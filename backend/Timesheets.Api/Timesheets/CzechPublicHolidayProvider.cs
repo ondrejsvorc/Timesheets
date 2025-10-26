@@ -1,4 +1,4 @@
-﻿namespace excel_extract_test.Timesheets;
+﻿namespace Timesheets.Api.Timesheets;
 
 public sealed record PublicHoliday(DateOnly Date, string LocalName, string Name);
 
