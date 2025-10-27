@@ -1,8 +1,9 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { AttendanceTimesheetImporter } from './AttendanceTimesheetImporter'
 
 export const App = () => {
-  return <p>App is running</p>
+  return <AttendanceTimesheetImporter />
 }
 
 createRoot(document.getElementById('root')!).render(
