@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace Timesheets.Api.Timesheets;
 
-public interface ITimesheetReader<T>
+public interface ITimesheetReader<T> where T : ITimesheet
 {
     T Read(Stream stream);
 }
@@ -72,29 +72,29 @@ public sealed partial class AttendanceTimesheetReader : ITimesheetReader<Attenda
             int rowNum = headerOffset + 1 + i;
 
             var row = new AttendanceDay
-            {
-                Date = new DateOnly(year, month, i + 1),
-                ClockIn = ParseTime(sheet.Cell($"B{rowNum}")),
-                ClockOut = ParseTime(sheet.Cell($"C{rowNum}")),
-                BreakStart = ParseTime(sheet.Cell($"D{rowNum}")),
-                BreakEnd = ParseTime(sheet.Cell($"E{rowNum}")),
-                OtherInterruption = ParseString(sheet.Cell($"F{rowNum}").GetString()),
-                HoursWithoutBreak = (decimal?)ParseDouble(sheet.Cell($"G{rowNum}")),
-                HoursObligation = (decimal?)ParseDouble(sheet.Cell($"H{rowNum}")),
-                IsHoliday = false
-            };
+            (
+                Date: new DateOnly(year, month, i + 1),
+                ClockIn: ParseTime(sheet.Cell($"B{rowNum}")),
+                ClockOut: ParseTime(sheet.Cell($"C{rowNum}")),
+                BreakStart: ParseTime(sheet.Cell($"D{rowNum}")),
+                BreakEnd: ParseTime(sheet.Cell($"E{rowNum}")),
+                OtherInterruption: ParseString(sheet.Cell($"F{rowNum}").GetString()),
+                HoursWithoutBreak: (decimal?)ParseDouble(sheet.Cell($"G{rowNum}")),
+                HoursObligation: (decimal?)ParseDouble(sheet.Cell($"H{rowNum}")),
+                IsHoliday: false
+            );
 
             rows.Add(row);
         }
 
         return new AttendanceTimesheet
-        {
-            EmployeePersonalNumber = employeePersonalNumber,
-            EmployeeName = employeeName,
-            Year = year,
-            Month = month,
-            Days = rows
-        };
+        (
+            EmployeePersonalNumber: employeePersonalNumber,
+            EmployeeName: employeeName,
+            Year: year,
+            Month: month,
+            Days: rows
+        );
     }
 
     private static TimeOnly? ParseTime(IXLCell cell)

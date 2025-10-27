@@ -1,35 +1,31 @@
 ﻿namespace Timesheets.Api.Timesheets;
 
+public interface ITimesheet
+{
+    public int Year { get; init; }
+    public int Month { get; init; }
+}
+public interface IDay
+{
+    public DateOnly Date { get; init; }
+}
+
 /// <summary>
 /// Měsíční výkaz pracovní doby.
 /// </summary>
-public sealed class AttendanceTimesheet
+/// <param name="EmployeePersonalNumber">Osobní číslo zaměstnance.</param>
+/// <param name="EmployeeName">Celé jméno zaměstnance, včetně titulů.</param>
+/// <param name="Year">Rok vykazovaného období.</param>
+/// <param name="Month">Měsíc vykazovaného období.</param>
+/// <param name="Days">Dny měsíčního výkazu pracovní doby.</param>
+public sealed record AttendanceTimesheet(
+    int EmployeePersonalNumber,
+    string? EmployeeName,
+    int Year,
+    int Month,
+    IReadOnlyList<AttendanceDay> Days
+) : ITimesheet
 {
-    /// <summary>
-    /// Osobní číslo zaměstnance.
-    /// </summary>
-    public int EmployeePersonalNumber { get; init; }
-
-    /// <summary>
-    /// Celé jméno zaměstnance, včetně titulů.
-    /// </summary>
-    public string? EmployeeName { get; init; }
-
-    /// <summary>
-    /// Rok vykazovaného období.
-    /// </summary>
-    public int Year { get; init; }
-
-    /// <summary>
-    /// Měsíc vykazovaného období.
-    /// </summary>
-    public int Month { get; init; }
-
-    /// <summary>
-    /// Dny měsíčního výkazu pracovní doby.
-    /// </summary>
-    public IReadOnlyList<AttendanceDay> Days { get; init; } = [];
-
     /// <summary>
     /// Součet všech hodin bez přestávky.
     /// </summary>
@@ -45,108 +41,64 @@ public sealed class AttendanceTimesheet
 /// <summary>
 /// Den v měsíčním výkazu pracovní doby.
 /// </summary>
-public sealed class AttendanceDay
+/// <param name="Date">Datum.</param>
+/// <param name="ClockIn">Příchod.</param>
+/// <param name="ClockOut">Odchod.</param>
+/// <param name="BreakStart">Začátek přestávky.</param>
+/// <param name="BreakEnd">Konec přestávky.</param>
+/// <param name="OtherInterruption">Jiné přerušení (úvazek).</param>
+/// <param name="HoursWithoutBreak">Celkem od - do bez přestávky na jídlo.</param>
+/// <param name="HoursObligation">Denní povinnost v hodinách.</param>
+/// <param name="IsHoliday">Určuje, zda se jedná o státní svátek.</param>
+public sealed record AttendanceDay(
+    DateOnly Date,
+    TimeOnly? ClockIn,
+    TimeOnly? ClockOut,
+    TimeOnly? BreakStart,
+    TimeOnly? BreakEnd,
+    string? OtherInterruption,
+    decimal? HoursWithoutBreak,
+    decimal? HoursObligation,
+    bool IsHoliday
+) : IDay
 {
     /// <summary>
-    /// Datum.
+    /// Určuje, zda den připadá na víkend.
     /// </summary>
-    public DateOnly Date { get; init; }
-
-    /// <summary>
-    /// Příchod.
-    /// </summary>
-    public TimeOnly? ClockIn { get; init; }
-
-    /// <summary>
-    /// Odchod.
-    /// </summary>
-    public TimeOnly? ClockOut { get; init; }
-
-    /// <summary>
-    /// Začátek přestávky.
-    /// </summary>
-    public TimeOnly? BreakStart { get; init; }
-
-    /// <summary>
-    /// Konec přestávky.
-    /// </summary>
-    public TimeOnly? BreakEnd { get; init; }
-
-    /// <summary>
-    /// Jiné přerušení (úvazek).
-    /// </summary>
-    public string? OtherInterruption { get; init; }
-
-    /// <summary>
-    /// Celkem od - do bez přestávky na jídlo.
-    /// </summary>
-    public decimal? HoursWithoutBreak { get; init; }
-
-    /// <summary>
-    /// Denní povinnost v hodinách.
-    /// </summary>
-    public decimal? HoursObligation { get; init; }
-
     public bool IsWeekend => Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-    public required bool IsHoliday { get; init; }
+
+    /// <summary>
+    /// Určuje, zda se jedná o pracovní den (nikoli víkend nebo svátek).
+    /// </summary>
     public bool IsWorkDay => !IsWeekend && !IsHoliday;
 }
 
 /// <summary>
 /// Měsíční výkaz projektové činnosti.
 /// </summary>
-public sealed class ProjectTimesheet
+/// <param name="EmployeeName">Celé jméno zaměstnance, včetně titulů.</param>
+/// <param name="Year">Rok vykazovaného období.</param>
+/// <param name="Month">Měsíc vykazovaného období.</param>
+/// <param name="ProjectName">Název projektu.</param>
+/// <param name="RecipientName">Název příjemce.</param>
+/// <param name="ProjectRegistrationNumber">Registrační číslo projektu.</param>
+/// <param name="EmployerName">Název zaměstnavatele, u kterého je sjednaná pozice.</param>
+/// <param name="PositionName">Název pozice.</param>
+/// <param name="WorkloadPercent">Výše úvazku u zaměstnavatele (%).</param>
+/// <param name="Days">Dny měsíčního výkazu projektové činnosti.</param>
+public sealed record ProjectTimesheet(
+    string? EmployeeName,
+    int Year,
+    int Month,
+    string? ProjectName,
+    string? RecipientName,
+    string? ProjectRegistrationNumber,
+    string? EmployerName,
+    string? PositionName,
+    decimal? WorkloadPercent,
+    IReadOnlyList<ProjectDay> Days
+) : ITimesheet
 {
-    /// <summary>
-    /// Celé jméno zaměstnance, včetně titulů.
-    /// </summary>
-    public string? EmployeeName { get; init; }
-
-    /// <summary>
-    /// Rok vykazovaného období.
-    /// </summary>
-    public int Year { get; init; }
-
-    /// <summary>
-    /// Měsíc vykazovaného období.
-    /// </summary>
-    public int Month { get; init; }
-
-    /// <summary>
-    /// Název projektu.
-    /// </summary>
-    public string? ProjectName { get; init; }
-
-    /// <summary>
-    /// Název příjemce.
-    /// </summary>
-    public string? RecipientName { get; init; }
-
-    /// <summary>
-    /// Registrační číslo projektu.
-    /// </summary>
-    public string? ProjectRegistrationNumber { get; init; }
-
-    /// <summary>
-    /// Název zaměstnavatele, u kterého je sjednaná pozice.
-    /// </summary>
-    public string? EmployerName { get; init; }
-
-    /// <summary>
-    /// Název pozice.
-    /// </summary>
-    public string? PositionName { get; init; }
-
-    /// <summary>
-    /// Výše úvazku u zaměstnavatele (%).
-    /// </summary>
-    public decimal? WorkloadPercent { get; init; }
-
-    /// <summary>
-    /// Dny měsíčního výkazu projektové činnosti.
-    /// </summary>
-    public IReadOnlyList<ProjectDay> Days { get; init; } = [];
-
     /// <summary>
     /// Součet odpracovaných hodin.
     /// </summary>
@@ -156,34 +108,28 @@ public sealed class ProjectTimesheet
 /// <summary>
 /// Den měsíčního výkazu projektové činnosti.
 /// </summary>
-public sealed class ProjectDay
+/// <param name="Date">Datum.</param>
+/// <param name="ActivityKey">Klíčová aktivita.</param>
+/// <param name="ActivityGroup">Název skupiny činností.</param>
+/// <param name="Description">Popis činností včetně průběžných výstupů práce za daný měsíc.</param>
+/// <param name="Hours">Počet hodin.</param>
+/// <param name="IsHoliday">Určuje, zda se jedná o státní svátek.</param>
+public sealed record ProjectDay(
+    DateOnly Date,
+    string? ActivityKey,
+    string? ActivityGroup,
+    string? Description,
+    decimal? Hours,
+    bool IsHoliday
+) : IDay
 {
     /// <summary>
-    /// Datum.
+    /// Určuje, zda den připadá na víkend.
     /// </summary>
-    public DateOnly Date { get; init; }
-
-    /// <summary>
-    /// Klíčová aktivita.
-    /// </summary>
-    public string? ActivityKey { get; init; }
-
-    /// <summary>
-    /// Název skupiny činností.
-    /// </summary>
-    public string? ActivityGroup { get; init; }
-
-    /// <summary>
-    /// Popis činností včetně průběžných výstupů práce za daný měsíc.
-    /// </summary>
-    public string? Description { get; init; }
-
-    /// <summary>
-    /// Počet hodin.
-    /// </summary>
-    public decimal? Hours { get; init; }
-
     public bool IsWeekend => Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-    public required bool IsHoliday { get; init; }
+
+    /// <summary>
+    /// Určuje, zda se jedná o pracovní den (nikoli víkend nebo svátek).
+    /// </summary>
     public bool IsWorkDay => !IsWeekend && !IsHoliday;
 }
