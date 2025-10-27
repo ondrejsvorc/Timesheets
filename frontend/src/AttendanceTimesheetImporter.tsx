@@ -64,6 +64,45 @@ export const AttendanceTimesheetImporter = () => {
     }
   }
 
+  function handleTimeChange(index: number, field: "clockIn" | "clockOut" | "breakStart" | "breakEnd", value: string) {
+    if (!timesheet) return;
+
+    const updatedDays = timesheet.days.map((day, i) => {
+      if (i !== index) return day;
+
+      const updatedDay = { ...day, [field]: value };
+      const { clockIn, clockOut } = updatedDay;
+
+      if (clockIn && clockOut) {
+        const diff = computeHours(clockIn, clockOut);
+        updatedDay.hoursWithoutBreak = diff;
+      } else {
+        updatedDay.hoursWithoutBreak = undefined;
+      }
+
+      return updatedDay;
+    });
+
+    const total = updatedDays.reduce((sum, d) => sum + (d.hoursWithoutBreak ?? 0), 0);
+
+    setTimesheet({
+      ...timesheet,
+      days: updatedDays,
+      totalHoursWithoutBreak: total,
+    });
+  }
+
+  function computeHours(clockIn: string, clockOut: string): number {
+    const [inH = 0, inM = 0, inS = 0] = clockIn.split(":").map(Number);
+    const [outH = 0, outM = 0, outS = 0] = clockOut.split(":").map(Number);
+
+    const start = inH * 3600 + inM * 60 + inS;
+    const end = outH * 3600 + outM * 60 + outS;
+    const diffSec = Math.max(0, end - start);
+
+    return +(diffSec / 3600).toFixed(2);
+  }
+
   return (
     <div style={{ padding: "1rem" }}>
       <h1>Import výkazu pracovní doby</h1>
@@ -90,33 +129,75 @@ export const AttendanceTimesheetImporter = () => {
           <table border={1} cellPadding={4} cellSpacing={0}>
             <thead>
               <tr>
-                <th>Den</th>
+                <th>Datum</th>
                 <th>Příchod</th>
                 <th>Odchod</th>
-                <th>Začátek přestávky</th>
-                <th>Konec přestávky</th>
+                <th>Začátek pauzy</th>
+                <th>Konec pauzy</th>
                 <th>Jiné přerušení (úvazek)</th>
-                <th>Celkem od - do bez přestávky na jídlo</th>
+                <th>Celkem od - do bez přestávky</th>
               </tr>
             </thead>
             <tbody>
-              {timesheet.days.map((d) => (
+              {timesheet.days.map((d, i) => (
                 <tr key={d.date}>
                   <td>{d.date}</td>
-                  <td>{d.clockIn ?? ""}</td>
-                  <td>{d.clockOut ?? ""}</td>
-                  <td>{d.breakStart ?? ""}</td>
-                  <td>{d.breakEnd ?? ""}</td>
-                  <td>{d.otherInterruption ?? ""}</td>
+
+                  <td>
+                    <input
+                      type="time"
+                      value={d.clockIn ?? ""}
+                      onChange={(e) => handleTimeChange(i, "clockIn", e.target.value)}
+                    />
+                  </td>
+
+                  <td>
+                    <input
+                      type="time"
+                      value={d.clockOut ?? ""}
+                      onChange={(e) => handleTimeChange(i, "clockOut", e.target.value)}
+                    />
+                  </td>
+
+                  <td>
+                    <input
+                      type="time"
+                      value={d.breakStart ?? ""}
+                      onChange={(e) => handleTimeChange(i, "breakStart", e.target.value)}
+                    />
+                  </td>
+
+                  <td>
+                    <input
+                      type="time"
+                      value={d.breakEnd ?? ""}
+                      onChange={(e) => handleTimeChange(i, "breakEnd", e.target.value)}
+                    />
+                  </td>
+
+                  <td>
+                    <input
+                      type="text"
+                      value={d.otherInterruption ?? ""}
+                      onChange={(e) =>
+                        setTimesheet((prev) => {
+                          if (!prev) return prev;
+                          const updatedDays = [...prev.days];
+                          updatedDays[i] = { ...updatedDays[i], otherInterruption: e.target.value };
+                          return { ...prev, days: updatedDays } as AttendanceTimesheet;
+                        })
+                      }
+                    />
+                  </td>
+
                   <td>{d.hoursWithoutBreak ?? ""}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-
           <p>
-            <strong>Součet:</strong>{" "}
-            {timesheet.totalHoursWithoutBreak} / {timesheet.totalHoursObligation}
+            <strong>Součet:</strong> {timesheet.totalHoursWithoutBreak} /{" "}
+            {timesheet.totalHoursObligation}
           </p>
         </>
       )}
