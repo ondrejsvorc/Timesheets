@@ -141,9 +141,16 @@ export const AttendanceTimesheetImporter = () => {
             <tbody>
               {timesheet.days.map((d, i) => (
                 <tr key={d.date}>
-                  <td>{d.date}</td>
+                  <td
+                    style={{
+                      fontWeight: "bold",
+                      color: d.isWorkDay ? "inherit" : "darkred",
+                    }}
+                  >
+                    {d.date}
+                  </td>
 
-                  <td>
+                  <td style={{ fontWeight: "bold" }}>
                     <input
                       type="time"
                       value={d.clockIn ?? ""}
@@ -151,7 +158,7 @@ export const AttendanceTimesheetImporter = () => {
                     />
                   </td>
 
-                  <td>
+                  <td style={{ fontWeight: "bold" }}>
                     <input
                       type="time"
                       value={d.clockOut ?? ""}
@@ -203,4 +210,4 @@ export const AttendanceTimesheetImporter = () => {
       )}
     </div>
   );
-}
+};
