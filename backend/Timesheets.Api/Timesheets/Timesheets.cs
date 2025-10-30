@@ -82,7 +82,6 @@ public sealed record AttendanceDay(
 /// <param name="ProjectName">Název projektu.</param>
 /// <param name="RecipientName">Název příjemce.</param>
 /// <param name="ProjectRegistrationNumber">Registrační číslo projektu.</param>
-/// <param name="EmployerName">Název zaměstnavatele, u kterého je sjednaná pozice.</param>
 /// <param name="PositionName">Název pozice.</param>
 /// <param name="WorkloadPercent">Výše úvazku u zaměstnavatele (%).</param>
 /// <param name="Days">Dny měsíčního výkazu projektové činnosti.</param>
@@ -93,7 +92,6 @@ public sealed record ProjectTimesheet(
     string? ProjectName,
     string? RecipientName,
     string? ProjectRegistrationNumber,
-    string? EmployerName,
     string? PositionName,
     decimal? WorkloadPercent,
     IReadOnlyList<ProjectDay> Days
