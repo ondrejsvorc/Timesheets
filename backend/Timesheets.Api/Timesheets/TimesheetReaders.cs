@@ -201,62 +201,24 @@ public sealed class CellParser : ICellParser
 
     public TimeOnly? ParseTime(IXLCell cell)
     {
-        if (cell.IsEmpty())
-        {
-            return null;
-        }
-
-        // Excel může ukládat čas jako DateTime
-        if (cell.TryGetValue(out DateTime dateTime))
-        {
-            return TimeOnly.FromDateTime(dateTime);
-        }
-
-        // Nebo jako číslo (fraction of day)
-        if (cell.TryGetValue(out double timeValue) && timeValue >= 0 && timeValue < 1)
-        {
-            return TimeOnly.FromTimeSpan(TimeSpan.FromDays(timeValue));
-        }
-
-        // Pokus o parsování textové hodnoty
         string? text = ParseString(cell);
-        if (!string.IsNullOrWhiteSpace(text))
+        if (TimeOnly.TryParseExact(text, ["H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss"], CzechCulture, DateTimeStyles.None, out TimeOnly parsed))
         {
-            if (TimeOnly.TryParseExact(text, ["H:mm", "HH:mm", "H.mm", "HH.mm"],
-                CzechCulture, DateTimeStyles.None, out TimeOnly time))
-            {
-                return time;
-            }
+            return parsed;
         }
-
         return null;
     }
 
     public decimal? ParseDecimal(IXLCell cell)
     {
-        if (cell.IsEmpty())
-        {
-            return null;
-        }
-
-        if (cell.TryGetValue(out decimal numValue))
-        {
-            return numValue;
-        }
-
-        string? text = ParseString(cell);
-        if (string.IsNullOrEmpty(text))
-        {
-            return null;
-        }
-
-        // Nahradit čárku za tečku pro parsování
-        text = text.Replace(',', '.');
+        // V českém prostředí se používá čárka jako desetinný oddělovač (např. "8,5"),
+        // ale InvariantCulture očekává tečku ("8.5"). Proto zde čárku převádíme na tečku,
+        // aby parser fungoval konzistentně i v případě, že se v Excelu objeví smíšené zápisy.
+        string? text = ParseString(cell)?.Replace(',', '.');
         if (decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal parsed))
         {
             return parsed;
         }
-
         return null;
     }
 
