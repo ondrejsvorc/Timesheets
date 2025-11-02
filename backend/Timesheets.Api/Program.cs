@@ -5,8 +5,9 @@ using Timesheets.Api.Timesheets;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddTransient<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();
-builder.Services.AddTransient<IPublicHolidayProvider, CzechPublicHolidayProvider>();
+builder.Services.AddSingleton<ICellParser, CellParser>();
+builder.Services.AddSingleton<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();
+builder.Services.AddSingleton<IPublicHolidayProvider, CzechPublicHolidayProvider>();
 builder.Services.AddTransient<ITimesheetImporter<AttendanceTimesheet>, AttendanceTimesheetImporter>();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
