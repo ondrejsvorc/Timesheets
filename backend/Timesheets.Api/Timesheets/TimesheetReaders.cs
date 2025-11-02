@@ -9,11 +9,18 @@ public interface ITimesheetReader<T> where T : ITimesheet
     T Read(Stream stream);
 }
 
-public abstract class TimesheetReaderBase
+public interface ICellParser
 {
-    protected static readonly CultureInfo CzechCulture = new("cs-CZ");
+    TimeOnly? ParseTime(IXLCell cell);
+    string? ParseString(IXLCell cell);
+    decimal? ParseDecimal(IXLCell cell);
+}
 
-    protected static TimeOnly? ParseTime(IXLCell cell)
+public sealed class CellParser : ICellParser
+{
+    private static readonly CultureInfo CzechCulture = new("cs-CZ");
+
+    public TimeOnly? ParseTime(IXLCell cell)
     {
         if (cell.IsEmpty())
         {
@@ -33,7 +40,7 @@ public abstract class TimesheetReaderBase
         }
 
         // Pokus o parsování textové hodnoty
-        string text = cell.GetString().Trim();
+        string? text = ParseString(cell);
         if (!string.IsNullOrWhiteSpace(text))
         {
             if (TimeOnly.TryParseExact(text, ["H:mm", "HH:mm", "H.mm", "HH.mm"],
@@ -46,25 +53,19 @@ public abstract class TimesheetReaderBase
         return null;
     }
 
-    protected static string? ParseString(string? value)
-    {
-        string? trimmed = value?.Trim();
-        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
-    }
-
-    protected static double? ParseDouble(IXLCell cell)
+    public decimal? ParseDecimal(IXLCell cell)
     {
         if (cell.IsEmpty())
         {
             return null;
         }
 
-        if (cell.TryGetValue(out double numValue))
+        if (cell.TryGetValue(out decimal numValue))
         {
             return numValue;
         }
 
-        string? text = cell.GetString()?.Trim();
+        string? text = ParseString(cell);
         if (string.IsNullOrEmpty(text))
         {
             return null;
@@ -72,7 +73,7 @@ public abstract class TimesheetReaderBase
 
         // Nahradit čárku za tečku pro parsování
         text = text.Replace(',', '.');
-        if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed))
+        if (decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal parsed))
         {
             return parsed;
         }
@@ -80,14 +81,14 @@ public abstract class TimesheetReaderBase
         return null;
     }
 
-    protected static decimal? ParseDecimal(IXLCell cell)
+    public string? ParseString(IXLCell cell)
     {
-        double? value = ParseDouble(cell);
-        return value.HasValue ? (decimal)value.Value : null;
+        string? text = cell.GetString()?.Trim();
+        return string.IsNullOrWhiteSpace(text) ? null : text;
     }
 }
 
-public sealed partial class AttendanceTimesheetReader : TimesheetReaderBase, ITimesheetReader<AttendanceTimesheet>
+public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : ITimesheetReader<AttendanceTimesheet>
 {
     [GeneratedRegex(@"^(\d+)\s+(.+)$")]
     private static partial Regex EmployeeRegex();
@@ -150,13 +151,13 @@ public sealed partial class AttendanceTimesheetReader : TimesheetReaderBase, ITi
             var row = new AttendanceDay
             (
                 Date: new DateOnly(year, month, i + 1),
-                ClockIn: ParseTime(sheet.Cell($"B{rowNum}")),
-                ClockOut: ParseTime(sheet.Cell($"C{rowNum}")),
-                BreakStart: ParseTime(sheet.Cell($"D{rowNum}")),
-                BreakEnd: ParseTime(sheet.Cell($"E{rowNum}")),
-                OtherInterruption: ParseString(sheet.Cell($"F{rowNum}").GetString()),
-                HoursWithoutBreak: ParseDecimal(sheet.Cell($"G{rowNum}")),
-                HoursObligation: ParseDecimal(sheet.Cell($"H{rowNum}")),
+                ClockIn: cellParser.ParseTime(sheet.Cell($"B{rowNum}")),
+                ClockOut: cellParser.ParseTime(sheet.Cell($"C{rowNum}")),
+                BreakStart: cellParser.ParseTime(sheet.Cell($"D{rowNum}")),
+                BreakEnd: cellParser.ParseTime(sheet.Cell($"E{rowNum}")),
+                OtherInterruption: cellParser.ParseString(sheet.Cell($"F{rowNum}")),
+                HoursWithoutBreak: cellParser.ParseDecimal(sheet.Cell($"G{rowNum}")),
+                HoursObligation: cellParser.ParseDecimal(sheet.Cell($"H{rowNum}")),
                 IsHoliday: false
             );
 
@@ -174,7 +175,7 @@ public sealed partial class AttendanceTimesheetReader : TimesheetReaderBase, ITi
     }
 }
 
-public sealed partial class ProjectTimesheetReader : TimesheetReaderBase, ITimesheetReader<ProjectTimesheet>
+public sealed partial class ProjectTimesheetReader(ICellParser cellParser) : ITimesheetReader<ProjectTimesheet>
 {
     [GeneratedRegex(@"^(\d{2})/(\d{4})$")]
     private static partial Regex PeriodRegex();
@@ -185,23 +186,23 @@ public sealed partial class ProjectTimesheetReader : TimesheetReaderBase, ITimes
         IXLWorksheet sheet = workbook.Worksheets.Worksheet(1);
 
         // Název projektu
-        string? projectName = ParseString(sheet.Cell("A4").GetString());
+        string? projectName = cellParser.ParseString(sheet.Cell("A4"));
 
         // Název příjemce
-        string? recipientName = ParseString(sheet.Cell("G4").GetString());
+        string? recipientName = cellParser.ParseString(sheet.Cell("G4"));
 
         // Registrační číslo projektu 
-        string? projectRegistrationNumber = ParseString(sheet.Cell("K4").GetString());
+        string? projectRegistrationNumber = cellParser.ParseString(sheet.Cell("K4"));
 
         // Celý název zaměstnance včetně titulů
-        string? employeeName = ParseString(sheet.Cell("D7").GetString());
+        string? employeeName = cellParser.ParseString(sheet.Cell("D7"));
 
 
         // Název pozice
-        string? positionName = ParseString(sheet.Cell("K7").GetString());
+        string? positionName = cellParser.ParseString(sheet.Cell("K7"));
 
         // Výše úvazku u zaměstnavatele
-        decimal? workloadPercent = ParseDecimal(sheet.Cell("D9"));
+        decimal? workloadPercent = cellParser.ParseDecimal(sheet.Cell("D9"));
 
         // Vykazovaný měsíc a rok 
         // Formát: 07/2018
@@ -228,16 +229,16 @@ public sealed partial class ProjectTimesheetReader : TimesheetReaderBase, ITimes
             int rowNum = headerOffset + 1 + i;
 
             // Klíčová aktivita 
-            string? activityKey = ParseString(sheet.Cell($"B{rowNum}").GetString());
+            string? activityKey = cellParser.ParseString(sheet.Cell($"B{rowNum}"));
 
             // Název skupiny činností
-            string? activityGroup = ParseString(sheet.Cell($"C{rowNum}").GetString());
+            string? activityGroup = cellParser.ParseString(sheet.Cell($"C{rowNum}"));
 
             // Popis činností
-            string? description = ParseString(sheet.Cell($"D{rowNum}").GetString());
+            string? description = cellParser.ParseString(sheet.Cell($"D{rowNum}"));
 
             // Počet hodin
-            decimal? hours = ParseDecimal(sheet.Cell($"O{rowNum}"));
+            decimal? hours = cellParser.ParseDecimal(sheet.Cell($"O{rowNum}"));
 
             var row = new ProjectDay
             (
