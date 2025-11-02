@@ -9,85 +9,6 @@ public interface ITimesheetReader<T> where T : ITimesheet
     T Read(Stream stream);
 }
 
-public interface ICellParser
-{
-    TimeOnly? ParseTime(IXLCell cell);
-    string? ParseString(IXLCell cell);
-    decimal? ParseDecimal(IXLCell cell);
-}
-
-public sealed class CellParser : ICellParser
-{
-    private static readonly CultureInfo CzechCulture = new("cs-CZ");
-
-    public TimeOnly? ParseTime(IXLCell cell)
-    {
-        if (cell.IsEmpty())
-        {
-            return null;
-        }
-
-        // Excel může ukládat čas jako DateTime
-        if (cell.TryGetValue(out DateTime dateTime))
-        {
-            return TimeOnly.FromDateTime(dateTime);
-        }
-
-        // Nebo jako číslo (fraction of day)
-        if (cell.TryGetValue(out double timeValue) && timeValue >= 0 && timeValue < 1)
-        {
-            return TimeOnly.FromTimeSpan(TimeSpan.FromDays(timeValue));
-        }
-
-        // Pokus o parsování textové hodnoty
-        string? text = ParseString(cell);
-        if (!string.IsNullOrWhiteSpace(text))
-        {
-            if (TimeOnly.TryParseExact(text, ["H:mm", "HH:mm", "H.mm", "HH.mm"],
-                CzechCulture, DateTimeStyles.None, out TimeOnly time))
-            {
-                return time;
-            }
-        }
-
-        return null;
-    }
-
-    public decimal? ParseDecimal(IXLCell cell)
-    {
-        if (cell.IsEmpty())
-        {
-            return null;
-        }
-
-        if (cell.TryGetValue(out decimal numValue))
-        {
-            return numValue;
-        }
-
-        string? text = ParseString(cell);
-        if (string.IsNullOrEmpty(text))
-        {
-            return null;
-        }
-
-        // Nahradit čárku za tečku pro parsování
-        text = text.Replace(',', '.');
-        if (decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal parsed))
-        {
-            return parsed;
-        }
-
-        return null;
-    }
-
-    public string? ParseString(IXLCell cell)
-    {
-        string? text = cell.GetString()?.Trim();
-        return string.IsNullOrWhiteSpace(text) ? null : text;
-    }
-}
-
 public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : ITimesheetReader<AttendanceTimesheet>
 {
     [GeneratedRegex(@"^(\d+)\s+(.+)$")]
@@ -197,7 +118,6 @@ public sealed partial class ProjectTimesheetReader(ICellParser cellParser) : ITi
         // Celý název zaměstnance včetně titulů
         string? employeeName = cellParser.ParseString(sheet.Cell("D7"));
 
-
         // Název pozice
         string? positionName = cellParser.ParseString(sheet.Cell("K7"));
 
@@ -265,5 +185,84 @@ public sealed partial class ProjectTimesheetReader(ICellParser cellParser) : ITi
             WorkloadPercent: workloadPercent,
             Days: rows
         );
+    }
+}
+
+public interface ICellParser
+{
+    TimeOnly? ParseTime(IXLCell cell);
+    string? ParseString(IXLCell cell);
+    decimal? ParseDecimal(IXLCell cell);
+}
+
+public sealed class CellParser : ICellParser
+{
+    private static readonly CultureInfo CzechCulture = new("cs-CZ");
+
+    public TimeOnly? ParseTime(IXLCell cell)
+    {
+        if (cell.IsEmpty())
+        {
+            return null;
+        }
+
+        // Excel může ukládat čas jako DateTime
+        if (cell.TryGetValue(out DateTime dateTime))
+        {
+            return TimeOnly.FromDateTime(dateTime);
+        }
+
+        // Nebo jako číslo (fraction of day)
+        if (cell.TryGetValue(out double timeValue) && timeValue >= 0 && timeValue < 1)
+        {
+            return TimeOnly.FromTimeSpan(TimeSpan.FromDays(timeValue));
+        }
+
+        // Pokus o parsování textové hodnoty
+        string? text = ParseString(cell);
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            if (TimeOnly.TryParseExact(text, ["H:mm", "HH:mm", "H.mm", "HH.mm"],
+                CzechCulture, DateTimeStyles.None, out TimeOnly time))
+            {
+                return time;
+            }
+        }
+
+        return null;
+    }
+
+    public decimal? ParseDecimal(IXLCell cell)
+    {
+        if (cell.IsEmpty())
+        {
+            return null;
+        }
+
+        if (cell.TryGetValue(out decimal numValue))
+        {
+            return numValue;
+        }
+
+        string? text = ParseString(cell);
+        if (string.IsNullOrEmpty(text))
+        {
+            return null;
+        }
+
+        // Nahradit čárku za tečku pro parsování
+        text = text.Replace(',', '.');
+        if (decimal.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal parsed))
+        {
+            return parsed;
+        }
+
+        return null;
+    }
+
+    public string? ParseString(IXLCell cell)
+    {
+        string text = cell.GetString().Trim();
+        return text.Length == 0 ? null : text;
     }
 }
