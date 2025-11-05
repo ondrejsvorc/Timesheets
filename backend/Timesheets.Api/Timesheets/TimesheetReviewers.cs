@@ -1,4 +1,5 @@
-﻿namespace Timesheets.Api.Timesheets;
+﻿
+namespace Timesheets.Api.Timesheets;
 
 public enum IssueType { Warning = 0, Error = 1 }
 
@@ -145,8 +146,8 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewNightShift(AttendanceDay day)
     {
-        TimeOnly nightStart = new(22, 0);
-        TimeOnly nightEnd = new(5, 59);
+        TimeOnly nightStart = new(hour: 22, minute: 0);
+        TimeOnly nightEnd = new(hour: 5, minute: 59);
 
         bool clockInStartsAtNight = day.ClockIn >= nightStart || day.ClockIn <= nightEnd;
         bool clockOutEndsAtNight = day.ClockOut >= nightStart || day.ClockOut <= nightEnd;
@@ -184,7 +185,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewDayHoursObligation(AttendanceDay day)
     {
-        if (day.IsWorkDay && (day.HoursObligation is null or 0))
+        if (day.IsWorkDay && day.HoursObligation is 0)
         {
             yield return new DayIssue
             (

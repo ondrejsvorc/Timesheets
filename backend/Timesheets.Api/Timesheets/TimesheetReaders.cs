@@ -14,8 +14,11 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
     [GeneratedRegex(@"^(\d+)\s+(.+)$")]
     private static partial Regex EmployeeRegex();
 
-    [GeneratedRegex(@"(\d{2})\.(\d{2})\.(\d{4})\s*-\s*(\d{2})\.(\d{2})\.(\d{4})")]
+    [GeneratedRegex(@"(\d{2})\.(\d{2})\.(\d{4})")]
     private static partial Regex PeriodRegex();
+
+    [GeneratedRegex(@"(\d+)\s*%")]
+    private static partial Regex WorkloadRegex();
 
     public AttendanceTimesheet Read(Stream stream)
     {
@@ -24,7 +27,6 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
 
         // Načtení kódu a jména zaměstnance z A1
         string cellA1 = sheet.Cell("A1").GetString();
-
         var employeeMatch = EmployeeRegex().Match(cellA1);
 
         int employeePersonalNumber = 0;
@@ -36,29 +38,26 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
             employeeName = employeeMatch.Groups[2].Value.Trim();
         }
 
-        // Načtení období z A2
+        // Načtení období a úvazku z A2
         string cellA2 = sheet.Cell("A2").GetString();
-
         var periodMatch = PeriodRegex().Match(cellA2);
+        var workloadMatch = WorkloadRegex().Match(cellA2);
 
         int year = 0;
         int month = 0;
         int daysInMonth = 31;
+        decimal workload = 1m;
 
         if (periodMatch.Success)
         {
-            int startDay = int.Parse(periodMatch.Groups[1].Value);
-            int startMonth = int.Parse(periodMatch.Groups[2].Value);
-            int startYear = int.Parse(periodMatch.Groups[3].Value);
-
-            int endDay = int.Parse(periodMatch.Groups[4].Value);
-            int endMonth = int.Parse(periodMatch.Groups[5].Value);
-            int endYear = int.Parse(periodMatch.Groups[6].Value);
-
-            // Předpokládáme, že období je vždy jeden měsíc
-            year = startYear;
-            month = startMonth;
+            year = int.Parse(periodMatch.Groups[3].Value);
+            month = int.Parse(periodMatch.Groups[2].Value);
             daysInMonth = DateTime.DaysInMonth(year, month);
+        }
+
+        if (workloadMatch.Success)
+        {
+            workload = decimal.Parse(workloadMatch.Groups[1].Value, CultureInfo.InvariantCulture) / 100m;
         }
 
         // Načtení řádků - od řádku 4 do (4 + daysInMonth - 1)
@@ -77,9 +76,8 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
                 BreakStart: cellParser.ParseTime(sheet.Cell($"D{rowNum}")),
                 BreakEnd: cellParser.ParseTime(sheet.Cell($"E{rowNum}")),
                 OtherInterruption: cellParser.ParseString(sheet.Cell($"F{rowNum}")),
-                HoursWithoutBreak: cellParser.ParseDecimal(sheet.Cell($"G{rowNum}")),
-                HoursObligation: cellParser.ParseDecimal(sheet.Cell($"H{rowNum}")),
-                IsHoliday: false
+                IsHoliday: false,
+                Workload: workload
             );
 
             rows.Add(row);
@@ -89,6 +87,7 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
         (
             EmployeePersonalNumber: employeePersonalNumber,
             EmployeeName: employeeName,
+            Workload: workload,
             Year: year,
             Month: month,
             Days: rows
@@ -122,7 +121,7 @@ public sealed partial class ProjectTimesheetReader(ICellParser cellParser) : ITi
         string? positionName = cellParser.ParseString(sheet.Cell("K7"));
 
         // Výše úvazku u zaměstnavatele
-        decimal? workloadPercent = cellParser.ParseDecimal(sheet.Cell("D9"));
+        decimal workload = cellParser.ParseDecimal(sheet.Cell("D9")) ?? 0;
 
         // Vykazovaný měsíc a rok 
         // Formát: 07/2018
@@ -167,7 +166,8 @@ public sealed partial class ProjectTimesheetReader(ICellParser cellParser) : ITi
                 ActivityGroup: activityGroup,
                 Description: description,
                 Hours: hours,
-                IsHoliday: false
+                IsHoliday: false,
+                Workload: workload
             );
 
             rows.Add(row);
@@ -182,7 +182,7 @@ public sealed partial class ProjectTimesheetReader(ICellParser cellParser) : ITi
             RecipientName: recipientName,
             ProjectRegistrationNumber: projectRegistrationNumber,
             PositionName: positionName,
-            WorkloadPercent: workloadPercent,
+            Workload: workload,
             Days: rows
         );
     }

@@ -4,10 +4,18 @@ public interface ITimesheet
 {
     public int Year { get; init; }
     public int Month { get; init; }
+    public decimal Workload { get; init; }
+}
+public interface ITimesheet<T> : ITimesheet where T : IDay
+{
+    public IReadOnlyList<T> Days { get; init; }
 }
 public interface IDay
 {
     public DateOnly Date { get; init; }
+    bool IsHoliday { get; init; }
+    bool IsWeekend { get; }
+    bool IsWorkDay { get; }
 }
 
 /// <summary>
@@ -15,27 +23,29 @@ public interface IDay
 /// </summary>
 /// <param name="EmployeePersonalNumber">Osobní číslo zaměstnance.</param>
 /// <param name="EmployeeName">Celé jméno zaměstnance, včetně titulů.</param>
+/// <param name="Workload">Úvazek.</param>
 /// <param name="Year">Rok vykazovaného období.</param>
 /// <param name="Month">Měsíc vykazovaného období.</param>
 /// <param name="Days">Dny měsíčního výkazu pracovní doby.</param>
 public sealed record AttendanceTimesheet(
     int EmployeePersonalNumber,
     string? EmployeeName,
+    decimal Workload,
     int Year,
     int Month,
     IReadOnlyList<AttendanceDay> Days
-) : ITimesheet
+) : ITimesheet<AttendanceDay>
 {
     /// <summary>
     /// Součet všech hodin bez přestávky.
     /// </summary>
-    public decimal TotalHoursWithoutBreak => Days.Sum(r => r.HoursWithoutBreak ?? 0);
+    public decimal TotalHoursWithoutBreak => TimesheetLogic.CalculateTotalHoursWithoutBreak(Days);
 
     /// <summary>
     /// Součet všech hodin povinnosti pouze za pracovní dny.
     /// Svátky a víkendy se do fondu nezapočítávají.
     /// </summary>
-    public decimal TotalHoursObligation => Days.Where(d => d.IsWorkDay).Sum(d => d.HoursObligation ?? 0);
+    public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(Days);
 }
 
 /// <summary>
@@ -47,9 +57,8 @@ public sealed record AttendanceTimesheet(
 /// <param name="BreakStart">Začátek přestávky.</param>
 /// <param name="BreakEnd">Konec přestávky.</param>
 /// <param name="OtherInterruption">Jiné přerušení (úvazek).</param>
-/// <param name="HoursWithoutBreak">Celkem od - do bez přestávky na jídlo.</param>
-/// <param name="HoursObligation">Denní povinnost v hodinách.</param>
 /// <param name="IsHoliday">Určuje, zda se jedná o státní svátek.</param>
+/// <param name="Workload">Úvazek.</param>
 public sealed record AttendanceDay(
     DateOnly Date,
     TimeOnly? ClockIn,
@@ -57,20 +66,23 @@ public sealed record AttendanceDay(
     TimeOnly? BreakStart,
     TimeOnly? BreakEnd,
     string? OtherInterruption,
-    decimal? HoursWithoutBreak,
-    decimal? HoursObligation,
-    bool IsHoliday
+    bool IsHoliday,
+    decimal Workload
 ) : IDay
 {
-    /// <summary>
-    /// Určuje, zda den připadá na víkend.
-    /// </summary>
-    public bool IsWeekend => Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+    public bool IsWeekend => TimesheetLogic.IsWeekend(this);
+    public bool IsWorkDay => TimesheetLogic.IsWorkDay(this);
 
     /// <summary>
-    /// Určuje, zda se jedná o pracovní den (nikoli víkend nebo svátek).
+    /// Denní povinnost v hodinách.
+    /// Vypočítává se na základě úvazku.
     /// </summary>
-    public bool IsWorkDay => !IsWeekend && !IsHoliday;
+    public decimal HoursObligation => TimesheetLogic.CalculateHoursObligation(this);
+
+    /// <summary>
+    /// Celkem od - do bez přestávky na jídlo.
+    /// </summary>
+    public decimal HoursWithoutBreak => TimesheetLogic.CalculateHoursWithoutBreak(this);
 }
 
 /// <summary>
@@ -83,7 +95,7 @@ public sealed record AttendanceDay(
 /// <param name="RecipientName">Název příjemce.</param>
 /// <param name="ProjectRegistrationNumber">Registrační číslo projektu.</param>
 /// <param name="PositionName">Název pozice.</param>
-/// <param name="WorkloadPercent">Výše úvazku u zaměstnavatele (%).</param>
+/// <param name="Workload">Úvazek.</param>
 /// <param name="Days">Dny měsíčního výkazu projektové činnosti.</param>
 public sealed record ProjectTimesheet(
     string? EmployeeName,
@@ -93,14 +105,12 @@ public sealed record ProjectTimesheet(
     string? RecipientName,
     string? ProjectRegistrationNumber,
     string? PositionName,
-    decimal? WorkloadPercent,
+    decimal Workload,
     IReadOnlyList<ProjectDay> Days
-) : ITimesheet
+) : ITimesheet<ProjectDay>
 {
-    /// <summary>
-    /// Součet odpracovaných hodin.
-    /// </summary>
-    public decimal TotalHours => Days.Sum(r => r.Hours ?? 0);
+    // TODO
+    public decimal TotalHours => Days.Sum(day => day.Hours ?? 0);
 }
 
 /// <summary>
@@ -118,16 +128,70 @@ public sealed record ProjectDay(
     string? ActivityGroup,
     string? Description,
     decimal? Hours,
-    bool IsHoliday
+    bool IsHoliday,
+    decimal Workload
 ) : IDay
 {
-    /// <summary>
-    /// Určuje, zda den připadá na víkend.
-    /// </summary>
-    public bool IsWeekend => Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+    public bool IsWeekend => TimesheetLogic.IsWeekend(this);
+    public bool IsWorkDay => TimesheetLogic.IsWorkDay(this);
+}
 
-    /// <summary>
-    /// Určuje, zda se jedná o pracovní den (nikoli víkend nebo svátek).
-    /// </summary>
-    public bool IsWorkDay => !IsWeekend && !IsHoliday;
+file static class TimesheetLogic
+{
+    private const decimal StandardWorkdayHours = 8m;
+
+    public static bool IsWeekend(IDay day) => day.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+    public static bool IsWorkDay(IDay day) => !IsWeekend(day) && !day.IsHoliday;
+
+    public static decimal CalculateWorkedHours(TimeOnly? clockIn, TimeOnly? clockOut)
+    {
+        if (clockIn is null || clockOut is null || clockOut <= clockIn)
+        {
+            return 0;
+        }
+        return (decimal)(clockOut.Value - clockIn.Value).TotalHours;
+    }
+
+    public static decimal CalculateBreakHours(TimeOnly? breakStart, TimeOnly? breakEnd)
+    {
+        if (breakStart is null || breakEnd is null || breakEnd <= breakStart)
+        {
+            return 0;
+        }
+        return (decimal)(breakEnd.Value - breakStart.Value).TotalHours;
+    }
+
+    public static decimal CalculateHoursWithoutBreak(AttendanceDay day)
+    {
+        decimal workedHours = CalculateWorkedHours(day.ClockIn, day.ClockOut);
+        decimal breakHours = CalculateBreakHours(day.BreakStart, day.BreakEnd);
+        decimal hours = workedHours - breakHours;
+        return Normalize(hours);
+    }
+
+    public static decimal CalculateHoursObligation(AttendanceDay day)
+    {
+        if (!IsWorkDay(day))
+        {
+            return 0;
+        }
+        decimal hours = StandardWorkdayHours * day.Workload;
+        return Normalize(hours);
+    }
+
+    public static decimal CalculateTotalHoursObligation(IEnumerable<AttendanceDay> days)
+    {
+        return days.Sum(CalculateHoursObligation);
+    }
+
+    public static decimal CalculateTotalHoursWithoutBreak(IEnumerable<AttendanceDay> days)
+    {
+        return days.Sum(CalculateHoursWithoutBreak);
+    }
+
+    private static decimal Normalize(decimal hours)
+    {
+        decimal clamped = Math.Max(hours, 0);
+        return Math.Round(clamped, decimals: 2, MidpointRounding.AwayFromZero);
+    }
 }
