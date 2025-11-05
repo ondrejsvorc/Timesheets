@@ -1,21 +1,32 @@
-﻿
+﻿using System.Globalization;
+
 namespace Timesheets.Api.Timesheets;
 
 public enum IssueType { Warning = 0, Error = 1 }
 
 public sealed record TimesheetIssue(string Code, IssueType Type, string Description);
-public sealed record DayIssue(string Code, IssueType Severity, string Description, int Day, string Field);
+public sealed record DayIssue(string Code, IssueType Type, string Description, int Day, string Field);
 
 public sealed class TimesheetReview
 {
-    public bool HasErrors => Issues.Any(i => i.Type is IssueType.Error) || DayIssues.Any(i => i.Severity is IssueType.Error);
-    public bool HasWarnings => Issues.Any(i => i.Type is IssueType.Warning) || DayIssues.Any(i => i.Severity is IssueType.Warning);
+    public bool HasErrors => Issues.Any(i => i.Type is IssueType.Error) || DayIssues.Any(i => i.Type is IssueType.Error);
+    public bool HasWarnings => Issues.Any(i => i.Type is IssueType.Warning) || DayIssues.Any(i => i.Type is IssueType.Warning);
 
     public bool CanBeSaved => !HasErrors;
     public bool CanBeApproved => !HasErrors && !HasWarnings;
 
     public IEnumerable<TimesheetIssue> Issues { get; init; } = [];
     public IEnumerable<DayIssue> DayIssues { get; init; } = [];
+}
+
+file static class TimesheetLimits
+{
+    public const decimal MaxContinuousWorkBeforeBreakHours = 6;
+    public const decimal MaxWorkShiftHours = 12;
+    public const decimal MinRestBetweenShiftsHours = 11;
+    public const decimal MinWeeklyRestHours = 35;
+    public const decimal StandardWeeklyWorkHours = 40;
+    public const decimal StandardWorkdayHours = 8;
 }
 
 public interface ITimesheetReviewer<TTimesheet>
@@ -38,7 +49,9 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
     [
         .. ReviewDaysCount(timesheet),
         .. ReviewOvertime(timesheet),
-        .. ReviewUndertime(timesheet)
+        .. ReviewUndertime(timesheet),
+        .. ReviewWeeklyWorkHours(timesheet),
+        .. ReviewRestBetweenWorkDays(timesheet)
     ];
 
     private static IEnumerable<DayIssue> ReviewDay(AttendanceDay day) =>
@@ -97,6 +110,71 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         }
     }
 
+    private static IEnumerable<TimesheetIssue> ReviewWeeklyWorkHours(AttendanceTimesheet timesheet)
+    {
+        List<AttendanceDay> orderedWorkDays = timesheet.Days
+            .Where(d => d.IsWorkDay)
+            .OrderBy(d => d.Date)
+            .ToList();
+
+        decimal weeklyLimit = TimesheetLimits.StandardWeeklyWorkHours * timesheet.Workload;
+        var weeks = orderedWorkDays.GroupBy(day => ISOWeek.GetWeekOfYear(day.Date.ToDateTime(TimeOnly.MinValue)));
+        foreach (var week in weeks)
+        {
+            decimal weekTotalHours = week.Sum(d => d.HoursWithoutBreak);
+            if (weekTotalHours > weeklyLimit)
+            {
+                yield return new TimesheetIssue(
+                    Code: "ERR-COM-04",
+                    Type: IssueType.Error,
+                    Description: $"V týdnu {week.Key} bylo odpracováno {weekTotalHours:F1} h, což překračuje zákonný limit {weeklyLimit:F1} h při úvazku {timesheet.Workload:P0}."
+                );
+            }
+        }
+    }
+
+    private static IEnumerable<TimesheetIssue> ReviewRestBetweenWorkDays(AttendanceTimesheet timesheet)
+    {
+        List<AttendanceDay> orderedDays = timesheet.Days
+            .Where(day => day.IsWorkDay && day.ClockIn is not null && day.ClockOut is not null)
+            .OrderBy(day => day.Date)
+            .ToList();
+
+        for (int i = 1; i < orderedDays.Count; i++)
+        {
+            AttendanceDay previous = orderedDays[i - 1];
+            AttendanceDay current = orderedDays[i];
+
+            // Přeskočit, pokud dny nejsou po sobě (např. je mezi nimi víkend/svátek/volno)
+            if ((current.Date.DayNumber - previous.Date.DayNumber) > 1)
+            {
+                continue;
+            }
+
+            DateTime previousEnd = previous.Date.ToDateTime(previous.ClockOut!.Value);
+            DateTime currentStart = current.Date.ToDateTime(current.ClockIn!.Value);
+
+            // Korekce přes půlnoc, pro případy jako je tento:
+            // previousEnd = 2024-10-01 02:00
+            // currentStart = 2024-10-02 10:00
+            // V tomto případě jde o to, že ve 02:00 ráno už byl další den, tedy 2024-10-02.
+            if (currentStart < previousEnd)
+            {
+                currentStart = currentStart.AddDays(1);
+            }
+
+            decimal restHours = (decimal)(currentStart - previousEnd).TotalHours;
+            if (restHours < TimesheetLimits.MinRestBetweenShiftsHours)
+            {
+                yield return new TimesheetIssue(
+                    Code: "ERR-COM-05",
+                    Type: IssueType.Error,
+                    Description: $"Mezi dny {previous.Date:dd.MM.} ({previous.ClockOut:HH\\:mm}) a {current.Date:dd.MM.} ({current.ClockIn:HH\\:mm}) není zajištěn minimální odpočinek 11 hodin (pouze {restHours:F1} h)."
+                );
+            }
+        }
+    }
+
     private static IEnumerable<DayIssue> ReviewWorkOnFreeDay(AttendanceDay day)
     {
         bool hasClockIn = day.ClockIn is not null;
@@ -108,7 +186,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             yield return new DayIssue
             (
                 Code: "WAR-ATT-01",
-                Severity: IssueType.Warning,
+                Type: IssueType.Warning,
                 Description: "Vyplněn příchod a/nebo odchod ve dni, kdy není uvedena pracovní povinnost.",
                 Day: day.Date.Day,
                 Field: nameof(day.ClockIn)
@@ -122,7 +200,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         {
             yield return new DayIssue(
                 Code: "WAR-ATT-02A",
-                Severity: IssueType.Warning,
+                Type: IssueType.Warning,
                 Description: "Odpracovaný čas za den je vyšší než denní pracovní povinnost.",
                 Day: day.Date.Day,
                 Field: nameof(day.HoursWithoutBreak)
@@ -136,7 +214,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         {
             yield return new DayIssue(
                 Code: "WAR-ATT-02B",
-                Severity: IssueType.Warning,
+                Type: IssueType.Warning,
                 Description: "Odpracovaný čas za den je nižší než denní pracovní povinnost.",
                 Day: day.Date.Day,
                 Field: nameof(day.HoursWithoutBreak)
@@ -157,7 +235,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             yield return new DayIssue
             (
                 Code: "WAR-ATT-04",
-                Severity: IssueType.Warning,
+                Type: IssueType.Warning,
                 Description: "Pracovní doba spadá do nočního intervalu (22:00 – 05:59).",
                 Day: day.Date.Day,
                 Field: nameof(day.ClockIn)
@@ -175,7 +253,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             yield return new DayIssue
             (
                 Code: "WAR-ATT-05",
-                Severity: IssueType.Warning,
+                Type: IssueType.Warning,
                 Description: "Zadána přestávka, ale chybí příchod nebo odchod.",
                 Day: day.Date.Day,
                 Field: nameof(day.BreakStart)
@@ -190,7 +268,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             yield return new DayIssue
             (
                 Code: "ERR-ATT-01",
-                Severity: IssueType.Error,
+                Type: IssueType.Error,
                 Description: "Není uvedena denní pracovní povinnost pro pracovní den.",
                 Day: day.Date.Day,
                 Field: nameof(day.HoursObligation)
@@ -205,7 +283,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             yield return new DayIssue
             (
                 Code: "ERR-ATT-02",
-                Severity: IssueType.Error,
+                Type: IssueType.Error,
                 Description: "Čas odchodu je dřívější nebo stejný jako příchod.",
                 Day: day.Date.Day,
                 Field: nameof(day.ClockOut)
@@ -220,7 +298,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             yield return new DayIssue
             (
                 Code: "ERR-ATT-03",
-                Severity: IssueType.Error,
+                Type: IssueType.Error,
                 Description: "Není vyplněn čas příchodu.",
                 Day: day.Date.Day,
                 Field: nameof(day.ClockIn)
@@ -235,7 +313,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             yield return new DayIssue
             (
                 Code: "ERR-ATT-04",
-                Severity: IssueType.Error,
+                Type: IssueType.Error,
                 Description: "Není vyplněn čas odchodu.",
                 Day: day.Date.Day,
                 Field: nameof(day.ClockOut)
@@ -250,11 +328,46 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             yield return new DayIssue
             (
                 Code: "ERR-ATT-05",
-                Severity: IssueType.Error,
+                Type: IssueType.Error,
                 Description: "Odpracovaný čas za den překračuje 12 hodin.",
                 Day: day.Date.Day,
                 Field: nameof(day.HoursWithoutBreak)
             );
+        }
+    }
+
+    private static IEnumerable<DayIssue> ReviewMissingBreak(AttendanceDay day)
+    {
+        if (day.IsWorkDay && day.ClockIn is not null && day.ClockOut is not null)
+        {
+            if (day.HoursWithoutBreak > TimesheetLimits.MaxContinuousWorkBeforeBreakHours && day.BreakStart is null)
+            {
+                yield return new DayIssue(
+                    Code: "ERR-ATT-06",
+                    Type: IssueType.Error,
+                    Description: $"Chybí povinná přestávka po nejdéle {TimesheetLimits.MaxContinuousWorkBeforeBreakHours} hodinách práce.",
+                    Day: day.Date.Day,
+                    Field: nameof(day.BreakStart)
+                );
+            }
+        }
+    }
+
+    private static IEnumerable<DayIssue> ReviewLateBreak(AttendanceDay day)
+    {
+        if (day.IsWorkDay && day.ClockIn is not null && day.BreakStart is not null)
+        {
+            decimal hoursWorkedBeforeBreak = (decimal)(day.BreakStart.Value - day.ClockIn.Value).TotalHours;
+            if (hoursWorkedBeforeBreak > TimesheetLimits.MaxContinuousWorkBeforeBreakHours)
+            {
+                yield return new DayIssue(
+                    Code: "ERR-ATT-07",
+                    Type: IssueType.Error,
+                    Description: $"Přestávka začíná až po {TimesheetLimits.MaxContinuousWorkBeforeBreakHours:F1} hodinách, což překračuje zákonný limit {TimesheetLimits.MaxContinuousWorkBeforeBreakHours} h.",
+                    Day: day.Date.Day,
+                    Field: nameof(day.BreakStart)
+                );
+            }
         }
     }
 }
