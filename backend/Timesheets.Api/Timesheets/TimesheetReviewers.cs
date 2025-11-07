@@ -29,9 +29,148 @@ file static class TimesheetLimits
     public const decimal StandardWorkdayHours = 8;
 }
 
-public interface ITimesheetReviewer<TTimesheet>
+public interface ITimesheetReviewer<T> where T : ITimesheet
 {
-    TimesheetReview Review(TTimesheet timesheet);
+    TimesheetReview Review(T timesheet);
+}
+
+public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimesheet>
+{
+    public TimesheetReview Review(CombinedTimesheet timesheet)
+    {
+        return new TimesheetReview
+        {
+            Issues = ReviewTimesheet(timesheet),
+            DayIssues = timesheet.Days.SelectMany(ReviewDay)
+        };
+    }
+
+    private static IEnumerable<TimesheetIssue> ReviewTimesheet(CombinedTimesheet timesheet) =>
+    [
+        .. ReviewOvertime(timesheet),
+        .. ReviewUndertime(timesheet),
+        .. ReviewWeeklyWorkHours(timesheet)
+    ];
+
+    private static IEnumerable<DayIssue> ReviewDay(CombinedDay day) =>
+    [
+        .. ReviewOvertime(day),
+        .. ReviewUndertime(day),
+        .. ReviewTooLongWorkday(day),
+        .. ReviewWorkOnFreeDay(day)
+    ];
+
+    private static IEnumerable<TimesheetIssue> ReviewOvertime(CombinedTimesheet timesheet)
+    {
+        if (timesheet.TotalHours > timesheet.TotalHoursObligation)
+        {
+            yield return new TimesheetIssue
+            (
+                Code: "ERR-COM-02",
+                Type: IssueType.Error,
+                Description: "Celková pracovní doba za měsíc přesahuje součet denních povinností."
+            );
+        }
+    }
+
+    private static IEnumerable<TimesheetIssue> ReviewUndertime(CombinedTimesheet timesheet)
+    {
+        if (timesheet.TotalHours < timesheet.TotalHoursObligation)
+        {
+            yield return new TimesheetIssue
+            (
+                Code: "ERR-COM-03",
+                Type: IssueType.Error,
+                Description: "Celková pracovní doba za měsíc je nižší než součet denních povinností."
+            );
+        }
+    }
+
+    private static IEnumerable<TimesheetIssue> ReviewWeeklyWorkHours(CombinedTimesheet timesheet)
+    {
+        List<CombinedDay> orderedWorkDays = timesheet.Days
+            .Where(d => d.IsWorkDay)
+            .OrderBy(d => d.Date)
+            .ToList();
+
+        decimal weeklyLimit = TimesheetLimits.StandardWeeklyWorkHours * timesheet.TotalWorkload;
+
+        var weeks = orderedWorkDays.GroupBy(d => ISOWeek.GetWeekOfYear(d.Date.ToDateTime(TimeOnly.MinValue)));
+        foreach (var week in weeks)
+        {
+            decimal weekTotalHours = week.Sum(day => day.TotalHours);
+            if (weekTotalHours > weeklyLimit)
+            {
+                yield return new TimesheetIssue(
+                    Code: "ERR-COM-04",
+                    Type: IssueType.Error,
+                    Description:
+                        $"V týdnu {week.Key} bylo odpracováno {weekTotalHours:F1} h, " +
+                        $"což překračuje zákonný limit {weeklyLimit:F1} h při celkovém úvazku {timesheet.TotalWorkload:P0}."
+                );
+            }
+        }
+    }
+
+    private static IEnumerable<DayIssue> ReviewOvertime(CombinedDay day)
+    {
+        if (day.IsWorkDay && day.TotalHours > day.TotalHoursObligation)
+        {
+            yield return new DayIssue(
+                Code: "WAR-ATT-02A",
+                Type: IssueType.Warning,
+                Description: "Odpracovaný čas za den je vyšší než denní pracovní povinnost.",
+                Day: day.Date.Day,
+                Field: nameof(day.TotalHours)
+            );
+        }
+    }
+
+    private static IEnumerable<DayIssue> ReviewUndertime(CombinedDay day)
+    {
+        if (day.IsWorkDay && day.TotalHours < day.TotalHoursObligation)
+        {
+            yield return new DayIssue(
+                Code: "WAR-ATT-02B",
+                Type: IssueType.Warning,
+                Description: "Odpracovaný čas za den je nižší než denní pracovní povinnost.",
+                Day: day.Date.Day,
+                Field: nameof(day.TotalHours)
+            );
+        }
+    }
+
+    private static IEnumerable<DayIssue> ReviewTooLongWorkday(CombinedDay day)
+    {
+        if (day.IsWorkDay && day.TotalHours is > TimesheetLimits.MaxWorkShiftHours)
+        {
+            yield return new DayIssue
+            (
+                Code: "ERR-ATT-05",
+                Type: IssueType.Error,
+                Description: $"Odpracovaný čas za den překračuje {TimesheetLimits.MaxWorkShiftHours} hodin.",
+                Day: day.Date.Day,
+                Field: nameof(day.TotalHours)
+            );
+        }
+    }
+
+    private static IEnumerable<DayIssue> ReviewWorkOnFreeDay(CombinedDay day)
+    {
+        bool noObligation = day.TotalHoursObligation == 0m;
+        bool worked = day.TotalHours > 0m;
+
+        if (noObligation && worked)
+        {
+            yield return new DayIssue(
+                Code: "WAR-COM-01",
+                Type: IssueType.Warning,
+                Description: "Evidována práce ve dni, kdy není uvedena žádná pracovní povinnost.",
+                Day: day.Date.Day,
+                Field: nameof(day.TotalHours)
+            );
+        }
+    }
 }
 
 public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceTimesheet>
@@ -47,91 +186,20 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<TimesheetIssue> ReviewTimesheet(AttendanceTimesheet timesheet) =>
     [
-        .. ReviewDaysCount(timesheet),
-        .. ReviewOvertime(timesheet),
-        .. ReviewUndertime(timesheet),
-        .. ReviewWeeklyWorkHours(timesheet),
-        .. ReviewRestBetweenWorkDays(timesheet)
+        .. ReviewRestBetweenWorkDays(timesheet),
     ];
 
     private static IEnumerable<DayIssue> ReviewDay(AttendanceDay day) =>
     [
-        .. ReviewWorkOnFreeDay(day),
-        .. ReviewOvertime(day),
-        .. ReviewUndertime(day),
         .. ReviewNightShift(day),
         .. ReviewBreakWithoutClockTimes(day),
         .. ReviewDayHoursObligation(day),
         .. ReviewClockOutBeforeClockIn(day),
         .. ReviewMissingClockIn(day),
         .. ReviewMissingClockOut(day),
-        .. ReviewTooLongWorkday(day)
+        .. ReviewMissingBreak(day),
+        .. ReviewLateBreak(day)
     ];
-
-    private static IEnumerable<TimesheetIssue> ReviewDaysCount(AttendanceTimesheet timesheet)
-    {
-        int expectedDays = DateTime.DaysInMonth(timesheet.Year, timesheet.Month);
-        int actualDays = timesheet.Days.Count;
-
-        if (actualDays != expectedDays)
-        {
-            yield return new TimesheetIssue
-            (
-                Code: "ERR-COM-01",
-                Type: IssueType.Error,
-                Description: "Počet záznamů v tabulce neodpovídá počtu dnů v měsíci."
-            );
-        }
-    }
-
-    private static IEnumerable<TimesheetIssue> ReviewOvertime(AttendanceTimesheet timesheet)
-    {
-        if (timesheet.TotalHoursWithoutBreak > timesheet.TotalHoursObligation)
-        {
-            yield return new TimesheetIssue
-            (
-                Code: "ERR-COM-02",
-                Type: IssueType.Error,
-                Description: "Celková pracovní doba za měsíc přesahuje součet denních povinností."
-            );
-        }
-    }
-
-    private static IEnumerable<TimesheetIssue> ReviewUndertime(AttendanceTimesheet timesheet)
-    {
-        if (timesheet.TotalHoursWithoutBreak < timesheet.TotalHoursObligation)
-        {
-            yield return new TimesheetIssue
-            (
-                Code: "ERR-COM-03",
-                Type: IssueType.Error,
-                Description: "Celková pracovní doba za měsíc je nižší než součet denních povinností."
-            );
-        }
-    }
-
-    private static IEnumerable<TimesheetIssue> ReviewWeeklyWorkHours(AttendanceTimesheet timesheet)
-    {
-        List<AttendanceDay> orderedWorkDays = timesheet.Days
-            .Where(d => d.IsWorkDay)
-            .OrderBy(d => d.Date)
-            .ToList();
-
-        decimal weeklyLimit = TimesheetLimits.StandardWeeklyWorkHours * timesheet.Workload;
-        var weeks = orderedWorkDays.GroupBy(day => ISOWeek.GetWeekOfYear(day.Date.ToDateTime(TimeOnly.MinValue)));
-        foreach (var week in weeks)
-        {
-            decimal weekTotalHours = week.Sum(d => d.HoursWithoutBreak);
-            if (weekTotalHours > weeklyLimit)
-            {
-                yield return new TimesheetIssue(
-                    Code: "ERR-COM-04",
-                    Type: IssueType.Error,
-                    Description: $"V týdnu {week.Key} bylo odpracováno {weekTotalHours:F1} h, což překračuje zákonný limit {weeklyLimit:F1} h při úvazku {timesheet.Workload:P0}."
-                );
-            }
-        }
-    }
 
     private static IEnumerable<TimesheetIssue> ReviewRestBetweenWorkDays(AttendanceTimesheet timesheet)
     {
@@ -172,53 +240,6 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
                     Description: $"Mezi dny {previous.Date:dd.MM.} ({previous.ClockOut:HH\\:mm}) a {current.Date:dd.MM.} ({current.ClockIn:HH\\:mm}) není zajištěn minimální odpočinek {TimesheetLimits.MinRestBetweenShiftsHours} hodin (pouze {restHours:F1} h)."
                 );
             }
-        }
-    }
-
-    private static IEnumerable<DayIssue> ReviewWorkOnFreeDay(AttendanceDay day)
-    {
-        bool hasClockIn = day.ClockIn is not null;
-        bool hasClockOut = day.ClockOut is not null;
-        bool noObligation = day.HoursObligation is 0;
-
-        if (noObligation && (hasClockIn || hasClockOut))
-        {
-            yield return new DayIssue
-            (
-                Code: "WAR-ATT-01",
-                Type: IssueType.Warning,
-                Description: "Vyplněn příchod a/nebo odchod ve dni, kdy není uvedena pracovní povinnost.",
-                Day: day.Date.Day,
-                Field: nameof(day.ClockIn)
-            );
-        }
-    }
-
-    private static IEnumerable<DayIssue> ReviewOvertime(AttendanceDay day)
-    {
-        if (day.IsWorkDay && day.HoursWithoutBreak > day.HoursObligation)
-        {
-            yield return new DayIssue(
-                Code: "WAR-ATT-02A",
-                Type: IssueType.Warning,
-                Description: "Odpracovaný čas za den je vyšší než denní pracovní povinnost.",
-                Day: day.Date.Day,
-                Field: nameof(day.HoursWithoutBreak)
-            );
-        }
-    }
-
-    private static IEnumerable<DayIssue> ReviewUndertime(AttendanceDay day)
-    {
-        if (day.IsWorkDay && day.HoursWithoutBreak < day.HoursObligation)
-        {
-            yield return new DayIssue(
-                Code: "WAR-ATT-02B",
-                Type: IssueType.Warning,
-                Description: "Odpracovaný čas za den je nižší než denní pracovní povinnost.",
-                Day: day.Date.Day,
-                Field: nameof(day.HoursWithoutBreak)
-            );
         }
     }
 
@@ -263,7 +284,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewDayHoursObligation(AttendanceDay day)
     {
-        if (day.IsWorkDay && day.HoursObligation is 0)
+        if (day.IsWorkDay && day.TotalHoursObligation is 0)
         {
             yield return new DayIssue
             (
@@ -271,7 +292,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
                 Type: IssueType.Error,
                 Description: "Není uvedena denní pracovní povinnost pro pracovní den.",
                 Day: day.Date.Day,
-                Field: nameof(day.HoursObligation)
+                Field: nameof(day.TotalHoursObligation)
             );
         }
     }
@@ -321,26 +342,11 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         }
     }
 
-    private static IEnumerable<DayIssue> ReviewTooLongWorkday(AttendanceDay day)
-    {
-        if (day.IsWorkDay && day.HoursWithoutBreak is > 12)
-        {
-            yield return new DayIssue
-            (
-                Code: "ERR-ATT-05",
-                Type: IssueType.Error,
-                Description: "Odpracovaný čas za den překračuje 12 hodin.",
-                Day: day.Date.Day,
-                Field: nameof(day.HoursWithoutBreak)
-            );
-        }
-    }
-
     private static IEnumerable<DayIssue> ReviewMissingBreak(AttendanceDay day)
     {
         if (day.IsWorkDay && day.ClockIn is not null && day.ClockOut is not null)
         {
-            if (day.HoursWithoutBreak > TimesheetLimits.MaxContinuousWorkBeforeBreakHours && day.BreakStart is null)
+            if (day.TotalHours > TimesheetLimits.MaxContinuousWorkBeforeBreakHours && day.BreakStart is null)
             {
                 yield return new DayIssue(
                     Code: "ERR-ATT-06",
@@ -377,5 +383,51 @@ public sealed class ProjectTimesheetReviewer : ITimesheetReviewer<ProjectTimeshe
     public TimesheetReview Review(ProjectTimesheet timesheet)
     {
         throw new NotImplementedException();
+    }
+}
+
+public sealed class ImportTimesheetReviewer : ITimesheetReviewer<ITimesheet<IDay>>
+{
+    public TimesheetReview Review(ITimesheet<IDay> timesheet)
+    {
+        return new TimesheetReview
+        {
+            Issues = ReviewTimesheet(timesheet)
+        };
+    }
+
+    private static IEnumerable<TimesheetIssue> ReviewTimesheet(ITimesheet<IDay> timesheet) =>
+    [
+        .. ReviewDaysCount(timesheet),
+        .. ReviewValidWorkload(timesheet)
+    ];
+
+    private static IEnumerable<TimesheetIssue> ReviewDaysCount(ITimesheet<IDay> timesheet)
+    {
+        int expectedDays = DateTime.DaysInMonth(timesheet.Year, timesheet.Month);
+        int actualDays = timesheet.Days.Count;
+
+        if (actualDays != expectedDays)
+        {
+            yield return new TimesheetIssue
+            (
+                Code: "",
+                Type: IssueType.Error,
+                Description: $"Počet záznamů v tabulce neodpovídá počtu dnů v měsíci {timesheet.Month}. roku {timesheet.Year}."
+            );
+        }
+    }
+
+    private static IEnumerable<TimesheetIssue> ReviewValidWorkload(ITimesheet<IDay> timesheet)
+    {
+        if (timesheet.TotalWorkload > 1m)
+        {
+            yield return new TimesheetIssue
+            (
+                Code: "",
+                Type: IssueType.Error,
+                Description: "Úvazek nesmí být vyšší než 100 %."
+            );
+        }
     }
 }
