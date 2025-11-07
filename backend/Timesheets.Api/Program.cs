@@ -11,6 +11,7 @@ builder.Services.AddSingleton<ITimesheetReader<ProjectTimesheet>, ProjectTimeshe
 builder.Services.AddSingleton<IPublicHolidayProvider, CzechPublicHolidayProvider>();
 builder.Services.AddTransient<ITimesheetImporter<AttendanceTimesheet>, AttendanceTimesheetImporter>();
 builder.Services.AddTransient<ITimesheetImporter<ProjectTimesheet>, ProjectTimesheetImporter>();
+builder.Services.AddTransient<ITimesheetReviewer<AttendanceTimesheet>, AttendanceTimesheetReviewer>();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 var app = builder.Build();
