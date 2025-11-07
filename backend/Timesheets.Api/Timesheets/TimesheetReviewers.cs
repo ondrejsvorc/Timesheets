@@ -169,7 +169,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
                 yield return new TimesheetIssue(
                     Code: "ERR-COM-05",
                     Type: IssueType.Error,
-                    Description: $"Mezi dny {previous.Date:dd.MM.} ({previous.ClockOut:HH\\:mm}) a {current.Date:dd.MM.} ({current.ClockIn:HH\\:mm}) není zajištěn minimální odpočinek 11 hodin (pouze {restHours:F1} h)."
+                    Description: $"Mezi dny {previous.Date:dd.MM.} ({previous.ClockOut:HH\\:mm}) a {current.Date:dd.MM.} ({current.ClockIn:HH\\:mm}) není zajištěn minimální odpočinek {TimesheetLimits.MinRestBetweenShiftsHours} hodin (pouze {restHours:F1} h)."
                 );
             }
         }
