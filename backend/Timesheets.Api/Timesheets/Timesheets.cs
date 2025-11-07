@@ -1,19 +1,20 @@
-﻿namespace Timesheets.Api.Timesheets;
+﻿
+namespace Timesheets.Api.Timesheets;
 
 public interface ITimesheet
 {
-    public int Year { get; init; }
-    public int Month { get; init; }
-    public decimal Workload { get; init; }
+    public int Year { get; }
+    public int Month { get; }
+    public decimal Workload { get; }
 }
 public interface ITimesheet<T> : ITimesheet where T : IDay
 {
-    public IReadOnlyList<T> Days { get; init; }
+    public IReadOnlyList<T> Days { get; }
 }
 public interface IDay
 {
-    public DateOnly Date { get; init; }
-    bool IsHoliday { get; init; }
+    public DateOnly Date { get; }
+    bool IsHoliday { get; }
     bool IsWeekend { get; }
     bool IsWorkDay { get; }
 }
@@ -110,7 +111,7 @@ public sealed record ProjectTimesheet(
 ) : ITimesheet<ProjectDay>
 {
     // TODO
-    public decimal TotalHours => Days.Sum(day => day.Hours ?? 0);
+    public decimal TotalHours => Days.Sum(day => day.Hours);
 }
 
 /// <summary>
@@ -127,7 +128,7 @@ public sealed record ProjectDay(
     string? ActivityKey,
     string? ActivityGroup,
     string? Description,
-    decimal? Hours,
+    decimal Hours,
     bool IsHoliday,
     decimal Workload
 ) : IDay

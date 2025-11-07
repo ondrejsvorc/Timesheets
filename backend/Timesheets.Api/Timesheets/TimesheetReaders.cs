@@ -157,7 +157,7 @@ public sealed partial class ProjectTimesheetReader(ICellParser cellParser) : ITi
             string? description = cellParser.ParseString(sheet.Cell($"D{rowNum}"));
 
             // Počet hodin
-            decimal? hours = cellParser.ParseDecimal(sheet.Cell($"O{rowNum}"));
+            decimal hours = cellParser.ParseDecimal(sheet.Cell($"O{rowNum}")) ?? 0;
 
             var row = new ProjectDay
             (
