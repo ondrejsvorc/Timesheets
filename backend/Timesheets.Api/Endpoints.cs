@@ -22,7 +22,8 @@ public static class Endpoints
 
         endpoints
             .MapEndpoint<ImportAttendanceTimesheet>()
-            .MapEndpoint<ImportProjectTimesheet>();
+            .MapEndpoint<ImportProjectTimesheet>()
+            .MapEndpoint<ReviewAttendanceTimesheet>();
     }
 
     private static IEndpointRouteBuilder MapEndpoint<TEndpoint>(this IEndpointRouteBuilder app) where TEndpoint : IEndpoint
