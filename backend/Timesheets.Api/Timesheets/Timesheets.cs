@@ -101,7 +101,7 @@ public sealed record AttendanceDay(
 ) : IDay
 {
     public bool IsWeekend => TimesheetLogic.IsWeekend(this);
-    public bool IsWorkday => TimesheetLogic.IsWorkDay(this);
+    public bool IsWorkday => TimesheetLogic.IsWorkday(this);
 
     public decimal TotalWorkload => Workload;
     public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(this);
@@ -157,7 +157,7 @@ public sealed record ProjectDay(
 ) : IDay
 {
     public bool IsWeekend => TimesheetLogic.IsWeekend(this);
-    public bool IsWorkday => TimesheetLogic.IsWorkDay(this);
+    public bool IsWorkday => TimesheetLogic.IsWorkday(this);
 
     public decimal TotalWorkload => Workload;
     public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(this);
@@ -169,9 +169,9 @@ file static class TimesheetLogic
     private const decimal StandardWorkdayHours = 8m;
 
     public static bool IsWeekend(IDay day) => day.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-    public static bool IsWorkDay(IDay day) => !IsWeekend(day) && !day.IsHoliday;
+    public static bool IsWorkday(IDay day) => !IsWeekend(day) && !day.IsHoliday;
 
-    public static decimal CalculateTotalHoursObligation(IDay day) => IsWorkDay(day) ? Normalize(StandardWorkdayHours * day.TotalWorkload) : 0m;
+    public static decimal CalculateTotalHoursObligation(IDay day) => IsWorkday(day) ? Normalize(StandardWorkdayHours * day.TotalWorkload) : 0m;
     public static decimal CalculateTotalHoursObligation(IEnumerable<IDay> days) => days.Sum(day => day.TotalHoursObligation);
 
     public static decimal CalculateTotalHours(IEnumerable<IDay> days) => days.Sum(day => day.TotalHours);
