@@ -2,6 +2,11 @@
 
 namespace Timesheets.Api.Timesheets;
 
+// TODO: Placené svátky
+// TODO: Práce o víkendu
+// TODO: Přesčasy
+// TODO: Pracovní neschopnost
+
 public enum IssueType { Warning = 0, Error = 1 }
 
 public sealed record TimesheetIssue(string Code, IssueType Type, string Description);
