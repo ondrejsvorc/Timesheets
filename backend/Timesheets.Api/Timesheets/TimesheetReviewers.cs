@@ -131,7 +131,7 @@ public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimes
     private static IEnumerable<TimesheetIssue> ReviewWeeklyWorkHours(CombinedTimesheet timesheet)
     {
         List<CombinedDay> orderedWorkDays = timesheet.Days
-            .Where(d => d.IsWorkDay)
+            .Where(d => d.IsWorkday)
             .OrderBy(d => d.Date)
             .ToList();
 
@@ -156,7 +156,7 @@ public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimes
 
     private static IEnumerable<DayIssue> ReviewOvertime(CombinedDay day)
     {
-        if (day.IsWorkDay && day.TotalHours > day.TotalHoursObligation)
+        if (day.IsWorkday && day.TotalHours > day.TotalHoursObligation)
         {
             yield return new DayIssue(
                 Code: "WAR-ATT-02A",
@@ -170,7 +170,7 @@ public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimes
 
     private static IEnumerable<DayIssue> ReviewUndertime(CombinedDay day)
     {
-        if (day.IsWorkDay && day.TotalHours < day.TotalHoursObligation)
+        if (day.IsWorkday && day.TotalHours < day.TotalHoursObligation)
         {
             yield return new DayIssue(
                 Code: "WAR-ATT-02B",
@@ -184,7 +184,7 @@ public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimes
 
     private static IEnumerable<DayIssue> ReviewTooLongWorkday(CombinedDay day)
     {
-        if (day.IsWorkDay && day.TotalHours is > TimesheetLimits.MaxWorkShiftHours)
+        if (day.IsWorkday && day.TotalHours is > TimesheetLimits.MaxWorkShiftHours)
         {
             yield return new DayIssue
             (
@@ -247,7 +247,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
     private static IEnumerable<TimesheetIssue> ReviewRestBetweenWorkDays(AttendanceTimesheet timesheet)
     {
         List<AttendanceDay> orderedDays = timesheet.Days
-            .Where(day => day.IsWorkDay && day.ClockIn is not null && day.ClockOut is not null)
+            .Where(day => day.IsWorkday && day.ClockIn is not null && day.ClockOut is not null)
             .OrderBy(day => day.Date)
             .ToList();
 
@@ -294,7 +294,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         bool clockInStartsAtNight = day.ClockIn >= nightStart || day.ClockIn <= nightEnd;
         bool clockOutEndsAtNight = day.ClockOut >= nightStart || day.ClockOut <= nightEnd;
 
-        if (day.IsWorkDay && (day.ClockIn is not null || day.ClockOut is not null) && (clockInStartsAtNight || clockOutEndsAtNight))
+        if (day.IsWorkday && (day.ClockIn is not null || day.ClockOut is not null) && (clockInStartsAtNight || clockOutEndsAtNight))
         {
             yield return new DayIssue
             (
@@ -312,7 +312,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         bool hasBreak = day.BreakStart is not null || day.BreakEnd is not null;
         bool missingClockBoundary = day.ClockIn is null || day.ClockOut is null;
 
-        if (day.IsWorkDay && hasBreak && missingClockBoundary)
+        if (day.IsWorkday && hasBreak && missingClockBoundary)
         {
             yield return new DayIssue
             (
@@ -327,7 +327,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewDayHoursObligation(AttendanceDay day)
     {
-        if (day.IsWorkDay && day.TotalHoursObligation is 0)
+        if (day.IsWorkday && day.TotalHoursObligation is 0)
         {
             yield return new DayIssue
             (
@@ -342,7 +342,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewClockOutBeforeClockIn(AttendanceDay day)
     {
-        if (day.IsWorkDay && day.ClockOut <= day.ClockIn)
+        if (day.IsWorkday && day.ClockOut <= day.ClockIn)
         {
             yield return new DayIssue
             (
@@ -357,7 +357,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewMissingClockIn(AttendanceDay day)
     {
-        if (day.IsWorkDay && day.ClockIn is null)
+        if (day.IsWorkday && day.ClockIn is null)
         {
             yield return new DayIssue
             (
@@ -372,7 +372,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewMissingClockOut(AttendanceDay day)
     {
-        if (day.IsWorkDay && day.ClockOut is null)
+        if (day.IsWorkday && day.ClockOut is null)
         {
             yield return new DayIssue
             (
@@ -387,7 +387,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewMissingBreak(AttendanceDay day)
     {
-        if (day.IsWorkDay && day.ClockIn is not null && day.ClockOut is not null)
+        if (day.IsWorkday && day.ClockIn is not null && day.ClockOut is not null)
         {
             if (day.TotalHours > TimesheetLimits.MaxContinuousWorkBeforeBreakHours && day.BreakStart is null)
             {
@@ -404,7 +404,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewLateBreak(AttendanceDay day)
     {
-        if (day.IsWorkDay && day.ClockIn is not null && day.BreakStart is not null)
+        if (day.IsWorkday && day.ClockIn is not null && day.BreakStart is not null)
         {
             decimal hoursWorkedBeforeBreak = (decimal)(day.BreakStart.Value - day.ClockIn.Value).TotalHours;
             if (hoursWorkedBeforeBreak > TimesheetLimits.MaxContinuousWorkBeforeBreakHours)
@@ -422,7 +422,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewShortBreak(AttendanceDay day)
     {
-        if (day.IsWorkDay && day.BreakStart is not null && day.BreakEnd is not null)
+        if (day.IsWorkday && day.BreakStart is not null && day.BreakEnd is not null)
         {
             decimal breakDuration = (decimal)(day.BreakEnd.Value - day.BreakStart.Value).TotalHours;
             if (breakDuration < TimesheetLimits.MinBreakDurationHours)

@@ -20,7 +20,7 @@ public interface IDay : IHasWorkSummary
     public DateOnly Date { get; }
     bool IsHoliday { get; }
     bool IsWeekend { get; }
-    bool IsWorkDay { get; }
+    bool IsWorkday { get; }
 }
 
 public sealed record CombinedTimesheet(
@@ -48,7 +48,7 @@ public sealed record CombinedDay(
     public DateOnly Date => Attendance.Date;
     public bool IsHoliday => Attendance.IsHoliday;
     public bool IsWeekend => Attendance.IsWeekend;
-    public bool IsWorkDay => Attendance.IsWorkDay;
+    public bool IsWorkday => Attendance.IsWorkday;
 
     public decimal TotalWorkload => Attendance.Workload + Projects.Sum(project => project.Workload);
     public decimal TotalHours => Attendance.TotalHours + Projects.Sum(project => project.Hours);
@@ -101,7 +101,7 @@ public sealed record AttendanceDay(
 ) : IDay
 {
     public bool IsWeekend => TimesheetLogic.IsWeekend(this);
-    public bool IsWorkDay => TimesheetLogic.IsWorkDay(this);
+    public bool IsWorkday => TimesheetLogic.IsWorkDay(this);
 
     public decimal TotalWorkload => Workload;
     public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(this);
@@ -157,7 +157,7 @@ public sealed record ProjectDay(
 ) : IDay
 {
     public bool IsWeekend => TimesheetLogic.IsWeekend(this);
-    public bool IsWorkDay => TimesheetLogic.IsWorkDay(this);
+    public bool IsWorkday => TimesheetLogic.IsWorkDay(this);
 
     public decimal TotalWorkload => Workload;
     public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(this);
