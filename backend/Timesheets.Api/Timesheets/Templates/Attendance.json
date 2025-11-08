@@ -1,0 +1,128 @@
+{
+  "Metadata": {
+    "Type": "Attendance",
+    "CreatedAt": "2025-08-10",
+    "DeprecatedAt": null
+  },
+  "Cells": [
+    {
+      "Key": "A1",
+      "Field": "EmployeePersonalNumber",
+      "InputDatatype": "string",
+      "OutputDatatype": "int",
+      "InputExample": "2002 Novák Jan, Ing. DiS.",
+      "OutputExample": "2002",
+      "Pattern": "^(\\d+)",
+      "IsRequired": true
+    },
+    {
+      "Key": "A1",
+      "Field": "EmployeeName",
+      "InputDatatype": "string",
+      "OutputDatatype": "string",
+      "InputExample": "2002 Novák Jan, Ing. DiS.",
+      "OutputExample": "Novák Jan, Ing. DiS.",
+      "Pattern": "\\d+\\s+(.+)$",
+      "IsRequired": true
+    },
+    {
+      "Key": "A2",
+      "Field": "Workload",
+      "InputDatatype": "string",
+      "OutputDatatype": "decimal",
+      "InputExample": "Novák Jan, v období 01.10.2024 - 01.11.2024 č.0 prac. 22250 - 100%;",
+      "OutputExample": "100",
+      "Pattern": "(\\d+)\\s*%",
+      "IsRequired": false,
+      "DefaultValue": 1.0
+    },
+    {
+      "Key": "A2",
+      "Field": "Year",
+      "InputDatatype": "string",
+      "OutputDatatype": "int",
+      "InputExample": "Novák Jan, v období 01.10.2024 - 01.11.2024 č.0 prac. 22250 - 100%;",
+      "OutputExample": "2024",
+      "Pattern": "\\d{2}\\.\\d{2}\\.(\\d{4})",
+      "IsRequired": true
+    },
+    {
+      "Key": "A2",
+      "Field": "Month",
+      "InputDatatype": "string",
+      "OutputDatatype": "int",
+      "InputExample": "Novák Jan, v období 01.10.2024 - 01.11.2024 č.0 prac. 22250 - 100%;",
+      "OutputExample": "10",
+      "Pattern": "\\d{2}\\.(\\d{2})\\.\\d{4}",
+      "IsRequired": true
+    }
+  ],
+  "Ranges": [
+    {
+      "Start": "A5",
+      "End": "LastDayOfMonth",
+      "Field": "Date",
+      "InputDatatype": "string",
+      "OutputDatatype": "date",
+      "InputExample": "03.10.2024 Čtvrtek",
+      "OutputExample": "03.10.2024",
+      "Pattern": "\\d{1,2}\\.\\d{1,2}\\.\\d{4}",
+      "IsRequired": true
+    },
+    {
+      "Start": "B5",
+      "End": "LastDayOfMonth",
+      "Field": "ClockIn",
+      "InputDatatype": "string",
+      "OutputDatatype": "time",
+      "InputExample": "6:00",
+      "OutputExample": "6:00",
+      "Pattern": "\\d{1,2}:\\d{2}",
+      "IsRequired": false
+    },
+    {
+      "Start": "C5",
+      "End": "LastDayOfMonth",
+      "Field": "ClockOut",
+      "InputDatatype": "string",
+      "OutputDatatype": "time",
+      "InputExample": "14:00",
+      "OutputExample": "14:00",
+      "Pattern": "\\d{1,2}:\\d{2}",
+      "IsRequired": false
+    },
+    {
+      "Start": "D5",
+      "End": "LastDayOfMonth",
+      "Field": "BreakStart",
+      "InputDatatype": "string",
+      "OutputDatatype": "time",
+      "InputExample": "10:45",
+      "OutputExample": "10:45",
+      "Pattern": "\\d{1,2}:\\d{2}",
+      "IsRequired": false
+    },
+    {
+      "Start": "E5",
+      "End": "LastDayOfMonth",
+      "Field": "BreakEnd",
+      "InputDatatype": "string",
+      "OutputDatatype": "time",
+      "InputExample": "11:15",
+      "OutputExample": "11:15",
+      "Pattern": "\\d{1,2}:\\d{2}",
+      "IsRequired": false
+    },
+    {
+      "Start": "F5",
+      "End": "LastDayOfMonth",
+      "Field": "OtherInterruption",
+      "InputDatatype": "string",
+      "OutputDatatype": "string",
+      "InputExample": "SCT (0)",
+      "OutputExample": "SCT (0)",
+      "Pattern": "^[A-Z]{1,3}.*",
+      "IsRequired": false
+    }
+  ]
+}
