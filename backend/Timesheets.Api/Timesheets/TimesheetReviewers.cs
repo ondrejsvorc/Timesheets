@@ -21,12 +21,49 @@ public sealed class TimesheetReview
 
 file static class TimesheetLimits
 {
+    /// <summary>
+    /// Zákon č. 262/2006 Sb., zákoník práce — § 88 odst. 1
+    /// Přestávka nejpozději po 6 hodinách nepřetržité práce.
+    /// </summary>
     public const decimal MaxContinuousWorkBeforeBreakHours = 6;
+
+    /// <summary>
+    /// Zákon č. 262/2006 Sb., zákoník práce — § 83 odst. 4
+    /// Délka směny nesmí přesáhnout 12 hodin.
+    /// </summary>
     public const decimal MaxWorkShiftHours = 12;
+
+    /// <summary>
+    /// Zákon č. 262/2006 Sb., zákoník práce — § 90 odst. 1
+    /// Minimální odpočinek mezi koncem a začátkem směny činí alespoň 11 hodin.
+    /// </summary>
     public const decimal MinRestBetweenShiftsHours = 11;
+
+    /// <summary>
+    /// Zákon č. 262/2006 Sb., zákoník práce — § 92 odst. 1
+    /// Nepřetržitý odpočinek v týdnu musí činit alespoň 35 hodin.
+    /// 24 h týdenního + 11 h denního.
+    /// </summary>
     public const decimal MinWeeklyRestHours = 35;
+
+    /// <summary>
+    /// Zákon č. 262/2006 Sb., zákoník práce - § 83 odst. 1
+    /// Stanovená týdenní pracovní doba je 40 hodin (při plném úvazku).
+    /// </summary>
     public const decimal StandardWeeklyWorkHours = 40;
+
+    /// <summary>
+    /// Zákon č. 262/2006 Sb., zákoník práce — § 79 odst. 1
+    /// Standardní denní pracovní doba činí 8 hodin (při úvazku 1,0).
+    /// </summary>
     public const decimal StandardWorkdayHours = 8;
+
+    /// <summary>
+    /// Zákon č. 262/2006 Sb., zákoník práce — § 88 odst. 1 
+    /// Minimální délka přestávky na jídlo a oddech činí 30 minut.
+    /// </summary>
+    public const decimal MinBreakDurationHours = 0.5m;
+
 }
 
 public interface ITimesheetReviewer<T> where T : ITimesheet
@@ -198,7 +235,8 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         .. ReviewMissingClockIn(day),
         .. ReviewMissingClockOut(day),
         .. ReviewMissingBreak(day),
-        .. ReviewLateBreak(day)
+        .. ReviewLateBreak(day),
+        .. ReviewShortBreak(day)
     ];
 
     private static IEnumerable<TimesheetIssue> ReviewRestBetweenWorkDays(AttendanceTimesheet timesheet)
@@ -376,6 +414,24 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             }
         }
     }
+
+    private static IEnumerable<DayIssue> ReviewShortBreak(AttendanceDay day)
+    {
+        if (day.IsWorkDay && day.BreakStart is not null && day.BreakEnd is not null)
+        {
+            decimal breakDuration = (decimal)(day.BreakEnd.Value - day.BreakStart.Value).TotalHours;
+            if (breakDuration < TimesheetLimits.MinBreakDurationHours)
+            {
+                yield return new DayIssue(
+                    Code: "ERR-ATT-08",
+                    Type: IssueType.Error,
+                    Description: $"Délka přestávky musí být alepsoň {(TimesheetLimits.MinBreakDurationHours * 60):F0} minut.",
+                    Day: day.Date.Day,
+                    Field: nameof(day.BreakEnd)
+                );
+            }
+        }
+    }
 }
 
 public sealed class ProjectTimesheetReviewer : ITimesheetReviewer<ProjectTimesheet>
@@ -399,7 +455,7 @@ public sealed class ImportTimesheetReviewer : ITimesheetReviewer<ITimesheet<IDay
     private static IEnumerable<TimesheetIssue> ReviewTimesheet(ITimesheet<IDay> timesheet) =>
     [
         .. ReviewDaysCount(timesheet),
-        .. ReviewValidWorkload(timesheet)
+        .. ReviewWorkload(timesheet)
     ];
 
     private static IEnumerable<TimesheetIssue> ReviewDaysCount(ITimesheet<IDay> timesheet)
@@ -413,20 +469,22 @@ public sealed class ImportTimesheetReviewer : ITimesheetReviewer<ITimesheet<IDay
             (
                 Code: "",
                 Type: IssueType.Error,
-                Description: $"Počet záznamů v tabulce neodpovídá počtu dnů v měsíci {timesheet.Month}. roku {timesheet.Year}."
+                Description: $"Počet dnů ve výkazu neodpovídá období výkazu {timesheet.Month}/{timesheet.Year}. Bylo nalezeno {actualDays} z očekávaných {expectedDays} dnů."
             );
         }
     }
 
-    private static IEnumerable<TimesheetIssue> ReviewValidWorkload(ITimesheet<IDay> timesheet)
+    private static IEnumerable<TimesheetIssue> ReviewWorkload(ITimesheet<IDay> timesheet)
     {
-        if (timesheet.TotalWorkload > 1m)
+        const decimal minWorkload = 0m;
+        const decimal maxWorkload = 1m;
+
+        if (timesheet.TotalWorkload < minWorkload || timesheet.TotalWorkload > maxWorkload)
         {
-            yield return new TimesheetIssue
-            (
+            yield return new TimesheetIssue(
                 Code: "",
                 Type: IssueType.Error,
-                Description: "Úvazek nesmí být vyšší než 100 %."
+                Description: $"Úvazek {timesheet.TotalWorkload:P0} je mimo povolený rozsah 0–100 %."
             );
         }
     }
