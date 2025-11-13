@@ -3,8 +3,7 @@ using Timesheets.Api;
 using Timesheets.Api.Timesheets;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options => options.CustomSchemaIds(type => type.FullName?.Replace('+', '.')));
+builder.Services.AddOpenApi();
 builder.Services.AddSingleton<ICellParser, CellParser>();
 builder.Services.AddSingleton<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();
 builder.Services.AddSingleton<ITimesheetReader<ProjectTimesheet>, ProjectTimesheetReader>();
@@ -16,8 +15,8 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi();
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Timesheets API"));
 }
 app.UseHttpsRedirection();
 app.MapEndpoints();
