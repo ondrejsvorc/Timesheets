@@ -23,6 +23,7 @@ public sealed class AttendanceTimesheetImporter(ITimesheetReader<AttendanceTimes
     }
 }
 
+[Obsolete]
 public sealed class ProjectTimesheetImporter(ITimesheetReader<ProjectTimesheet> reader, IPublicHolidayProvider provider) : ITimesheetImporter<ProjectTimesheet>
 {
     public async Task<ProjectTimesheet> ImportAsync(Stream stream)

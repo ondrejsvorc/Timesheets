@@ -5,19 +5,20 @@ using Timesheets.Api.Common.Extensions;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
 
+[Obsolete]
 public sealed class ImportProjectTimesheet : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) => app
         .MapPost("/project/import", Handle)
-        .WithSummary("Importuje výkaz projektové činnosti.")
+        .WithSummary("Create Project Timesheet")
         .DisableAntiforgery()
         .WithRequestValidation<Request>();
 
     public sealed record Request(IFormFile File);
     public sealed record Response(ProjectTimesheet Timesheet);
-    public sealed class RequestValidator : AbstractValidator<Request>
+    public sealed class Validator : AbstractValidator<Request>
     {
-        public RequestValidator()
+        public Validator()
         {
             RuleFor(x => x.File)
                 .NotNull().WithMessage("Soubor je povinný.")
