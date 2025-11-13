@@ -1,0 +1,22 @@
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Timesheets.Api.Common.Extensions;
+
+namespace Timesheets.Api.Contracts.Endpoints;
+
+public sealed class GetContract : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) =>
+        app.MapGet("/{id}", Handle)
+           .WithSummary("Get Contract")
+           .WithRequestValidation<Request>();
+
+    public sealed record Request;
+    public sealed record Response;
+    public sealed class Validator : AbstractValidator<Request> { }
+
+    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
+    }
+}
