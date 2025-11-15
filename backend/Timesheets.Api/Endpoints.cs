@@ -17,8 +17,8 @@ public static class Endpoints
         var endpoints = app.MapGroup("/api");
         endpoints.MapProjectEndpoints();
         endpoints.MapContractEndpoints();
-        endpoints.MapTimesheetEndpoints();
         endpoints.MapEmployeesEndpoints();
+        endpoints.MapTimesheetEndpoints();
     }
 
     private static void MapProjectEndpoints(this IEndpointRouteBuilder app) =>
