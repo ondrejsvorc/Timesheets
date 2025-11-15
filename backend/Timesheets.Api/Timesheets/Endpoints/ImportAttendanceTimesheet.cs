@@ -9,15 +9,15 @@ public sealed class ImportAttendanceTimesheet : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) => app
         .MapPost("/attendance/import", Handle)
-        .WithSummary("Importuje výkaz pracovní doby.")
+        .WithSummary("Create Attendance Timesheet")
         .DisableAntiforgery()
         .WithRequestValidation<Request>();
 
     public sealed record Request(IFormFile File);
     public sealed record Response(AttendanceTimesheet Timesheet);
-    public sealed class RequestValidator : AbstractValidator<Request>
+    public sealed class Validator : AbstractValidator<Request>
     {
-        public RequestValidator()
+        public Validator()
         {
             RuleFor(x => x.File)
                 .NotNull().WithMessage("Soubor je povinný.")
@@ -26,7 +26,7 @@ public sealed class ImportAttendanceTimesheet : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, BadRequest<string>>> Handle([FromForm] Request request, [FromServices] ITimesheetImporter<AttendanceTimesheet> importer)
+    private static async Task<Results<Ok<Response>, BadRequest<string>>> Handle([FromForm] Request request, [FromServices] ITimesheetImporter<AttendanceTimesheet> importer, CancellationToken cancellationToken)
     {
         await using var stream = request.File.OpenReadStream();
         AttendanceTimesheet timesheet = await importer.ImportAsync(stream);

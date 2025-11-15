@@ -95,6 +95,7 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
     }
 }
 
+[Obsolete]
 public sealed partial class ProjectTimesheetReader(ICellParser cellParser) : ITimesheetReader<ProjectTimesheet>
 {
     [GeneratedRegex(@"^(\d{2})/(\d{4})$")]
