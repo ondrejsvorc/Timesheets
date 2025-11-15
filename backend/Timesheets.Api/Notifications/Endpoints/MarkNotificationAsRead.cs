@@ -7,7 +7,7 @@ namespace Timesheets.Api.Notifications.Endpoints;
 public class MarkNotificationAsRead : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapPost("/{id:guid}/read", Handle)
+        app.MapPost("/{id}/read", Handle)
            .WithSummary("Mark Notification As Read");
 
     public sealed record Response(bool Success);
