@@ -3,7 +3,21 @@ using Timesheets.Api;
 using Timesheets.Api.Timesheets;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddOpenApi();
+
+builder.Services.AddOpenApi(options =>
+{
+    options.CreateSchemaReferenceId = info =>
+    {
+        Type type = info.Type;
+        if (type.IsGenericType)
+        {
+            Type genericArg = type.GetGenericArguments()[0];
+            return genericArg.FullName?.Replace('+', '.') + "[]";
+        }
+        return type.FullName?.Replace('+', '.');
+    };
+});
+
 builder.Services.AddSingleton<ICellParser, CellParser>();
 builder.Services.AddSingleton<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();
 builder.Services.AddSingleton<ITimesheetReader<ProjectTimesheet>, ProjectTimesheetReader>();
