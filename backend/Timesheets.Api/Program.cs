@@ -1,5 +1,6 @@
 using FluentValidation;
 using Timesheets.Api;
+using Timesheets.Api.Data;
 using Timesheets.Api.Timesheets;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,8 @@ builder.Services.AddOpenApi(options =>
         return type.FullName?.Replace('+', '.');
     };
 });
+
+builder.Services.AddDbContext<AppDbContext>();
 
 builder.Services.AddSingleton<ICellParser, CellParser>();
 builder.Services.AddSingleton<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();
