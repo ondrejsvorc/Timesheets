@@ -1,6 +1,7 @@
 using FluentValidation;
 using Timesheets.Api;
 using Timesheets.Api.Data;
+using Timesheets.Api.Notifications;
 using Timesheets.Api.Timesheets;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +29,9 @@ builder.Services.AddSingleton<IPublicHolidayProvider, CzechPublicHolidayProvider
 builder.Services.AddTransient<ITimesheetImporter<AttendanceTimesheet>, AttendanceTimesheetImporter>();
 builder.Services.AddTransient<ITimesheetImporter<ProjectTimesheet>, ProjectTimesheetImporter>();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+builder.Services.AddSignalR();
+builder.Services.AddScoped<NotificationSender>();
 
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
