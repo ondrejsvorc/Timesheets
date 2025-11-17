@@ -111,23 +111,13 @@ public sealed record AttendanceDay(
 /// <summary>
 /// Měsíční výkaz projektové činnosti.
 /// </summary>
-/// <param name="EmployeeName">Celé jméno zaměstnance, včetně titulů.</param>
 /// <param name="Year">Rok vykazovaného období.</param>
 /// <param name="Month">Měsíc vykazovaného období.</param>
-/// <param name="ProjectName">Název projektu.</param>
-/// <param name="RecipientName">Název příjemce.</param>
-/// <param name="ProjectRegistrationNumber">Registrační číslo projektu.</param>
-/// <param name="PositionName">Název pozice.</param>
 /// <param name="Workload">Úvazek.</param>
 /// <param name="Days">Dny měsíčního výkazu projektové činnosti.</param>
 public sealed record ProjectTimesheet(
-    string? EmployeeName,
     int Year,
     int Month,
-    string? ProjectName,
-    string? RecipientName,
-    string? ProjectRegistrationNumber,
-    string? PositionName,
     decimal Workload,
     IReadOnlyList<ProjectDay> Days
 ) : ITimesheet<ProjectDay>
@@ -141,16 +131,10 @@ public sealed record ProjectTimesheet(
 /// Den měsíčního výkazu projektové činnosti.
 /// </summary>
 /// <param name="Date">Datum.</param>
-/// <param name="ActivityKey">Klíčová aktivita.</param>
-/// <param name="ActivityGroup">Název skupiny činností.</param>
-/// <param name="Description">Popis činností včetně průběžných výstupů práce za daný měsíc.</param>
 /// <param name="Hours">Počet hodin.</param>
 /// <param name="IsHoliday">Určuje, zda se jedná o státní svátek.</param>
 public sealed record ProjectDay(
     DateOnly Date,
-    string? ActivityKey,
-    string? ActivityGroup,
-    string? Description,
     decimal Hours,
     bool IsHoliday,
     decimal Workload
@@ -170,8 +154,9 @@ file static class TimesheetLogic
 
     public static bool IsWeekend(IDay day) => day.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
     public static bool IsWorkday(IDay day) => !IsWeekend(day) && !day.IsHoliday;
+    public static bool HasObligation(IDay day) => !IsWeekend(day);
 
-    public static decimal CalculateTotalHoursObligation(IDay day) => IsWorkday(day) ? Normalize(StandardWorkdayHours * day.TotalWorkload) : 0m;
+    public static decimal CalculateTotalHoursObligation(IDay day) => HasObligation(day) ? Normalize(StandardWorkdayHours * day.TotalWorkload) : 0m;
     public static decimal CalculateTotalHoursObligation(IEnumerable<IDay> days) => days.Sum(day => day.TotalHoursObligation);
 
     public static decimal CalculateTotalHours(IEnumerable<IDay> days) => days.Sum(day => day.TotalHours);

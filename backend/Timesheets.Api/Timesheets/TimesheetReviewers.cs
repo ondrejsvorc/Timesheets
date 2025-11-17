@@ -7,6 +7,8 @@ namespace Timesheets.Api.Timesheets;
 // TODO: Přesčasy
 // TODO: Pracovní neschopnost
 
+// Kompenzace = vyrovnání pracovních hodin uvnitř téhož měsíce tak, aby celkově nevznikl přesčas, pokud člověk pracoval o víkendu nebo ve svátek.
+
 public enum IssueType { Warning = 0, Error = 1 }
 
 public sealed record TimesheetIssue(string Code, IssueType Type, string Description);
@@ -99,7 +101,7 @@ public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimes
         .. ReviewOvertime(day),
         .. ReviewUndertime(day),
         .. ReviewTooLongWorkday(day),
-        .. ReviewWorkOnFreeDay(day)
+        .. ReviewWeekendAndHolidayWork(day)
     ];
 
     private static IEnumerable<TimesheetIssue> ReviewOvertime(CombinedTimesheet timesheet)
@@ -197,17 +199,24 @@ public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimes
         }
     }
 
-    private static IEnumerable<DayIssue> ReviewWorkOnFreeDay(CombinedDay day)
+    private static IEnumerable<DayIssue> ReviewWeekendAndHolidayWork(CombinedDay day)
     {
-        bool noObligation = day.TotalHoursObligation == 0m;
-        bool worked = day.TotalHours > 0m;
-
-        if (noObligation && worked)
+        if (day.IsWeekend && day.TotalHours > 0)
         {
             yield return new DayIssue(
                 Code: "WAR-COM-01",
                 Type: IssueType.Warning,
-                Description: "Evidována práce ve dni, kdy není uvedena žádná pracovní povinnost.",
+                Description: "Práce evidovaná o víkendu. Očekává se, že bude kompenzována v jiném pracovním dni.",
+                Day: day.Date.Day,
+                Field: nameof(day.TotalHours)
+            );
+        }
+        else if (day.IsHoliday && day.TotalHours > 0)
+        {
+            yield return new DayIssue(
+                Code: "WAR-COM-02",
+                Type: IssueType.Warning,
+                Description: "Práce evidovaná ve státní svátek. Očekává se, že bude kompenzována v jiném pracovním dni.",
                 Day: day.Date.Day,
                 Field: nameof(day.TotalHours)
             );
