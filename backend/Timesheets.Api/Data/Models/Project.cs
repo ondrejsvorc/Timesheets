@@ -2,4 +2,5 @@
 
 public class Project
 {
+    public required Guid Id { get; set; }
 }
