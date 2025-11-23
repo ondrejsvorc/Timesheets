@@ -14,8 +14,8 @@ public sealed class UpdateProject : IEndpoint
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(Guid Id, string Name, string Identifier, DateOnly Start, DateOnly End, string Description);
-    public sealed record Response(Guid Id, string Name, string Identifier, DateOnly Start, DateOnly End, string Description);
+    public sealed record Request(Guid Id, string Name, string Identifier, DateTime Start, DateTime End, string Description);
+    public sealed record Response(Guid Id, string Name, string Identifier, DateTime Start, DateTime End, string Description);
     public sealed class Validator : AbstractValidator<Request> { }
 
     private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)

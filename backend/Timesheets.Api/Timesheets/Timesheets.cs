@@ -12,7 +12,7 @@ public interface ITimesheet<T> : ITimesheet where T : IDay
 }
 public interface IDay
 {
-    public DateOnly Date { get; init; }
+    public DateTime Date { get; init; }
     bool IsHoliday { get; init; }
     bool IsWeekend { get; }
     bool IsWorkDay { get; }
@@ -60,11 +60,11 @@ public sealed record AttendanceTimesheet(
 /// <param name="IsHoliday">Určuje, zda se jedná o státní svátek.</param>
 /// <param name="Workload">Úvazek.</param>
 public sealed record AttendanceDay(
-    DateOnly Date,
-    TimeOnly? ClockIn,
-    TimeOnly? ClockOut,
-    TimeOnly? BreakStart,
-    TimeOnly? BreakEnd,
+    DateTime Date,
+    TimeSpan? ClockIn,
+    TimeSpan? ClockOut,
+    TimeSpan? BreakStart,
+    TimeSpan? BreakEnd,
     string? OtherInterruption,
     bool IsHoliday,
     decimal Workload
@@ -123,7 +123,7 @@ public sealed record ProjectTimesheet(
 /// <param name="Hours">Počet hodin.</param>
 /// <param name="IsHoliday">Určuje, zda se jedná o státní svátek.</param>
 public sealed record ProjectDay(
-    DateOnly Date,
+    DateTime Date,
     string? ActivityKey,
     string? ActivityGroup,
     string? Description,
@@ -143,7 +143,7 @@ file static class TimesheetLogic
     public static bool IsWeekend(IDay day) => day.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
     public static bool IsWorkDay(IDay day) => !IsWeekend(day) && !day.IsHoliday;
 
-    public static decimal CalculateWorkedHours(TimeOnly? clockIn, TimeOnly? clockOut)
+    public static decimal CalculateWorkedHours(TimeSpan? clockIn, TimeSpan? clockOut)
     {
         if (clockIn is null || clockOut is null || clockOut <= clockIn)
         {
@@ -152,7 +152,7 @@ file static class TimesheetLogic
         return (decimal)(clockOut.Value - clockIn.Value).TotalHours;
     }
 
-    public static decimal CalculateBreakHours(TimeOnly? breakStart, TimeOnly? breakEnd)
+    public static decimal CalculateBreakHours(TimeSpan? breakStart, TimeSpan? breakEnd)
     {
         if (breakStart is null || breakEnd is null || breakEnd <= breakStart)
         {

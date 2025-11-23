@@ -118,7 +118,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             .ToList();
 
         decimal weeklyLimit = TimesheetLimits.StandardWeeklyWorkHours * timesheet.Workload;
-        var weeks = orderedWorkDays.GroupBy(day => ISOWeek.GetWeekOfYear(day.Date.ToDateTime(TimeOnly.MinValue)));
+        var weeks = orderedWorkDays.GroupBy(day => ISOWeek.GetWeekOfYear(day.Date));
         foreach (var week in weeks)
         {
             decimal weekTotalHours = week.Sum(d => d.HoursWithoutBreak);
@@ -146,13 +146,13 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             AttendanceDay current = orderedDays[i];
 
             // Přeskočit, pokud dny nejsou po sobě (např. je mezi nimi víkend/svátek/volno)
-            if ((current.Date.DayNumber - previous.Date.DayNumber) > 1)
+            if ((current.Date.Date - previous.Date.Date).Days > 1)
             {
                 continue;
             }
 
-            DateTime previousEnd = previous.Date.ToDateTime(previous.ClockOut!.Value);
-            DateTime currentStart = current.Date.ToDateTime(current.ClockIn!.Value);
+            DateTime previousEnd = previous.Date.Date + previous.ClockOut!.Value;
+            DateTime currentStart = current.Date.Date + current.ClockIn!.Value;
 
             // Korekce přes půlnoc, pro případy jako je tento:
             // previousEnd = 2024-10-01 02:00
@@ -224,8 +224,8 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewNightShift(AttendanceDay day)
     {
-        TimeOnly nightStart = new(hour: 22, minute: 0);
-        TimeOnly nightEnd = new(hour: 5, minute: 59);
+        TimeSpan nightStart = new TimeSpan(hours: 22, minutes: 0, seconds: 0);
+        TimeSpan nightEnd = new TimeSpan(hours: 5, minutes: 59, seconds: 0);
 
         bool clockInStartsAtNight = day.ClockIn >= nightStart || day.ClockIn <= nightEnd;
         bool clockOutEndsAtNight = day.ClockOut >= nightStart || day.ClockOut <= nightEnd;

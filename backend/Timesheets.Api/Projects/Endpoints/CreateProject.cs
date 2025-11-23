@@ -13,8 +13,8 @@ public sealed class CreateProject : IEndpoint
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(string Name, string Identifier, DateOnly Start, DateOnly End, string Description);
-    public sealed record Response(Guid Id, string Name, string Identifier, DateOnly Start, DateOnly End, string Description);
+    public sealed record Request(string Name, string Identifier, DateTime Start, DateTime End, string Description);
+    public sealed record Response(Guid Id, string Name, string Identifier, DateTime Start, DateTime End, string Description);
     public sealed class Validator : AbstractValidator<Request> { }
 
     private static async Task<Results<Created<Response>, BadRequest<string>>> Handle([FromBody] Request request, CancellationToken cancellationToken)

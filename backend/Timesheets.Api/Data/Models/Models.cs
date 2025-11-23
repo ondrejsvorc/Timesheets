@@ -1,4 +1,4 @@
-﻿namespace Timesheets.Api.Data;
+﻿namespace Timesheets.Api.Data.Models;
 
 public sealed class Project
 {
@@ -6,8 +6,8 @@ public sealed class Project
     public string Name { get; set; } = string.Empty;
     public string? RegistrationNumber { get; set; }
     public string? RecipientName { get; set; }
-    public DateOnly StartDate { get; set; }
-    public DateOnly? EndDate { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
     public string? Description { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -27,8 +27,8 @@ public sealed class Contract
 {
     public Guid Id { get; set; }
     public Guid ProjectId { get; set; }
-    public DateOnly StartDate { get; set; }
-    public DateOnly? EndDate { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
     public string? Description { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -55,8 +55,8 @@ public sealed class ContractEmployee
 
     public string? Position { get; set; }
     public decimal? Workload { get; set; }
-    public DateOnly StartDate { get; set; }
-    public DateOnly? EndDate { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 }
 
 public sealed class Employee
@@ -105,11 +105,11 @@ public sealed class AttendanceDay
     public Guid Id { get; set; }
     public Guid AttendanceTimesheetId { get; set; }
 
-    public DateOnly Date { get; set; }
-    public TimeOnly? ClockIn { get; set; }
-    public TimeOnly? ClockOut { get; set; }
-    public TimeOnly? BreakStart { get; set; }
-    public TimeOnly? BreakEnd { get; set; }
+    public DateTime Date { get; set; }
+    public TimeSpan? ClockIn { get; set; }
+    public TimeSpan? ClockOut { get; set; }
+    public TimeSpan? BreakStart { get; set; }
+    public TimeSpan? BreakEnd { get; set; }
 
     public Guid? InterruptionId { get; set; }
 
@@ -153,7 +153,7 @@ public sealed class ProjectDay
     public Guid Id { get; set; }
     public Guid ProjectTimesheetId { get; set; }
 
-    public DateOnly Date { get; set; }
+    public DateTime Date { get; set; }
     public decimal Hours { get; set; }
     public bool IsHoliday { get; set; }
     public decimal Workload { get; set; }

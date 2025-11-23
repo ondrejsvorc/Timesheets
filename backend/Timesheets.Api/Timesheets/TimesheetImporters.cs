@@ -12,7 +12,7 @@ public sealed class AttendanceTimesheetImporter(ITimesheetReader<AttendanceTimes
         AttendanceTimesheet timesheet = reader.Read(stream);
 
         IReadOnlyCollection<PublicHoliday> holidays = await provider.GetPublicHolidaysAsync(timesheet.Year);
-        HashSet<DateOnly> holidayDates = holidays.Select(h => h.Date).ToHashSet();
+        HashSet<DateTime> holidayDates = holidays.Select(h => h.Date).ToHashSet();
 
         return timesheet with
         {
@@ -31,7 +31,7 @@ public sealed class ProjectTimesheetImporter(ITimesheetReader<ProjectTimesheet> 
         ProjectTimesheet timesheet = reader.Read(stream);
 
         IReadOnlyCollection<PublicHoliday> holidays = await provider.GetPublicHolidaysAsync(timesheet.Year);
-        HashSet<DateOnly> holidayDates = holidays.Select(h => h.Date).ToHashSet();
+        HashSet<DateTime> holidayDates = holidays.Select(h => h.Date).ToHashSet();
 
         return timesheet with
         {

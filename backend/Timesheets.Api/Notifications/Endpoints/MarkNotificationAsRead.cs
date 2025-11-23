@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Timesheets.Api.Data;
+using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Notifications.Endpoints;
 

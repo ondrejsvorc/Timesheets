@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Data;
 

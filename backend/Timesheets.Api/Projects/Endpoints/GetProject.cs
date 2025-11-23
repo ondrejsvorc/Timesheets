@@ -13,7 +13,7 @@ public sealed class GetProject : IEndpoint
            .WithRequestValidation<Request>();
 
     public sealed record Request;
-    public sealed record ContractItem(Guid Id, string Name, string Identifier, DateOnly Start, DateOnly End, int EmployeeCount);
+    public sealed record ContractItem(Guid Id, string Name, string Identifier, DateTime Start, DateTime End, int EmployeeCount);
     public sealed record Response(Guid Id, string Name, string Identifier, IEnumerable<ContractItem> Contracts);
     public sealed class Validator : AbstractValidator<Request> { }
 
