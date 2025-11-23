@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Notifications;
 
