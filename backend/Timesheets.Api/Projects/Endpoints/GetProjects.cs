@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Projects.Endpoints;
@@ -9,12 +10,24 @@ public sealed class GetProjects : IEndpoint
         app.MapGet("/", Handle)
            .WithSummary("Get Projects");
 
-    public sealed record ProjectItem(Guid Id, string RegistrationNumber, string Name, DateTime StartDate, DateTime EndDate, int ContractCount);
+    public sealed record ProjectItem(Guid Id, string Name, string? RegistrationNumber, DateTime StartDate, DateTime? EndDate, int ContractCount);
     public sealed record Response(IEnumerable<ProjectItem> Projects);
 
     private static async Task<Ok<Response>> Handle(AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        List<ProjectItem> projects = await dbContext.Projects
+            .AsNoTracking()
+            .Select(p => new ProjectItem(
+                p.Id,
+                p.Name,
+                p.RegistrationNumber,
+                p.StartDate,
+                p.EndDate,
+                p.Contracts.Count
+            ))
+            .ToListAsync(cancellationToken);
+
+        return TypedResults.Ok(new Response(projects));
     }
 }
 
