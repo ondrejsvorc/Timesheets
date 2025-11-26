@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Timesheets.Api.Common.Extensions;
+using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Employees.Endpoints;
 
@@ -17,7 +18,7 @@ public sealed class UpdateEmployee : IEndpoint
     public sealed record Response;
     public sealed class Validator : AbstractValidator<Request> { }
 
-    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

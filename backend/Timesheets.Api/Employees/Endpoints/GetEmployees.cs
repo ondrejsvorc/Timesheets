@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Timesheets.Api.Common.Extensions;
+using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Employees.Endpoints;
 
@@ -15,7 +16,7 @@ public sealed class GetEmployees : IEndpoint
     public sealed record Response;
     public sealed class Validator : AbstractValidator<Request> { }
 
-    private static async Task<Ok<Response>> Handle(CancellationToken cancellationToken)
+    private static async Task<Ok<Response>> Handle(AppDbContext dbContext, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

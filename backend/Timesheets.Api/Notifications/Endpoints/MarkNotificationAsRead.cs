@@ -12,16 +12,16 @@ public class MarkNotificationAsRead : IEndpoint
 
     public sealed record Response(bool Success);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext db, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        Notification? notification = await db.Notifications.FindAsync([id], cancellationToken);
+        Notification? notification = await dbContext.Notifications.FindAsync([id], cancellationToken);
         if (notification is null)
         {
             return TypedResults.NotFound();
         }
 
         notification.IsRead = true;
-        await db.SaveChangesAsync(cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(true));
     }
