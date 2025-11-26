@@ -1,12 +1,12 @@
 ﻿namespace Timesheets.Api.Timesheets;
 
-public interface IHasWorkSummary
+public interface ISummarizable
 {
     decimal TotalWorkload { get; }
     decimal TotalHours { get; }
     decimal TotalHoursObligation { get; }
 }
-public interface ITimesheet : IHasWorkSummary
+public interface ITimesheet : ISummarizable
 {
     public int Year { get; }
     public int Month { get; }
@@ -15,7 +15,7 @@ public interface ITimesheet<T> : ITimesheet where T : IDay
 {
     public IReadOnlyList<T> Days { get; }
 }
-public interface IDay : IHasWorkSummary
+public interface IDay : ISummarizable
 {
     public DateOnly Date { get; }
     bool IsHoliday { get; }
