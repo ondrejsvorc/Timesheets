@@ -24,10 +24,8 @@ builder.Services.AddDbContext<AppDbContext>();
 
 builder.Services.AddSingleton<ICellParser, CellParser>();
 builder.Services.AddSingleton<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();
-builder.Services.AddSingleton<ITimesheetReader<ProjectTimesheet>, ProjectTimesheetReader>();
 builder.Services.AddSingleton<IPublicHolidayProvider, CzechPublicHolidayProvider>();
 builder.Services.AddTransient<ITimesheetImporter<AttendanceTimesheet>, AttendanceTimesheetImporter>();
-builder.Services.AddTransient<ITimesheetImporter<ProjectTimesheet>, ProjectTimesheetImporter>();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddSignalR();

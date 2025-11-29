@@ -24,34 +24,29 @@ public interface IDay : ISummarizable
 }
 
 public sealed record CombinedTimesheet(
-    AttendanceTimesheet Attendance,
-    IReadOnlyList<ProjectTimesheet> Projects
+    int Year,
+    int Month,
+    IReadOnlyList<CombinedDay> Days
 ) : ITimesheet<CombinedDay>
 {
-    public int Year => Attendance.Year;
-    public int Month => Attendance.Month;
-
-    public decimal TotalWorkload => Attendance.Workload + Projects.Sum(project => project.Workload);
-    public decimal TotalHours => Attendance.TotalHours + Projects.Sum(project => project.TotalHours);
+    public decimal TotalHours => Days.Sum(d => d.TotalHours);
+    public decimal TotalWorkload => Days.Sum(d => d.TotalWorkload);
     public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(Days);
-
-    public IReadOnlyList<CombinedDay> Days => Attendance.Days
-        .Select((attendance, i) => new CombinedDay(attendance, Projects.Select(p => p.Days[i]).ToList()))
-        .ToList();
 }
 
 public sealed record CombinedDay(
-    AttendanceDay Attendance,
-    IReadOnlyList<ProjectDay> Projects
+    DateOnly Date,
+    bool IsHoliday,
+    bool IsWeekend,
+    bool IsWorkday,
+    decimal AttendanceHours,
+    decimal ProjectHours,
+    decimal AttendanceWorkload,
+    decimal ProjectWorkload
 ) : IDay
 {
-    public DateOnly Date => Attendance.Date;
-    public bool IsHoliday => Attendance.IsHoliday;
-    public bool IsWeekend => Attendance.IsWeekend;
-    public bool IsWorkday => Attendance.IsWorkday;
-
-    public decimal TotalWorkload => Attendance.Workload + Projects.Sum(project => project.Workload);
-    public decimal TotalHours => Attendance.TotalHours + Projects.Sum(project => project.Hours);
+    public decimal TotalHours => AttendanceHours + ProjectHours;
+    public decimal TotalWorkload => AttendanceWorkload + ProjectWorkload;
     public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(this);
 }
 

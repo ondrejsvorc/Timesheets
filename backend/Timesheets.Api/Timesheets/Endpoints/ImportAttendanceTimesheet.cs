@@ -8,7 +8,7 @@ namespace Timesheets.Api.Timesheets.Endpoints;
 public sealed class ImportAttendanceTimesheet : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) => app
-        .MapPost("/attendance/import", Handle)
+        .MapPost("/", Handle)
         .WithSummary("Create Attendance Timesheet")
         .DisableAntiforgery()
         .WithRequestValidation<Request>();
