@@ -17,7 +17,7 @@ export const AppHeader = () => {
 
         {/* Navigation */}
         <nav className="flex items-center gap-8">
-          <Link to="/projects" className="text-gray-800 hover:text-black">{Texts.projects}</Link>
+          <Link to="/" className="text-gray-800 hover:text-black">{Texts.projects}</Link>
           <Link to="/employees" className="text-gray-800 hover:text-black">{Texts.employees}</Link>
         </nav>
 
