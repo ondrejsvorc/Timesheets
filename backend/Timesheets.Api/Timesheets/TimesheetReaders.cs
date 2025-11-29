@@ -70,7 +70,7 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
 
             var row = new AttendanceDay
             (
-                Date: new DateOnly(year, month, i + 1),
+                Date: new DateTime(year, month, i + 1),
                 ClockIn: cellParser.ParseTime(sheet.Cell($"B{rowNum}")),
                 ClockOut: cellParser.ParseTime(sheet.Cell($"C{rowNum}")),
                 BreakStart: cellParser.ParseTime(sheet.Cell($"D{rowNum}")),
@@ -97,19 +97,29 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
 
 public interface ICellParser
 {
-    TimeOnly? ParseTime(IXLCell cell);
+    TimeSpan? ParseTime(IXLCell cell);
     string? ParseString(IXLCell cell);
     decimal? ParseDecimal(IXLCell cell);
 }
 
 public sealed class CellParser : ICellParser
 {
-    private static readonly CultureInfo CzechCulture = new("cs-CZ");
+    private static readonly string[] AllowedTimeFormats =
+    [
+        "h\\:mm",
+        "hh\\:mm",
+        "h\\:mm\\:ss",
+        "hh\\:mm\\:ss"
+    ];
 
-    public TimeOnly? ParseTime(IXLCell cell)
+    public TimeSpan? ParseTime(IXLCell cell)
     {
         string? text = ParseString(cell);
-        if (TimeOnly.TryParseExact(text, ["H:mm", "HH:mm", "H:mm:ss", "HH:mm:ss"], CzechCulture, DateTimeStyles.None, out TimeOnly parsed))
+        if (text is null)
+        {
+            return null;
+        }
+        if (TimeSpan.TryParseExact(text, AllowedTimeFormats, CultureInfo.InvariantCulture, out TimeSpan parsed))
         {
             return parsed;
         }

@@ -66,7 +66,7 @@ file static class TimesheetLimits
     public const decimal StandardWorkdayHours = 8;
 
     /// <summary>
-    /// Zákon č. 262/2006 Sb., zákoník práce — § 88 odst. 1 
+    /// Zákon č. 262/2006 Sb., zákoník práce — § 88 odst. 1
     /// Minimální délka přestávky na jídlo a oddech činí 30 minut.
     /// </summary>
     public const decimal MinBreakDurationHours = 0.5m;
@@ -253,6 +253,71 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         .. ReviewShortBreak(day)
     ];
 
+    private static IEnumerable<TimesheetIssue> ReviewDaysCount(AttendanceTimesheet timesheet)
+    {
+        int expectedDays = DateTime.DaysInMonth(timesheet.Year, timesheet.Month);
+        int actualDays = timesheet.Days.Count;
+
+        if (actualDays != expectedDays)
+        {
+            yield return new TimesheetIssue
+            (
+                Code: "ERR-COM-01",
+                Type: IssueType.Error,
+                Description: "Počet záznamů v tabulce neodpovídá počtu dnů v měsíci."
+            );
+        }
+    }
+
+    private static IEnumerable<TimesheetIssue> ReviewOvertime(AttendanceTimesheet timesheet)
+    {
+        if (timesheet.TotalHoursWithoutBreak > timesheet.TotalHoursObligation)
+        {
+            yield return new TimesheetIssue
+            (
+                Code: "ERR-COM-02",
+                Type: IssueType.Error,
+                Description: "Celková pracovní doba za měsíc přesahuje součet denních povinností."
+            );
+        }
+    }
+
+    private static IEnumerable<TimesheetIssue> ReviewUndertime(AttendanceTimesheet timesheet)
+    {
+        if (timesheet.TotalHoursWithoutBreak < timesheet.TotalHoursObligation)
+        {
+            yield return new TimesheetIssue
+            (
+                Code: "ERR-COM-03",
+                Type: IssueType.Error,
+                Description: "Celková pracovní doba za měsíc je nižší než součet denních povinností."
+            );
+        }
+    }
+
+    private static IEnumerable<TimesheetIssue> ReviewWeeklyWorkHours(AttendanceTimesheet timesheet)
+    {
+        List<AttendanceDay> orderedWorkDays = timesheet.Days
+            .Where(d => d.IsWorkDay)
+            .OrderBy(d => d.Date)
+            .ToList();
+
+        decimal weeklyLimit = TimesheetLimits.StandardWeeklyWorkHours * timesheet.Workload;
+        var weeks = orderedWorkDays.GroupBy(day => ISOWeek.GetWeekOfYear(day.Date));
+        foreach (var week in weeks)
+        {
+            decimal weekTotalHours = week.Sum(d => d.HoursWithoutBreak);
+            if (weekTotalHours > weeklyLimit)
+            {
+                yield return new TimesheetIssue(
+                    Code: "ERR-COM-04",
+                    Type: IssueType.Error,
+                    Description: $"V týdnu {week.Key} bylo odpracováno {weekTotalHours:F1} h, což překračuje zákonný limit {weeklyLimit:F1} h při úvazku {timesheet.Workload:P0}."
+                );
+            }
+        }
+    }
+
     private static IEnumerable<TimesheetIssue> ReviewRestBetweenWorkDays(AttendanceTimesheet timesheet)
     {
         List<AttendanceDay> orderedDays = timesheet.Days
@@ -266,13 +331,13 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             AttendanceDay current = orderedDays[i];
 
             // Přeskočit, pokud dny nejsou po sobě (např. je mezi nimi víkend/svátek/volno)
-            if ((current.Date.DayNumber - previous.Date.DayNumber) > 1)
+            if ((current.Date.Date - previous.Date.Date).Days > 1)
             {
                 continue;
             }
 
-            DateTime previousEnd = previous.Date.ToDateTime(previous.ClockOut!.Value);
-            DateTime currentStart = current.Date.ToDateTime(current.ClockIn!.Value);
+            DateTime previousEnd = previous.Date.Date + previous.ClockOut!.Value;
+            DateTime currentStart = current.Date.Date + current.ClockIn!.Value;
 
             // Korekce přes půlnoc, pro případy jako je tento:
             // previousEnd = 2024-10-01 02:00
@@ -297,8 +362,8 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewNightShift(AttendanceDay day)
     {
-        TimeOnly nightStart = new(hour: 22, minute: 0);
-        TimeOnly nightEnd = new(hour: 5, minute: 59);
+        TimeSpan nightStart = new TimeSpan(hours: 22, minutes: 0, seconds: 0);
+        TimeSpan nightEnd = new TimeSpan(hours: 5, minutes: 59, seconds: 0);
 
         bool clockInStartsAtNight = day.ClockIn >= nightStart || day.ClockIn <= nightEnd;
         bool clockOutEndsAtNight = day.ClockOut >= nightStart || day.ClockOut <= nightEnd;

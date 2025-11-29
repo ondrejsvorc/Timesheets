@@ -1,6 +1,6 @@
 ﻿namespace Timesheets.Api.Timesheets;
 
-public sealed record PublicHoliday(DateOnly Date, string LocalName, string Name);
+public sealed record PublicHoliday(DateTime Date, string LocalName, string Name);
 
 public interface IPublicHolidayProvider
 {

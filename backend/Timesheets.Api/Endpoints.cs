@@ -26,7 +26,7 @@ public static class Endpoints
 
     private static void MapProjectEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/projects").WithTags("Projects")
-        .MapEndpoint<GetProject>()
+        .MapEndpoint<GetProjectContracts>()
         .MapEndpoint<UpdateProject>()
         .MapEndpoint<DeleteProject>()
         .MapEndpoint<GetProjects>()
