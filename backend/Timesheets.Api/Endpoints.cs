@@ -41,7 +41,10 @@ public static class Endpoints
         .MapEndpoint<GetContractEmployees>()
         .MapEndpoint<AddContractEmployee>()
         .MapEndpoint<UpdateContractEmployee>()
-        .MapEndpoint<RemoveContractEmployee>();
+        .MapEndpoint<RemoveContractEmployee>()
+        .MapEndpoint<GetContractManagers>()
+        .MapEndpoint<AddContractManager>()
+        .MapEndpoint<RemoveContractManager>();
 
     private static void MapTimesheetEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/timesheets").WithTags("Timesheets")
