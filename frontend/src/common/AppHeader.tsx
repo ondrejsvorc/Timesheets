@@ -1,4 +1,5 @@
 import { Bell, User } from "lucide-react";
+import { Link } from "react-router";
 import { Texts } from "./Texts";
 
 export const AppHeader = () => {
@@ -10,14 +11,14 @@ export const AppHeader = () => {
       <div className="mx-auto max-w-7xl flex items-center justify-between h-14 px-6">
 
         {/* Brand */}
-        <a href="/" className="text-xl font-semibold tracking-wide cursor-pointer select-none">
+        <Link to="/" className="text-xl font-semibold tracking-wide cursor-pointer select-none">
           {Texts.applicationName}
-        </a>
+        </Link>
 
         {/* Navigation */}
         <nav className="flex items-center gap-8">
-          <a href="/projects" className="text-gray-800 hover:text-black">{Texts.projects}</a>
-          <a href="/employees" className="text-gray-800 hover:text-black">{Texts.employees}</a>
+          <Link to="/projects" className="text-gray-800 hover:text-black">{Texts.projects}</Link>
+          <Link to="/employees" className="text-gray-800 hover:text-black">{Texts.employees}</Link>
         </nav>
 
         {/* Actions */}
