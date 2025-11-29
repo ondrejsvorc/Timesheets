@@ -139,7 +139,7 @@ public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimes
 
         decimal weeklyLimit = TimesheetLimits.StandardWeeklyWorkHours * timesheet.TotalWorkload;
 
-        var weeks = orderedWorkDays.GroupBy(d => ISOWeek.GetWeekOfYear(d.Date.ToDateTime(TimeOnly.MinValue)));
+        var weeks = orderedWorkDays.GroupBy(d => ISOWeek.GetWeekOfYear(d.Date));
         foreach (var week in weeks)
         {
             decimal weekTotalHours = week.Sum(day => day.TotalHours);
@@ -266,55 +266,6 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
                 Type: IssueType.Error,
                 Description: "Počet záznamů v tabulce neodpovídá počtu dnů v měsíci."
             );
-        }
-    }
-
-    private static IEnumerable<TimesheetIssue> ReviewOvertime(AttendanceTimesheet timesheet)
-    {
-        if (timesheet.TotalHoursWithoutBreak > timesheet.TotalHoursObligation)
-        {
-            yield return new TimesheetIssue
-            (
-                Code: "ERR-COM-02",
-                Type: IssueType.Error,
-                Description: "Celková pracovní doba za měsíc přesahuje součet denních povinností."
-            );
-        }
-    }
-
-    private static IEnumerable<TimesheetIssue> ReviewUndertime(AttendanceTimesheet timesheet)
-    {
-        if (timesheet.TotalHoursWithoutBreak < timesheet.TotalHoursObligation)
-        {
-            yield return new TimesheetIssue
-            (
-                Code: "ERR-COM-03",
-                Type: IssueType.Error,
-                Description: "Celková pracovní doba za měsíc je nižší než součet denních povinností."
-            );
-        }
-    }
-
-    private static IEnumerable<TimesheetIssue> ReviewWeeklyWorkHours(AttendanceTimesheet timesheet)
-    {
-        List<AttendanceDay> orderedWorkDays = timesheet.Days
-            .Where(d => d.IsWorkDay)
-            .OrderBy(d => d.Date)
-            .ToList();
-
-        decimal weeklyLimit = TimesheetLimits.StandardWeeklyWorkHours * timesheet.Workload;
-        var weeks = orderedWorkDays.GroupBy(day => ISOWeek.GetWeekOfYear(day.Date));
-        foreach (var week in weeks)
-        {
-            decimal weekTotalHours = week.Sum(d => d.HoursWithoutBreak);
-            if (weekTotalHours > weeklyLimit)
-            {
-                yield return new TimesheetIssue(
-                    Code: "ERR-COM-04",
-                    Type: IssueType.Error,
-                    Description: $"V týdnu {week.Key} bylo odpracováno {weekTotalHours:F1} h, což překračuje zákonný limit {weeklyLimit:F1} h při úvazku {timesheet.Workload:P0}."
-                );
-            }
         }
     }
 
