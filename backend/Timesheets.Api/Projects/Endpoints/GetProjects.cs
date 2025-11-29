@@ -1,6 +1,6 @@
-﻿using FluentValidation;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Timesheets.Api.Common.Extensions;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Projects.Endpoints;
 
@@ -8,17 +8,26 @@ public sealed class GetProjects : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
         app.MapGet("/", Handle)
-           .WithSummary("Get Projects")
-           .WithRequestValidation<Request>();
+           .WithSummary("Get Projects");
 
-    public sealed record Request;
-    public sealed record ProjectItem(Guid Id, string Identifier, string Name, DateOnly Start, DateOnly End, int ContractCount);
+    public sealed record ProjectItem(Guid Id, string Name, string? RegistrationNumber, DateTime StartDate, DateTime? EndDate, int ContractCount);
     public sealed record Response(IEnumerable<ProjectItem> Projects);
-    public sealed class Validator : AbstractValidator<Request> { }
 
-    private static async Task<Ok<Response>> Handle(CancellationToken cancellationToken)
+    private static async Task<Ok<Response>> Handle(AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        List<ProjectItem> projects = await dbContext.Projects
+            .AsNoTracking()
+            .Select(p => new ProjectItem(
+                p.Id,
+                p.Name,
+                p.RegistrationNumber,
+                p.StartDate,
+                p.EndDate,
+                p.Contracts.Count
+            ))
+            .ToListAsync(cancellationToken);
+
+        return TypedResults.Ok(new Response(projects));
     }
 }
 

@@ -12,9 +12,9 @@ public class GetEmployeeNotifications : IEndpoint
 
     public sealed record Response(Guid Id, string Message, DateTime CreatedAt, bool IsRead);
 
-    private static async Task<Ok<List<Response>>> Handle(AppDbContext db, Guid employeeId, CancellationToken cancellationToken)
+    private static async Task<Ok<List<Response>>> Handle(AppDbContext dbContext, Guid employeeId, CancellationToken cancellationToken)
     {
-        List<Response> notifications = await db.Notifications
+        List<Response> notifications = await dbContext.Notifications
             .Where(x => x.EmployeeId == employeeId)
             .OrderByDescending(x => x.CreatedAt)
             .Select(x => new Response(x.Id, x.Message, x.CreatedAt, x.IsRead))

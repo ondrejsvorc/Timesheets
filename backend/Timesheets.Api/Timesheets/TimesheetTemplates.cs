@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 namespace Timesheets.Api.Timesheets;
 
 public sealed record TimesheetTemplate(Metadata Metadata, IReadOnlyList<Cell> Cells, IReadOnlyList<Range> Ranges);
-public sealed record Metadata(TemplateType Type, DateOnly CreatedAt, DateOnly? DeprecatedAt);
+public sealed record Metadata(TemplateType Type, DateTime CreatedAt, DateTime? DeprecatedAt);
 public enum TemplateType { Attendance, Project }
 public sealed record Cell(
     string Key,
