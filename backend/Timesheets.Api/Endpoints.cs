@@ -30,12 +30,14 @@ public static class Endpoints
         .MapEndpoint<UpdateProject>()
         .MapEndpoint<DeleteProject>()
         .MapEndpoint<GetProjects>()
+        .MapEndpoint<GetProjectCatalog>()
         .MapEndpoint<CreateProject>()
         .MapEndpoint<CreateProjectContract>();
 
     private static void MapContractEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/contracts").WithTags("Contracts")
         .MapEndpoint<GetContract>()
+        .MapEndpoint<GetContractCatalog>()
         .MapEndpoint<UpdateContract>()
         .MapEndpoint<DeleteContract>()
         .MapEndpoint<GetContractEmployees>()
