@@ -1,9 +1,16 @@
 import { Constants } from "../../common/Constants";
 
 export type CreateProjectRequest = {
+  name: string;
+  registrationNumber: string;
+  startDate: string;
+  endDate: string;
+  recipientName: string;
+  description: string;
 };
 
 export type CreateProjectResponse = {
+  id: string;
 };
 
 export const createProject = async (request: CreateProjectRequest): Promise<CreateProjectResponse> => {
@@ -13,5 +20,5 @@ export const createProject = async (request: CreateProjectRequest): Promise<Crea
     body: JSON.stringify(request),
   });
   if (!response.ok) throw new Error("Failed to create project.");
-  return response.json();
+  return await response.json();
 }
