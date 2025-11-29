@@ -3,9 +3,9 @@ import { Constants } from "../../common/Constants";
 export type CreateProjectRequest = {
   name: string;
   registrationNumber: string;
-  startDate: string;
-  endDate: string;
   recipientName: string;
+  startDate: string;
+  endDate: string | null;
   description: string;
 };
 
@@ -21,4 +21,4 @@ export const createProject = async (request: CreateProjectRequest): Promise<Crea
   });
   if (!response.ok) throw new Error("Failed to create project.");
   return await response.json();
-}
+};
