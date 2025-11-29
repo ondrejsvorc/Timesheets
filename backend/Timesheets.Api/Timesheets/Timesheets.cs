@@ -35,7 +35,7 @@ public sealed record CombinedTimesheet(
 }
 
 public sealed record CombinedDay(
-    DateOnly Date,
+    DateTime Date,
     bool IsHoliday,
     bool IsWeekend,
     bool IsWorkday,
