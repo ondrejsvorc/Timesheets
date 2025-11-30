@@ -15,10 +15,9 @@ public sealed class UpdateEmployee : IEndpoint
            .WithRequestValidation<Request>();
 
     public sealed record Request;
-    public sealed record Response;
     public sealed class Validator : AbstractValidator<Request> { }
 
-    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

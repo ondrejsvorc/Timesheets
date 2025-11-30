@@ -15,7 +15,7 @@ public sealed class CreateEmployee : IEndpoint
            .WithRequestValidation<Request>();
 
     public sealed record Request;
-    public sealed record Response;
+    public sealed record Response(Guid Id);
     public sealed class Validator : AbstractValidator<Request> { }
 
     private static async Task<Results<Created<Response>, BadRequest<string>>> Handle([FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
