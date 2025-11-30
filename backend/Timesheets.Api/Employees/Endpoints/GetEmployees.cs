@@ -9,6 +9,7 @@ public sealed class GetEmployees : IEndpoint
         app.MapGet("/", Handle)
            .WithSummary("Get Employees");
 
+    public sealed record EmployeeItem;
     public sealed record Response;
 
     private static async Task<Ok<Response>> Handle(AppDbContext dbContext, CancellationToken cancellationToken)
