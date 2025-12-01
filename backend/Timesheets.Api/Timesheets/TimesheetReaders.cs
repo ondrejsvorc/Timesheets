@@ -76,6 +76,7 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
                 BreakStart: cellParser.ParseTime(sheet.Cell($"D{rowNum}")),
                 BreakEnd: cellParser.ParseTime(sheet.Cell($"E{rowNum}")),
                 OtherInterruption: cellParser.ParseString(sheet.Cell($"F{rowNum}")),
+                Schedules: [], // TODO
                 IsHoliday: false,
                 Workload: workload
             );

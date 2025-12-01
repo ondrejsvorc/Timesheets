@@ -1,5 +1,7 @@
 ﻿namespace Timesheets.Api.Timesheets;
 
+public sealed record TimeRange(TimeSpan Start, TimeSpan End);
+
 public interface ISummarizable
 {
     decimal TotalWorkload { get; }
@@ -91,6 +93,7 @@ public sealed record AttendanceDay(
     TimeSpan? BreakStart,
     TimeSpan? BreakEnd,
     string? OtherInterruption,
+    IReadOnlyList<TimeRange> Schedules,
     bool IsHoliday,
     decimal Workload
 ) : IDay
