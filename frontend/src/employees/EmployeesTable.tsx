@@ -68,21 +68,11 @@ export const EmployeesTable = () => {
         <table className="w-full table-fixed">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b border-gray-300">
-                {Texts.personalNumber}
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b border-gray-300">
-                {Texts.fullName}
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b border-gray-300">
-                {Texts.email}
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b border-gray-300">
-                {Texts.employeeType}
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b border-gray-300">
-                {Texts.actions}
-              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b border-gray-300">{Texts.personalNumber}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b border-gray-300">{Texts.fullName}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b border-gray-300">{Texts.email}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b border-gray-300">{Texts.employeeType}</th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 border-b border-gray-300">{Texts.actions}</th>
             </tr>
           </thead>
           <tbody>
@@ -94,10 +84,7 @@ export const EmployeesTable = () => {
                 <td className="px-4 py-3 text-sm text-gray-900">{employee.employeeType}</td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleOpenDialog(employee.id)}
-                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm"
-                    >
+                    <button onClick={() => handleOpenDialog(employee.id)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm">
                       <UserPlus className="w-4 h-4" />
                       {Texts.addEmployeePosition}
                     </button>
@@ -111,11 +98,7 @@ export const EmployeesTable = () => {
           </tbody>
         </table>
       </div>
-      <AddEmployeePositionDialog
-        isOpen={isDialogOpen}
-        onClose={handleCloseDialog}
-        onConfirm={handleConfirm}
-      />
+      <AddEmployeePositionDialog isOpen={isDialogOpen} onClose={handleCloseDialog} onConfirm={handleConfirm} />
     </>
   );
 };

@@ -1,5 +1,5 @@
+import type { ProjectItem } from "./api/getProjects";
 import { ProjectCard } from "./ProjectCard";
-import type { ProjectItem } from "./ProjectsPage";
 
 export const ProjectCards = ({ projects }: { projects: ProjectItem[] }) => {
   return (
