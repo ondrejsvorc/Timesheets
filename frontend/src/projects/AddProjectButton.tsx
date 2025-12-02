@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
 import { Texts } from "../common/Texts";
 import { AddProjectDialog } from "./AddProjectDialog";
 import type { ProjectFormData } from "./AddProjectDialog";
+import { AddButton } from "../common/Buttons";
 
 export const AddProjectButton = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -10,17 +10,14 @@ export const AddProjectButton = () => {
   const handleClick = () => setIsDialogOpen(true);
   const handleClose = () => setIsDialogOpen(false);
 
-  const handleConfirm = (data: ProjectFormData) => {
+  const handleConfirm = async (data: ProjectFormData) => {
     console.log("Project data:", data);
     // TODO: Implement project creation logic
     setIsDialogOpen(false);
   };
 
   return (<>
-      <button onClick={handleClick} className="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 flex items-center gap-2">
-        <Plus className="w-4 h-4" />
-        {Texts.addProject}
-      </button>
+      <AddButton onClick={handleClick} label={Texts.addProject} />
       <AddProjectDialog isOpen={isDialogOpen} onClose={handleClose} onConfirm={handleConfirm} />
   </>);
 };
