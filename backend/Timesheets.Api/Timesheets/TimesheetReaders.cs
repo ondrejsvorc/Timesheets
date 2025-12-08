@@ -76,7 +76,7 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
                 BreakStart: cellParser.ParseTime(sheet.Cell($"D{rowNum}")),
                 BreakEnd: cellParser.ParseTime(sheet.Cell($"E{rowNum}")),
                 OtherInterruption: cellParser.ParseString(sheet.Cell($"F{rowNum}")),
-                Schedules: [], // TODO
+                Schedules: cellParser.ParseTimeRanges(sheet.Cell($"K{rowNum}")),
                 IsHoliday: false,
                 Workload: workload
             );
@@ -101,6 +101,7 @@ public interface ICellParser
     TimeSpan? ParseTime(IXLCell cell);
     string? ParseString(IXLCell cell);
     decimal? ParseDecimal(IXLCell cell);
+    IReadOnlyList<TimeRange> ParseTimeRanges(IXLCell cell);
 }
 
 public sealed class CellParser : ICellParser
@@ -144,5 +145,43 @@ public sealed class CellParser : ICellParser
     {
         string text = cell.GetString().Trim();
         return text.Length == 0 ? null : text;
+    }
+
+    public IReadOnlyList<TimeRange> ParseTimeRanges(IXLCell cell)
+    {
+        string? text = ParseString(cell);
+        if (text is null)
+        {
+            return [];
+        }
+
+        const char intervalSeparator = ',';
+        const char rangeSeparator = '-';
+
+        string[] parts = text.Split(intervalSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        List<TimeRange> ranges = new(parts.Length);
+        
+        foreach (string part in parts)
+        {
+            string[] tokens = part.Split(rangeSeparator, StringSplitOptions.TrimEntries);
+            if (tokens.Length != 2)
+            {
+                continue;
+            }
+
+            if (!TimeSpan.TryParseExact(tokens[0], AllowedTimeFormats, CultureInfo.InvariantCulture, out TimeSpan start))
+            {
+                continue;
+            }
+
+            if (!TimeSpan.TryParseExact(tokens[1], AllowedTimeFormats, CultureInfo.InvariantCulture, out TimeSpan end))
+            {
+                continue;
+            }
+
+            ranges.Add(new TimeRange(start, end));
+        }
+
+        return ranges;
     }
 }
