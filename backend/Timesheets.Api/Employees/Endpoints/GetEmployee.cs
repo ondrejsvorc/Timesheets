@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
-using Timesheets.Api.Data;
 using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Employees.Endpoints;
 
@@ -10,7 +10,7 @@ public sealed class GetEmployee : IEndpoint
         app.MapGet("/{id}", Handle)
            .WithSummary("Get Employee");
 
-    public sealed record Response(Guid Id, Guid EmployeeTypeId, int PersonalNumber, string FullName, string? Email, bool IsGlobalManager);
+    public sealed record Response(Guid Id, Guid? EmployeeTypeId, int? PersonalNumber, string FullName, string? Email, bool IsGlobalManager);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {

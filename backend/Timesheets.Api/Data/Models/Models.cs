@@ -64,10 +64,10 @@ public sealed class ContractEmployee
 public sealed class Employee
 {
     public Guid Id { get; set; }
-    public Guid EmployeeTypeId { get; set; }
-    public int PersonalNumber { get; set; }
+    public Guid? EmployeeTypeId { get; set; }
+    public int? PersonalNumber { get; set; }
     public string FullName { get; set; } = string.Empty;
-    public string? Email { get; set; }
+    public string Email { get; set; } = string.Empty;
     public bool IsGlobalManager { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

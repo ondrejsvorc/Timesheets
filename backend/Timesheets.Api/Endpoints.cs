@@ -1,4 +1,5 @@
-﻿using Timesheets.Api.Contracts.Endpoints;
+﻿using Timesheets.Api.Auth.Endpoints;
+using Timesheets.Api.Contracts.Endpoints;
 using Timesheets.Api.Employees.Endpoints;
 using Timesheets.Api.Notifications;
 using Timesheets.Api.Notifications.Endpoints;
@@ -16,7 +17,19 @@ public static class Endpoints
 {
     public static void MapEndpoints(this WebApplication app)
     {
-        var endpoints = app.MapGroup("/api");
+        app.MapAuthEndpoints();
+        app.MapProtectedApiEndpoints();
+    }
+
+    private static void MapAuthEndpoints(this WebApplication app) =>
+        app.MapGroup("/auth").AllowAnonymous().WithTags("Authentication")
+        .MapEndpoint<Login>()
+        .MapEndpoint<Logout>()
+        .MapEndpoint<GetCurrentUser>();
+
+    private static void MapProtectedApiEndpoints(this WebApplication app)
+    {
+        var endpoints = app.MapGroup("/api").RequireAuthorization();
         endpoints.MapProjectEndpoints();
         endpoints.MapContractEndpoints();
         endpoints.MapEmployeeEndpoints();
