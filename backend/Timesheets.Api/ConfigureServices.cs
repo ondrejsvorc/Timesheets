@@ -1,12 +1,9 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using System.Security.Claims;
-using Timesheets.Api.Common.Extensions;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
 using Timesheets.Api.Notifications;
 using Timesheets.Api.Timesheets;
 using AttendanceTimesheet = Timesheets.Api.Timesheets.AttendanceTimesheet;
@@ -87,32 +84,8 @@ public static class ConfigureServices
                             throw new InvalidOperationException("OIDC Principal is missing.");
                         }
 
-                        ClaimsPrincipal currentUser = context.Principal;
-                        string email = currentUser.GetEmail();
-                        if (string.IsNullOrWhiteSpace(email))
-                        {
-                            throw new InvalidOperationException("OIDC 'email' is missing.");
-                        }
-
-                        AppDbContext dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-                        bool employeeExists = await dbContext.Employees.AnyAsync(e => e.Email == email, context.HttpContext.RequestAborted);
-                        if (employeeExists)
-                        {
-                            return;
-                        }
-
-                        Employee employee = new()
-                        {
-                            Id = Guid.NewGuid(),
-                            FullName = currentUser.GetFullName(),
-                            Email = email,
-                            IsGlobalManager = false,
-                            EmployeeTypeId = null,
-                            PersonalNumber = context.Principal.GetPersonalNumber(),
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        dbContext.Employees.Add(employee);
-                        await dbContext.SaveChangesAsync(context.HttpContext.RequestAborted);
+                        UserSynchronizer synchronizer = context.HttpContext.RequestServices.GetRequiredService<UserSynchronizer>();
+                        await synchronizer.SyncFromPrincipalAsync(context.Principal, context.HttpContext.RequestAborted);
                     }
                 };
             });
@@ -127,6 +100,7 @@ public static class ConfigureServices
 
     private static void AddAppServices(this WebApplicationBuilder builder)
     {
+        builder.Services.AddScoped<UserSynchronizer>();
         builder.Services.AddSingleton<ICellParser, CellParser>();
         builder.Services.AddSingleton<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();
         builder.Services.AddSingleton<IPublicHolidayProvider, CzechPublicHolidayProvider>();
