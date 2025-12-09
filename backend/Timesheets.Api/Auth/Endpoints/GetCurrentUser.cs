@@ -16,7 +16,7 @@ public sealed class GetCurrentUser : IEndpoint
     private static async Task<IResult> Handle(HttpContext httpContext, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         ClaimsPrincipal currentUser = httpContext.User;
-        if (currentUser.IsAuthenticated())
+        if (!currentUser.IsAuthenticated())
         {
             return Results.Unauthorized();
         }

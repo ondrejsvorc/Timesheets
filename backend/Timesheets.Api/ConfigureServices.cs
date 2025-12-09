@@ -6,7 +6,6 @@ using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 using Timesheets.Api.Notifications;
 using Timesheets.Api.Timesheets;
-using AttendanceTimesheet = Timesheets.Api.Timesheets.AttendanceTimesheet;
 
 namespace Timesheets.Api;
 
