@@ -73,6 +73,8 @@ public sealed class Employee
     public DateTime? UpdatedAt { get; set; }
 
     public EmployeeType EmployeeType { get; set; } = null!;
+    public ICollection<ProjectManager> ProjectManagers { get; set; } = [];
+    public ICollection<ContractManager> ContractManagers { get; set; } = [];
 }
 
 public sealed class EmployeeType

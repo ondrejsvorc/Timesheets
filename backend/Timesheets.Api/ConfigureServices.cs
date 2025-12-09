@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using System.Security.Claims;
+using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
 using Timesheets.Api.Notifications;
@@ -69,7 +70,7 @@ public static class ConfigureServices
 
                 options.SaveTokens = true;
                 options.GetClaimsFromUserInfoEndpoint = true;
-                options.PushedAuthorizationBehavior = PushedAuthorizationBehavior.UseIfAvailable;
+                options.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
 
                 options.Scope.Clear();
                 foreach (string scope in auth.GetSection("Scope").Get<string[]>() ?? [])
@@ -81,10 +82,16 @@ public static class ConfigureServices
                 {
                     OnTokenValidated = async context =>
                     {
-                        string email = context.Principal?.FindFirst("email")?.Value ?? "";
+                        if (context.Principal is null)
+                        {
+                            throw new InvalidOperationException("OIDC Principal is missing.");
+                        }
+
+                        ClaimsPrincipal currentUser = context.Principal;
+                        string email = currentUser.GetEmail();
                         if (string.IsNullOrWhiteSpace(email))
                         {
-                            return;
+                            throw new InvalidOperationException("OIDC 'email' is missing.");
                         }
 
                         AppDbContext dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
@@ -94,26 +101,14 @@ public static class ConfigureServices
                             return;
                         }
 
-                        static int? ExtractPersonalNumber(ClaimsPrincipal? principal)
-                        {
-                            // Example: "urn:schac:personalUniqueCode:int:esi:ujep.cz:105976"
-                            string? schac = principal?.FindFirst("schacPersonalUniqueCode")?.Value;
-                            if (string.IsNullOrWhiteSpace(schac))
-                            {
-                                return null;
-                            }
-                            ReadOnlySpan<char> last = schac.AsSpan(schac.LastIndexOf(':') + 1);
-                            return int.TryParse(last, out int value) ? value : null;
-                        }
-
                         Employee employee = new()
                         {
                             Id = Guid.NewGuid(),
-                            FullName = context.Principal?.FindFirst("displayName")?.Value ?? "",
+                            FullName = currentUser.GetFullName(),
                             Email = email,
                             IsGlobalManager = false,
                             EmployeeTypeId = null,
-                            PersonalNumber = ExtractPersonalNumber(context.Principal),
+                            PersonalNumber = context.Principal.GetPersonalNumber(),
                             CreatedAt = DateTime.UtcNow
                         };
                         dbContext.Employees.Add(employee);

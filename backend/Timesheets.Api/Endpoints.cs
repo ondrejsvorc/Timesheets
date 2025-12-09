@@ -25,7 +25,8 @@ public static class Endpoints
         app.MapGroup("/auth").AllowAnonymous().WithTags("Authentication")
         .MapEndpoint<Login>()
         .MapEndpoint<Logout>()
-        .MapEndpoint<GetCurrentUser>();
+        .MapEndpoint<GetCurrentUser>()
+        .MapEndpoint<GetCurrentUserPermissions>();
 
     private static void MapProtectedApiEndpoints(this WebApplication app)
     {

@@ -5,31 +5,31 @@ using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Auth.Endpoints;
 
-public sealed class GetCurrentUser : IEndpoint
+public sealed class GetCurrentUserPermissions : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapGet("/currentUser", Handle)
-           .WithSummary("Get Currently Authenticated User");
+        app.MapGet("/currentUserPermissions", Handle)
+           .WithSummary("Get Currently Authenticated User Permissions");
 
-    public sealed record Response(Guid Id, string FullName, string Email, string EmployeeType);
+    public sealed record Response(bool IsGlobalManager, IReadOnlyList<Guid> ProjectManagerOf, IReadOnlyList<Guid> ContractManagerOf);
 
     private static async Task<IResult> Handle(HttpContext httpContext, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         ClaimsPrincipal currentUser = httpContext.User;
-        if (currentUser.IsAuthenticated())
+        if (!currentUser.IsAuthenticated())
         {
             return Results.Unauthorized();
         }
 
         string email = currentUser.GetEmail();
+
         Response? response = await dbContext.Employees
             .AsNoTracking()
             .Where(e => e.Email == email)
             .Select(e => new Response(
-                Id: e.Id,
-                FullName: e.FullName,
-                Email: e.Email,
-                EmployeeType: e.EmployeeType.Name
+                IsGlobalManager: e.IsGlobalManager,
+                ProjectManagerOf: e.ProjectManagers.Select(pm => pm.ProjectId).ToList(),
+                ContractManagerOf: e.ContractManagers.Select(cm => cm.ContractId).ToList()
             ))
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -41,4 +41,3 @@ public sealed class GetCurrentUser : IEndpoint
         return Results.Ok(response);
     }
 }
-
