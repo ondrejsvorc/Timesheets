@@ -15,7 +15,7 @@ public static class ConfigureServices
     public static void AddServices(this WebApplicationBuilder builder)
     {
         builder.AddOpenApi();
-        builder.AddAuthenticationLayer();
+        builder.AddAuthentication();
         builder.AddDatabase();
         builder.AddAppServices();
     }
@@ -37,7 +37,7 @@ public static class ConfigureServices
         });
     }
 
-    private static void AddAuthenticationLayer(this WebApplicationBuilder builder)
+    private static void AddAuthentication(this WebApplicationBuilder builder)
     {
         IConfigurationSection authSection = builder.Configuration.GetSection("Authentication");
 
