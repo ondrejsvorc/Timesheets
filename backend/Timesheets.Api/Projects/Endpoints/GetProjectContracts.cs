@@ -33,7 +33,7 @@ public sealed class GetProjectContracts : IEndpoint
                 c.RegistrationNumber,
                 c.StartDate,
                 c.EndDate,
-                c.Employees.Count
+                c.ContractEmployees.Count
             ))
             .ToListAsync(cancellationToken);
 

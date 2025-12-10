@@ -1,0 +1,31 @@
+services:
+  timesheets.api:
+    image: ${DOCKER_REGISTRY-}timesheetsapi
+    container_name: timesheets.api
+    build:
+      context: .
+      dockerfile: Timesheets.Api/Dockerfile
+    ports:
+       - "5000:5000"
+       - "5001:5001"
+    depends_on:
+      timesheets.database:
+        condition: service_healthy
+
+  timesheets.database:
+    image: postgres:latest
+    container_name: timesheets.database
+    environment:
+       - POSTGRES_DB=timesheets
+       - POSTGRES_USER=postgres
+       - POSTGRES_PASSWORD=postgres
+    volumes:
+       - ./.containers/timesheets-db:/var/lib/postgresql
+    ports:
+       - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+

@@ -1,6 +1,7 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
@@ -14,7 +15,7 @@ public static class ConfigureServices
     public static void AddServices(this WebApplicationBuilder builder)
     {
         builder.AddOpenApi();
-        builder.AddAuthentication();
+        //builder.AddAuthentication();
         builder.AddDatabase();
         builder.AddAppServices();
     }
@@ -94,7 +95,7 @@ public static class ConfigureServices
 
     private static void AddDatabase(this WebApplicationBuilder builder)
     {
-        builder.Services.AddDbContext<AppDbContext>();
+        builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("Database")));
     }
 
     private static void AddAppServices(this WebApplicationBuilder builder)

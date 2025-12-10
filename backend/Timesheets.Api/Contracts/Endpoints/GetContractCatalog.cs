@@ -11,7 +11,7 @@ public sealed class GetContractCatalog : IEndpoint
            .WithSummary("Get Contract Catalog");
 
     public sealed record ContractItem(Guid Id, string Name);
-    public sealed record Response(IEnumerable<ContractItem> Projects);
+    public sealed record Response(IEnumerable<ContractItem> Contracts);
 
     private static async Task<Ok<Response>> Handle(AppDbContext dbContext, CancellationToken cancellationToken)
     {

@@ -484,3 +484,4 @@ $RECYCLE.BIN/
 *.swp
 
 Timesheets.Api/appsettings.Development.json
+.containers

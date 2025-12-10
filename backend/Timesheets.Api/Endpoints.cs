@@ -17,7 +17,7 @@ public static class Endpoints
 {
     public static void MapEndpoints(this WebApplication app)
     {
-        app.MapAuthEndpoints();
+        //app.MapAuthEndpoints();
         app.MapProtectedApiEndpoints();
     }
 
@@ -30,7 +30,7 @@ public static class Endpoints
 
     private static void MapProtectedApiEndpoints(this WebApplication app)
     {
-        var endpoints = app.MapGroup("/api").RequireAuthorization();
+        var endpoints = app.MapGroup("/api");//.RequireAuthorization();
         endpoints.MapProjectEndpoints();
         endpoints.MapContractEndpoints();
         endpoints.MapEmployeeEndpoints();
@@ -40,20 +40,20 @@ public static class Endpoints
 
     private static void MapProjectEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/projects").WithTags("Projects")
-        .MapEndpoint<GetProjectContracts>()
         .MapEndpoint<UpdateProject>()
         .MapEndpoint<DeleteProject>()
         .MapEndpoint<GetProjects>()
         .MapEndpoint<GetProjectCatalog>()
         .MapEndpoint<CreateProject>()
+        .MapEndpoint<GetProjectContracts>()
         .MapEndpoint<CreateProjectContract>();
 
     private static void MapContractEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/contracts").WithTags("Contracts")
-        .MapEndpoint<GetContract>()
         .MapEndpoint<GetContractCatalog>()
         .MapEndpoint<UpdateContract>()
         .MapEndpoint<DeleteContract>()
+        .MapEndpoint<GetContractTimesheets>()
         .MapEndpoint<GetContractEmployees>()
         .MapEndpoint<AddContractEmployee>()
         .MapEndpoint<UpdateContractEmployee>()

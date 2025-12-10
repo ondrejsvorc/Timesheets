@@ -2,6 +2,7 @@
 using System.Security.Claims;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
+using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Auth.Endpoints;
 
@@ -23,20 +24,33 @@ public sealed class GetCurrentUserPermissions : IEndpoint
 
         string email = currentUser.GetEmail();
 
-        Response? response = await dbContext.Employees
+        Employee? employee = await dbContext.Employees
             .AsNoTracking()
             .Where(e => e.Email == email)
-            .Select(e => new Response(
-                IsGlobalManager: e.IsGlobalManager,
-                ProjectManagerOf: e.ProjectManagers.Select(pm => pm.ProjectId).ToList(),
-                ContractManagerOf: e.ContractManagers.Select(cm => cm.ContractId).ToList()
-            ))
             .FirstOrDefaultAsync(cancellationToken);
 
-        if (response is null)
+        if (employee is null)
         {
             return Results.NotFound("Employee not found.");
         }
+
+        List<Guid> projectManagerOf = await dbContext.ProjectManagers
+            .AsNoTracking()
+            .Where(pm => pm.EmployeeId == employee.Id)
+            .Select(pm => pm.ProjectId)
+            .ToListAsync(cancellationToken);
+
+        List<Guid> contractManagerOf = await dbContext.ContractManagers
+            .AsNoTracking()
+            .Where(cm => cm.EmployeeId == employee.Id)
+            .Select(cm => cm.ContractId)
+            .ToListAsync(cancellationToken);
+
+        Response response = new Response(
+            IsGlobalManager: employee.IsGlobalManager,
+            ProjectManagerOf: projectManagerOf,
+            ContractManagerOf: contractManagerOf
+        );
 
         return Results.Ok(response);
     }
