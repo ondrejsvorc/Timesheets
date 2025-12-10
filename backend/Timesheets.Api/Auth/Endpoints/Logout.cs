@@ -12,7 +12,7 @@ public sealed class Logout : IEndpoint
 
     private static async Task Handle(HttpContext context)
     {
-        _ = context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme, new AuthenticationProperties { RedirectUri = "/" });
+        await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await context.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
     }
 }
