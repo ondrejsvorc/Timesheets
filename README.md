@@ -1,9 +1,8 @@
 # Timesheets
 
-Web Application for Managing and Auditing Timesheets
+Web application for managing and auditing timesheets.
 
-### Migrations
-```
-dotnet ef migrations add MigrationName --project Timesheets.Api --startup-project Timesheets.Api --output-dir Data/Migrations
-```
-
+## Prerequisites
+- **.NET SDK 10.0** (or later)
+- **Docker Desktop** (for running PostgreSQL database)
+- **EF Core Tools** (for database migrations)
