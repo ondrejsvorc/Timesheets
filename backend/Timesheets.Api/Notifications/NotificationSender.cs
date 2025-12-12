@@ -12,9 +12,7 @@ public class NotificationSender(AppDbContext db, IHubContext<NotificationHub> hu
         {
             Id = Guid.NewGuid(),
             EmployeeId = employeeId,
-            Message = message,
-            CreatedAt = DateTime.UtcNow,
-            IsRead = false
+            Message = message
         };
 
         db.Notifications.Add(notification);
