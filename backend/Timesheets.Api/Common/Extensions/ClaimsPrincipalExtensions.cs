@@ -12,12 +12,11 @@ public static class ClaimsPrincipalExtensions
 
     public static int? GetPersonalNumber(this ClaimsPrincipal principal)
     {
-        string? schac = principal.FindFirst("schacPersonalUniqueCode")?.Value;
-        if (string.IsNullOrWhiteSpace(schac))
+        string? personalNumber = principal.FindFirstValue("personalNumber");
+        if (!string.IsNullOrWhiteSpace(personalNumber) && int.TryParse(personalNumber, out int value))
         {
-            return null;
+            return value;
         }
-        ReadOnlySpan<char> last = schac.AsSpan(schac.LastIndexOf(':') + 1);
-        return int.TryParse(last, out int value) ? value : null;
+        return null;
     }
 }
