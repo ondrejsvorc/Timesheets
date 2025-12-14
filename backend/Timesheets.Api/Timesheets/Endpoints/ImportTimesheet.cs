@@ -5,7 +5,7 @@ using Timesheets.Api.Common.Extensions;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
 
-public sealed class ImportAttendanceTimesheet : IEndpoint
+public sealed class ImportTimesheet : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) => app
         .MapPost("/", Handle)

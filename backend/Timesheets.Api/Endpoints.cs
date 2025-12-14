@@ -64,7 +64,13 @@ public static class Endpoints
 
     private static void MapTimesheetEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/timesheets").WithTags("Timesheets")
-        .MapEndpoint<ImportAttendanceTimesheet>();
+        .MapEndpoint<GetAttendanceTimesheet>()
+        .MapEndpoint<CreateTimesheet>()
+        .MapEndpoint<UpdateTimesheet>()
+        .MapEndpoint<ReviewTimesheet>()
+        .MapEndpoint<SubmitTimesheet>()
+        .MapEndpoint<ApproveTimesheet>()
+        .MapEndpoint<ImportTimesheet>();
 
     private static void MapEmployeeEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/employees").WithTags("Employees")
