@@ -22,20 +22,3 @@ public sealed class AttendanceTimesheetImporter(ITimesheetReader<AttendanceTimes
         };
     }
 }
-
-[Obsolete]
-public sealed class ProjectTimesheetImporter(ITimesheetReader<ProjectTimesheet> reader, ICzechHolidaysFactory factory) : ITimesheetImporter<ProjectTimesheet>
-{
-    public async Task<ProjectTimesheet> ImportAsync(Stream stream)
-    {
-        ProjectTimesheet timesheet = reader.Read(stream);
-        IEnumerable<CzechHolidayDate> holidays = factory.Create(timesheet.Year);
-
-        return timesheet with
-        {
-            Days = timesheet.Days
-                .Select(day => day with { IsHoliday = holidays.Any(holiday => holiday.Date == DateOnly.FromDateTime(day.Date)) })
-                .ToList()
-        };
-    }
-}
