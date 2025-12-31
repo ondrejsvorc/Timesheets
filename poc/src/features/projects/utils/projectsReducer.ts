@@ -1,0 +1,19 @@
+import type { ProjectItem } from "../api/shared/projectItem";
+
+export type ProjectsAction = { type: "add"; project: ProjectItem } | { type: "update"; project: ProjectItem } | { type: "delete"; projectId: string };
+
+export const projectsReducer = (draft: ProjectItem[], action: ProjectsAction) => {
+  switch (action.type) {
+    case "add": {
+      draft.push(action.project);
+      break;
+    }
+    case "delete": {
+      const index = draft.findIndex((p) => p.id === action.projectId);
+      if (index !== -1) {
+        draft.splice(index, 1);
+      }
+      break;
+    }
+  }
+};

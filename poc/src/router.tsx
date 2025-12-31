@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 import { App } from "./App";
+import { getProjects } from "./features/projects/api/getProjects";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
 
 export const router = createBrowserRouter([
@@ -8,8 +9,9 @@ export const router = createBrowserRouter([
     element: <App />,
     children: [
       {
-        index: true,
+        path: "/projects",
         element: <ProjectsPage />,
+        loader: async () => await getProjects(),
       },
     ],
   },

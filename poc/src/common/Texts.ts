@@ -35,4 +35,7 @@ export const Texts = {
   workload: "Úvazek",
   academic: "Akademik",
   nonAcademic: "Neakademik",
+  actionSuccessful: "Akce byla úspěšně provedena",
+  actionFailed: "Akci se nepodařilo provést",
+  delete: "Smazat",
 };
