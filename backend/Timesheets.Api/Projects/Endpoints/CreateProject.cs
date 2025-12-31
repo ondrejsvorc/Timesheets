@@ -16,7 +16,7 @@ public sealed class CreateProject : IEndpoint
            .WithRequestValidation<Request>();
 
     public sealed record Request(string Name, string RegistrationNumber, string RecipientName, DateTime StartDate, DateTime? EndDate, string Description);
-    public sealed record Response(Guid Id);
+    public sealed record Response(ProjectItem Project);
     public sealed class Validator : AbstractValidator<Request> { }
 
     private static async Task<Results<Created<Response>, BadRequest<string>>> Handle([FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -37,6 +37,15 @@ public sealed class CreateProject : IEndpoint
         dbContext.Projects.Add(project);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return TypedResults.Created($"/projects/{project.Id}", new Response(project.Id));
+        ProjectItem projectItem = new(
+            project.Id,
+            project.Name,
+            project.RegistrationNumber,
+            project.StartDate,
+            project.EndDate,
+            ContractCount: 0
+        );
+
+        return TypedResults.Created($"/projects/{project.Id}", new Response(projectItem));
     }
 }

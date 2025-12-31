@@ -10,7 +10,6 @@ public sealed class GetProjects : IEndpoint
         app.MapGet("/", Handle)
            .WithSummary("Get Projects");
 
-    public sealed record ProjectItem(Guid Id, string Name, string? RegistrationNumber, DateTime StartDate, DateTime? EndDate, int ContractCount);
     public sealed record Response(IEnumerable<ProjectItem> Projects);
 
     private static async Task<Ok<Response>> Handle(AppDbContext dbContext, CancellationToken cancellationToken)
