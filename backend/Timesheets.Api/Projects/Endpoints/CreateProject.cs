@@ -15,7 +15,7 @@ public sealed class CreateProject : IEndpoint
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(string Name, string RegistrationNumber, string RecipientName, DateTime StartDate, DateTime? EndDate, string Description);
+    public sealed record Request(string Name, string RegistrationNumber, string RecipientName, DateTime StartDate, DateTime? EndDate, string? Description);
     public sealed record Response(ProjectItem Project);
     public sealed class Validator : AbstractValidator<Request> { }
 
