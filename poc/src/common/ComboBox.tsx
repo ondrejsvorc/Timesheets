@@ -1,5 +1,6 @@
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { Texts } from "@/common/Texts";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -32,13 +33,13 @@ export const ComboBox = ({ value, items, placeholder, loading, onChange }: Combo
       </PopoverTrigger>
       <PopoverContent className="w-full p-0">
         <Command>
-          <CommandInput placeholder="Hledat…" />
+          <CommandInput placeholder={Texts.search} />
           {loading ? (
             <div className="flex items-center justify-center py-6">
               <Loader2 className="size-5 animate-spin opacity-60 [animation-duration:0.5s]" />
             </div>
           ) : items.length === 0 ? (
-            <CommandEmpty>Žádné položky</CommandEmpty>
+            <CommandEmpty>{Texts.noItems}</CommandEmpty>
           ) : (
             <CommandGroup>
               {items.map((item) => (

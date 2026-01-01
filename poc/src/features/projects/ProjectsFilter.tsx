@@ -12,7 +12,7 @@ interface FilterProps {
 export const ProjectsFilter = ({ value, onChange }: FilterProps) => {
   return (
     <div className="flex items-center gap-4 flex-wrap">
-      <Input type="text" placeholder="Hledat…" value={value.query} onChange={(e) => onChange({ ...value, query: e.target.value })} className="w-64" />
+      <Input type="text" placeholder={Texts.search} value={value.query} onChange={(e) => onChange({ ...value, query: e.target.value })} className="w-64" />
       <div className="flex items-center gap-3">
         <Checkbox id="onlyActive" checked={value.onlyActive} onCheckedChange={(checked: boolean) => onChange({ ...value, onlyActive: checked })} />
         <Label htmlFor="onlyActive">{Texts.activeOnly}</Label>

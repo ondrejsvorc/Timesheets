@@ -1,4 +1,5 @@
 import { SearchX } from "lucide-react";
+import { Texts } from "./Texts";
 
 export const EmptyState = () => {
   return (
@@ -6,7 +7,7 @@ export const EmptyState = () => {
       <div className="rounded-full bg-muted p-3">
         <SearchX className="size-5" />
       </div>
-      <span className="text-sm font-medium">Žádné výsledky</span>
+      <span className="text-sm font-medium">{Texts.noResults}</span>
     </div>
   );
 };

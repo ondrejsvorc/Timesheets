@@ -1,4 +1,5 @@
 import { useImmer } from "use-immer";
+import { Texts } from "@/common/Texts";
 import { EmptyState } from "@/common/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AddEmployeePositionButton } from "./AddEmployeePositionButton";
@@ -21,20 +22,20 @@ export const EmployeesTable = ({ employees }: EmployeesTableProps) => {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Osobní číslo</TableHead>
-            <TableHead>Celé jméno</TableHead>
-            <TableHead>E-mail</TableHead>
-            <TableHead>Typ zaměstnance</TableHead>
-            <TableHead>Akce</TableHead>
+            <TableHead>{Texts.personalNumber}</TableHead>
+            <TableHead>{Texts.fullName}</TableHead>
+            <TableHead>{Texts.email}</TableHead>
+            <TableHead>{Texts.employeeType}</TableHead>
+            <TableHead>{Texts.actions}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {employees.map((employee) => (
             <TableRow key={employee.id} className="cursor-pointer">
-              <TableCell>{employee.personalNumber ?? "—"}</TableCell>
+              <TableCell>{employee.personalNumber ?? Texts.dash}</TableCell>
               <TableCell>{employee.fullName}</TableCell>
-              <TableCell>{employee.email ?? "—"}</TableCell>
-              <TableCell>{employee.employeeTypeId ? "Akademik" : "Neakademik"}</TableCell>
+              <TableCell>{employee.email ?? Texts.dash}</TableCell>
+              <TableCell>{employee.employeeTypeId ? Texts.academic : Texts.nonAcademic}</TableCell>
               <TableCell>
                 <AddEmployeePositionButton onClick={() => setIsAddPositionOpen(true)} />
               </TableCell>

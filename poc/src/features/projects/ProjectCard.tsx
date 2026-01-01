@@ -21,7 +21,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
   const [isConfirmOpen, setIsConfirmOpen] = useImmer(false);
   const startDate = project.startDate ? format(parseISO(project.startDate), "d. M. yyyy", { locale: cs }) : null;
   const endDate = project.endDate ? format(parseISO(project.endDate), "d. M. yyyy", { locale: cs }) : null;
-  const dateRange = startDate && endDate ? `${startDate} – ${endDate}` : startDate || "Bez data";
+  const dateRange = startDate && endDate ? `${startDate} – ${endDate}` : startDate || Texts.noDate;
   const isActive = isProjectActive(project);
 
   return (

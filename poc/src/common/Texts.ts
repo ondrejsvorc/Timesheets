@@ -38,4 +38,11 @@ export const Texts = {
   actionSuccessful: "Akce byla úspěšně provedena",
   actionFailed: "Akci se nepodařilo provést",
   delete: "Smazat",
+  noResults: "Žádné výsledky",
+  noDate: "Bez data",
+  search: "Hledat…",
+  noItems: "Žádné položky",
+  confirmAction: "Potvrzení akce",
+  confirmActionDescription: "Opravdu si přejete pokračovat? Tuto akci nelze vrátit zpět.",
+  dash: "—",
 };

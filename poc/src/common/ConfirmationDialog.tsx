@@ -1,6 +1,7 @@
 import type { MouseEvent } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DialogCancelButton, DialogConfirmButton } from "./Buttons";
+import { Texts } from "./Texts";
 
 interface ConfirmationDialogProps {
   open: boolean;
@@ -13,8 +14,8 @@ export const ConfirmationDialog = ({ open, onCancel, onConfirm }: ConfirmationDi
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Potvrzení akce</DialogTitle>
-          <DialogDescription>Opravdu si přejete pokračovat? Tuto akci nelze vrátit zpět.</DialogDescription>
+          <DialogTitle>{Texts.confirmAction}</DialogTitle>
+          <DialogDescription>{Texts.confirmActionDescription}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogCancelButton onClick={onCancel}></DialogCancelButton>
