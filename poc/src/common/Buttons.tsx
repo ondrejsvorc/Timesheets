@@ -1,4 +1,4 @@
-import { Check, Loader2, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -143,5 +143,15 @@ export const DeleteButton = ({ onClick, disabled, children }: DeleteButtonProps)
       <Trash2 className="size-4" />
       {children}
     </span>
+  </Button>
+);
+
+interface BackButtonProps {
+  onClick: () => void;
+}
+
+export const BackButton = ({ onClick }: BackButtonProps) => (
+  <Button type="button" variant="outline" size="icon" aria-label="Back" onClick={onClick}>
+    <ArrowLeft className="size-4" />
   </Button>
 );

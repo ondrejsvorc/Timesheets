@@ -16,3 +16,9 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+
+export const routes = {
+  projects: () => "/projects",
+  employees: () => "/employees",
+  projectDetail: (id: string) => `/projects/${id}`,
+};
