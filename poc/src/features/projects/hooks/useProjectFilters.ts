@@ -14,21 +14,21 @@ const initialFilters: ProjectsFilterState = {
 
 const byActive =
   (onlyActive: boolean) =>
-  (project: ProjectItem): boolean =>
-    !onlyActive || isProjectActive(project);
+  (item: ProjectItem): boolean =>
+    !onlyActive || isProjectActive(item);
 
 const byStartsWith =
   (query: string) =>
-  (project: ProjectItem): boolean =>
-    project.name.toLowerCase().startsWith(query);
+  (item: ProjectItem): boolean =>
+    item.name.toLowerCase().startsWith(query);
 
 const byIncludes =
   (query: string) =>
-  (project: ProjectItem): boolean =>
-    project.name.toLowerCase().includes(query);
+  (item: ProjectItem): boolean =>
+    item.name.toLowerCase().includes(query);
 
-const applyFilters = (projects: ProjectItem[], filters: ProjectsFilterState): ProjectItem[] => {
-  const base = projects.filter(byActive(filters.onlyActive));
+const applyFilters = (items: ProjectItem[], filters: ProjectsFilterState): ProjectItem[] => {
+  const base = items.filter(byActive(filters.onlyActive));
   const query = filters.query.trim().toLowerCase();
   if (!query) {
     return base;
@@ -37,8 +37,8 @@ const applyFilters = (projects: ProjectItem[], filters: ProjectsFilterState): Pr
   return startsWith.length > 0 ? startsWith : base.filter(byIncludes(query));
 };
 
-export const useProjectFilters = (projects: ProjectItem[]) => {
+export const useProjectFilters = (items: ProjectItem[]) => {
   const [filters, setFilters] = useState<ProjectsFilterState>(initialFilters);
-  const filteredProjects = useMemo(() => applyFilters(projects, filters), [projects, filters]);
-  return { filters, setFilters, filteredProjects };
+  const filtered = useMemo(() => applyFilters(items, filters), [items, filters]);
+  return { filters, setFilters, filtered };
 };

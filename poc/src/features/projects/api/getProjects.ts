@@ -57,6 +57,11 @@ const mockResponse: GetProjectsResponse = {
   ],
 };
 
-export const getProjects = async (): Promise<GetProjectsResponse> => {
-  return mockResponse;
+export const getProjects = () => {
+  return {
+    promise: (async (): Promise<GetProjectsResponse> => {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      return mockResponse;
+    })(),
+  };
 };

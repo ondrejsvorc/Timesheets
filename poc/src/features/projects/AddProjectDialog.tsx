@@ -10,7 +10,7 @@ import { Texts } from "@/common/Texts";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,11 +20,11 @@ import type { ProjectItem } from "./api/shared/projectItem";
 
 type AddProjectFormValues = z.infer<typeof addProjectSchema>;
 const addProjectSchema = z.object({
-  name: z.string().min(1, "Zadejte název projektu"),
-  registrationNumber: z.string().min(1, "Zadejte ID projektu"),
-  startDate: z.string().min(1, "Zadejte datum začátku"),
-  endDate: z.string().min(1, "Zadejte datum ukončení"),
-  recipientName: z.string().min(1, "Zadejte název příjemce"),
+  name: z.string().nonempty(),
+  registrationNumber: z.string().nonempty(),
+  startDate: z.string().nonempty(),
+  endDate: z.string().nonempty(),
+  recipientName: z.string().nonempty(),
   description: z.string().optional(),
 });
 
@@ -78,7 +78,6 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -94,7 +93,6 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -136,7 +134,6 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -177,7 +174,6 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -194,7 +190,6 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -208,7 +203,6 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
                   <FormControl>
                     <Textarea className="resize-none" {...field} />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />

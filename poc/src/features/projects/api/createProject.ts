@@ -25,5 +25,6 @@ export const createProject = async (request: CreateProjectRequest, signal: Abort
       contractCount: 0,
     },
   };
+  await new Promise((resolve) => setTimeout(resolve, 2000));
   return mockResponse;
 };

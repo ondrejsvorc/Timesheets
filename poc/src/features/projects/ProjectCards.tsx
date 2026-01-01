@@ -1,3 +1,4 @@
+import { EmptyState } from "@/common/EmptyState";
 import type { ProjectItem } from "./api/shared/projectItem";
 import { ProjectCard } from "./ProjectCard";
 
@@ -7,7 +8,7 @@ interface ProjectCardsProps {
 
 export const ProjectCards = ({ projects }: ProjectCardsProps) => {
   if (projects.length === 0) {
-    return <div className="text-center py-12 text-muted-foreground">Žádné projekty nenalezeny.</div>;
+    return <EmptyState />;
   }
 
   return (
