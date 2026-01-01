@@ -1,10 +1,10 @@
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { Texts } from "@/common/Texts";
 import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { Texts } from "@/constants/texts";
+import { cn } from "@/utils/cn";
 
 export interface ComboBoxItem {
   value: string;

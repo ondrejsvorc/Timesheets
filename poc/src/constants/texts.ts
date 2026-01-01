@@ -45,4 +45,5 @@ export const Texts = {
   confirmAction: "Potvrzení akce",
   confirmActionDescription: "Opravdu si přejete pokračovat? Tuto akci nelze vrátit zpět.",
   dash: "—",
+  addPosition: "Přidat pozici",
 };

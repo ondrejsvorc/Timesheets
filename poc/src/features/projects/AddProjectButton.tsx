@@ -1,4 +1,4 @@
-import { AddButton } from "@/common/Buttons";
+import { AddButton } from "@/components/shared/buttons/ActionButtons";
 
 interface AddProjectButtonProps {
   onClick: () => void;

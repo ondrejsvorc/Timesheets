@@ -1,10 +1,10 @@
 import { lazy, Suspense } from "react";
 import { Await, useAsyncValue, useLoaderData } from "react-router";
 import { useImmer, useImmerReducer } from "use-immer";
-import { FilterBar } from "@/common/FilterBar";
-import { GenericSkeleton } from "@/common/GenericSkeleton";
-import { PageHeader, PageTitle } from "@/common/PageHeader";
-import { Texts } from "@/common/Texts";
+import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { FilterBar } from "@/components/shared/layout/FilterBar";
+import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
+import { Texts } from "@/constants/texts";
 import { AddProjectButton } from "./AddProjectButton";
 import { AddProjectDialog } from "./AddProjectDialog";
 import type { GetProjectsResponse } from "./api/getProjects";

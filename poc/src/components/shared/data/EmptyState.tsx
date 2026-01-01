@@ -1,5 +1,5 @@
 import { SearchX } from "lucide-react";
-import { Texts } from "./Texts";
+import { Texts } from "@/constants/texts";
 
 export const EmptyState = () => {
   return (

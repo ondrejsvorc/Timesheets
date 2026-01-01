@@ -1,7 +1,7 @@
 import { Outlet } from "react-router";
 import { Toaster } from "sonner";
-import { AppFooter } from "./common/AppFooter";
-import { AppHeader } from "./common/AppHeader";
+import { AppFooter } from "./components/shared/layout/AppFooter";
+import { AppHeader } from "./components/shared/layout/AppHeader";
 
 export const App = () => {
   return (

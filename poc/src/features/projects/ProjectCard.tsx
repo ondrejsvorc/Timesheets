@@ -2,12 +2,12 @@ import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { useImmer } from "use-immer";
-import { ConfirmationDialog } from "@/common/ConfirmationDialog";
-import { Texts } from "@/common/Texts";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { Texts } from "@/constants/texts";
+import { cn } from "@/utils/cn";
 import type { ProjectItem } from "./api/shared/projectItem";
 import { useProjectsDispatch } from "./hooks/useProjectsDispatch";
 import { isProjectActive } from "./utils/isProjectActive";
@@ -55,9 +55,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
             <span
               className={cn(
                 "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                isActive
-                  ? "bg-primary/10 text-primary border border-primary/20"
-                  : "bg-muted text-muted-foreground border border-border",
+                isActive ? "bg-primary/10 text-primary border border-primary/20" : "bg-muted text-muted-foreground border border-border",
               )}
             >
               {isActive ? Texts.active : Texts.inactive}

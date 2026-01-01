@@ -1,4 +1,4 @@
-import { EmptyState } from "@/common/EmptyState";
+import { EmptyState } from "@/components/shared/data/EmptyState";
 import type { ProjectItem } from "./api/shared/projectItem";
 import { ProjectCard } from "./ProjectCard";
 

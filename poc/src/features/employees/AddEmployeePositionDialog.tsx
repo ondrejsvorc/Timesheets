@@ -6,15 +6,15 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useImmer } from "use-immer";
 import { z } from "zod";
-import { DialogCancelButton, DialogConfirmButton } from "@/common/Buttons";
-import { ComboBox, type ComboBoxItem } from "@/common/ComboBox";
+import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
+import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/cn";
 import { getContractCatalog } from "./api/getContractCatalog";
 import { getProjectCatalog } from "./api/getProjectCatalog";
 

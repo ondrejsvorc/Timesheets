@@ -1,7 +1,7 @@
 import { Bell, User } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
-import { Texts } from "./Texts";
+import { Texts } from "../../../constants/texts";
 
 export const AppHeader = () => {
   const handleNotificationsClick = () => {};
@@ -17,17 +17,28 @@ export const AppHeader = () => {
 
         {/* Navigation */}
         <nav className="flex items-center gap-1">
-          <Link to="/projects" className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all">
+          <Link
+            to="/projects"
+            className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
+          >
             {Texts.projects}
           </Link>
-          <Link to="/employees" className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all">
+          <Link
+            to="/employees"
+            className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
+          >
             {Texts.employees}
           </Link>
         </nav>
 
         {/* Actions */}
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={handleNotificationsClick} className="text-muted-foreground hover:text-foreground hover:bg-accent">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleNotificationsClick}
+            className="text-muted-foreground hover:text-foreground hover:bg-accent"
+          >
             <Bell className="h-5 w-5" />
           </Button>
 

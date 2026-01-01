@@ -5,8 +5,7 @@ import { cs } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { DialogCancelButton, DialogConfirmButton } from "@/common/Buttons";
-import { Texts } from "@/common/Texts";
+import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,7 +13,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+import { Texts } from "@/constants/texts";
+import { cn } from "@/utils/cn";
 import { type CreateProjectRequest, createProject } from "./api/createProject";
 import type { ProjectItem } from "./api/shared/projectItem";
 

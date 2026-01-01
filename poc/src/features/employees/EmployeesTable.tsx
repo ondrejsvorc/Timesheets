@@ -1,7 +1,7 @@
 import { useImmer } from "use-immer";
-import { Texts } from "@/common/Texts";
-import { EmptyState } from "@/common/EmptyState";
+import { EmptyState } from "@/components/shared/data/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Texts } from "@/constants/texts";
 import { AddEmployeePositionButton } from "./AddEmployeePositionButton";
 import { AddEmployeePositionDialog } from "./AddEmployeePositionDialog";
 import type { EmployeeItem } from "./api/getEmployees";

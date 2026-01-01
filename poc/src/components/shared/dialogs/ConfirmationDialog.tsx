@@ -1,7 +1,7 @@
 import type { MouseEvent } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DialogCancelButton, DialogConfirmButton } from "./Buttons";
-import { Texts } from "./Texts";
+import { Texts } from "@/constants/texts";
+import { DialogCancelButton, DialogConfirmButton } from "../buttons/DialogButtons";
 
 interface ConfirmationDialogProps {
   open: boolean;
