@@ -5,7 +5,6 @@ import { FilterBar } from "@/common/FilterBar";
 import { GenericSkeleton } from "@/common/GenericSkeleton";
 import { PageHeader, PageTitle } from "@/common/PageHeader";
 import { Texts } from "@/common/Texts";
-import { Spinner } from "@/components/ui/spinner";
 import { AddProjectButton } from "./AddProjectButton";
 import { AddProjectDialog } from "./AddProjectDialog";
 import type { GetProjectsResponse } from "./api/getProjects";
