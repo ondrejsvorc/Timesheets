@@ -8,30 +8,30 @@ export const AppHeader = () => {
   const handleUserClick = () => {};
 
   return (
-    <header className="w-full border-b border-primary/15 bg-background">
-      <div className="mx-auto max-w-7xl flex h-14 items-center justify-between px-6">
+    <header className="w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+      <div className="mx-auto max-w-7xl flex h-16 items-center justify-between px-6">
         {/* Brand */}
-        <Link to="/" className="text-lg font-semibold tracking-wide text-primary select-none">
+        <Link to="/" className="text-xl font-semibold tracking-tight text-primary select-none hover:text-primary/90 transition-colors">
           {Texts.applicationName}
         </Link>
 
         {/* Navigation */}
-        <nav className="flex items-center gap-8">
-          <Link to="/projects" className="text-foreground/80 hover:text-foreground transition-colors">
+        <nav className="flex items-center gap-1">
+          <Link to="/projects" className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all">
             {Texts.projects}
           </Link>
-          <Link to="/employees" className="text-foreground/80 hover:text-foreground transition-colors">
+          <Link to="/employees" className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all">
             {Texts.employees}
           </Link>
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={handleNotificationsClick} className="text-muted-foreground hover:text-foreground">
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={handleNotificationsClick} className="text-muted-foreground hover:text-foreground hover:bg-accent">
             <Bell className="h-5 w-5" />
           </Button>
 
-          <Button variant="ghost" size="icon" onClick={handleUserClick} className="text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="icon" onClick={handleUserClick} className="text-muted-foreground hover:text-foreground hover:bg-accent">
             <User className="h-5 w-5" />
           </Button>
         </div>

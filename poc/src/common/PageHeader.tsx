@@ -17,9 +17,9 @@ export const PageHeader = ({ leading, actions, children }: PageHeaderProps) => {
 };
 
 export const PageTitle = ({ children }: { children: React.ReactNode }) => {
-  return <h1 className="text-2xl font-semibold leading-snug select-none">{children}</h1>;
+  return <h1 className="text-3xl font-semibold leading-tight tracking-tight select-none text-foreground">{children}</h1>;
 };
 
 export const PageSubtitle = ({ children }: { children: React.ReactNode }) => {
-  return <p className="text-sm text-muted-foreground">{children}</p>;
+  return <p className="text-sm text-muted-foreground leading-relaxed">{children}</p>;
 };

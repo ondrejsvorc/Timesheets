@@ -2,9 +2,11 @@ import { SearchX } from "lucide-react";
 
 export const EmptyState = () => {
   return (
-    <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
-      <SearchX className="size-4" />
-      <span>Žádné výsledky</span>
+    <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
+      <div className="rounded-full bg-muted p-3">
+        <SearchX className="size-5" />
+      </div>
+      <span className="text-sm font-medium">Žádné výsledky</span>
     </div>
   );
 };

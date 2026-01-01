@@ -26,14 +26,14 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
 
   return (
     <>
-      <Card className="cursor-pointer" onClick={() => {}}>
+      <Card className="cursor-pointer group hover:border-primary/20 transition-all duration-200" onClick={() => {}}>
         <CardHeader>
-          <CardTitle>{project.name}</CardTitle>
-          {project.registrationNumber && <div className="text-sm text-muted-foreground">{project.registrationNumber}</div>}
+          <CardTitle className="group-hover:text-primary transition-colors">{project.name}</CardTitle>
+          {project.registrationNumber && <div className="text-sm text-muted-foreground font-mono">{project.registrationNumber}</div>}
           <CardAction>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -46,18 +46,18 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
             </DropdownMenu>
           </CardAction>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
+        <CardContent className="flex flex-col gap-3">
           <div className="text-sm text-muted-foreground">{dateRange}</div>
-          <div className="text-sm">
-            {Texts.contracts}: {project.contractCount}
+          <div className="text-sm text-foreground/90">
+            {Texts.contracts}: <span className="font-medium">{project.contractCount}</span>
           </div>
-          <div className="mt-auto">
+          <div className="mt-auto pt-2">
             <span
               className={cn(
-                "inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-medium",
+                "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors",
                 isActive
-                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                  : "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
+                  ? "bg-primary/10 text-primary border border-primary/20"
+                  : "bg-muted text-muted-foreground border border-border",
               )}
             >
               {isActive ? Texts.active : Texts.inactive}
