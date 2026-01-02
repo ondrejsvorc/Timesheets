@@ -14,10 +14,6 @@ import { ProjectsFilter } from "./ProjectsFilter";
 import { ProjectsContext } from "./utils/projectsContext";
 import { projectsReducer } from "./utils/projectsReducer";
 
-const ProjectsPageContentLazy = lazy(async () => ({
-  default: ProjectsPageContent,
-}));
-
 export const ProjectsPage = () => {
   const { promise } = useLoaderData() as {
     promise: Promise<GetProjectsResponse>;
@@ -30,7 +26,7 @@ export const ProjectsPage = () => {
       </PageHeader>
       <Suspense fallback={<GenericSkeleton />}>
         <Await resolve={promise}>
-          <ProjectsPageContentLazy />
+          <ProjectsPageContent />
         </Await>
       </Suspense>
     </>
