@@ -46,4 +46,6 @@ export const Texts = {
   confirmActionDescription: "Opravdu si přejete pokračovat? Tuto akci nelze vrátit zpět.",
   dash: "—",
   addPosition: "Přidat pozici",
+  registrationNumber: "Číslo zakázky",
+  contractName: "Název zakázky",
 };

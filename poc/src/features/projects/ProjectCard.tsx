@@ -1,11 +1,13 @@
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { MoreHorizontal, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router";
 import { useImmer } from "use-immer";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
 import type { ProjectItem } from "./api/shared/projectItem";
@@ -23,10 +25,16 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
   const endDate = project.endDate ? format(parseISO(project.endDate), "d. M. yyyy", { locale: cs }) : null;
   const dateRange = startDate && endDate ? `${startDate} – ${endDate}` : startDate || Texts.noDate;
   const isActive = isProjectActive(project);
+  const navigate = useNavigate();
 
   return (
     <>
-      <Card className="cursor-pointer group hover:border-primary/20 transition-all duration-200" onClick={() => {}}>
+      <Card
+        className="cursor-pointer group hover:border-primary/20 transition-all duration-200"
+        onClick={() => {
+          navigate(Routes.project(project.id));
+        }}
+      >
         <CardHeader>
           <CardTitle className="group-hover:text-primary transition-colors">{project.name}</CardTitle>
           {project.registrationNumber && <div className="text-sm text-muted-foreground font-mono">{project.registrationNumber}</div>}
