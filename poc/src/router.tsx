@@ -14,6 +14,8 @@ import { ProjectContractsManagers } from "./features/project/ProjectContractsMan
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api/getProjects";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
+import { TimesheetAuditTable } from "./components/poc/TimesheetAuditTablePoC";
+import { TimesheetDayEditor } from "./components/poc/TimesheetDayEditorPoC";
 
 const requireProjectId = (params: Params) => {
   if (!params.id) {
@@ -77,6 +79,14 @@ export const router = createBrowserRouter([
           //   loader: ({ params }) => getEmployeeTimesheets(requireEmployeeId(params)),
           // },
         ],
+      },
+      {
+        path: "timesheet",
+        element: <TimesheetAuditTable />
+      },
+      {
+        path: "timesheets/edit/:year/:month/:day",
+        element: <TimesheetDayEditor />
       },
     ],
   },
