@@ -11,7 +11,7 @@ export const AppHeader = () => {
     <header className="w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="mx-auto max-w-7xl flex h-16 items-center justify-between px-6">
         {/* Brand */}
-        <Link to="/" className="text-xl font-semibold tracking-tight text-primary select-none hover:text-primary/90 transition-colors">
+        <Link to="/projects" className="text-xl font-semibold tracking-tight text-primary select-none hover:text-primary/90 transition-colors">
           {Texts.applicationName}
         </Link>
 
