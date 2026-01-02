@@ -11,19 +11,19 @@ namespace Timesheets.Api.Projects.Endpoints;
 public sealed class CreateProjectContract : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapPost("/{projectId}/contracts", Handle)
+        app.MapPost("/{id}/contracts", Handle)
            .WithSummary("Create Contract in Project")
            .WithRequestValidation<Request>();
 
-    public sealed record Request(string Name, string? RegistrationNumber, DateTime StartDate, DateTime? EndDate, string? Description);
-    public sealed record Response(Guid Id);
+    public sealed record Request(string Name, string RegistrationNumber, DateTime StartDate, DateTime? EndDate, string? Description);
+    public sealed record Response(ProjectContractItem ProjectContract);
     public sealed class Validator : AbstractValidator<Request> { }
 
-    private static async Task<Results<Created<Response>, NotFound, BadRequest<string>>> Handle(Guid projectId, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Created<Response>, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         bool projectExists = await dbContext.Projects
             .AsNoTracking()
-            .AnyAsync(p => p.Id == projectId, cancellationToken);
+            .AnyAsync(p => p.Id == id, cancellationToken);
 
         if (!projectExists)
         {
@@ -33,7 +33,7 @@ public sealed class CreateProjectContract : IEndpoint
         Contract contract = new()
         {
             Id = Guid.NewGuid(),
-            ProjectId = projectId,
+            ProjectId = id,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             Description = request.Description,
@@ -44,6 +44,15 @@ public sealed class CreateProjectContract : IEndpoint
         dbContext.Contracts.Add(contract);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return TypedResults.Created($"/projects/{projectId}/contracts/{contract.Id}", new Response(contract.Id));
+        ProjectContractItem projectContract = new(
+            contract.Id,
+            request.Name,
+            request.RegistrationNumber,
+            contract.StartDate,
+            contract.EndDate,
+            EmployeeCount: 0
+        );
+
+        return TypedResults.Created($"/projects/{id}/contracts/{contract.Id}", new Response(projectContract));
     }
 }

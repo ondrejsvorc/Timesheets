@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { useImmer, useImmerReducer } from "use-immer";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
@@ -8,8 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { AddContractButton } from "./AddContractButton";
-import type { GetProjectContractsResponse, ProjectContractItem } from "./api/getProjectContracts";
+import { AddContractDialog } from "./AddContractDialog";
+import type { GetProjectContractsResponse } from "./api/getProjectContracts";
+import type { ProjectContractItem } from "./api/shared/projectContractItem";
 import { type ContractsFilterState, useContractFilters } from "./hooks/useContractFilters";
+import { ProjectContractsContext } from "./utils/projectContractsContext";
+import { projectContractsReducer } from "./utils/projectContractsReducer";
 
 export const ProjectContracts = () => {
   const { promise } = useLoaderData() as {
@@ -27,19 +32,30 @@ export const ProjectContracts = () => {
 
 const ProjectContractsContent = () => {
   const response = useAsyncValue() as GetProjectContractsResponse;
-  const { filters, setFilters, filtered } = useContractFilters(response.contracts);
+  const [state, dispatch] = useImmerReducer(projectContractsReducer, response.contracts);
+  const { filters, setFilters, filtered } = useContractFilters(state);
+  const [isAddOpen, setIsAddOpen] = useImmer(false);
 
   return (
-    <>
+    <ProjectContractsContext.Provider value={dispatch}>
       <SubPageHeader>
         <SubPageTitle>Zakázky</SubPageTitle>
       </SubPageHeader>
       <FilterBar>
         <ContractsFilter value={filters} onChange={setFilters} />
-        <AddContractButton onClick={() => {}} />
+        <AddContractButton onClick={() => setIsAddOpen(true)} />
       </FilterBar>
       <ContractsTable contracts={filtered} />
-    </>
+      <AddContractDialog
+        open={isAddOpen}
+        projectId=""
+        onClose={() => setIsAddOpen(false)}
+        onSaved={(contract) => {
+          dispatch({ type: "add", contract });
+          setIsAddOpen(false);
+        }}
+      />
+    </ProjectContractsContext.Provider>
   );
 };
 
