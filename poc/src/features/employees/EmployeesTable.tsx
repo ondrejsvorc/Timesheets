@@ -1,6 +1,8 @@
+import { useNavigate } from "react-router";
 import { useImmer } from "use-immer";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { AddEmployeePositionButton } from "./AddEmployeePositionButton";
 import { AddEmployeePositionDialog } from "./AddEmployeePositionDialog";
@@ -12,6 +14,7 @@ interface EmployeesTableProps {
 
 export const EmployeesTable = ({ employees }: EmployeesTableProps) => {
   const [isAddPositionOpen, setIsAddPositionOpen] = useImmer(false);
+  const navigate = useNavigate();
 
   if (employees.length === 0) {
     return <EmptyState />;
@@ -31,7 +34,7 @@ export const EmployeesTable = ({ employees }: EmployeesTableProps) => {
         </TableHeader>
         <TableBody>
           {employees.map((employee) => (
-            <TableRow key={employee.id} className="cursor-pointer">
+            <TableRow key={employee.id} className="cursor-pointer" onClick={() => navigate(Routes.employee(employee.id))}>
               <TableCell>{employee.personalNumber ?? Texts.dash}</TableCell>
               <TableCell>{employee.fullName}</TableCell>
               <TableCell>{employee.email ?? Texts.dash}</TableCell>

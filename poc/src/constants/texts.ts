@@ -48,4 +48,6 @@ export const Texts = {
   addPosition: "Přidat pozici",
   registrationNumber: "Číslo zakázky",
   contractName: "Název zakázky",
+  position: "Pozice",
+  status: "Status",
 };

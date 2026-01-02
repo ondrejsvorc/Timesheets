@@ -4,19 +4,20 @@ import { BackButton, EditButton } from "@/components/shared/buttons/ActionButton
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Routes } from "@/constants/routes";
-import type { GetProjectResponse } from "./api/getProject";
-import { ProjectTabs } from "./ProjectTabs";
+import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
+import type { GetEmployeeResponse } from "./api/getEmployee";
+import { EmployeeTabs } from "./EmployeeTabs";
 
-export const ProjectPage = () => {
+export const EmployeePage = () => {
   const { promise } = useLoaderData() as {
-    promise: Promise<GetProjectResponse>;
+    promise: Promise<GetEmployeeResponse>;
   };
 
   return (
     <>
       <Suspense fallback={<GenericSkeleton />}>
         <Await resolve={promise}>
-          <ProjectPageHeader />
+          <EmployeePageHeader />
         </Await>
       </Suspense>
       <Suspense fallback={<GenericSkeleton />}>
@@ -26,20 +27,23 @@ export const ProjectPage = () => {
   );
 };
 
-const ProjectPageHeader = () => {
-  const response = useAsyncValue() as GetProjectResponse;
+const EmployeePageHeader = () => {
+  const response = useAsyncValue() as GetEmployeeResponse;
   const navigate = useNavigate();
+  const employee = response.employee;
 
   return (
     <>
       <PageHeader
-        leading={<BackButton onClick={() => navigate(Routes.projects())} />}
+        leading={<BackButton onClick={() => navigate(Routes.employees())} />}
         actions={<EditButton onClick={() => {}}>Upravit údaje</EditButton>}
       >
-        <PageTitle>{response.project.name}</PageTitle>
-        <PageSubtitle>{response.project.registrationNumber}</PageSubtitle>
+        <PageTitle>{employee.fullName}</PageTitle>
+        <PageSubtitle>
+          {employee.personalNumber} · {employee.email} · {resolveEmployeeTypeName(employee.employeeTypeId)}
+        </PageSubtitle>
       </PageHeader>
-      <ProjectTabs />
+      <EmployeeTabs />
     </>
   );
 };

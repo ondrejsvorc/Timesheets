@@ -3,7 +3,7 @@ import { Await, useAsyncValue, useLoaderData } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
-import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubpageHeader";
+import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";

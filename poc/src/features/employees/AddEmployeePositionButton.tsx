@@ -8,7 +8,14 @@ interface AddEmployeePositionButtonProps {
 
 export const AddEmployeePositionButton = ({ onClick }: AddEmployeePositionButtonProps) => {
   return (
-    <Button type="button" variant="secondary" onClick={onClick}>
+    <Button
+      type="button"
+      variant="secondary"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
       <span className="inline-flex items-center gap-2">
         <UserPlus className="size-4" />
         {Texts.addPosition}
