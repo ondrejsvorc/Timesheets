@@ -10,13 +10,5 @@ public static class ClaimsPrincipalExtensions
 
     public static string GetFullName(this ClaimsPrincipal principal) => principal.FindFirstValue("displayName") ?? string.Empty;
 
-    public static int? GetPersonalNumber(this ClaimsPrincipal principal)
-    {
-        string? personalNumber = principal.FindFirstValue("personalNumber");
-        if (!string.IsNullOrWhiteSpace(personalNumber) && int.TryParse(personalNumber, out int value))
-        {
-            return value;
-        }
-        return null;
-    }
+    public static int GetPersonalNumber(this ClaimsPrincipal principal) => Convert.ToInt32(principal.FindFirstValue("personalNumber"));
 }

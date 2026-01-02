@@ -4,8 +4,8 @@ public sealed class Project
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string? RegistrationNumber { get; set; }
-    public string? RecipientName { get; set; }
+    public string RegistrationNumber { get; set; } = string.Empty;
+    public string RecipientName { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public string? Description { get; set; }
@@ -31,7 +31,7 @@ public sealed class Contract
     public Guid Id { get; set; }
     public Guid ProjectId { get; set; }
     public string Name { get; set; } = string.Empty;
-    public string? RegistrationNumber { get; set; }
+    public string RegistrationNumber { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public string? Description { get; set; }
@@ -73,7 +73,7 @@ public sealed class Employee
 {
     public Guid Id { get; set; }
     public Guid? EmployeeTypeId { get; set; }
-    public int? PersonalNumber { get; set; }
+    public int PersonalNumber { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public bool IsGlobalManager { get; set; }

@@ -10,20 +10,11 @@ public sealed class GetProjectContracts : IEndpoint
         app.MapGet("/{id}/contracts", Handle)
            .WithSummary("Get Project Contracts");
 
-    public sealed record ContractItem(Guid Id, string Name, string? RegistrationNumber, DateTime StartDate, DateTime? EndDate, int EmployeeCount);
+    public sealed record ContractItem(Guid Id, string Name, string RegistrationNumber, DateTime StartDate, DateTime? EndDate, int EmployeeCount);
     public sealed record Response(IEnumerable<ContractItem> Contracts);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Ok<Response>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        bool exists = await dbContext.Projects
-            .AsNoTracking()
-            .AnyAsync(p => p.Id == id, cancellationToken);
-
-        if (!exists)
-        {
-            return TypedResults.NotFound();
-        }
-
         List<ContractItem> contracts = await dbContext.Contracts
             .AsNoTracking()
             .Where(c => c.ProjectId == id)

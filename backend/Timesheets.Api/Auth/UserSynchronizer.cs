@@ -8,13 +8,13 @@ namespace Timesheets.Api.Auth;
 
 public sealed class UserSynchronizer(AppDbContext dbContext)
 {
-    private readonly record struct SynchronizedUser(string Email, string FullName, int? PersonalNumber);
+    private readonly record struct SynchronizedUser(string Email, string FullName, int PersonalNumber);
 
     public async Task SyncFromPrincipalAsync(ClaimsPrincipal principal, CancellationToken cancellationToken)
     {
         string email = principal.GetEmail();
         string fullName = principal.GetFullName();
-        int? personalNumber = principal.GetPersonalNumber();
+        int personalNumber = principal.GetPersonalNumber();
         SynchronizedUser user = new(email, fullName, personalNumber);
         await SyncAsync(user, cancellationToken);
     }
