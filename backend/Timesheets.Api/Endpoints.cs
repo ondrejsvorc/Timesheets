@@ -40,12 +40,14 @@ public static class Endpoints
 
     private static void MapProjectEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/projects").WithTags("Projects")
+        .MapEndpoint<GetProject>()
         .MapEndpoint<UpdateProject>()
         .MapEndpoint<DeleteProject>()
         .MapEndpoint<GetProjects>()
         .MapEndpoint<GetProjectCatalog>()
         .MapEndpoint<CreateProject>()
         .MapEndpoint<GetProjectContracts>()
+        .MapEndpoint<GetProjectContractsManagers>()
         .MapEndpoint<CreateProjectContract>();
 
     private static void MapContractEndpoints(this IEndpointRouteBuilder app) =>
@@ -68,8 +70,6 @@ public static class Endpoints
         .MapEndpoint<CreateTimesheet>()
         .MapEndpoint<UpdateTimesheet>()
         .MapEndpoint<ReviewTimesheet>()
-        .MapEndpoint<SubmitTimesheet>()
-        .MapEndpoint<ApproveTimesheet>()
         .MapEndpoint<ImportTimesheet>();
 
     private static void MapEmployeeEndpoints(this IEndpointRouteBuilder app) =>
