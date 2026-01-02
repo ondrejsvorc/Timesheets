@@ -1,6 +1,6 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Await, useAsyncValue, useLoaderData } from "react-router";
-import { useImmer, useImmerReducer } from "use-immer";
+import { useImmerReducer } from "use-immer";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
@@ -12,7 +12,10 @@ import { AddContractButton } from "./AddContractButton";
 import { AddContractDialog } from "./AddContractDialog";
 import type { GetProjectContractsResponse } from "./api/getProjectContracts";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
+import { EditContractButton } from "./EditContractButton";
+import { EditContractDialog } from "./EditContractDialog";
 import { type ContractsFilterState, useContractFilters } from "./hooks/useContractFilters";
+import { useProjectContractsDispatch } from "./hooks/useProjectContractsDispatch";
 import { ProjectContractsContext } from "./utils/projectContractsContext";
 import { projectContractsReducer } from "./utils/projectContractsReducer";
 
@@ -34,7 +37,7 @@ const ProjectContractsContent = () => {
   const response = useAsyncValue() as GetProjectContractsResponse;
   const [state, dispatch] = useImmerReducer(projectContractsReducer, response.contracts);
   const { filters, setFilters, filtered } = useContractFilters(state);
-  const [isAddOpen, setIsAddOpen] = useImmer(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
   return (
     <ProjectContractsContext.Provider value={dispatch}>
@@ -82,17 +85,39 @@ export const ContractsTable = ({ contracts }: ContractsTableProps) => {
         </TableHeader>
         <TableBody>
           {contracts.map((contract) => (
-            <TableRow key={contract.id} className="cursor-pointer">
-              <TableCell>{contract.name}</TableCell>
-              <TableCell>{contract.registrationNumber ?? Texts.dash}</TableCell>
-              <TableCell>{contract.startDate ?? Texts.dash}</TableCell>
-              <TableCell>{contract.endDate ?? Texts.dash}</TableCell>
-              <TableCell>TODO</TableCell>
-            </TableRow>
+            <ContractRow key={contract.id} contract={contract} />
           ))}
         </TableBody>
       </Table>
     </div>
+  );
+};
+
+export const ContractRow = ({ contract }: { contract: ProjectContractItem }) => {
+  const [editOpen, setEditOpen] = useState(false);
+  const dispatch = useProjectContractsDispatch();
+
+  return (
+    <>
+      <TableRow className="cursor-pointer">
+        <TableCell>{contract.name}</TableCell>
+        <TableCell>{contract.registrationNumber ?? Texts.dash}</TableCell>
+        <TableCell>{contract.startDate ?? Texts.dash}</TableCell>
+        <TableCell>{contract.endDate ?? Texts.dash}</TableCell>
+        <TableCell>
+          <EditContractButton onClick={() => setEditOpen(true)} />
+        </TableCell>
+      </TableRow>
+      <EditContractDialog
+        open={editOpen}
+        contract={contract}
+        onClose={() => setEditOpen(false)}
+        onSaved={() => {
+          dispatch({ type: "edit", contract });
+          setEditOpen(false);
+        }}
+      />
+    </>
   );
 };
 

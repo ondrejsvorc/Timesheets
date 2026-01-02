@@ -49,6 +49,7 @@ export const Texts = {
   registrationNumber: "Číslo zakázky",
   contractName: "Název zakázky",
   newContract: "Nová zakázka",
+  editContract: "Upravit zakázku",
   contractDescription: "Popis zákazky",
   contractId: "ID zakázky",
   position: "Pozice",
