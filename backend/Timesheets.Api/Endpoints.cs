@@ -78,7 +78,9 @@ public static class Endpoints
         .MapEndpoint<UpdateEmployee>()
         .MapEndpoint<DeleteEmployee>()
         .MapEndpoint<GetEmployees>()
-        .MapEndpoint<CreateEmployee>();
+        .MapEndpoint<CreateEmployee>()
+        .MapEndpoint<GetEmployeePositions>()
+        .MapEndpoint<GetEmployeeTimesheets>();
 
     private static void MapNotificationEndpoints(this IEndpointRouteBuilder app)
     {
