@@ -4,10 +4,10 @@ import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Texts } from "@/constants/texts";
+import { createFilterControls } from "@/utils/createFilterControls";
 import type { GetEmployeesResponse } from "./api/getEmployees";
-import { EmployeesFilter } from "./EmployeesFilter";
 import { EmployeesTable } from "./EmployeesTable";
-import { useEmployeeFilters } from "./hooks/useEmployeeFilters";
+import { type EmployeesFilterCriteria, useEmployeesFilter } from "./hooks/useEmployeesFilters";
 
 const EmployeesPageContentLazy = lazy(async () => ({
   default: EmployeesPageContent,
@@ -32,14 +32,16 @@ export const EmployeesPage = () => {
   );
 };
 
+const { FilterSearchInput } = createFilterControls<EmployeesFilterCriteria>();
+
 const EmployeesPageContent = () => {
   const response = useAsyncValue() as GetEmployeesResponse;
-  const { filters, setFilters, filtered } = useEmployeeFilters(response.employees);
+  const { filter, setFilter, filtered } = useEmployeesFilter(response.employees);
 
   return (
     <>
-      <FilterBar>
-        <EmployeesFilter value={filters} onChange={setFilters} />
+      <FilterBar filter={filter} setFilter={setFilter}>
+        <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <EmployeesTable employees={filtered} />
     </>

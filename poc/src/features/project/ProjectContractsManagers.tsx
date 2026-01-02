@@ -4,12 +4,13 @@ import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
+import { createFilterControls } from "@/utils/createFilterControls";
 import { AddContractManagerButton } from "./AddContractManagerButton";
 import type { GetProjectContractsManagersResponse, ProjectContractManagerItem } from "./api/getProjectContractsManagers";
-import { type ContractsManagersFilterState, useContractsManagersFilters } from "./hooks/useContractsManagersFilters";
+import type { ContractsFilterCriteria } from "./hooks/useContractsFilter";
+import { useContractsManagersFilter } from "./hooks/useContractsManagersFilter";
 
 export const ProjectContractsManagers = () => {
   const { promise } = useLoaderData() as {
@@ -25,21 +26,20 @@ export const ProjectContractsManagers = () => {
   );
 };
 
+const { FilterSearchInput } = createFilterControls<ContractsFilterCriteria>();
+
 const ProjectContractsManagersContent = () => {
   const response = useAsyncValue() as GetProjectContractsManagersResponse;
-  const { filters, setFilters, filtered } = useContractsManagersFilters(response.managers);
+  const { filter, setFilter, filtered } = useContractsManagersFilter(response.managers);
 
   return (
     <>
       <SubPageHeader>
         <SubPageTitle>Manažeři zakázek</SubPageTitle>
       </SubPageHeader>
-
-      <FilterBar>
-        <ContractsManagersFilter value={filters} onChange={setFilters} />
-        <AddContractManagerButton onClick={() => {}} />
+      <FilterBar filter={filter} setFilter={setFilter} actions={<AddContractManagerButton onClick={() => {}} />}>
+        <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-
       <ContractsManagersTable managers={filtered} />
     </>
   );
@@ -78,25 +78,6 @@ export const ContractsManagersTable = ({ managers }: ContractsManagersTableProps
           ))}
         </TableBody>
       </Table>
-    </div>
-  );
-};
-
-interface FilterProps {
-  value: ContractsManagersFilterState;
-  onChange: (value: ContractsManagersFilterState) => void;
-}
-
-const ContractsManagersFilter = ({ value, onChange }: FilterProps) => {
-  return (
-    <div className="flex items-center gap-4 flex-wrap">
-      <Input
-        type="text"
-        placeholder={Texts.search}
-        value={value.query}
-        onChange={(e) => onChange({ ...value, query: e.target.value })}
-        className="w-64"
-      />
     </div>
   );
 };

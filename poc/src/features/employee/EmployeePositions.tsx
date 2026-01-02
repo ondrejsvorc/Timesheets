@@ -4,12 +4,11 @@ import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
-import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
-import type { EmployeesFilterState } from "../employees/hooks/useEmployeeFilters";
+import { createFilterControls } from "@/utils/createFilterControls";
 import type { EmployeePositionItem, GetEmployeePositionsResponse } from "./api/getEmployeePositions";
-import { usePositionFilters } from "./hooks/usePositionFilters";
+import { type PositionsFilterCriteria, usePositionsFilter } from "./hooks/usePositionsFilter";
 
 export const EmployeePositions = () => {
   const { promise } = useLoaderData() as {
@@ -25,17 +24,19 @@ export const EmployeePositions = () => {
   );
 };
 
+const { FilterSearchInput } = createFilterControls<PositionsFilterCriteria>();
+
 const EmployeePositionsContent = () => {
   const response = useAsyncValue() as GetEmployeePositionsResponse;
-  const { filters, setFilters, filtered } = usePositionFilters(response.positions);
+  const { filter, setFilter, filtered } = usePositionsFilter(response.positions);
 
   return (
     <>
       <SubPageHeader>
         <SubPageTitle>Pozice</SubPageTitle>
       </SubPageHeader>
-      <FilterBar>
-        <PositionsFilter value={filters} onChange={setFilters} />
+      <FilterBar filter={filter} setFilter={setFilter}>
+        <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <PositionsTable positions={filtered} />
     </>
@@ -79,25 +80,6 @@ export const PositionsTable = ({ positions }: PositionsTableProps) => {
           ))}
         </TableBody>
       </Table>
-    </div>
-  );
-};
-
-interface FilterProps {
-  value: EmployeesFilterState;
-  onChange: (value: EmployeesFilterState) => void;
-}
-
-const PositionsFilter = ({ value, onChange }: FilterProps) => {
-  return (
-    <div className="flex items-center gap-4 flex-wrap">
-      <Input
-        type="text"
-        placeholder={Texts.search}
-        value={value.query}
-        onChange={(e) => onChange({ ...value, query: e.target.value })}
-        className="w-64"
-      />
     </div>
   );
 };
