@@ -1,6 +1,3 @@
-import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
-import { useImmerReducer } from "use-immer";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
@@ -8,6 +5,9 @@ import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageH
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
+import { Suspense, useState } from "react";
+import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { useImmerReducer } from "use-immer";
 import { AddContractButton } from "./AddContractButton";
 import { AddContractDialog } from "./AddContractDialog";
 import type { GetProjectContractsResponse } from "./api/getProjectContracts";
@@ -101,9 +101,9 @@ export const ContractRow = ({ contract }: { contract: ProjectContractItem }) => 
   return (
     <>
       <TableRow className="cursor-pointer">
+        <TableCell> {contract.registrationNumber}</TableCell>
         <TableCell>{contract.name}</TableCell>
-        <TableCell>{contract.registrationNumber ?? Texts.dash}</TableCell>
-        <TableCell>{contract.startDate ?? Texts.dash}</TableCell>
+        <TableCell>{contract.startDate}</TableCell>
         <TableCell>{contract.endDate ?? Texts.dash}</TableCell>
         <TableCell>
           <EditContractButton onClick={() => setEditOpen(true)} />
