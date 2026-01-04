@@ -1,3 +1,4 @@
+import { DeleteIcon, EditIcon } from "@/components/shared/buttons/ActionButtons";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +8,7 @@ import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useImmer } from "use-immer";
 import type { ProjectItem } from "./api/shared/projectItem";
@@ -46,14 +47,14 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent>
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsEditOpen(true);
                   }}
                 >
-                  <Pencil className="size-4" />
+                  <EditIcon />
                   {Texts.edit}
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -62,7 +63,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
                     setIsConfirmOpen(true);
                   }}
                 >
-                  <Trash2 />
+                  <DeleteIcon />
                   {Texts.delete}
                 </DropdownMenuItem>
               </DropdownMenuContent>

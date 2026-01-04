@@ -1,12 +1,12 @@
-import { Suspense } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
-import { useImmer, useImmerReducer } from "use-immer";
+import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
-import { AddProjectButton } from "./AddProjectButton";
+import { Suspense } from "react";
+import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { useImmer, useImmerReducer } from "use-immer";
 import { AddProjectDialog } from "./AddProjectDialog";
 import type { GetProjectsResponse } from "./api/getProjects";
 import { type ProjectsFilterCriteria, useProjectsFilter } from "./hooks/useProjectsFilter";
@@ -43,7 +43,7 @@ const ProjectsPageContent = () => {
 
   return (
     <ProjectsContext.Provider value={dispatch}>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<AddProjectButton onClick={() => setIsAddOpen(true)} />}>
+      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addProject}</AddButton>}>
         <FilterSearchInput placeholder={Texts.search} />
         <FilterCheckbox field="onlyActive" label={Texts.activeOnly} />
       </FilterBar>

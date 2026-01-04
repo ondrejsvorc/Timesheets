@@ -1,10 +1,10 @@
-import { lazy, Suspense } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
+import { lazy, Suspense } from "react";
+import { Await, useAsyncValue, useLoaderData } from "react-router";
 import type { GetEmployeesResponse } from "./api/getEmployees";
 import { EmployeesTable } from "./EmployeesTable";
 import { type EmployeesFilterCriteria, useEmployeesFilter } from "./hooks/useEmployeesFilters";

@@ -1,8 +1,8 @@
+import { Button } from "@/components/ui/button";
+import { Texts } from "@/constants/texts";
 import { ArrowLeft, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Texts } from "@/constants/texts";
 import { BusyButton } from "./BusyButton";
 
 interface AddButtonProps {
@@ -11,10 +11,11 @@ interface AddButtonProps {
   children: ReactNode;
 }
 
+export const AddIcon = () => <Plus className="size-4" />;
 export const AddButton = ({ onClick, disabled, children }: AddButtonProps) => (
   <Button type="button" onClick={onClick} disabled={disabled}>
     <span className="inline-flex items-center gap-2">
-      <Plus className="size-4" />
+      <AddIcon />
       {children}
     </span>
   </Button>
@@ -26,10 +27,11 @@ interface EditButtonProps {
   children: ReactNode;
 }
 
+export const EditIcon = () => <Pencil className="size-4" />;
 export const EditButton = ({ onClick, disabled, children }: EditButtonProps) => (
   <Button type="button" variant="outline" onClick={onClick} disabled={disabled}>
     <span className="inline-flex items-center gap-2">
-      <Pencil className="size-4" />
+      <EditIcon />
       {children}
     </span>
   </Button>
@@ -41,6 +43,7 @@ interface DeleteButtonProps {
   children: ReactNode;
 }
 
+export const DeleteIcon = () => <Trash2 className="size-4" />;
 export const DeleteButton = ({ onClick, disabled, children }: DeleteButtonProps) => (
   <Button type="button" variant="destructive" onClick={onClick} disabled={disabled}>
     <span className="inline-flex items-center gap-2">
@@ -56,6 +59,7 @@ interface SaveButtonProps {
   children: ReactNode;
 }
 
+export const SaveIcon = () => <Save className="size-4" />;
 export const SaveButton = ({ onClick, disabled, children }: SaveButtonProps) => (
   <BusyButton
     onClick={onClick}
@@ -73,8 +77,9 @@ interface BackButtonProps {
   onClick: () => void;
 }
 
+export const BackIcon = () => <ArrowLeft className="size-4" />;
 export const BackButton = ({ onClick }: BackButtonProps) => (
   <Button type="button" variant="outline" size="icon" aria-label="Back" onClick={onClick}>
-    <ArrowLeft className="size-4" />
+    <BackIcon />
   </Button>
 );

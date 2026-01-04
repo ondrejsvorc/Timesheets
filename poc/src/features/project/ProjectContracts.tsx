@@ -1,18 +1,18 @@
+import { AddButton, EditButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useNavigate } from "react-router";
 import { useImmerReducer } from "use-immer";
-import { AddContractButton } from "./AddContractButton";
 import { AddContractDialog } from "./AddContractDialog";
 import type { GetProjectContractsResponse } from "./api/getProjectContracts";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
-import { EditContractButton } from "./EditContractButton";
 import { EditContractDialog } from "./EditContractDialog";
 import { type ContractsFilterCriteria, useContractsFilter } from "./hooks/useContractsFilter";
 import { useProjectContractsDispatch } from "./hooks/useProjectContractsDispatch";
@@ -44,9 +44,9 @@ const ProjectContractsContent = () => {
   return (
     <ProjectContractsContext.Provider value={dispatch}>
       <SubPageHeader>
-        <SubPageTitle>Zakázky</SubPageTitle>
+        <SubPageTitle>{Texts.contracts}</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<AddContractButton onClick={() => setIsAddOpen(true)} />}>
+      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addContract}</AddButton>}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <ContractsTable contracts={filtered} />
@@ -66,58 +66,75 @@ const ProjectContractsContent = () => {
 interface ContractsTableProps {
   contracts: ProjectContractItem[];
 }
-
 export const ContractsTable = ({ contracts }: ContractsTableProps) => {
+  const [contractToEdit, setContractToEdit] = useState<ProjectContractItem | null>(null);
+
+  const dispatch = useProjectContractsDispatch();
+
   if (contracts.length === 0) {
     return <EmptyState />;
   }
 
   return (
-    <div className="rounded-md border p-4">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{Texts.registrationNumber}</TableHead>
-            <TableHead>{Texts.contractName}</TableHead>
-            <TableHead>{Texts.startDate}</TableHead>
-            <TableHead>{Texts.endDate}</TableHead>
-            <TableHead>{Texts.actions}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {contracts.map((contract) => (
-            <ContractRow key={contract.id} contract={contract} />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <>
+      <div className="rounded-md border p-4">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{Texts.registrationNumber}</TableHead>
+              <TableHead>{Texts.contractName}</TableHead>
+              <TableHead>{Texts.startDate}</TableHead>
+              <TableHead>{Texts.endDate}</TableHead>
+              <TableHead>{Texts.actions}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {contracts.map((contract) => (
+              <ContractRow key={contract.id} contract={contract} onEdit={setContractToEdit} />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {contractToEdit && (
+        <EditContractDialog
+          open
+          contract={contractToEdit}
+          onClose={() => setContractToEdit(null)}
+          onSaved={() => {
+            dispatch({ type: "edit", contract: contractToEdit });
+            setContractToEdit(null);
+          }}
+        />
+      )}
+    </>
   );
 };
 
-export const ContractRow = ({ contract }: { contract: ProjectContractItem }) => {
-  const [editOpen, setEditOpen] = useState(false);
-  const dispatch = useProjectContractsDispatch();
+interface ContractRowProps {
+  contract: ProjectContractItem;
+  onEdit: (contract: ProjectContractItem) => void;
+}
+
+export const ContractRow = ({ contract, onEdit }: ContractRowProps) => {
+  const navigate = useNavigate();
 
   return (
-    <>
-      <TableRow className="cursor-pointer">
-        <TableCell> {contract.registrationNumber}</TableCell>
-        <TableCell>{contract.name}</TableCell>
-        <TableCell>{contract.startDate}</TableCell>
-        <TableCell>{contract.endDate ?? Texts.dash}</TableCell>
-        <TableCell>
-          <EditContractButton onClick={() => setEditOpen(true)} />
-        </TableCell>
-      </TableRow>
-      <EditContractDialog
-        open={editOpen}
-        contract={contract}
-        onClose={() => setEditOpen(false)}
-        onSaved={() => {
-          dispatch({ type: "edit", contract });
-          setEditOpen(false);
-        }}
-      />
-    </>
+    <TableRow className="cursor-pointer" onClick={() => navigate(Routes.projects())}>
+      <TableCell>{contract.registrationNumber}</TableCell>
+      <TableCell>{contract.name}</TableCell>
+      <TableCell>{contract.startDate}</TableCell>
+      <TableCell>{contract.endDate ?? Texts.dash}</TableCell>
+      <TableCell>
+        <EditButton
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(contract);
+          }}
+        >
+          {Texts.editContract}
+        </EditButton>
+      </TableCell>
+    </TableRow>
   );
 };

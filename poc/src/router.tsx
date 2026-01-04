@@ -1,5 +1,8 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
+import { TimesheetAuditTable } from "./components/poc/TimesheetAuditTablePoC";
+import { TimesheetDayEditor } from "./components/poc/TimesheetDayEditorPoC";
+import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { getEmployee } from "./features/employee/api/getEmployee";
 import { getEmployeePositions } from "./features/employee/api/getEmployeePositions";
 import { EmployeePage } from "./features/employee/EmployeePage";
@@ -14,8 +17,7 @@ import { ProjectContractsManagers } from "./features/project/ProjectContractsMan
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api/getProjects";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
-import { TimesheetAuditTable } from "./components/poc/TimesheetAuditTablePoC";
-import { TimesheetDayEditor } from "./components/poc/TimesheetDayEditorPoC";
+import { TimesheetsPage } from "./features/timesheets/TimesheetsPage";
 
 const requireProjectId = (params: Params) => {
   if (!params.id) {
@@ -32,6 +34,10 @@ const requireEmployeeId = (params: Params) => {
 };
 
 export const router = createBrowserRouter([
+  {
+    path: "*",
+    element: <ErrorPage />,
+  },
   {
     path: "/",
     element: <App />,
@@ -81,12 +87,16 @@ export const router = createBrowserRouter([
         ],
       },
       {
+        path: "timesheet2",
+        element: <TimesheetsPage />,
+      },
+      {
         path: "timesheet",
-        element: <TimesheetAuditTable />
+        element: <TimesheetAuditTable />,
       },
       {
         path: "timesheets/edit/:year/:month/:day",
-        element: <TimesheetDayEditor />
+        element: <TimesheetDayEditor />,
       },
     ],
   },

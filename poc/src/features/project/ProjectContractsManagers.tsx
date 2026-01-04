@@ -1,5 +1,4 @@
-import { Suspense } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
@@ -7,7 +6,8 @@ import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageH
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
-import { AddContractManagerButton } from "./AddContractManagerButton";
+import { Suspense } from "react";
+import { Await, useAsyncValue, useLoaderData } from "react-router";
 import type { GetProjectContractsManagersResponse, ProjectContractManagerItem } from "./api/getProjectContractsManagers";
 import type { ContractsFilterCriteria } from "./hooks/useContractsFilter";
 import { useContractsManagersFilter } from "./hooks/useContractsManagersFilter";
@@ -35,9 +35,9 @@ const ProjectContractsManagersContent = () => {
   return (
     <>
       <SubPageHeader>
-        <SubPageTitle>Manažeři zakázek</SubPageTitle>
+        <SubPageTitle>{Texts.contractsManagers}</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<AddContractManagerButton onClick={() => {}} />}>
+      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => {}}>{Texts.addManager}</AddButton>}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <ContractsManagersTable managers={filtered} />

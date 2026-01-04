@@ -55,4 +55,7 @@ export const Texts = {
   position: "Pozice",
   status: "Status",
   edit: "Upravit",
+  addContract: "Přidat zakázku",
+  addManager: "Přidat manažera",
+  contractsManagers: "Manažeři zakázek",
 };

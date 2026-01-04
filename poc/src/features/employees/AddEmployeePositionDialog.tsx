@@ -1,11 +1,3 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { cs } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { useImmer } from "use-immer";
-import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
 import { Button } from "@/components/ui/button";
@@ -15,7 +7,16 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/utils/cn";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { cs } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { useImmer } from "use-immer";
+import { z } from "zod";
 import { getContractCatalog } from "./api/getContractCatalog";
+import type { EmployeeItem } from "./api/getEmployees";
 import { getProjectCatalog } from "./api/getProjectCatalog";
 
 type AddEmployeePositionFormValues = z.infer<typeof addEmployeePositionSchema>;
@@ -31,11 +32,12 @@ const addEmployeePositionSchema = z.object({
 
 interface AddEmployeePositionDialogProps {
   open: boolean;
+  employee: EmployeeItem;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const AddEmployeePositionDialog = ({ open, onClose, onSaved }: AddEmployeePositionDialogProps) => {
+export const AddEmployeePositionDialog = ({ open, employee, onClose, onSaved }: AddEmployeePositionDialogProps) => {
   const [projects, setProjects] = useImmer<ComboBoxItem[]>([]);
   const [contracts, setContracts] = useImmer<ComboBoxItem[]>([]);
   const [projectsLoading, setProjectsLoading] = useImmer(false);
