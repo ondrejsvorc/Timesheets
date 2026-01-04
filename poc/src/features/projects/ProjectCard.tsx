@@ -1,8 +1,3 @@
-import { format, parseISO } from "date-fns";
-import { cs } from "date-fns/locale";
-import { MoreHorizontal, Trash2 } from "lucide-react";
-import { useNavigate } from "react-router";
-import { useImmer } from "use-immer";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +5,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
+import { format, parseISO } from "date-fns";
+import { cs } from "date-fns/locale";
+import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router";
+import { useImmer } from "use-immer";
 import type { ProjectItem } from "./api/shared/projectItem";
 import { useProjectsDispatch } from "./hooks/useProjectsDispatch";
 import { isProjectActive } from "./utils/isProjectActive";
@@ -20,6 +20,7 @@ interface ProjectCardProps {
 
 export const ProjectCard = ({ project }: ProjectCardProps) => {
   const dispatch = useProjectsDispatch();
+  const [isEditOpen, setIsEditOpen] = useImmer(false);
   const [isConfirmOpen, setIsConfirmOpen] = useImmer(false);
   const startDate = project.startDate ? format(parseISO(project.startDate), "d. M. yyyy", { locale: cs }) : null;
   const endDate = project.endDate ? format(parseISO(project.endDate), "d. M. yyyy", { locale: cs }) : null;
@@ -46,7 +47,21 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsConfirmOpen(true)}>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditOpen(true);
+                  }}
+                >
+                  <Pencil className="size-4" />
+                  {Texts.edit}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsConfirmOpen(true);
+                  }}
+                >
                   <Trash2 />
                   {Texts.delete}
                 </DropdownMenuItem>

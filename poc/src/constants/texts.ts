@@ -54,4 +54,5 @@ export const Texts = {
   contractId: "ID zakázky",
   position: "Pozice",
   status: "Status",
+  edit: "Upravit",
 };
