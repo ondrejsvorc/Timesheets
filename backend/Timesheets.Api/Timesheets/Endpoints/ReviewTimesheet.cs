@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
 using System.Text.Json;
+using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
 
@@ -45,7 +45,7 @@ public sealed class ReviewTimesheet : IEndpoint
         }).ToList();
 
         AttendanceTimesheet attendanceTimesheet = new(
-            EmployeePersonalNumber: timesheet.Employee.PersonalNumber ?? 0, // TODO
+            EmployeePersonalNumber: timesheet.Employee.PersonalNumber, // TODO
             EmployeeName: timesheet.Employee.FullName,
             Workload: attendanceDays.FirstOrDefault()?.Workload ?? 0,
             Year: timesheet.Year,
