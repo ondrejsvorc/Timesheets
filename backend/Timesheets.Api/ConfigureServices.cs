@@ -1,4 +1,5 @@
-﻿using FluentValidation;
+﻿using CzechHolidays;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
@@ -64,6 +65,7 @@ public static class ConfigureServices
                 options.CallbackPath = auth["CallbackPath"];
                 options.SignedOutCallbackPath = auth["SignedOutCallbackPath"];
                 options.RemoteSignOutPath = auth["RemoteSignOutPath"];
+                options.SignedOutRedirectUri = auth["SignedOutRedirectUri"] ?? "/error";
 
                 options.SaveTokens = true;
                 options.GetClaimsFromUserInfoEndpoint = true;
@@ -103,7 +105,7 @@ public static class ConfigureServices
         builder.Services.AddScoped<UserSynchronizer>();
         builder.Services.AddSingleton<ICellParser, CellParser>();
         builder.Services.AddSingleton<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();
-        builder.Services.AddSingleton<IPublicHolidayProvider, CzechPublicHolidayProvider>();
+        builder.Services.AddSingleton<ICzechHolidaysFactory, CzechHolidaysFactory>();
         builder.Services.AddTransient<ITimesheetImporter<AttendanceTimesheet>, AttendanceTimesheetImporter>();
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
         builder.Services.AddSignalR();
