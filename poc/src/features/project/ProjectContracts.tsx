@@ -83,8 +83,6 @@ export const ContractsTable = ({ contracts }: ContractsTableProps) => {
             <TableRow>
               <TableHead>{Texts.registrationNumber}</TableHead>
               <TableHead>{Texts.contractName}</TableHead>
-              <TableHead>{Texts.startDate}</TableHead>
-              <TableHead>{Texts.endDate}</TableHead>
               <TableHead>{Texts.actions}</TableHead>
             </TableRow>
           </TableHeader>
@@ -123,8 +121,6 @@ export const ContractRow = ({ contract, onEdit }: ContractRowProps) => {
     <TableRow className="cursor-pointer" onClick={() => navigate(Routes.projects())}>
       <TableCell>{contract.registrationNumber}</TableCell>
       <TableCell>{contract.name}</TableCell>
-      <TableCell>{contract.startDate}</TableCell>
-      <TableCell>{contract.endDate ?? Texts.dash}</TableCell>
       <TableCell>
         <EditButton
           onClick={(e) => {

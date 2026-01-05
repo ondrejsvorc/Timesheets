@@ -11,9 +11,6 @@ export type ContractFormValues = z.infer<typeof contractSchema>;
 export const contractSchema = z.object({
   name: z.string().nonempty(),
   contractId: z.string().nonempty(),
-  startDate: z.string().nonempty(),
-  endDate: z.string().nonempty(),
-  description: z.string().optional(),
 });
 
 interface ContractFormProps {
@@ -61,19 +58,6 @@ export const ContractForm = ({ initialValues, onSubmit, onCancel }: ContractForm
             </FormItem>
           )}
         />
-
-        {/* <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{Texts.contractDescription}</FormLabel>
-              <FormControl>
-                <Textarea className="resize-none" {...field} />
-              </FormControl>
-            </FormItem>
-          )}
-        /> */}
 
         <DialogFooter>
           <DialogCancelButton onClick={onCancel} />

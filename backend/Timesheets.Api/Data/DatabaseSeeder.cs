@@ -77,19 +77,14 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     ProjectId = Guid.Parse("20000000-0000-0000-0000-000000000001"),
                     Name = "Kontrakt Alpha-1",
-                    RegistrationNumber = "CONT-2024-001",
-                    StartDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-                    EndDate = new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc),
-                    Description = "Hlavní kontrakt projektu Alpha"
+                    RegistrationNumber = "CONT-2024-001"
                 },
                 new()
                 {
                     Id = Guid.Parse("30000000-0000-0000-0000-000000000002"),
                     ProjectId = Guid.Parse("20000000-0000-0000-0000-000000000002"),
                     Name = "Kontrakt Beta-1",
-                    RegistrationNumber = "CONT-2024-002",
-                    StartDate = new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc),
-                    Description = "Hlavní kontrakt projektu Beta"
+                    RegistrationNumber = "CONT-2024-002"
                 }
             ];
             context.Contracts.AddRange(contracts);

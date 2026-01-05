@@ -18,9 +18,6 @@ export const AddContractDialog = ({ projectId, open, onClose, onSaved }: AddCont
       {
         name: values.name,
         registrationNumber: values.contractId,
-        startDate: values.startDate,
-        endDate: values.endDate,
-        description: values.description,
       },
       signal,
     );

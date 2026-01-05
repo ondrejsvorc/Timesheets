@@ -3,9 +3,6 @@ import type { ProjectContractItem } from "./shared/projectContractItem";
 export type CreateProjectContractRequest = {
   name: string;
   registrationNumber: string;
-  startDate: string;
-  endDate?: string;
-  description?: string | null;
 };
 
 export type CreateProjectContractResponse = {
@@ -23,8 +20,6 @@ export const createProjectContract = async (
       id: crypto.randomUUID(),
       name: request.name,
       registrationNumber: request.registrationNumber,
-      startDate: request.startDate,
-      endDate: request.endDate,
       employeeCount: 0,
     },
   };

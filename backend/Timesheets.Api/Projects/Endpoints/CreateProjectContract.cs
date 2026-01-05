@@ -15,7 +15,7 @@ public sealed class CreateProjectContract : IEndpoint
            .WithSummary("Create Contract in Project")
            .WithRequestValidation<Request>();
 
-    public sealed record Request(string Name, string RegistrationNumber, DateTime StartDate, DateTime? EndDate, string? Description);
+    public sealed record Request(string Name, string RegistrationNumber);
     public sealed record Response(ProjectContractItem ProjectContract);
     public sealed class Validator : AbstractValidator<Request> { }
 
@@ -34,9 +34,6 @@ public sealed class CreateProjectContract : IEndpoint
         {
             Id = Guid.NewGuid(),
             ProjectId = id,
-            StartDate = request.StartDate,
-            EndDate = request.EndDate,
-            Description = request.Description,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null
         };
@@ -48,8 +45,6 @@ public sealed class CreateProjectContract : IEndpoint
             contract.Id,
             request.Name,
             request.RegistrationNumber,
-            contract.StartDate,
-            contract.EndDate,
             EmployeeCount: 0
         );
 

@@ -21,8 +21,6 @@ public sealed class GetProjectContracts : IEndpoint
                 c.Id,
                 c.Name,
                 c.RegistrationNumber,
-                c.StartDate,
-                c.EndDate,
                 c.ContractEmployees.Count
             ))
             .ToListAsync(cancellationToken);

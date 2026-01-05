@@ -194,13 +194,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.Property(c => c.RegistrationNumber)
             .HasMaxLength(100);
 
-        builder.Property(c => c.Description);
-
-        builder.Property(c => c.StartDate)
-            .IsRequired();
-
-        builder.Property(c => c.EndDate);
-
         builder.Property(c => c.CreatedAt)
             .IsRequired();
 
