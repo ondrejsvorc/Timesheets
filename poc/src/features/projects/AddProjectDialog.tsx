@@ -1,10 +1,3 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { PopoverTrigger } from "@radix-ui/react-popover";
-import { format } from "date-fns";
-import { cs } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -12,9 +5,15 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { PopoverTrigger } from "@radix-ui/react-popover";
+import { format } from "date-fns";
+import { cs } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { type CreateProjectRequest, createProject } from "./api/createProject";
 import type { ProjectItem } from "./api/shared/projectItem";
 
@@ -194,7 +193,7 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
               )}
             />
 
-            <FormField
+            {/* <FormField
               control={form.control}
               name="description"
               render={({ field }) => (
@@ -205,7 +204,7 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
                   </FormControl>
                 </FormItem>
               )}
-            />
+            /> */}
 
             <DialogFooter>
               <DialogCancelButton onClick={handleClose} />
