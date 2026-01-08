@@ -1,3 +1,4 @@
+import { compareIds } from "@/utils/compareIds";
 import type { ProjectItem } from "../api/shared/projectItem";
 
 export type ProjectsAction = { type: "add"; project: ProjectItem } | { type: "update"; project: ProjectItem } | { type: "delete"; projectId: string };
@@ -9,7 +10,7 @@ export const projectsReducer = (draft: ProjectItem[], action: ProjectsAction) =>
       break;
     }
     case "delete": {
-      const index = draft.findIndex((p) => p.id === action.projectId);
+      const index = draft.findIndex((p) => compareIds(p.id, action.projectId));
       if (index !== -1) {
         draft.splice(index, 1);
       }

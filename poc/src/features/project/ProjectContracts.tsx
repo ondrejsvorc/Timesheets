@@ -68,7 +68,6 @@ interface ContractsTableProps {
 }
 export const ContractsTable = ({ contracts }: ContractsTableProps) => {
   const [contractToEdit, setContractToEdit] = useState<ProjectContractItem | null>(null);
-
   const dispatch = useProjectContractsDispatch();
 
   if (contracts.length === 0) {
