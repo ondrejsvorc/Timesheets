@@ -3,15 +3,11 @@ import type * as React from "react";
 import { cn } from "@/utils/cn";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
-  return (
-    <div data-slot="table-container" className="relative w-full overflow-x-auto">
-      <table data-slot="table" className={cn("w-full caption-bottom text-sm", className)} {...props} />
-    </div>
-  );
+  return <table data-slot="table" className={cn("w-full caption-bottom text-sm", className)} {...props} />;
 }
 
 function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
-  return <thead data-slot="table-header" className={cn("[&_tr]:border-b [&_tr]:border-border/50", className)} {...props} />;
+  return <thead data-slot="table-header" className={cn("[&_tr]:border-b [&_tr]:border-border/50 sticky top-0", className)} {...props} />;
 }
 
 function TableBody({ className, ...props }: React.ComponentProps<"tbody">) {
