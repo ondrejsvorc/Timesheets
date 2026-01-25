@@ -9,6 +9,7 @@ export interface Attendance {
   breakStart: string;
   breakEnd: string;
   interruptions: string;
+  nightHours: number;
   schedules: TimeRange[];
 }
 
@@ -27,7 +28,9 @@ export interface TimesheetDay {
   date: string;
   attendance: Attendance;
   coreHours: number;
-  projectHours: Record<string, number>; // { [id]: hodiny }
+  projectHours: Record<string, number>;
+  isHoliday: boolean;
+  isWeekend: boolean;
 }
 
 export interface Timesheet {

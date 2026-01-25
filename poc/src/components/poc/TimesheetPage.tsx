@@ -4,26 +4,44 @@ import type { Timesheet, TimesheetDay } from "./Timesheet";
 import { TimesheetTable } from "./TimesheetTable";
 
 const createMockTimesheet = (): Timesheet => {
-  const days: TimesheetDay[] = Array.from({ length: 31 }, (_, i) => ({
-    date: `${(i + 1).toString().padStart(2, "0")}. 01. 2026`,
-    attendance: {
-      clockIn: "",
-      clockOut: "",
-      breakStart: "",
-      breakEnd: "",
-      interruptions: "",
-      schedules: [],
-    },
-    coreHours: 0,
-    projectHours: {
-      "p-a": 0,
-      "p-b": 0,
-    },
-  }));
+  const year = 2026;
+  const month = 1;
+
+  const days: TimesheetDay[] = Array.from({ length: 31 }, (_, i) => {
+    const dayNumber = i + 1;
+    const dateObj = new Date(year, month - 1, dayNumber);
+    const dayOfWeek = dateObj.getDay(); // 0=Ne, 6=So
+
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    const isHoliday = dayNumber === 1; // 1.1. Nový rok
+
+    // Simulujeme práci: jen v pracovní dny, které nejsou svátek
+    const shouldHaveAttendance = !isWeekend && !isHoliday;
+
+    return {
+      date: `${dayNumber.toString().padStart(2, "0")}. 01. ${year}`,
+      isWeekend,
+      isHoliday,
+      attendance: {
+        clockIn: shouldHaveAttendance ? "08:00" : "",
+        clockOut: shouldHaveAttendance ? "16:30" : "",
+        breakStart: shouldHaveAttendance ? "12:00" : "",
+        breakEnd: shouldHaveAttendance ? "12:30" : "",
+        interruptions: "",
+        nightHours: 0,
+        schedules: [],
+      },
+      coreHours: 0,
+      projectHours: {
+        "p-a": 0,
+        "p-b": 0,
+      },
+    };
+  });
 
   return {
-    year: 2026,
-    month: 1,
+    year,
+    month,
     totalWorkload: 1.0,
     core: { workload: 0.6 },
     projects: [

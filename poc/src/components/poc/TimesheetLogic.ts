@@ -1,4 +1,4 @@
-import type { Attendance, TimesheetDay } from "./Timesheet";
+import type { Attendance, TimeRange, Timesheet, TimesheetDay } from "./Timesheet";
 
 /**
  * Converts "HH:mm" time format to minutes.
@@ -41,10 +41,298 @@ export const TimesheetLogic = {
     return parts.join(" ") || "0";
   },
 
+  calculateSchedulesTotal: (schedules: TimeRange[]): number => {
+    if (!schedules || schedules.length === 0) return 0;
+
+    const totalMinutes = schedules.reduce((acc, range) => {
+      const start = toMinutes(range.start);
+      const end = toMinutes(range.end);
+
+      if (range.start && range.end && end > start) {
+        return acc + (end - start);
+      }
+      return acc;
+    }, 0);
+
+    return Number((totalMinutes / 60).toFixed(2));
+  },
+
+  calculateMonthlyFund: (timesheet: Timesheet): number => {
+    const workingDaysCount = timesheet.days.filter((day) => !day.isWeekend && !day.isHoliday).length;
+    const standardDayHours = 8;
+    const totalFundHours = workingDaysCount * (standardDayHours * timesheet.totalWorkload);
+    return Number(totalFundHours.toFixed(2));
+  },
+
+  calculateMonthlyTotalWorked: (days: TimesheetDay[]): number => {
+    return days.reduce((sum, day) => {
+      return sum + TimesheetLogic.calculateWorkedHours(day.attendance);
+    }, 0);
+  },
+
+  calculateMonthlyTotalAllocated: (days: TimesheetDay[]): number => {
+    return days.reduce((sum, day) => {
+      const dayAllocated = day.coreHours + Object.values(day.projectHours).reduce((a, b) => a + (b || 0), 0);
+      return sum + dayAllocated;
+    }, 0);
+  },
+
+  calculateWorkloadFund: (timesheet: Timesheet, workload: number): number => {
+    const workingDaysCount = timesheet.days.filter((day) => !day.isWeekend && !day.isHoliday).length;
+    const standardDayHours = 8;
+    return Number((workingDaysCount * (standardDayHours * workload)).toFixed(2));
+  },
+
+  isCoreHoursValid: (day: TimesheetDay): boolean => {
+    const stagTotal = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
+    // Kmen musí být >= STAG rozvrh
+    return day.coreHours >= stagTotal;
+  },
+
+  distributeRemainingHours: (day: TimesheetDay, timesheet: Timesheet) => {
+    // 1. Zjistíme cílovou kapacitu dne (docházka nebo 8h fallback)
+    let targetTotal = TimesheetLogic.calculateWorkedHours(day.attendance);
+    if (targetTotal === 0 && !day.isWeekend && !day.isHoliday) {
+      targetTotal = 8 * timesheet.totalWorkload;
+    }
+
+    // 2. Spočítáme, co už uživatel vyplnil (tohle zůstane netknuté)
+    const currentAllocated = (day.coreHours || 0) + Object.values(day.projectHours).reduce((sum, val) => sum + (val || 0), 0);
+
+    // Rozdíl, který musíme "dogenerovat"
+    let delta = Number((targetTotal - currentAllocated).toFixed(2));
+
+    // Pokud už je vše vyplněno (nebo víc), nic neděláme
+    if (delta <= 0.01) return null;
+
+    return (onUpdate: any) => {
+      onUpdate((draft: TimesheetDay) => {
+        // --- KROK 1: DOPLNĚNÍ KMENE (STAG) ---
+        // Doplňujeme Kmen JEN pokud je v něm nula nebo méně než vyžaduje STAG
+        const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
+        if (draft.coreHours < stagHours && delta > 0) {
+          const needed = Number((stagHours - draft.coreHours).toFixed(2));
+          const toAdd = Math.min(needed, delta);
+          draft.coreHours = Number((draft.coreHours + toAdd).toFixed(2));
+          delta = Number((delta - toAdd).toFixed(2));
+        }
+
+        if (delta <= 0) return;
+
+        // --- KROK 2: IDENTIFIKACE SKUTEČNĚ PRÁZDNÝCH PROJEKTŮ ---
+        // Vybereme jen ty projekty, kde je nula nebo undefined (uživatel je nevyplnil)
+        const emptyProjectIds = timesheet.projects.filter((p) => !draft.projectHours[p.id] || draft.projectHours[p.id] === 0).map((p) => p.id);
+
+        if (emptyProjectIds.length === 0) {
+          // Pokud jsou všechny projekty už vyplněné, zbytek "přilepíme" ke kmeni
+          draft.coreHours = Number((draft.coreHours + delta).toFixed(2));
+          return;
+        }
+
+        // --- KROK 3: NÁHODNÝ VÝBĚR Z PRÁZDNÝCH ---
+        // Aby to bylo lidské, nevybereme vždycky všechny prázdné
+        const selectedIds = emptyProjectIds.filter(() => Math.random() > 0.3);
+        const finalTargets = selectedIds.length > 0 ? selectedIds : [emptyProjectIds[0]];
+
+        let runningDelta = delta;
+
+        finalTargets.forEach((id, index) => {
+          const isLast = index === finalTargets.length - 1;
+          let share: number;
+
+          if (isLast) {
+            share = runningDelta;
+          } else {
+            const pDef = timesheet.projects.find((p) => p.id === id);
+            const weight = pDef ? pDef.workload : 1;
+            const totalWeight = timesheet.projects.filter((p) => finalTargets.includes(p.id)).reduce((s, p) => s + p.workload, 0);
+
+            const rawShare = (weight / totalWeight) * delta;
+            // Držíme se minima 1h, pokud to runningDelta dovolí
+            share = Math.max(1.0, Math.round(rawShare * 2) / 2);
+            share = Math.min(share, runningDelta - (finalTargets.length - 1 - index) * 0.5);
+          }
+
+          if (share > 0) {
+            draft.projectHours[id] = Number(share.toFixed(2));
+            runningDelta = Number((runningDelta - share).toFixed(2));
+          }
+        });
+
+        // --- KROK 4: FINÁLNÍ DOPLNĚNÍ ---
+        // Pokud i po tomhle zbyla nějaká setina, hodíme ji do kmene
+        if (runningDelta > 0) {
+          draft.coreHours = Number((draft.coreHours + runningDelta).toFixed(2));
+        }
+      });
+    };
+  },
+
+  distributeMonthlyHours: (timesheet: Timesheet, onUpdateDay: (date: string, recipe: any) => void) => {
+    const monthlyFund = TimesheetLogic.calculateMonthlyFund(timesheet);
+
+    const localData: Record<string, { core: number; projects: Record<string, number>; cap: number }> = {};
+    let coreUsed = 0;
+    const pUsed: Record<string, number> = {};
+    timesheet.projects.forEach((p) => {
+      pUsed[p.id] = 0;
+    });
+
+    timesheet.days.forEach((day) => {
+      let cap = TimesheetLogic.calculateWorkedHours(day.attendance);
+      if (cap === 0 && !day.isWeekend && !day.isHoliday) cap = 8 * timesheet.totalWorkload;
+
+      localData[day.date] = { core: day.coreHours || 0, projects: { ...day.projectHours }, cap };
+      coreUsed = Number((coreUsed + (day.coreHours || 0)).toFixed(2));
+      timesheet.projects.forEach((p) => {
+        pUsed[p.id] = Number((pUsed[p.id] + (day.projectHours[p.id] || 0)).toFixed(2));
+      });
+    });
+
+    let coreWallet = Number((Math.max(0, monthlyFund * (timesheet.core.workload / timesheet.totalWorkload)) - coreUsed).toFixed(2));
+    const pWallets = timesheet.projects.map((p) => ({
+      id: p.id,
+      rem: Number((Math.max(0, monthlyFund * (p.workload / timesheet.totalWorkload)) - pUsed[p.id]).toFixed(2)),
+    }));
+
+    const workingDays = timesheet.days.filter((d) => !d.isWeekend && !d.isHoliday);
+
+    // --- FÁZE 1: NÁHODNÉ "LIDSKÉ" BLOKY (pouze násobky 0.5h) ---
+    // Zvýšíme počet iterací a snížíme max velikost bloku, aby se to víc drobilo
+    const maxIterations = 800;
+    for (let i = 0; i < maxIterations; i++) {
+      // Filtrujeme peněženky, které mají alespoň 0.5h
+      const active = pWallets.filter((w) => w.rem >= 0.5).map((w) => ({ id: w.id, isCore: false }));
+      if (coreWallet >= 0.5) active.push({ id: "core", isCore: true });
+      if (active.length === 0) break;
+
+      const day = workingDays[Math.floor(Math.random() * workingDays.length)];
+      const target = active[Math.floor(Math.random() * active.length)];
+      const d = localData[day.date];
+
+      const allocated = Number((d.core + Object.values(d.projects).reduce((a, b) => a + (b || 0), 0)).toFixed(2));
+      const space = Number((d.cap - allocated).toFixed(2));
+
+      // Chceme bloky 0.5h až 4.5h (aby jeden projekt nesežral celý 8h den)
+      if (space >= 0.5) {
+        const wallet = target.isCore ? { rem: coreWallet } : pWallets.find((w) => w.id === target.id)!;
+
+        // Vygenerujeme násobek 0.5
+        let take = (Math.floor(Math.random() * 9) + 1) * 0.5; // 0.5, 1.0, ... 4.5
+        take = Number(Math.min(take, space, wallet.rem).toFixed(2));
+
+        // Pokud "take" není násobek 0.5, zkusíme ho zaokrouhlit dolů na 0.5 (pokud to jde)
+        if (take % 0.5 !== 0 && take > 0.5) {
+          take = Math.floor(take * 2) / 2;
+        }
+
+        if (take >= 0.5) {
+          if (target.isCore) {
+            d.core = Number((d.core + take).toFixed(2));
+            coreWallet = Number((coreWallet - take).toFixed(2));
+          } else {
+            d.projects[target.id] = Number(((d.projects[target.id] || 0) + take).toFixed(2));
+            const w = pWallets.find((pw) => pw.id === target.id)!;
+            w.rem = Number((w.rem - take).toFixed(2));
+          }
+        }
+      }
+    }
+
+    // --- FÁZE 2: MATEMATICKÉ DOČIŠTĚNÍ (zbytky pod 0.5h) ---
+    // Tady už jdeme "na krev", aby to sedělo na setiny
+    const finalCleanup = (id: string, isCore: boolean) => {
+      let rem = isCore ? coreWallet : pWallets.find((w) => w.id === id)!.rem;
+      if (rem <= 0) return;
+
+      // Seřadíme dny náhodně, aby ty "divné" setiny nebyly vždycky na začátku měsíce
+      const randomCleanupDays = [...workingDays].sort(() => Math.random() - 0.5);
+
+      for (const day of randomCleanupDays) {
+        const d = localData[day.date];
+        const allocated = Number((d.core + Object.values(d.projects).reduce((a, b) => a + (b || 0), 0)).toFixed(2));
+        const space = Number((d.cap - allocated).toFixed(2));
+
+        if (space > 0) {
+          const take = Number(Math.min(space, rem).toFixed(2));
+          if (isCore) {
+            d.core = Number((d.core + take).toFixed(2));
+            coreWallet = Number((coreWallet - take).toFixed(2));
+          } else {
+            d.projects[id] = Number(((d.projects[id] || 0) + take).toFixed(2));
+            pWallets.find((w) => w.id === id)!.rem = Number((pWallets.find((w) => w.id === id)!.rem - take).toFixed(2));
+          }
+          rem = Number((rem - take).toFixed(2));
+        }
+        if (rem <= 0) break;
+      }
+    };
+
+    pWallets.forEach((w) => finalCleanup(w.id, false));
+    finalCleanup("core", true);
+
+    // --- FÁZE 3: PROPIS ---
+    Object.entries(localData).forEach(([date, data]) => {
+      onUpdateDay(date, (draft: TimesheetDay) => {
+        draft.coreHours = Number(data.core.toFixed(2));
+        Object.entries(data.projects).forEach(([pid, val]) => {
+          draft.projectHours[pid] = Number(val.toFixed(2));
+        });
+      });
+    });
+  },
+
+  calculateNightWorked: (attendance: Attendance): number => {
+    const start = toMinutes(attendance.clockIn);
+    const end = toMinutes(attendance.clockOut);
+
+    if (!start || !end || end <= start) return 0;
+
+    // Noční doba v minutách od začátku dne (22:00 = 1320, 06:00 = 360)
+    const nightStart = 22 * 60; // 1320
+    const nightEnd = 6 * 60; // 360
+
+    let nightMinutes = 0;
+
+    // Pokud směna končí v ten samý den (nebo je to "standardní" pojetí v rámci 24h)
+    // 1. Část: Práce od 00:00 do 06:00
+    const morningStart = Math.max(start, 0);
+    const morningEnd = Math.min(end, nightEnd);
+    if (morningEnd > morningStart) {
+      nightMinutes += morningEnd - morningStart;
+    }
+
+    // 2. Část: Práce od 22:00 do 24:00
+    const eveningStart = Math.max(start, nightStart);
+    const eveningEnd = Math.min(end, 24 * 60);
+    if (eveningEnd > eveningStart) {
+      nightMinutes += eveningEnd - eveningStart;
+    }
+
+    // Odečteme poměrnou část přestávky, pokud zasahuje do noci?
+    // Většinou se to u nočních příplatků nedělá, pokud nebyla čerpána v noci,
+    // ale pro zjednodušení počítáme čistý čas přítomnosti v nočních hodinách.
+
+    return Number((nightMinutes / 60).toFixed(2));
+  },
+
+  formatNightWorkedToHuman: (attendance: Attendance): string => {
+    const hours = TimesheetLogic.calculateNightWorked(attendance);
+    if (hours === 0) return "-";
+
+    // Převede např. 2.5 na "2h 30m" nebo 2.25 na "2h 15m"
+    const h = Math.floor(hours);
+    const m = Math.round((hours - h) * 60);
+
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  },
+
   getDelta: (day: TimesheetDay): number => {
     const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
     const allocated = day.coreHours + Object.values(day.projectHours).reduce((sum, h) => sum + h, 0);
-    return Number((allocated - worked).toFixed(2));
+    return Number((worked - allocated).toFixed(2));
   },
 
   isValidTime: (time: string): boolean => {

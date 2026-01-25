@@ -1,9 +1,14 @@
+import { Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/utils/cn";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "../shared/inputs/MultiSelectComboBox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import { ScheduleCell, ScheduleEditorModal } from "./ScheduleCell";
 import { TimeSmartInput } from "./TimeSmartInput";
-import type { ProjectDefinition, Timesheet, TimesheetDay } from "./Timesheet";
+import type { TimeRange, Timesheet, TimesheetDay } from "./Timesheet";
 import { TimesheetLogic } from "./TimesheetLogic";
 
 interface TimesheetTableProps {
@@ -12,6 +17,15 @@ interface TimesheetTableProps {
 }
 
 export const TimesheetTable = ({ timesheet, onUpdateDay }: TimesheetTableProps) => {
+  const [editingDay, setEditingDay] = useState<{ date: string; schedules: TimeRange[] } | null>(null);
+
+  const updateDaySchedules = (date: string, newSchedules: TimeRange[]) => {
+    // Předpokládám, že používáš tvůj existující setter s draftem
+    onUpdateDay(date, (draft: TimesheetDay) => {
+      draft.attendance.schedules = newSchedules;
+    });
+  };
+
   return (
     <div className="rounded-md border-t border-l border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full relative border-separate border-spacing-0 shadow-sm">
       <Table className="min-w-max w-full border-separate border-spacing-0">
@@ -24,7 +38,8 @@ export const TimesheetTable = ({ timesheet, onUpdateDay }: TimesheetTableProps) 
             <TableHead className="min-w-[80px] text-center">Pauza do</TableHead>
             <TableHead className="min-w-[80px] text-center">Přerušení</TableHead>
             <TableHead className="min-w-[80px] text-center">Odpracováno</TableHead>
-            <TableHead className="min-w-[80px] text-center">STAG (hod)</TableHead>
+            <TableHead className="min-w-[80px] text-center">Noční práce</TableHead>
+            <TableHead className="min-w-[80px] text-center">STAG (hod.)</TableHead>
             <TableHead className="min-w-[80px] text-center">STAG (rozvrh)</TableHead>
             <TableHead className="min-w-[80px] text-center border-l">Kmen ({timesheet.core.workload * 100}%)</TableHead>
             {timesheet.projects.map((project) => (
@@ -34,7 +49,28 @@ export const TimesheetTable = ({ timesheet, onUpdateDay }: TimesheetTableProps) 
                 </div>
               </TableHead>
             ))}
-            <TableHead className="min-w-[80px] text-center sticky right-0 z-40 bg-muted/90 border-l backdrop-blur-sm">Kontrola</TableHead>
+            <TableHead className="min-w-[100px] text-center sticky right-0 z-40 bg-muted/90 border-l backdrop-blur-sm shadow-[-5px_0_5px_-5px_rgba(0,0,0,0.1)]">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-[10px] font-bold text-slate-500">KONTROLA</span>
+                <TooltipProvider>
+                  <Tooltip delayDuration={200}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-90"
+                        onClick={() => TimesheetLogic.distributeMonthlyHours(timesheet, onUpdateDay)}
+                      >
+                        <Sparkles className="h-3.5 w-3.5 fill-blue-100" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="bg-slate-800 text-white border-none">
+                      <p className="text-[11px]">Inteligentně doplnit zbývající hodiny měsíce</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -42,23 +78,34 @@ export const TimesheetTable = ({ timesheet, onUpdateDay }: TimesheetTableProps) 
             <TimesheetRow
               key={day.date}
               day={day}
-              projects={timesheet.projects}
-              coreWorkload={timesheet.core.workload}
+              timesheet={timesheet}
               onUpdate={(recipe) => onUpdateDay(day.date, recipe)}
+              setEditingDay={setEditingDay}
             />
           ))}
         </TableBody>
-        <TimesheetTableFooter days={timesheet.days} projects={timesheet.projects} />
+        <TimesheetTableFooter timesheet={timesheet} />
       </Table>
+      <ScheduleEditorModal
+        isOpen={!!editingDay}
+        onOpenChange={(open) => !open && setEditingDay(null)}
+        initialSchedules={editingDay?.schedules || []}
+        dateLabel={editingDay?.date}
+        onSave={(newSchedules) => {
+          if (editingDay) {
+            updateDaySchedules(editingDay.date, newSchedules);
+          }
+        }}
+      />
     </div>
   );
 };
 
 interface TimesheetRowProps {
   day: TimesheetDay;
-  projects: ProjectDefinition[];
-  coreWorkload: number;
+  timesheet: Timesheet;
   onUpdate: (recipe: (draftDay: TimesheetDay) => void) => void;
+  setEditingDay: (val: { date: string; schedules: TimeRange[] } | null) => void;
 }
 
 export const INTERRUPTION_OPTIONS: MultiSelectComboBoxItem[] = [
@@ -99,15 +146,66 @@ export const INTERRUPTION_OPTIONS: MultiSelectComboBoxItem[] = [
   { value: "Zv", label: "Zv – Zdravotní volno" },
 ];
 
-const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
-  const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
-  const workedHumanReadable = TimesheetLogic.formatWorkedHoursToHuman(worked);
-  const delta = TimesheetLogic.getDelta(day);
+const DecimalInput = ({ value, onChange }: { value: number; onChange: (val: number) => void }) => {
+  const [inputValue, setInputValue] = useState<string>(value === 0 ? "" : value.toString().replace(".", ","));
+
+  useEffect(() => {
+    const normalizedInput = inputValue.replace(",", ".");
+    const numericInput = parseFloat(normalizedInput) || 0;
+    if (numericInput !== value) {
+      const formatted = value === 0 ? "" : value.toString().replace(".", ",");
+      setInputValue(formatted);
+    }
+  }, [value, inputValue]);
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextValue = e.target.value.replace(".", ",");
+    if (nextValue === "" || /^\d*,?\d*$/.test(nextValue)) {
+      setInputValue(nextValue);
+      if (nextValue !== "" && !nextValue.endsWith(",")) {
+        const parsed = parseFloat(nextValue.replace(",", "."));
+        if (!Number.isNaN(parsed)) {
+          onChange(parsed);
+        }
+      } else if (nextValue === "") {
+        onChange(0);
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    const parsed = parseFloat(inputValue.replace(",", "."));
+    if (Number.isNaN(parsed) || parsed === 0) {
+      setInputValue("");
+      onChange(0);
+    } else {
+      const fixed = Number(parsed.toFixed(2));
+      setInputValue(fixed.toString().replace(".", ","));
+      onChange(fixed);
+    }
+  };
 
   return (
-    <TableRow>
-      <TableCell className="font-medium sticky text-center bg-white border-r">{day.date}</TableCell>
-      {/* Příchod */}
+    <Input className="w-20 h-8 mx-auto text-right font-medium tabular-nums" value={inputValue} onChange={handleTextChange} onBlur={handleBlur} />
+  );
+};
+
+export const TimesheetRow = ({ day, timesheet, onUpdate, setEditingDay }: TimesheetRowProps) => {
+  const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
+  const workedReadable = TimesheetLogic.formatWorkedHoursToHuman(worked);
+  const nightWorked = TimesheetLogic.calculateNightWorked(day.attendance);
+  const nightWorkedReadable = TimesheetLogic.formatNightWorkedToHuman(day.attendance);
+  const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
+  const stagReadable = TimesheetLogic.formatWorkedHoursToHuman(stagHours);
+  const isCoreInvalid = !TimesheetLogic.isCoreHoursValid(day);
+  const delta = TimesheetLogic.getDelta(day);
+  const isWeekend = day.isWeekend;
+
+  return (
+    <TableRow className={cn(isWeekend && "bg-slate-50/50 text-slate-500")}>
+      <TableCell className={cn("font-medium sticky text-center border-r z-10", isWeekend ? "bg-slate-100/80" : "bg-white")}>{day.date}</TableCell>
+
+      {/* Attendance Inputs */}
       <TableCell className="text-center">
         <TimeSmartInput
           value={day.attendance.clockIn}
@@ -118,7 +216,6 @@ const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
           }
         />
       </TableCell>
-      {/* Odchod */}
       <TableCell className="text-center">
         <TimeSmartInput
           value={day.attendance.clockOut}
@@ -129,7 +226,6 @@ const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
           }
         />
       </TableCell>
-      {/* Pauza Start */}
       <TableCell className="text-center">
         <TimeSmartInput
           value={day.attendance.breakStart}
@@ -140,7 +236,6 @@ const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
           }
         />
       </TableCell>
-      {/* Pauza Konec */}
       <TableCell className="text-center">
         <TimeSmartInput
           value={day.attendance.breakEnd}
@@ -151,6 +246,8 @@ const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
           }
         />
       </TableCell>
+
+      {/* Interruptions */}
       <TableCell className="text-center">
         <MultiSelectComboBox
           items={INTERRUPTION_OPTIONS}
@@ -163,6 +260,8 @@ const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
           }
         />
       </TableCell>
+
+      {/* Worked Total */}
       <TableCell className="text-center font-bold tabular-nums">
         <TooltipProvider delayDuration={100}>
           <Tooltip>
@@ -170,72 +269,208 @@ const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
               <span className="cursor-help border-b border-dotted border-slate-400">{worked.toFixed(2)}</span>
             </TooltipTrigger>
             <TooltipContent side="top">
-              <p className="font-medium text-xs">{workedHumanReadable}</p>
+              <p className="font-medium text-xs">{workedReadable}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </TableCell>
-      <TableCell className="text-center"></TableCell>
-      <TableCell className="text-center"></TableCell>
+
+      {/* Noční práce jako Input */}
       <TableCell className="text-center">
-        <Input
-          type="number"
-          step="0.25"
-          className="w-20 h-8 mx-auto text-right"
-          value={day.coreHours || ""}
-          onChange={(e) =>
-            onUpdate((draftDay) => {
-              draftDay.coreHours = parseFloat(e.target.value) || 0;
+        <DecimalInput
+          value={day.attendance.nightHours || 0}
+          onChange={(val) => {
+            onUpdate((draft) => {
+              draft.attendance.nightHours = val;
+            });
+          }}
+        />
+      </TableCell>
+
+      {/* STAG (hod) */}
+      <TableCell className="text-center font-bold tabular-nums">
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help border-b border-dotted border-slate-300 text-blue-600">{stagHours > 0 ? stagHours.toFixed(2) : "-"}</span>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="font-medium text-xs">{stagReadable}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </TableCell>
+
+      {/* STAG (rozvrh) */}
+      <TableCell className="text-center px-2">
+        <ScheduleCell
+          schedules={day.attendance.schedules}
+          onClick={() =>
+            setEditingDay({
+              date: day.date,
+              schedules: day.attendance.schedules,
             })
           }
         />
       </TableCell>
-      {projects.map((project) => (
+
+      {/* Kmen (Core) */}
+      <TableCell className={cn("text-center", isCoreInvalid && "bg-red-50")}>
+        <div className="flex flex-col items-center gap-0.5">
+          <DecimalInput
+            value={day.coreHours}
+            onChange={(val) =>
+              onUpdate((d) => {
+                d.coreHours = val;
+              })
+            }
+          />
+          {isCoreInvalid && stagHours > 0 && (
+            <span className="text-[9px] text-red-500 font-bold uppercase tracking-tighter">Min: {stagHours.toFixed(1)}</span>
+          )}
+        </div>
+      </TableCell>
+
+      {/* Projects */}
+      {timesheet.projects.map((project) => (
         <TableCell key={project.id} className="text-center">
-          <Input
-            type="number"
-            step="0.25"
-            className="w-20 h-8 mx-auto text-right"
-            value={day.projectHours[project.id] || ""}
-            onChange={(e) =>
-              onUpdate((draftDay) => {
-                draftDay.projectHours[project.id] = parseFloat(e.target.value) || 0;
+          <DecimalInput
+            value={day.projectHours[project.id] || 0}
+            onChange={(val) =>
+              onUpdate((d) => {
+                d.projectHours[project.id] = val;
               })
             }
           />
         </TableCell>
       ))}
+
+      {/* Delta & Magic Button */}
       <TableCell
-        className={`text-center font-bold sticky right-0 border-l tabular-nums ${delta === 0 ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50"}`}
+        className={cn(
+          "text-center font-bold sticky right-0 border-l tabular-nums transition-colors z-30",
+          delta === 0 ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50",
+        )}
       >
-        {delta === 0 ? "0" : delta.toFixed(2)}
+        <div className="flex items-center justify-center gap-2 min-w-[80px]">
+          {/* Číslo delty */}
+          <span className="flex-1 text-right">{delta === 0 ? "0" : delta.toFixed(2)}</span>
+
+          {/* Tlačítko s bleskem */}
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn(
+              "h-7 w-7 shrink-0 transition-opacity",
+              // Tlačítko svítí jen když chybí hodiny (delta > 0)
+              delta <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 border-blue-200 bg-white",
+            )}
+            onClick={() => {
+              if (delta > 0) {
+                const magicFn = TimesheetLogic.distributeRemainingHours(day, timesheet);
+                if (magicFn) magicFn(onUpdate);
+              }
+            }}
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );
 };
 
 interface TimesheetTableFooterProps {
-  days: TimesheetDay[];
-  projects: ProjectDefinition[];
+  timesheet: Timesheet;
 }
 
-export const TimesheetTableFooter = ({ days, projects }: TimesheetTableFooterProps) => {
-  const sum = (fn: (d: TimesheetDay) => number) => days.reduce((acc, d) => acc + fn(d), 0).toFixed(2);
+export const TimesheetTableFooter = ({ timesheet }: TimesheetTableFooterProps) => {
+  const { days, projects, core } = timesheet;
 
-  // Date Column (1) + Time Columns (5) + Worked Column (1) + STAG columns (2) = 9
-  const leadColumnsCount = 9;
+  const sum = (fn: (d: TimesheetDay) => number) => days.reduce((acc, d) => acc + fn(d), 0);
+
+  const monthlyTotalWorked = TimesheetLogic.calculateMonthlyTotalWorked(days);
+  const monthlyTotalAllocated = TimesheetLogic.calculateMonthlyTotalAllocated(days);
+  const monthlyTotalFund = TimesheetLogic.calculateMonthlyFund(timesheet);
 
   return (
-    <TableFooter className="sticky bottom-0 z-50 bg-slate-100 font-bold">
-      <TableRow>
-        <TableCell colSpan={leadColumnsCount} />
-        <TableCell className="text-center">{sum((d) => d.coreHours)}</TableCell>
+    <TableFooter className="sticky bottom-0 z-50 bg-slate-100 font-bold border-t-2 border-slate-300">
+      {/* Řádek 1: Celkové součty podle docházky */}
+      <TableRow className="hover:bg-slate-100/50">
+        <TableCell colSpan={6} className="text-right py-1 text-slate-500 font-medium text-[10px]">
+          ODPRACOVÁNO (DOCHÁZKA):
+        </TableCell>
+        <TableCell className="text-center py-1 tabular-nums">{monthlyTotalWorked.toFixed(2)}</TableCell>
+        <TableCell colSpan={3} />
+
+        <TableCell className="text-center py-1 tabular-nums border-l border-slate-200">{sum((d) => d.coreHours).toFixed(2)}</TableCell>
+
         {projects.map((p) => (
-          <TableCell key={p.id} className="text-center">
-            {sum((d) => d.projectHours[p.id] || 0)}
+          <TableCell key={p.id} className="text-center py-1 tabular-nums">
+            {sum((d) => d.projectHours[p.id] || 0).toFixed(2)}
           </TableCell>
         ))}
-        <TableCell className="text-center sticky right-0 bg-slate-100 border-l"></TableCell>
+        <TableCell className="sticky right-0 bg-slate-100 border-l" />
+      </TableRow>
+
+      {/* Řádek 2: Čerpání úvazku (Semafor) */}
+      <TableRow className="bg-slate-200/50 text-[11px] uppercase tracking-wider">
+        <TableCell colSpan={6} className="text-right py-1 text-slate-600">
+          ČERPÁNÍ ÚVAZKU (VÝKAZ):
+        </TableCell>
+
+        {/* Celkové čerpání vs Celkový Fond */}
+        <TableCell className="text-center py-1 whitespace-nowrap tabular-nums">
+          <span className={monthlyTotalAllocated > monthlyTotalFund + 0.01 ? "text-red-600 font-extrabold" : "text-green-700"}>
+            {monthlyTotalAllocated.toFixed(2)} / {monthlyTotalFund.toFixed(2)}
+          </span>
+        </TableCell>
+
+        <TableCell colSpan={3} />
+
+        {/* Kmen: Aktuálně / Fond */}
+        {(() => {
+          const coreFund = TimesheetLogic.calculateWorkloadFund(timesheet, core.workload);
+          const coreCurrent = sum((d) => d.coreHours);
+          return (
+            <TableCell
+              className={cn(
+                "text-center py-1 whitespace-nowrap tabular-nums border-l border-slate-300",
+                coreCurrent > coreFund + 0.01 ? "text-red-600" : "text-blue-800",
+              )}
+            >
+              {coreCurrent.toFixed(2)} / {coreFund.toFixed(2)}
+            </TableCell>
+          );
+        })()}
+
+        {/* Projekty: Aktuálně / Fond */}
+        {projects.map((p) => {
+          const projectFund = TimesheetLogic.calculateWorkloadFund(timesheet, p.workload);
+          const projectCurrent = sum((d) => d.projectHours[p.id] || 0);
+          return (
+            <TableCell
+              key={p.id}
+              className={cn(
+                "text-center py-1 whitespace-nowrap tabular-nums",
+                projectCurrent > projectFund + 0.01 ? "text-red-600" : "text-blue-800",
+              )}
+            >
+              {projectCurrent.toFixed(2)} / {projectFund.toFixed(2)}
+            </TableCell>
+          );
+        })}
+
+        {/* Kontrolní status vpravo */}
+        <TableCell className="sticky right-0 bg-slate-200 border-l border-slate-300">
+          <div className="flex justify-center">
+            {Math.abs(monthlyTotalAllocated - monthlyTotalFund) < 0.01 ? (
+              <span className="text-[9px] text-green-600">OK</span>
+            ) : (
+              <span className="text-[9px] text-red-500 font-bold">{monthlyTotalAllocated > monthlyTotalFund ? "OVER" : "DIF"}</span>
+            )}
+          </div>
+        </TableCell>
       </TableRow>
     </TableFooter>
   );

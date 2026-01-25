@@ -113,8 +113,21 @@
   --sidebar-ring: oklch(0.55 0.12 250);
 }
 
+/* Toto pokryje Tooltipy a ComboBoxy (Poppery) */
 [data-radix-popper-content-wrapper] {
     z-index: 9999 !important;
+}
+
+/* Toto pokryje Dialogy a Modaly (Portály) */
+[data-radix-portal] {
+    position: relative;
+    z-index: 10000 !important;
+}
+
+/* Pojistka pro samotný Overlay a Content dialogu */
+div[role="dialog"], 
+div[data-state="open"] > .fixed.inset-0 {
+    z-index: 10000 !important;
 }
 
 @layer base {
