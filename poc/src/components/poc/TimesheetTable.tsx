@@ -1,5 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "../shared/inputs/MultiSelectComboBox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { TimeSmartInput } from "./TimeSmartInput";
 import type { ProjectDefinition, Timesheet, TimesheetDay } from "./Timesheet";
 import { TimesheetLogic } from "./TimesheetLogic";
@@ -59,8 +61,47 @@ interface TimesheetRowProps {
   onUpdate: (recipe: (draftDay: TimesheetDay) => void) => void;
 }
 
+export const INTERRUPTION_OPTIONS: MultiSelectComboBoxItem[] = [
+  { value: "D", label: "D – Dovolenka" },
+  { value: "JMV/HO", label: "JMV/HO – práce na dálku od 1.10.2023" },
+  { value: "KAHO", label: "KAHO – Karanténa -home office" },
+  { value: "M", label: "M – Omluvená nepřítomnost - tvůrčí volno" },
+  { value: "MD/OD", label: "MD/OD – Mateřská / Otcovská dovolená" },
+  { value: "N", label: "N – Nemocenská" },
+  { value: "NA", label: "NA – Neomluvená absence" },
+  { value: "NK", label: "NK – Návštěva lékaře - krátkodobá" },
+  { value: "NL", label: "NL – Návštěva lékaře - celý den" },
+  { value: "NP", label: "NP – Pracovní úraz" },
+  { value: "NV", label: "NV – Náhradní volno" },
+  { value: "O", label: "O – Ošetřovné" },
+  { value: "OPN", label: "OPN – Osobní překážky" },
+  { value: "PN", label: "PN – Narození dítěte" },
+  { value: "PO", label: "PO – Odběr krve" },
+  { value: "PS", label: "PS – Svatba" },
+  { value: "PU", label: "PU – Úmrtí rod. příslušníka" },
+  { value: "PVB", label: "PVB – Pracovní volno - branná povinnost" },
+  { value: "PVM", label: "PVM – Pracovní volno - akce pro děti" },
+  { value: "PZ", label: "PZ – Překážka na straně zaměstnavatele" },
+  { value: "RD", label: "RD – Rodičovská dovolená" },
+  { value: "SCP", label: "SCP – Tuzemská služební cesta Projekt" },
+  { value: "SCS", label: "SCS – Tuzemská služební cesta Stáž" },
+  { value: "SCT", label: "SCT – Služební cesta" },
+  { value: "SCZ", label: "SCZ – Služební cesta zahraniční" },
+  { value: "SCZE", label: "SCZE – Zahraniční cesta Erasmus" },
+  { value: "SCZP", label: "SCZP – Zahraniční cesta Projekt" },
+  { value: "SCZS", label: "SCZS – Zahraniční cesta Stáž" },
+  { value: "ST", label: "ST – Studium s náhradou mzdy" },
+  { value: "VN", label: "VN – Neplacené volno" },
+  { value: "VZ", label: "VZ – Nové zaměstnání" },
+  { value: "Z", label: "Z – Volno pro obecný zájem" },
+  { value: "Zp", label: "Zp – Veřejná funkce - poslanec" },
+  { value: "Zs", label: "Zs – Dlouhodobý pobyt v cizině" },
+  { value: "Zv", label: "Zv – Zdravotní volno" },
+];
+
 const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
   const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
+  const workedHumanReadable = TimesheetLogic.formatWorkedHoursToHuman(worked);
   const delta = TimesheetLogic.getDelta(day);
 
   return (
@@ -77,7 +118,6 @@ const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
           }
         />
       </TableCell>
-
       {/* Odchod */}
       <TableCell className="text-center">
         <TimeSmartInput
@@ -89,7 +129,6 @@ const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
           }
         />
       </TableCell>
-
       {/* Pauza Start */}
       <TableCell className="text-center">
         <TimeSmartInput
@@ -101,7 +140,6 @@ const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
           }
         />
       </TableCell>
-
       {/* Pauza Konec */}
       <TableCell className="text-center">
         <TimeSmartInput
@@ -114,18 +152,29 @@ const TimesheetRow = ({ day, projects, onUpdate }: TimesheetRowProps) => {
         />
       </TableCell>
       <TableCell className="text-center">
-        <Input
-          type="text"
-          className="w-20 h-8 mx-auto"
-          value={day.attendance.interruptions || ""}
-          onChange={(e) =>
+        <MultiSelectComboBox
+          items={INTERRUPTION_OPTIONS}
+          placeholder="Vyberte..."
+          value={day.attendance.interruptions ? day.attendance.interruptions.split(",").filter(Boolean) : []}
+          onChange={(selectedArray) =>
             onUpdate((draftDay) => {
-              draftDay.attendance.interruptions = e.target.value;
+              draftDay.attendance.interruptions = selectedArray.join(",");
             })
           }
         />
       </TableCell>
-      <TableCell className="text-center font-bold tabular-nums">{worked.toFixed(2)}</TableCell>
+      <TableCell className="text-center font-bold tabular-nums">
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help border-b border-dotted border-slate-400">{worked.toFixed(2)}</span>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              <p className="font-medium text-xs">{workedHumanReadable}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </TableCell>
       <TableCell className="text-center"></TableCell>
       <TableCell className="text-center"></TableCell>
       <TableCell className="text-center">

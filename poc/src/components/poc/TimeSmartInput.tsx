@@ -23,6 +23,7 @@ export const TimeSmartInput = ({ value, onChange }: TimeSmartInputProps) => {
     <Input
       type="text"
       className="h-8 w-16"
+      placeholder="00:00"
       value={localValue}
       onFocus={(e) => e.target.select()}
       onChange={(e) => setLocalValue(e.target.value)}

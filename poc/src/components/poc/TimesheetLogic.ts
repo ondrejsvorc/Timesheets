@@ -1,18 +1,44 @@
 import type { Attendance, TimesheetDay } from "./Timesheet";
 
+/**
+ * Converts "HH:mm" time format to minutes.
+ */
+const toMinutes = (time: string): number => {
+  const [hours, minutes] = (time || "").split(":").map(Number);
+  return (hours || 0) * 60 + (minutes || 0);
+};
+
 export const TimesheetLogic = {
   calculateWorkedHours: (attendance: Attendance): number => {
-    const toMin = (t: string) => {
-      const [h, m] = (t || "").split(":").map(Number);
-      return (h || 0) * 60 + (m || 0);
-    };
+    const clockIn = toMinutes(attendance.clockIn);
+    const clockOut = toMinutes(attendance.clockOut);
+    if (!clockIn || !clockOut || clockOut <= clockIn) {
+      return 0;
+    }
 
-    const start = toMin(attendance.clockIn);
-    const end = toMin(attendance.clockOut);
+    const breakStart = toMinutes(attendance.breakStart);
+    const breakEnd = toMinutes(attendance.breakEnd);
+    const breakMinutes = attendance.breakStart && attendance.breakEnd && breakEnd > breakStart ? breakEnd - breakStart : 0;
 
-    if (end <= start) return 0;
-    const mins = end - start;
-    return Math.max(0, mins / 60);
+    const workedMinutes = clockOut - clockIn;
+    const workedMinutesWithoutBreak = workedMinutes - breakMinutes;
+    const workedHours = Number((workedMinutesWithoutBreak / 60).toFixed(2));
+
+    return workedHours;
+  },
+
+  formatWorkedHoursToHuman: (hours: number): string => {
+    if (hours <= 0) return "0";
+
+    const totalMinutes = Math.round(hours * 60);
+    const wholeHours = Math.floor(totalMinutes / 60);
+    const remainingMinutes = totalMinutes % 60;
+
+    const parts: string[] = [];
+    if (wholeHours > 0) parts.push(`${wholeHours}h`);
+    if (remainingMinutes > 0) parts.push(`${remainingMinutes}m`);
+
+    return parts.join(" ") || "0";
   },
 
   getDelta: (day: TimesheetDay): number => {

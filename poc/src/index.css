@@ -113,6 +113,10 @@
   --sidebar-ring: oklch(0.55 0.12 250);
 }
 
+[data-radix-popper-content-wrapper] {
+    z-index: 9999 !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
