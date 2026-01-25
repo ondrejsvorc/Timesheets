@@ -26,7 +26,6 @@ export const TimesheetLogic = {
     return regex.test(time);
   },
 
-  // Tvoje vylepšená smart funkce
   formatSmartTime: (value: string): string => {
     const clean = value.replace(/\D/g, "");
     if (!clean) return "";

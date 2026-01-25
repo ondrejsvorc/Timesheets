@@ -1,6 +1,5 @@
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { cn } from "@/utils/cn";
 import { TimeSmartInput } from "./TimeSmartInput";
 import type { ProjectDefinition, Timesheet, TimesheetDay } from "./Timesheet";
 import { TimesheetLogic } from "./TimesheetLogic";
@@ -174,25 +173,20 @@ interface TimesheetTableFooterProps {
 export const TimesheetTableFooter = ({ days, projects }: TimesheetTableFooterProps) => {
   const sum = (fn: (d: TimesheetDay) => number) => days.reduce((acc, d) => acc + fn(d), 0).toFixed(2);
 
+  // Date Column (1) + Time Columns (5) + Worked Column (1) + STAG columns (2) = 9
+  const leadColumnsCount = 9;
+
   return (
-    <TableFooter className="sticky bottom-0 z-50">
+    <TableFooter className="sticky bottom-0 z-50 bg-slate-100 font-bold">
       <TableRow>
-        <TableCell />
-        <TableCell />
-        <TableCell />
-        <TableCell />
-        <TableCell />
-        <TableCell />
-        <TableCell />
-        <TableCell />
-        <TableCell />
+        <TableCell colSpan={leadColumnsCount} />
         <TableCell className="text-center">{sum((d) => d.coreHours)}</TableCell>
         {projects.map((p) => (
           <TableCell key={p.id} className="text-center">
             {sum((d) => d.projectHours[p.id] || 0)}
           </TableCell>
         ))}
-        <TableCell className="text-center"></TableCell>
+        <TableCell className="text-center sticky right-0 bg-slate-100 border-l"></TableCell>
       </TableRow>
     </TableFooter>
   );
