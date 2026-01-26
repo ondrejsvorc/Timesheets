@@ -282,53 +282,6 @@ export const TimesheetLogic = {
     });
   },
 
-  calculateNightWorked: (attendance: Attendance): number => {
-    const start = toMinutes(attendance.clockIn);
-    const end = toMinutes(attendance.clockOut);
-
-    if (!start || !end || end <= start) return 0;
-
-    // Noční doba v minutách od začátku dne (22:00 = 1320, 06:00 = 360)
-    const nightStart = 22 * 60; // 1320
-    const nightEnd = 6 * 60; // 360
-
-    let nightMinutes = 0;
-
-    // Pokud směna končí v ten samý den (nebo je to "standardní" pojetí v rámci 24h)
-    // 1. Část: Práce od 00:00 do 06:00
-    const morningStart = Math.max(start, 0);
-    const morningEnd = Math.min(end, nightEnd);
-    if (morningEnd > morningStart) {
-      nightMinutes += morningEnd - morningStart;
-    }
-
-    // 2. Část: Práce od 22:00 do 24:00
-    const eveningStart = Math.max(start, nightStart);
-    const eveningEnd = Math.min(end, 24 * 60);
-    if (eveningEnd > eveningStart) {
-      nightMinutes += eveningEnd - eveningStart;
-    }
-
-    // Odečteme poměrnou část přestávky, pokud zasahuje do noci?
-    // Většinou se to u nočních příplatků nedělá, pokud nebyla čerpána v noci,
-    // ale pro zjednodušení počítáme čistý čas přítomnosti v nočních hodinách.
-
-    return Number((nightMinutes / 60).toFixed(2));
-  },
-
-  formatNightWorkedToHuman: (attendance: Attendance): string => {
-    const hours = TimesheetLogic.calculateNightWorked(attendance);
-    if (hours === 0) return "-";
-
-    // Převede např. 2.5 na "2h 30m" nebo 2.25 na "2h 15m"
-    const h = Math.floor(hours);
-    const m = Math.round((hours - h) * 60);
-
-    if (h === 0) return `${m}m`;
-    if (m === 0) return `${h}h`;
-    return `${h}h ${m}m`;
-  },
-
   getDelta: (day: TimesheetDay): number => {
     const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
     const allocated = day.coreHours + Object.values(day.projectHours).reduce((sum, h) => sum + h, 0);

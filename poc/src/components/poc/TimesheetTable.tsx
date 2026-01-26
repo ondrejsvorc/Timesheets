@@ -1,9 +1,9 @@
-import { Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/utils/cn";
+import { Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "../shared/inputs/MultiSelectComboBox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { ScheduleCell, ScheduleEditorModal } from "./ScheduleCell";
@@ -193,8 +193,6 @@ const DecimalInput = ({ value, onChange }: { value: number; onChange: (val: numb
 export const TimesheetRow = ({ day, timesheet, onUpdate, setEditingDay }: TimesheetRowProps) => {
   const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
   const workedReadable = TimesheetLogic.formatWorkedHoursToHuman(worked);
-  const nightWorked = TimesheetLogic.calculateNightWorked(day.attendance);
-  const nightWorkedReadable = TimesheetLogic.formatNightWorkedToHuman(day.attendance);
   const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
   const stagReadable = TimesheetLogic.formatWorkedHoursToHuman(stagHours);
   const isCoreInvalid = !TimesheetLogic.isCoreHoursValid(day);
