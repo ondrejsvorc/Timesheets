@@ -1,9 +1,9 @@
+import { Sparkles } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/utils/cn";
-import { Sparkles } from "lucide-react";
-import { useEffect, useState } from "react";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "../shared/inputs/MultiSelectComboBox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { ScheduleCell, ScheduleEditorModal } from "./ScheduleCell";
@@ -20,7 +20,6 @@ export const TimesheetTable = ({ timesheet, onUpdateDay }: TimesheetTableProps) 
   const [editingDay, setEditingDay] = useState<{ date: string; schedules: TimeRange[] } | null>(null);
 
   const updateDaySchedules = (date: string, newSchedules: TimeRange[]) => {
-    // Předpokládám, že používáš tvůj existující setter s draftem
     onUpdateDay(date, (draft: TimesheetDay) => {
       draft.attendance.schedules = newSchedules;
     });
@@ -190,193 +189,200 @@ const DecimalInput = ({ value, onChange }: { value: number; onChange: (val: numb
   );
 };
 
-export const TimesheetRow = ({ day, timesheet, onUpdate, setEditingDay }: TimesheetRowProps) => {
-  const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
-  const workedReadable = TimesheetLogic.formatWorkedHoursToHuman(worked);
-  const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
-  const stagReadable = TimesheetLogic.formatWorkedHoursToHuman(stagHours);
-  const isCoreInvalid = !TimesheetLogic.isCoreHoursValid(day);
-  const delta = TimesheetLogic.getDelta(day);
-  const isWeekend = day.isWeekend;
+export const TimesheetRow = React.memo(
+  ({ day, timesheet, onUpdate, setEditingDay }: TimesheetRowProps) => {
+    const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
+    const workedReadable = TimesheetLogic.formatWorkedHoursToHuman(worked);
+    const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
+    const stagReadable = TimesheetLogic.formatWorkedHoursToHuman(stagHours);
+    const isCoreInvalid = !TimesheetLogic.isCoreHoursValid(day);
+    const delta = TimesheetLogic.getDelta(day);
+    const isWeekend = day.isWeekend;
 
-  return (
-    <TableRow className={cn(isWeekend && "bg-slate-50/50 text-slate-500")}>
-      <TableCell className={cn("font-medium sticky text-center border-r z-10", isWeekend ? "bg-slate-100/80" : "bg-white")}>{day.date}</TableCell>
+    console.log("render row", day.date);
 
-      {/* Attendance Inputs */}
-      <TableCell className="text-center">
-        <TimeSmartInput
-          value={day.attendance.clockIn}
-          onChange={(val) =>
-            onUpdate((d) => {
-              d.attendance.clockIn = val;
-            })
-          }
-        />
-      </TableCell>
-      <TableCell className="text-center">
-        <TimeSmartInput
-          value={day.attendance.clockOut}
-          onChange={(val) =>
-            onUpdate((d) => {
-              d.attendance.clockOut = val;
-            })
-          }
-        />
-      </TableCell>
-      <TableCell className="text-center">
-        <TimeSmartInput
-          value={day.attendance.breakStart}
-          onChange={(val) =>
-            onUpdate((d) => {
-              d.attendance.breakStart = val;
-            })
-          }
-        />
-      </TableCell>
-      <TableCell className="text-center">
-        <TimeSmartInput
-          value={day.attendance.breakEnd}
-          onChange={(val) =>
-            onUpdate((d) => {
-              d.attendance.breakEnd = val;
-            })
-          }
-        />
-      </TableCell>
+    return (
+      <TableRow className={cn(isWeekend && "bg-slate-50/50 text-slate-500")}>
+        <TableCell className={cn("font-medium sticky text-center border-r z-10", isWeekend ? "bg-slate-100/80" : "bg-white")}>{day.date}</TableCell>
 
-      {/* Interruptions */}
-      <TableCell className="text-center">
-        <MultiSelectComboBox
-          items={INTERRUPTION_OPTIONS}
-          placeholder="Vyberte..."
-          value={day.attendance.interruptions ? day.attendance.interruptions.split(",").filter(Boolean) : []}
-          onChange={(selectedArray) =>
-            onUpdate((draftDay) => {
-              draftDay.attendance.interruptions = selectedArray.join(",");
-            })
-          }
-        />
-      </TableCell>
-
-      {/* Worked Total */}
-      <TableCell className="text-center font-bold tabular-nums">
-        <TooltipProvider delayDuration={100}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help border-b border-dotted border-slate-400">{worked.toFixed(2)}</span>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p className="font-medium text-xs">{workedReadable}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </TableCell>
-
-      {/* Noční práce jako Input */}
-      <TableCell className="text-center">
-        <DecimalInput
-          value={day.attendance.nightHours || 0}
-          onChange={(val) => {
-            onUpdate((draft) => {
-              draft.attendance.nightHours = val;
-            });
-          }}
-        />
-      </TableCell>
-
-      {/* STAG (hod) */}
-      <TableCell className="text-center font-bold tabular-nums">
-        <TooltipProvider delayDuration={100}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="cursor-help border-b border-dotted border-slate-300 text-blue-600">{stagHours > 0 ? stagHours.toFixed(2) : "-"}</span>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              <p className="font-medium text-xs">{stagReadable}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </TableCell>
-
-      {/* STAG (rozvrh) */}
-      <TableCell className="text-center px-2">
-        <ScheduleCell
-          schedules={day.attendance.schedules}
-          onClick={() =>
-            setEditingDay({
-              date: day.date,
-              schedules: day.attendance.schedules,
-            })
-          }
-        />
-      </TableCell>
-
-      {/* Kmen (Core) */}
-      <TableCell className={cn("text-center", isCoreInvalid && "bg-red-50")}>
-        <div className="flex flex-col items-center gap-0.5">
-          <DecimalInput
-            value={day.coreHours}
+        {/* Attendance Inputs */}
+        <TableCell className="text-center">
+          <TimeSmartInput
+            value={day.attendance.clockIn}
             onChange={(val) =>
               onUpdate((d) => {
-                d.coreHours = val;
-              })
-            }
-          />
-          {isCoreInvalid && stagHours > 0 && (
-            <span className="text-[9px] text-red-500 font-bold uppercase tracking-tighter">Min: {stagHours.toFixed(1)}</span>
-          )}
-        </div>
-      </TableCell>
-
-      {/* Projects */}
-      {timesheet.projects.map((project) => (
-        <TableCell key={project.id} className="text-center">
-          <DecimalInput
-            value={day.projectHours[project.id] || 0}
-            onChange={(val) =>
-              onUpdate((d) => {
-                d.projectHours[project.id] = val;
+                d.attendance.clockIn = val;
               })
             }
           />
         </TableCell>
-      ))}
+        <TableCell className="text-center">
+          <TimeSmartInput
+            value={day.attendance.clockOut}
+            onChange={(val) =>
+              onUpdate((d) => {
+                d.attendance.clockOut = val;
+              })
+            }
+          />
+        </TableCell>
+        <TableCell className="text-center">
+          <TimeSmartInput
+            value={day.attendance.breakStart}
+            onChange={(val) =>
+              onUpdate((d) => {
+                d.attendance.breakStart = val;
+              })
+            }
+          />
+        </TableCell>
+        <TableCell className="text-center">
+          <TimeSmartInput
+            value={day.attendance.breakEnd}
+            onChange={(val) =>
+              onUpdate((d) => {
+                d.attendance.breakEnd = val;
+              })
+            }
+          />
+        </TableCell>
 
-      {/* Delta & Magic Button */}
-      <TableCell
-        className={cn(
-          "text-center font-bold sticky right-0 border-l tabular-nums transition-colors z-30",
-          delta === 0 ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50",
-        )}
-      >
-        <div className="flex items-center justify-center gap-2 min-w-[80px]">
-          {/* Číslo delty */}
-          <span className="flex-1 text-right">{delta === 0 ? "0" : delta.toFixed(2)}</span>
+        {/* Interruptions */}
+        <TableCell className="text-center">
+          <MultiSelectComboBox
+            items={INTERRUPTION_OPTIONS}
+            placeholder="Vyberte..."
+            value={day.attendance.interruptions ? day.attendance.interruptions.split(",").filter(Boolean) : []}
+            onChange={(selectedArray) =>
+              onUpdate((draftDay) => {
+                draftDay.attendance.interruptions = selectedArray.join(",");
+              })
+            }
+          />
+        </TableCell>
 
-          {/* Tlačítko s bleskem */}
-          <Button
-            variant="outline"
-            size="icon"
-            className={cn(
-              "h-7 w-7 shrink-0 transition-opacity",
-              // Tlačítko svítí jen když chybí hodiny (delta > 0)
-              delta <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 border-blue-200 bg-white",
-            )}
-            onClick={() => {
-              if (delta > 0) {
-                const magicFn = TimesheetLogic.distributeRemainingHours(day, timesheet);
-                if (magicFn) magicFn(onUpdate);
-              }
+        {/* Worked Total */}
+        <TableCell className="text-center font-bold tabular-nums">
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-help border-b border-dotted border-slate-400">{worked.toFixed(2)}</span>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="font-medium text-xs">{workedReadable}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </TableCell>
+
+        {/* Noční práce jako Input */}
+        <TableCell className="text-center">
+          <DecimalInput
+            value={day.attendance.nightHours || 0}
+            onChange={(val) => {
+              onUpdate((draft) => {
+                draft.attendance.nightHours = val;
+              });
             }}
-          >
-            <Sparkles className="h-4 w-4" />
-          </Button>
-        </div>
-      </TableCell>
-    </TableRow>
-  );
-};
+          />
+        </TableCell>
+
+        {/* STAG (hod) */}
+        <TableCell className="text-center font-bold tabular-nums">
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-help border-b border-dotted border-slate-300 text-blue-600">
+                  {stagHours > 0 ? stagHours.toFixed(2) : "-"}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p className="font-medium text-xs">{stagReadable}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </TableCell>
+
+        {/* STAG (rozvrh) */}
+        <TableCell className="text-center px-2">
+          <ScheduleCell
+            schedules={day.attendance.schedules}
+            onClick={() =>
+              setEditingDay({
+                date: day.date,
+                schedules: day.attendance.schedules,
+              })
+            }
+          />
+        </TableCell>
+
+        {/* Kmen (Core) */}
+        <TableCell className={cn("text-center", isCoreInvalid && "bg-red-50")}>
+          <div className="flex flex-col items-center gap-0.5">
+            <DecimalInput
+              value={day.coreHours}
+              onChange={(val) =>
+                onUpdate((d) => {
+                  d.coreHours = val;
+                })
+              }
+            />
+            {isCoreInvalid && stagHours > 0 && (
+              <span className="text-[9px] text-red-500 font-bold uppercase tracking-tighter">Min: {stagHours.toFixed(1)}</span>
+            )}
+          </div>
+        </TableCell>
+
+        {/* Projects */}
+        {timesheet.projects.map((project) => (
+          <TableCell key={project.id} className="text-center">
+            <DecimalInput
+              value={day.projectHours[project.id] || 0}
+              onChange={(val) =>
+                onUpdate((d) => {
+                  d.projectHours[project.id] = val;
+                })
+              }
+            />
+          </TableCell>
+        ))}
+
+        {/* Delta & Magic Button */}
+        <TableCell
+          className={cn(
+            "text-center font-bold sticky right-0 border-l tabular-nums transition-colors z-30",
+            delta === 0 ? "text-green-600 bg-green-50" : "text-red-500 bg-red-50",
+          )}
+        >
+          <div className="flex items-center justify-center gap-2 min-w-[80px]">
+            {/* Číslo delty */}
+            <span className="flex-1 text-right">{delta === 0 ? "0" : delta.toFixed(2)}</span>
+
+            {/* Tlačítko s bleskem */}
+            <Button
+              variant="outline"
+              size="icon"
+              className={cn(
+                "h-7 w-7 shrink-0 transition-opacity",
+                // Tlačítko svítí jen když chybí hodiny (delta > 0)
+                delta <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 border-blue-200 bg-white",
+              )}
+              onClick={() => {
+                if (delta > 0) {
+                  const magicFn = TimesheetLogic.distributeRemainingHours(day, timesheet);
+                  if (magicFn) magicFn(onUpdate);
+                }
+              }}
+            >
+              <Sparkles className="h-4 w-4" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+    );
+  },
+  (prev, next) => prev.day === next.day,
+);
 
 interface TimesheetTableFooterProps {
   timesheet: Timesheet;
