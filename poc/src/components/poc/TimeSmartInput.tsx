@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { startTransition, useState } from "react";
 import { Input } from "../ui/input";
 
 interface TimeSmartInputProps {
@@ -7,16 +7,14 @@ interface TimeSmartInputProps {
 }
 
 export const TimeSmartInput = ({ value, onChange }: TimeSmartInputProps) => {
-  const [localValue, setLocalValue] = useState(value);
+  const [draft, setDraft] = useState<string>(value);
 
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  const commitChange = () => {
-    const formatted = formatSmartTime(localValue);
-    setLocalValue(formatted);
-    onChange(formatted);
+  const commit = () => {
+    const formatted = formatSmartTime(draft);
+    setDraft(formatted);
+    startTransition(() => {
+      onChange(formatted);
+    });
   };
 
   return (
@@ -24,14 +22,14 @@ export const TimeSmartInput = ({ value, onChange }: TimeSmartInputProps) => {
       type="text"
       className="h-8 w-16"
       placeholder="00:00"
-      value={localValue}
-      onFocus={(e) => e.target.select()}
-      onChange={(e) => setLocalValue(e.target.value)}
-      onBlur={commitChange}
+      value={draft}
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => setDraft(e.currentTarget.value)}
+      onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === "Enter") {
-          commitChange();
-          (e.target as HTMLInputElement).blur();
+          commit();
+          e.currentTarget.blur();
         }
       }}
     />
