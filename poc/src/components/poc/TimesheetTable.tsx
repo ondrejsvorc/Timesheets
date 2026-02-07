@@ -1,5 +1,5 @@
 import { Sparkles } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -24,6 +24,13 @@ export const TimesheetTable = ({ timesheet, onUpdateDay }: TimesheetTableProps) 
       draft.attendance.schedules = newSchedules;
     });
   };
+
+  const onUpdateByDate = useCallback(
+    (date: string, recipe: (draftDay: TimesheetDay) => void) => {
+      onUpdateDay(date, recipe);
+    },
+    [onUpdateDay],
+  );
 
   return (
     <div className="rounded-md border-t border-l border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full relative border-separate border-spacing-0 shadow-sm">
@@ -78,7 +85,7 @@ export const TimesheetTable = ({ timesheet, onUpdateDay }: TimesheetTableProps) 
               key={day.date}
               day={day}
               timesheet={timesheet}
-              onUpdate={(recipe) => onUpdateDay(day.date, recipe)}
+              onUpdate={onUpdateByDate.bind(null, day.date)}
               setEditingDay={setEditingDay}
             />
           ))}
