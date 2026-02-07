@@ -205,12 +205,15 @@ export const TimesheetRow = React.memo(
     const isCoreInvalid = !TimesheetLogic.isCoreHoursValid(day);
     const delta = TimesheetLogic.getDelta(day);
     const isWeekend = day.isWeekend;
+    const isHoliday = day.isHoliday;
 
     console.log("render row", day.date);
 
     return (
-      <TableRow className={cn(isWeekend && "bg-slate-50/50 text-slate-500")}>
-        <TableCell className={cn("font-medium sticky text-center border-r z-10", isWeekend ? "bg-slate-100/80" : "bg-white")}>{day.date}</TableCell>
+      <TableRow className={cn((isWeekend || isHoliday) && "bg-slate-50/50 text-slate-500")}>
+        <TableCell className={cn("font-medium sticky text-center border-r z-10", isWeekend || isHoliday ? "bg-slate-100/80" : "bg-white")}>
+          {day.date} {isHoliday && <span className="text-xs">S</span>}
+        </TableCell>
 
         {/* Attendance Inputs */}
         <TableCell className="text-center">
@@ -406,35 +409,12 @@ export const TimesheetTableFooter = ({ timesheet }: TimesheetTableFooterProps) =
 
   return (
     <TableFooter className="sticky bottom-0 z-50 bg-slate-100 font-bold border-t-2 border-slate-300">
-      {/* Řádek 1: Celkové součty podle docházky */}
-      <TableRow className="hover:bg-slate-100/50">
-        <TableCell colSpan={6} className="text-right py-1 text-slate-500 font-medium text-[10px]">
-          ODPRACOVÁNO (DOCHÁZKA):
-        </TableCell>
-        <TableCell className="text-center py-1 tabular-nums">{monthlyTotalWorked.toFixed(2)}</TableCell>
-        <TableCell colSpan={3} />
-
-        <TableCell className="text-center py-1 tabular-nums border-l border-slate-200">{sum((d) => d.coreHours).toFixed(2)}</TableCell>
-
-        {projects.map((p) => (
-          <TableCell key={p.id} className="text-center py-1 tabular-nums">
-            {sum((d) => d.projectHours[p.id] || 0).toFixed(2)}
-          </TableCell>
-        ))}
-        <TableCell className="sticky right-0 bg-slate-100 border-l" />
-      </TableRow>
-
-      {/* Řádek 2: Čerpání úvazku (Semafor) */}
       <TableRow className="bg-slate-200/50 text-[11px] uppercase tracking-wider">
-        <TableCell colSpan={6} className="text-right py-1 text-slate-600">
-          ČERPÁNÍ ÚVAZKU (VÝKAZ):
-        </TableCell>
+        <TableCell colSpan={6} />
 
-        {/* Celkové čerpání vs Celkový Fond */}
+        {/* Odpracováno - celkové hodiny podle docházky */}
         <TableCell className="text-center py-1 whitespace-nowrap tabular-nums">
-          <span className={monthlyTotalAllocated > monthlyTotalFund + 0.01 ? "text-red-600 font-extrabold" : "text-green-700"}>
-            {monthlyTotalAllocated.toFixed(2)} / {monthlyTotalFund.toFixed(2)}
-          </span>
+          {monthlyTotalWorked.toFixed(2)} / {monthlyTotalFund.toFixed(2)}
         </TableCell>
 
         <TableCell colSpan={3} />
