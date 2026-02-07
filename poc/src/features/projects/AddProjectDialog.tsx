@@ -1,3 +1,10 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { PopoverTrigger } from "@radix-ui/react-popover";
+import { format } from "date-fns";
+import { cs } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -7,13 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { PopoverTrigger } from "@radix-ui/react-popover";
-import { format } from "date-fns";
-import { cs } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { type CreateProjectRequest, createProject } from "./api/createProject";
 import type { ProjectItem } from "./api/shared/projectItem";
 
@@ -23,7 +23,6 @@ const addProjectSchema = z.object({
   registrationNumber: z.string().nonempty(),
   startDate: z.string().nonempty(),
   endDate: z.string().nonempty(),
-  recipientName: z.string().nonempty(),
   description: z.string().optional(),
 });
 
@@ -47,7 +46,6 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
     const request: CreateProjectRequest = {
       name: values.name,
       registrationNumber: values.registrationNumber,
-      recipientName: values.recipientName,
       startDate: values.startDate,
       endDate: values.endDate,
       description: values.description,
@@ -177,34 +175,6 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
                 )}
               />
             </div>
-
-            <FormField
-              control={form.control}
-              name="recipientName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    {Texts.recipientName} <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {/* <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{Texts.projectDescription}</FormLabel>
-                  <FormControl>
-                    <Textarea className="resize-none" {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            /> */}
 
             <DialogFooter>
               <DialogCancelButton onClick={handleClose} />

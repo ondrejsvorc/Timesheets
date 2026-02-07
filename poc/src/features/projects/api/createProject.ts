@@ -3,7 +3,6 @@ import type { ProjectItem } from "./shared/projectItem";
 export type CreateProjectRequest = {
   name: string;
   registrationNumber: string;
-  recipientName: string;
   startDate: string;
   endDate?: string | null;
   description?: string | null;
