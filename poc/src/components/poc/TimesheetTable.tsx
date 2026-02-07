@@ -10,6 +10,7 @@ import { ScheduleCell, ScheduleEditorModal } from "./ScheduleCell";
 import { TimeSmartInput } from "./TimeSmartInput";
 import type { TimeRange, Timesheet, TimesheetDay } from "./Timesheet";
 import { TimesheetLogic } from "./TimesheetLogic";
+import { TimesheetValidations } from "./TimesheetValidations";
 
 interface TimesheetTableProps {
   timesheet: Timesheet;
@@ -57,7 +58,7 @@ export const TimesheetTable = ({ timesheet, onUpdateDay }: TimesheetTableProps) 
             ))}
             <TableHead className="min-w-[100px] text-center sticky right-0 z-40 bg-muted/90 border-l backdrop-blur-sm shadow-[-5px_0_5px_-5px_rgba(0,0,0,0.1)]">
               <div className="flex items-center justify-center gap-1">
-                <span className="text-[10px] font-bold text-slate-500">KONTROLA</span>
+                <span className="text-[10px] font-bold text-slate-500">GENEROVAT</span>
                 <TooltipProvider>
                   <Tooltip delayDuration={200}>
                     <TooltipTrigger asChild>
@@ -207,17 +208,110 @@ export const TimesheetRow = React.memo(
     const isWeekend = day.isWeekend;
     const isHoliday = day.isHoliday;
 
+    // Najdeme předchozí den pro validaci odpočinku
+    const dayIndex = timesheet.days.findIndex((d) => d.date === day.date);
+    const previousDay = dayIndex > 0 ? timesheet.days[dayIndex - 1] : undefined;
+
+    // Validace
+    const validations = TimesheetValidations.validateDay(day, previousDay);
+    const errors = validations.filter((v) => v.type === "error");
+    const warnings = validations.filter((v) => v.type === "warning");
+    const hasErrors = errors.length > 0;
+    const hasWarnings = warnings.length > 0;
+
+    // Pomocná funkce pro získání validací pro konkrétní pole
+    const getFieldValidations = (fieldName: string) => {
+      return validations.filter((v) => v.field === fieldName);
+    };
+
+    // Komponenta pro input s validací
+    const ValidatedTimeInput = ({ field, value, onChange }: { field: string; value: string; onChange: (val: string) => void }) => {
+      const fieldValidations = getFieldValidations(field);
+      const fieldErrors = fieldValidations.filter((v) => v.type === "error");
+      const fieldWarnings = fieldValidations.filter((v) => v.type === "warning");
+
+      return (
+        <TooltipProvider delayDuration={100}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="relative inline-block">
+                <TimeSmartInput value={value} onChange={onChange} />
+                {(fieldErrors.length > 0 || fieldWarnings.length > 0) && (
+                  <span
+                    className={cn(
+                      "absolute -top-1 -right-1 size-3 rounded-full border-2 border-white",
+                      fieldErrors.length > 0 ? "bg-red-500" : "bg-yellow-500",
+                    )}
+                  />
+                )}
+              </div>
+            </TooltipTrigger>
+            {(fieldErrors.length > 0 || fieldWarnings.length > 0) && (
+              <TooltipContent side="top" className="max-w-xs">
+                <div className="space-y-1">
+                  {fieldErrors.map((err) => (
+                    <p key={err.code} className="text-xs text-red-600 font-medium">
+                      ⚠ {err.message}
+                    </p>
+                  ))}
+                  {fieldWarnings.map((warn) => (
+                    <p key={warn.code} className="text-xs text-yellow-600">
+                      ℹ {warn.message}
+                    </p>
+                  ))}
+                </div>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+      );
+    };
+
     console.log("render row", day.date);
 
     return (
-      <TableRow className={cn((isWeekend || isHoliday) && "bg-slate-50/50 text-slate-500")}>
+      <TableRow
+        className={cn(
+          (isWeekend || isHoliday) && "bg-slate-50/50 text-slate-500",
+          hasErrors && "bg-red-50/30",
+          hasWarnings && !hasErrors && "bg-yellow-50/30",
+        )}
+      >
         <TableCell className={cn("font-medium sticky text-center border-r z-10", isWeekend || isHoliday ? "bg-slate-100/80" : "bg-white")}>
-          {day.date} {isHoliday && <span className="text-xs">S</span>}
+          <div className="flex items-center justify-center gap-1">
+            <span>
+              {day.date} {isHoliday && <span className="text-xs">S</span>}
+            </span>
+            {(hasErrors || hasWarnings) && (
+              <TooltipProvider delayDuration={100}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn("text-xs cursor-help", hasErrors ? "text-red-600" : "text-yellow-600")}>{hasErrors ? "⚠" : "ℹ"}</span>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-xs">
+                    <div className="space-y-1">
+                      {errors.map((err) => (
+                        <p key={err.code} className="text-xs text-red-600 font-medium">
+                          ⚠ {err.message}
+                        </p>
+                      ))}
+                      {warnings.map((warn) => (
+                        <p key={warn.code} className="text-xs text-yellow-600">
+                          ℹ {warn.message}
+                        </p>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         </TableCell>
 
         {/* Attendance Inputs */}
         <TableCell className="text-center">
-          <TimeSmartInput
+          <ValidatedTimeInput
+            field="clockIn"
             value={day.attendance.clockIn}
             onChange={(val) =>
               onUpdate((d) => {
@@ -227,7 +321,8 @@ export const TimesheetRow = React.memo(
           />
         </TableCell>
         <TableCell className="text-center">
-          <TimeSmartInput
+          <ValidatedTimeInput
+            field="clockOut"
             value={day.attendance.clockOut}
             onChange={(val) =>
               onUpdate((d) => {
@@ -237,7 +332,8 @@ export const TimesheetRow = React.memo(
           />
         </TableCell>
         <TableCell className="text-center">
-          <TimeSmartInput
+          <ValidatedTimeInput
+            field="breakStart"
             value={day.attendance.breakStart}
             onChange={(val) =>
               onUpdate((d) => {
@@ -247,7 +343,8 @@ export const TimesheetRow = React.memo(
           />
         </TableCell>
         <TableCell className="text-center">
-          <TimeSmartInput
+          <ValidatedTimeInput
+            field="breakEnd"
             value={day.attendance.breakEnd}
             onChange={(val) =>
               onUpdate((d) => {
@@ -285,16 +382,9 @@ export const TimesheetRow = React.memo(
           </TooltipProvider>
         </TableCell>
 
-        {/* Noční práce jako Input */}
+        {/* Noční práce - readonly, automaticky dopočítané */}
         <TableCell className="text-center">
-          <DecimalInput
-            value={day.attendance.nightHours || 0}
-            onChange={(val) => {
-              onUpdate((draft) => {
-                draft.attendance.nightHours = val;
-              });
-            }}
-          />
+          <span className="font-bold tabular-nums text-slate-600">{TimesheetLogic.calculateNightHours(day.attendance).toFixed(2)}</span>
         </TableCell>
 
         {/* STAG (hod) */}

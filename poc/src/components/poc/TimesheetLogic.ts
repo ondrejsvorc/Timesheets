@@ -10,17 +10,61 @@ const toMinutes = (time: string): number => {
 
 export const TimesheetLogic = {
   calculateWorkedHours: (attendance: Attendance): number => {
-    const clockIn = toMinutes(attendance.clockIn);
-    const clockOut = toMinutes(attendance.clockOut);
-    if (!clockIn || !clockOut || clockOut <= clockIn) {
+    // Kontrola, zda jsou časy vyplněné (prázdný string, ne 0 minut!)
+    if (!attendance.clockIn || !attendance.clockOut) {
       return 0;
     }
 
-    const breakStart = toMinutes(attendance.breakStart);
-    const breakEnd = toMinutes(attendance.breakEnd);
-    const breakMinutes = attendance.breakStart && attendance.breakEnd && breakEnd > breakStart ? breakEnd - breakStart : 0;
+    const clockIn = toMinutes(attendance.clockIn);
+    const clockOut = toMinutes(attendance.clockOut);
 
-    const workedMinutes = clockOut - clockIn;
+    // Pokud je odchod menší než příchod, znamená to, že směna pokračuje přes půlnoc
+    // (např. příchod 22:00, odchod 06:00 = odchod je další den ráno = 8 hodin)
+    // (např. příchod 08:00, odchod 00:00 = odchod je další den o půlnoci = 16 hodin)
+    let actualClockOut = clockOut;
+    if (clockOut < clockIn) {
+      actualClockOut = clockOut + 24 * 60; // Přidáme 24 hodin
+      const workedMinutes = actualClockOut - clockIn;
+      // Pokud by noční směna byla víc než 12 hodin, považujeme to za chybu (odchod před příchodem)
+      // Např. 16:00 - 08:00 = 16h je neplatné, ale 22:00 - 06:00 = 8h je OK
+      if (workedMinutes > 12 * 60) {
+        return 0; // Neplatné - více než 12 hodin noční směny
+      }
+    }
+
+    // Pokud jsou si rovné, je to neplatné
+    if (actualClockOut <= clockIn) {
+      return 0;
+    }
+
+    const workedMinutes = actualClockOut - clockIn;
+
+    // Výpočet přestávky - pouze pokud je validní
+    let breakMinutes = 0;
+    if (attendance.breakStart && attendance.breakEnd) {
+      const breakStart = toMinutes(attendance.breakStart);
+      const breakEnd = toMinutes(attendance.breakEnd);
+      
+      // Pokud je konec přestávky < začátek, může to být přestávka přes půlnoc
+      if (breakEnd < breakStart) {
+        // Přestávka přes půlnoc - zkontrolujeme, zda je to validní
+        // Pokud by přestávka přes půlnoc byla víc než 12 hodin, je to nevalidní
+        // (např. 12:30-12:00 není přestávka přes půlnoc, ale nevalidní přestávka)
+        const breakDuration = breakEnd + 24 * 60 - breakStart;
+        if (breakDuration <= 12 * 60) {
+          // Validní přestávka přes půlnoc (max 12h)
+          breakMinutes = breakDuration;
+        }
+        // Pokud je breakDuration > 12h, je to nevalidní (např. 12:30-12:00), takže breakMinutes zůstane 0
+      } else {
+        // Normální přestávka - konec musí být později než začátek
+        if (breakEnd > breakStart) {
+          breakMinutes = breakEnd - breakStart;
+        }
+        // Pokud breakEnd <= breakStart, je to nevalidní, takže breakMinutes zůstane 0
+      }
+    }
+
     const workedMinutesWithoutBreak = workedMinutes - breakMinutes;
     const workedHours = Number((workedMinutesWithoutBreak / 60).toFixed(2));
 
@@ -39,6 +83,68 @@ export const TimesheetLogic = {
     if (remainingMinutes > 0) parts.push(`${remainingMinutes}m`);
 
     return parts.join(" ") || "0";
+  },
+
+  /**
+   * Vypočítá počet nočních hodin (22:00 - 05:59) v pracovní době
+   */
+  calculateNightHours: (attendance: Attendance): number => {
+    if (!attendance.clockIn || !attendance.clockOut) {
+      return 0;
+    }
+
+    const clockIn = toMinutes(attendance.clockIn);
+    const clockOut = toMinutes(attendance.clockOut);
+
+    const nightStart = 22 * 60; // 22:00 = 1320 minut
+    const nightEnd = 5 * 60 + 59; // 05:59 = 359 minut
+
+    // Pokud je odchod < příchod, znamená to noční směnu přes půlnoc
+    let actualClockOut = clockOut;
+    const isNightShift = clockOut < clockIn;
+    if (isNightShift) {
+      actualClockOut = clockOut + 24 * 60;
+      // Pokud je to víc než 12h, není to validní noční směna
+      if (actualClockOut - clockIn > 12 * 60) {
+        return 0;
+      }
+    }
+
+    let nightMinutes = 0;
+
+    // Noční čas je 22:00-05:59 (přes půlnoc)
+    // Projdeme každou minutu pracovní doby a zkontrolujeme, zda je v nočním čase
+    for (let minute = clockIn; minute < actualClockOut; minute++) {
+      const minuteOfDay = minute % (24 * 60); // Minuta v rámci dne (0-1439)
+      
+      // Zkontrolujeme, zda je minuta v nočním čase (22:00-05:59)
+      if (minuteOfDay >= nightStart || minuteOfDay <= nightEnd) {
+        nightMinutes++;
+      }
+    }
+
+    // Odečteme přestávku, pokud zasahuje do nočního času (22:00-05:59)
+    if (attendance.breakStart && attendance.breakEnd) {
+      const breakStart = toMinutes(attendance.breakStart);
+      const breakEnd = toMinutes(attendance.breakEnd);
+      
+      // Pokud je konec přestávky < začátek, znamená to přestávku přes půlnoc
+      let actualBreakEnd = breakEnd;
+      if (breakEnd < breakStart) {
+        actualBreakEnd = breakEnd + 24 * 60;
+      }
+      
+      // Projdeme každou minutu přestávky a zkontrolujeme, zda je v nočním čase
+      for (let minute = breakStart; minute < actualBreakEnd; minute++) {
+        const minuteOfDay = minute % (24 * 60);
+        // Zkontrolujeme, zda je minuta v nočním čase (22:00-05:59)
+        if (minuteOfDay >= nightStart || minuteOfDay <= nightEnd) {
+          nightMinutes--;
+        }
+      }
+    }
+
+    return Number((Math.max(0, nightMinutes) / 60).toFixed(2));
   },
 
   calculateSchedulesTotal: (schedules: TimeRange[]): number => {
