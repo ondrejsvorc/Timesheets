@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { AlertCircle, AlertTriangle, Sparkles } from "lucide-react";
 import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -240,7 +240,7 @@ export const TimesheetRow = React.memo(
                   <span
                     className={cn(
                       "absolute -top-1 -right-1 size-3 rounded-full border-2 border-white",
-                      fieldErrors.length > 0 ? "bg-red-500" : "bg-yellow-500",
+                      fieldErrors.length > 0 ? "bg-[#FF9692]" : "bg-[#FFD465]",
                     )}
                   />
                 )}
@@ -250,13 +250,15 @@ export const TimesheetRow = React.memo(
               <TooltipContent side="top" className="max-w-xs">
                 <div className="space-y-1">
                   {fieldErrors.map((err) => (
-                    <p key={err.code} className="text-xs text-red-600 font-medium">
-                      ⚠ {err.message}
+                    <p key={err.code} className="text-xs font-medium flex items-center gap-1.5" style={{ color: "#FF9692" }}>
+                      <AlertCircle className="h-3 w-3 shrink-0" />
+                      {err.message}
                     </p>
                   ))}
                   {fieldWarnings.map((warn) => (
-                    <p key={warn.code} className="text-xs text-yellow-600">
-                      ℹ {warn.message}
+                    <p key={warn.code} className="text-xs flex items-center gap-1.5" style={{ color: "#FFD465" }}>
+                      <AlertTriangle className="h-3 w-3 shrink-0" />
+                      {warn.message}
                     </p>
                   ))}
                 </div>
@@ -286,18 +288,26 @@ export const TimesheetRow = React.memo(
               <TooltipProvider delayDuration={100}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <span className={cn("text-xs cursor-help", hasErrors ? "text-red-600" : "text-yellow-600")}>{hasErrors ? "⚠" : "ℹ"}</span>
+                    <span className="cursor-help inline-flex items-center">
+                      {hasErrors ? (
+                        <AlertCircle className="h-3.5 w-3.5" style={{ color: "#FF9692" }} />
+                      ) : (
+                        <AlertTriangle className="h-3.5 w-3.5" style={{ color: "#FFD465" }} />
+                      )}
+                    </span>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="max-w-xs">
                     <div className="space-y-1">
                       {errors.map((err) => (
-                        <p key={err.code} className="text-xs text-red-600 font-medium">
-                          ⚠ {err.message}
+                        <p key={err.code} className="text-xs font-medium flex items-center gap-1.5" style={{ color: "#FF9692" }}>
+                          <AlertCircle className="h-3 w-3 shrink-0" />
+                          {err.message}
                         </p>
                       ))}
                       {warnings.map((warn) => (
-                        <p key={warn.code} className="text-xs text-yellow-600">
-                          ℹ {warn.message}
+                        <p key={warn.code} className="text-xs flex items-center gap-1.5" style={{ color: "#FFD465" }}>
+                          <AlertTriangle className="h-3 w-3 shrink-0" />
+                          {warn.message}
                         </p>
                       ))}
                     </div>
