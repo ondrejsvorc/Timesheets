@@ -274,14 +274,14 @@ export const TimesheetRow = React.memo(
     return (
       <TableRow
         className={cn(
-          (isWeekend || isHoliday) && "bg-slate-50/50 text-slate-500",
+          (isWeekend || isHoliday) && "bg-slate-50/50",
           hasErrors && "bg-red-50/30",
           hasWarnings && !hasErrors && "bg-yellow-50/30",
         )}
       >
         <TableCell className={cn("font-medium sticky text-center border-r z-10", isWeekend || isHoliday ? "bg-slate-100/80" : "bg-white")}>
           <div className="flex items-center justify-center gap-1">
-            <span>
+            <span className={cn(isWeekend || isHoliday && "text-slate-500")}>
               {day.date} {isHoliday && <span className="text-xs">S</span>}
             </span>
             {(hasErrors || hasWarnings) && (
