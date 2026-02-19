@@ -5,19 +5,19 @@ This plan outlines the steps to migrate the `backend/Timesheets.Api.Tests/` proj
 ## Phase 1: Project Baseline & Initial Setup
 **Goal:** Confirm the current state of the test project and prepare for the migration.
 
-- [ ] Task: Verify that all current tests in `backend/Timesheets.Api.Tests/` pass before making any changes.
+- [x] Task: Verify that all current tests in `backend/Timesheets.Api.Tests/` pass before making any changes. e180304
     - [ ] Run `dotnet test backend/Timesheets.Api.Tests/Timesheets.Api.Tests.csproj` and ensure all tests pass.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Project Baseline & Initial Setup' (Protocol in workflow.md)
 
 ## Phase 2: Migrate AttendanceTimesheetReaderTests
 **Goal:** Refactor `AttendanceTimesheetReaderTests.cs` to use xUnit Assert.
 
-- [ ] Task: Refactor assertions in `AttendanceTimesheetReaderTests.cs` (Red Phase - Migration).
-    - [ ] Replace `using FluentAssertions;` with `using Xunit;` (if not already present).
-    - [ ] Migrate `FluentAssertions` syntax (e.g., `.Should().Be(...)`) to xUnit `Assert` methods (e.g., `Assert.Equal(...)`).
-    - [ ] Utilize `Assert.Multiple` to group related assertions where appropriate.
-- [ ] Task: Verify migration in `AttendanceTimesheetReaderTests.cs` (Green Phase - Passing).
-    - [ ] Run tests for `AttendanceTimesheetReaderTests.cs` and confirm they all pass.
+- [x] Task: Refactor assertions in `AttendanceTimesheetReaderTests.cs` (Red Phase - Migration). d8bc0f6
+    - [x] Replace `using FluentAssertions;` with `using Xunit;` (if not already present).
+    - [x] Migrate `FluentAssertions` syntax (e.g., `.Should().Be(...)`) to xUnit `Assert` methods (e.g., `Assert.Equal(...)`).
+    - [x] Utilize `Assert.Multiple` to group related assertions where appropriate.
+- [x] Task: Verify migration in `AttendanceTimesheetReaderTests.cs` (Green Phase - Passing). d8bc0f6
+    - [x] Run tests for `AttendanceTimesheetReaderTests.cs` and confirm they all pass.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Migrate AttendanceTimesheetReaderTests' (Protocol in workflow.md)
 
 ## Phase 3: Migrate CellParserTests
