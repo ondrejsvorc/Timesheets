@@ -9,9 +9,11 @@ export interface EmployeePositionItem {
 }
 
 export interface GetEmployeePositionsResponse {
+  employeeId: string;
   positions: EmployeePositionItem[];
 }
 const mockResponse: GetEmployeePositionsResponse = {
+  employeeId: "1f4a3b2c-8e6d-4b2a-9f3e-1c2d3e4f5a6b",
   positions: [
     {
       projectId: "8f2b9b7e-6d3e-4c6e-9b8f-1f3a9a1c2d01",

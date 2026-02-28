@@ -15,9 +15,9 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useImmer } from "use-immer";
 import { z } from "zod";
-import { getContractCatalog } from "./api/getContractCatalog";
-import type { EmployeeItem } from "./api/getEmployees";
-import { getProjectCatalog } from "./api/getProjectCatalog";
+import { getContractCatalog } from "../employees/api/getContractCatalog";
+import type { EmployeeItem } from "../employees/api/getEmployees";
+import { getProjectCatalog } from "../employees/api/getProjectCatalog";
 
 type AddEmployeePositionFormValues = z.infer<typeof addEmployeePositionSchema>;
 const addEmployeePositionSchema = z.object({
@@ -32,12 +32,12 @@ const addEmployeePositionSchema = z.object({
 
 interface AddEmployeePositionDialogProps {
   open: boolean;
-  employee: EmployeeItem;
+  employeeId: string;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const AddEmployeePositionDialog = ({ open, employee, onClose, onSaved }: AddEmployeePositionDialogProps) => {
+export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }: AddEmployeePositionDialogProps) => {
   const [projects, setProjects] = useImmer<ComboBoxItem[]>([]);
   const [contracts, setContracts] = useImmer<ComboBoxItem[]>([]);
   const [projectsLoading, setProjectsLoading] = useImmer(false);

@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Await, useAsyncValue, useLoaderData } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
@@ -9,6 +9,8 @@ import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
 import type { EmployeePositionItem, GetEmployeePositionsResponse } from "./api/getEmployeePositions";
 import { type PositionsFilterCriteria, usePositionsFilter } from "./hooks/usePositionsFilter";
+import { AddButton } from "@/components/shared/buttons/ActionButtons";
+import { AddEmployeePositionDialog } from "./AddEmployeePositionDialog";
 
 export const EmployeePositions = () => {
   const { promise } = useLoaderData() as {
@@ -29,16 +31,23 @@ const { FilterSearchInput } = createFilterControls<PositionsFilterCriteria>();
 const EmployeePositionsContent = () => {
   const response = useAsyncValue() as GetEmployeePositionsResponse;
   const { filter, setFilter, filtered } = usePositionsFilter(response.positions);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
   return (
     <>
       <SubPageHeader>
         <SubPageTitle>Pozice</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter}>
+      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePosition}</AddButton>}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <PositionsTable positions={filtered} />
+      <AddEmployeePositionDialog
+        open={isAddOpen}
+        employeeId={response.employeeId}
+        onClose={() => setIsAddOpen(false)}
+        onSaved={() => setIsAddOpen(false)}
+      />
     </>
   );
 };
