@@ -58,4 +58,7 @@ export const Texts = {
   addContract: "Přidat zakázku",
   addManager: "Přidat manažera",
   contractsManagers: "Manažeři zakázek",
+  addEmployee: "Přidat zaměstnance",
+  from: "Od",
+  to: "Do",
 };
