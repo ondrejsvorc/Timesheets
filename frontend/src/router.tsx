@@ -2,6 +2,13 @@ import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
 import { TimesheetPage } from "./components/poc/TimesheetPage";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
+import { Routes } from "./constants/routes";
+import { getContractEmployees } from "./features/contract/api/getContractEmployees";
+import { getProjectContract } from "./features/contract/api/getProjectContract";
+import { getContractTimesheets } from "./features/contract/api/getContractTimesheets";
+import { ContractEmployees } from "./features/contract/ContractEmployees";
+import { ContractPage } from "./features/contract/ContractPage";
+import { ContractTimesheets } from "./features/contract/ContractTimesheets";
 import { getEmployee } from "./features/employee/api/getEmployee";
 import { getEmployeePositions } from "./features/employee/api/getEmployeePositions";
 import { EmployeePage } from "./features/employee/EmployeePage";
@@ -29,6 +36,13 @@ const requireEmployeeId = (params: Params) => {
     throw redirect("/employees");
   }
   return params.id;
+};
+
+const requireContractParams = (params: Params) => {
+  if (!params.id || !params.contractId) {
+    throw redirect(params.id ? Routes.project(params.id) : "/projects");
+  }
+  return { projectId: params.id, contractId: params.contractId };
 };
 
 export const router = createBrowserRouter([
@@ -59,6 +73,36 @@ export const router = createBrowserRouter([
             path: "contracts-managers",
             element: <ProjectContractsManagers />,
             loader: ({ params }) => getProjectContractsManagers(requireProjectId(params)),
+          },
+        ],
+      },
+      {
+        path: "projects/:id/contracts/:contractId",
+        element: <ContractPage />,
+        loader: ({ params }) => {
+          const { projectId, contractId } = requireContractParams(params);
+          const promise = getProjectContract(projectId, contractId).promise.then((contract) => {
+            if (!contract) throw redirect(Routes.project(projectId));
+            return contract;
+          });
+          return { promise };
+        },
+        children: [
+          {
+            index: true,
+            element: <ContractTimesheets />,
+            loader: ({ params }) => {
+              const { projectId, contractId } = requireContractParams(params);
+              return getContractTimesheets(projectId, contractId);
+            },
+          },
+          {
+            path: "employees",
+            element: <ContractEmployees />,
+            loader: ({ params }) => {
+              const { projectId, contractId } = requireContractParams(params);
+              return getContractEmployees(projectId, contractId);
+            },
           },
         ],
       },

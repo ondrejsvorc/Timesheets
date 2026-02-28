@@ -8,7 +8,7 @@ import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { AddContractDialog } from "./AddContractDialog";
 import type { GetProjectContractsResponse } from "./api/getProjectContracts";
@@ -115,9 +115,10 @@ interface ContractRowProps {
 
 export const ContractRow = ({ contract, onEdit }: ContractRowProps) => {
   const navigate = useNavigate();
+  const projectId = useParams().id;
 
   return (
-    <TableRow className="cursor-pointer" onClick={() => navigate(Routes.projects())}>
+    <TableRow className="cursor-pointer" onClick={() => projectId && navigate(Routes.contract(projectId, contract.id))}>
       <TableCell>{contract.registrationNumber}</TableCell>
       <TableCell>{contract.name}</TableCell>
       <TableCell>
