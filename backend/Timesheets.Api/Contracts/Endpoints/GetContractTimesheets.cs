@@ -15,29 +15,22 @@ public sealed class GetContractTimesheets : IEndpoint
            .WithSummary("Get Contract Timesheets")
            .WithRequestValidation<Request>();
 
-    public enum GroupByOption { Employee, Month }
-
     public sealed record TimesheetItem(
         Guid Id,
+        Guid EmployeeId,
+        int Year,
+        int Month,
         string? Position,
         decimal? Workload,
         Guid StatusId,
         string Status
     );
 
-    public sealed record EmployeeGroup(
+    public sealed record EmployeeItem(
         Guid Id,
-        bool AllTimesheetsApproved,
-        int? PersonalNumber,
+        int PersonalNumber,
         string FullName,
-        string EmployeeType,
-        IEnumerable<TimesheetItem> Timesheets
-    );
-
-    public sealed record MonthGroup(
-        int Year,
-        int Month,
-        IEnumerable<EmployeeGroup> Items
+        string EmployeeType
     );
 
     public sealed record Request(
@@ -45,13 +38,12 @@ public sealed class GetContractTimesheets : IEndpoint
         [FromQuery(Name = "fromMonth")] int FromMonth,
         [FromQuery(Name = "toYear")] int ToYear,
         [FromQuery(Name = "toMonth")] int ToMonth,
-        [FromQuery(Name = "groupBy")] GroupByOption GroupBy,
-        [FromQuery(Name = "status")] string[]? Statuses
+        [FromQuery(Name = "status")] string[] Statuses
     );
 
     public sealed record Response(
-        IEnumerable<EmployeeGroup> Employees,
-        IEnumerable<MonthGroup> Months
+        IEnumerable<EmployeeItem> Employees,
+        IEnumerable<TimesheetItem> Timesheets
     );
 
     public sealed class Validator : AbstractValidator<Request>
@@ -82,98 +74,62 @@ public sealed class GetContractTimesheets : IEndpoint
             .Where(timesheet => timesheet.Year > request.FromYear || (timesheet.Year == request.FromYear && timesheet.Month >= request.FromMonth))
             .Where(timesheet => timesheet.Year < request.ToYear || (timesheet.Year == request.ToYear && timesheet.Month <= request.ToMonth));
 
-        if (request.Statuses?.Any() == true)
+        if (request.Statuses.Length != 0)
         {
-            query = query.Where(t => request.Statuses.Contains(t.TimesheetStatus.Name));
+            query = query.Where(timesheet => request.Statuses.Contains(timesheet.TimesheetStatus.Name));
         }
 
-        List<AttendanceTimesheet> timesheets = await query
-            .Include(timesheet => timesheet.TimesheetStatus)
-            .Include(timesheet => timesheet.Contract)
-                .ThenInclude(contract => contract.ContractEmployees)
-            .Include(timesheet => timesheet.Employee)
-                .ThenInclude(employee => employee.EmployeeType)
+        var items = await query
+            .Select(timesheet => new
+            {
+                timesheet.Id,
+                timesheet.EmployeeId,
+                timesheet.Year,
+                timesheet.Month,
+                timesheet.TimesheetStatusId,
+                Status = timesheet.TimesheetStatus.Name,
+                timesheet.Employee.PersonalNumber,
+                timesheet.Employee.FullName,
+                EmployeeType = timesheet.Employee.EmployeeType.Name,
+                ContractEmployee = dbContext.ContractEmployees
+                    .Where(employee => employee.ContractId == id)
+                    .Where(employee => employee.EmployeeId == timesheet.EmployeeId)
+                    .Where(employee => employee.StartDate <= new DateTime(timesheet.Year, timesheet.Month, 1))
+                    .Where(employee => employee.EndDate == null || employee.EndDate >= new DateTime(timesheet.Year, timesheet.Month, 1))
+                    .OrderByDescending(employee => employee.StartDate)
+                    .Select(employee => new { employee.Position, employee.Workload })
+                    .FirstOrDefault()
+            })
             .ToListAsync(cancellationToken);
 
-        if (request.GroupBy is GroupByOption.Employee)
+        if (items.Count == 0)
         {
-            List<EmployeeGroup> employees = timesheets
-                .GroupBy(timesheet => timesheet.Employee)
-                .Select(grouped =>
-                {
-                    IEnumerable<TimesheetItem> timesheets = grouped.Select(timesheet =>
-                    {
-                        ContractEmployee? contractEmployee = timesheet.Contract.ContractEmployees
-                            .FirstOrDefault(e => e.EmployeeId == timesheet.EmployeeId);
-
-                        return new TimesheetItem(
-                            timesheet.Id,
-                            contractEmployee?.Position,
-                            contractEmployee?.Workload,
-                            timesheet.TimesheetStatusId,
-                            timesheet.TimesheetStatus.Name
-                        );
-                    });
-
-                    bool allApproved = timesheets.All(i => i.Status == "Schválený");
-
-                    return new EmployeeGroup(
-                        grouped.Key.Id,
-                        allApproved,
-                        grouped.Key.PersonalNumber,
-                        grouped.Key.FullName,
-                        grouped.Key.EmployeeType.Name,
-                        timesheets
-                    );
-                })
-                .ToList();
-
-            return TypedResults.Ok(new Response(Employees: employees, Months: []));
-        }
-        if (request.GroupBy is GroupByOption.Month)
-        {
-            List<MonthGroup> months = timesheets
-                .GroupBy(timesheet => new { timesheet.Year, timesheet.Month })
-                .OrderBy(grouped => grouped.Key.Year)
-                    .ThenBy(grouped => grouped.Key.Month)
-                .Select(monthGroup => new MonthGroup(
-                    monthGroup.Key.Year,
-                    monthGroup.Key.Month,
-                    monthGroup
-                        .GroupBy(timesheet => timesheet.Employee)
-                        .Select(employeeGroup =>
-                        {
-                            IEnumerable<TimesheetItem> items = employeeGroup.Select(timesheet =>
-                            {
-                                ContractEmployee? contractEmployee = timesheet.Contract.ContractEmployees
-                                    .FirstOrDefault(e => e.EmployeeId == timesheet.EmployeeId);
-
-                                return new TimesheetItem(
-                                    timesheet.Id,
-                                    contractEmployee?.Position,
-                                    contractEmployee?.Workload,
-                                    timesheet.TimesheetStatusId,
-                                    timesheet.TimesheetStatus.Name
-                                );
-                            });
-
-                            bool allApproved = items.All(i => i.Status == "Schválený");
-
-                            return new EmployeeGroup(
-                                employeeGroup.Key.Id,
-                                allApproved,
-                                employeeGroup.Key.PersonalNumber,
-                                employeeGroup.Key.FullName,
-                                employeeGroup.Key.EmployeeType.Name,
-                                items
-                            );
-                        })
-                ))
-                .ToList();
-
-            return TypedResults.Ok(new Response(Employees: [], Months: months));
+            return TypedResults.Ok(new Response(Employees: [], Timesheets: []));
         }
 
-        return TypedResults.Ok(new Response(Employees: [], Months: []));
+        List<TimesheetItem> timesheets = items
+            .Select(item => new TimesheetItem(
+                item.Id,
+                item.EmployeeId,
+                item.Year,
+                item.Month,
+                item.ContractEmployee?.Position,
+                item.ContractEmployee?.Workload,
+                item.TimesheetStatusId,
+                item.Status
+            ))
+            .ToList();
+
+        List<EmployeeItem> employees = items
+            .Select(item => new EmployeeItem(
+                item.EmployeeId,
+                item.PersonalNumber,
+                item.FullName,
+                item.EmployeeType
+            ))
+            .Distinct()
+            .ToList();
+
+        return TypedResults.Ok(new Response(employees, timesheets));
     }
 }
