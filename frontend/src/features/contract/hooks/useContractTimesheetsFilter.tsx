@@ -1,11 +1,11 @@
 import type { Draft } from "immer";
 import { useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router";
-import type { GetContractTimesheetsRequest } from "../api/getContractTimesheets";
+import type { ContractTimesheetsFilterCriteria } from "../api/getContractTimesheets";
 import { buildTimesheetsRequestFromUrl } from "../api/getContractTimesheets";
 import { useImmer } from "use-immer";
 
-export type ContractTimesheetsFilterCriteria = GetContractTimesheetsRequest;
+export type { ContractTimesheetsFilterCriteria };
 
 function filterToSearchParams(filter: ContractTimesheetsFilterCriteria): URLSearchParams {
   const next = new URLSearchParams();

@@ -13,20 +13,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { CheckCircle, XCircle } from "lucide-react";
-import { Suspense } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigation } from "react-router";
-import type {
-  EmployeeGroup,
-  GetContractTimesheetsResponse,
-  MonthGroup,
-} from "./api/getContractTimesheets";
+import { useEffect } from "react";
+import { useParams } from "react-router";
+import type { EmployeeGroupView, MonthGroupView, TimesheetRowView } from "./api/getContractTimesheets";
+import { buildEmployeesView, buildMonthsView } from "./api/getContractTimesheets";
 import { CZECH_MONTH_NAMES, formatMonthYear } from "./utils/czechMonths";
 import {
   type ContractTimesheetsFilterCriteria,
   useContractTimesheetsFilter,
 } from "./hooks/useContractTimesheetsFilter";
+import { useContractTimesheets } from "./hooks/useContractTimesheets";
 
 const TIMESHEET_STATUS_OPTIONS: MultiSelectComboBoxItem[] = [
   { value: Texts.statusInProgress, label: Texts.statusInProgress },
@@ -39,41 +38,43 @@ const YEAR_OPTIONS = [CURRENT_YEAR - 2, CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 export const ContractTimesheets = () => {
-  const loaderData = useLoaderData() as { promise: Promise<GetContractTimesheetsResponse> };
-
-  return (
-    <Suspense fallback={<GenericSkeleton />}>
-      <Await resolve={loaderData.promise}>
-        <ContractTimesheetsContent />
-      </Await>
-    </Suspense>
-  );
-};
-
-const ContractTimesheetsContent = () => {
-  const response = useAsyncValue() as GetContractTimesheetsResponse;
-  const navigation = useNavigation();
+  const { id: projectId, contractId } = useParams<{ id: string; contractId: string }>();
   const { filter, setFilter } = useContractTimesheetsFilter();
-  const isLoading = navigation.state === "loading";
+  const { data, isLoading, fetchTimesheets } = useContractTimesheets(projectId ?? "", contractId ?? "");
+
+  useEffect(() => {
+    if (projectId && contractId) {
+      fetchTimesheets(filter);
+    }
+  }, [projectId, contractId]); // eslint-disable-line react-hooks/exhaustive-deps -- initial fetch only
+
+  const handleFilter = () => {
+    fetchTimesheets(filter);
+  };
+
+  const monthsView = data ? buildMonthsView(data) : [];
+  const employeesView = data ? buildEmployeesView(data) : [];
 
   return (
     <>
       <SubPageHeader>
         <SubPageTitle>Výkazy</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter}>
+      <FilterBar filter={filter} setFilter={setFilter} actions={<Button onClick={handleFilter}>Filtrovat</Button>}>
         <ContractTimesheetsFilterControls />
       </FilterBar>
-      {filter.groupBy === "Month" ? (
+      {isLoading && !data ? (
+        <GenericSkeleton />
+      ) : filter.groupBy === "Month" ? (
         <TimesheetsByMonth
-          months={response.months}
-          employeesCount={response.employees.length}
+          months={monthsView}
+          employeesCount={data?.employees.length ?? 0}
           isLoading={isLoading}
         />
       ) : (
         <TimesheetsByEmployee
-          employees={response.employees}
-          monthsCount={response.months.length}
+          employees={employeesView}
+          monthsCount={monthsView.length}
           isLoading={isLoading}
         />
       )}
@@ -223,7 +224,7 @@ function ApprovalIcon({ approved }: { approved: boolean }) {
 }
 
 interface TimesheetsByMonthProps {
-  months: MonthGroup[];
+  months: MonthGroupView[];
   employeesCount: number;
   isLoading: boolean;
 }
@@ -245,7 +246,7 @@ const TimesheetsByMonth = ({ months, employeesCount, isLoading }: TimesheetsByMo
               <div className="mb-3 flex items-center gap-2 font-medium text-foreground">
                 <ApprovalIcon approved={employee.allTimesheetsApproved} />
                 <span>
-                  {employee.fullName} · {employee.personalNumber ?? Texts.dash} · {employee.employeeType}
+                  {employee.fullName} · {employee.personalNumber} · {employee.employeeType}
                 </span>
               </div>
               {employee.timesheets.length === 0 ? (
@@ -295,11 +296,9 @@ function TimesheetItemRow({ item }: TimesheetItemRowProps) {
 }
 
 /** Seskupí výkazy zaměstnance po měsících (year, month), seřazené chronologicky. */
-function groupTimesheetsByMonth(
-  timesheets: Array<{ year?: number; month?: number; id: string; position: string | null; workload: number | null; status: string }>,
-): { year: number; month: number; items: typeof timesheets }[] {
-  const withPeriod = timesheets.filter((t): t is typeof t & { year: number; month: number } => t.year != null && t.month != null);
-  const byKey = new Map<string, typeof withPeriod>();
+function groupTimesheetsByMonth(timesheets: TimesheetRowView[]): { year: number; month: number; items: TimesheetRowView[] }[] {
+  const withPeriod = timesheets.filter((t): t is TimesheetRowView & { year: number; month: number } => t.year != null && t.month != null);
+  const byKey = new Map<string, TimesheetRowView[]>();
   for (const t of withPeriod) {
     const key = `${t.year}-${t.month}`;
     const list = byKey.get(key) ?? [];
@@ -311,11 +310,11 @@ function groupTimesheetsByMonth(
       const [y, m] = key.split("-").map(Number) as [number, number];
       return { year: y, month: m, items };
     })
-    .sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
+    .sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month));
 }
 
 interface TimesheetsByEmployeeProps {
-  employees: EmployeeGroup[];
+  employees: EmployeeGroupView[];
   monthsCount: number;
   isLoading: boolean;
 }
@@ -332,7 +331,7 @@ const TimesheetsByEmployee = ({ employees, monthsCount, isLoading }: TimesheetsB
         return (
         <div key={emp.id} className="space-y-6">
           <div className="font-medium text-foreground">
-            {emp.fullName} · {emp.personalNumber ?? Texts.dash} · {emp.employeeType}
+            {emp.fullName} · {emp.personalNumber} · {emp.employeeType}
           </div>
           {months.length === 0 ? (
             <p className="text-sm text-muted-foreground">{Texts.noItems}</p>

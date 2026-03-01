@@ -5,7 +5,6 @@ import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { Routes } from "./constants/routes";
 import { getContractEmployees } from "./features/contract/api/getContractEmployees";
 import { getProjectContract } from "./features/contract/api/getProjectContract";
-import { buildTimesheetsRequestFromUrl, getContractTimesheets } from "./features/contract/api/getContractTimesheets";
 import { ContractPage } from "./features/contract/ContractPage";
 import { getEmployee } from "./features/employee/api/getEmployee";
 import { getEmployeePositions } from "./features/employee/api/getEmployeePositions";
@@ -91,11 +90,6 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: <ContractTimesheets />,
-            loader: ({ params, request }) => {
-              const { projectId, contractId } = requireContractParams(params);
-              const timesheetsRequest = buildTimesheetsRequestFromUrl(new URL(request.url));
-              return getContractTimesheets(projectId, contractId, timesheetsRequest);
-            },
           },
           {
             path: "employees",
