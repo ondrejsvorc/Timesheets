@@ -331,18 +331,20 @@ const TimesheetsByEmployee = ({ employees, monthsCount, isLoading }: TimesheetsB
         const months = groupTimesheetsByMonth(emp.timesheets);
         return (
         <div key={emp.id} className="space-y-6">
-          <div className="flex items-center gap-2 font-medium text-foreground">
-            <ApprovalIcon approved={emp.allTimesheetsApproved} />
-            <span>
-              {emp.fullName} · {emp.personalNumber ?? Texts.dash} · {emp.employeeType}
-            </span>
+          <div className="font-medium text-foreground">
+            {emp.fullName} · {emp.personalNumber ?? Texts.dash} · {emp.employeeType}
           </div>
           {months.length === 0 ? (
             <p className="text-sm text-muted-foreground">{Texts.noItems}</p>
           ) : (
-            months.map((monthGroup) => (
+            months.map((monthGroup) => {
+              const monthApproved = monthGroup.items.every(
+                (item) => item.status === Texts.statusApproved,
+              );
+              return (
               <div key={`${monthGroup.year}-${monthGroup.month}`} className="rounded-md border p-4">
-                <div className="mb-3 font-medium text-foreground">
+                <div className="mb-3 flex items-center gap-2 font-medium text-foreground">
+                  <ApprovalIcon approved={monthApproved} />
                   {formatMonthYear(monthGroup.month, monthGroup.year)}
                 </div>
                 <Table>
@@ -361,7 +363,8 @@ const TimesheetsByEmployee = ({ employees, monthsCount, isLoading }: TimesheetsB
                   </TableBody>
                 </Table>
               </div>
-            ))
+              );
+            })
           )}
         </div>
         );
