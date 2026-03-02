@@ -6,23 +6,23 @@ namespace Timesheets.Api.Tests;
 
 public class AttendanceTimesheetReaderTests
 {
-    private readonly ICellParser _cellParser = new CellParser();
-    private readonly AttendanceTimesheetReader _sut;
+    private readonly ICellParser _parser = new CellParser();
+    private readonly AttendanceTimesheetReader _reader;
 
     public AttendanceTimesheetReaderTests()
     {
-        _sut = new AttendanceTimesheetReader(_cellParser);
+        _reader = new AttendanceTimesheetReader(_parser);
     }
 
     [Fact]
     public void Read_ValidFile_ReturnsCorrectTimesheet()
     {
         // Arrange
-        var filePath = Path.Combine("TestData", "valid_attendance.xlsx");
-        using var stream = File.OpenRead(filePath);
+        string filePath = Path.Combine("TestData", "valid_attendance.xlsx");
+        using FileStream stream = File.OpenRead(filePath);
 
         // Act
-        var result = _sut.Read(stream);
+        AttendanceTimesheet result = _reader.Read(stream);
 
         // Assert
         Assert.NotNull(result);
@@ -37,7 +37,7 @@ public class AttendanceTimesheetReaderTests
         
         // Check a specific day (e.g., Oct 1st)
         // Note: headerOffset is 3, so Oct 1st is row 4.
-        var firstDay = result.Days[0];
+        AttendanceDay firstDay = result.Days[0];
         Assert.Equal(new DateTime(2024, 10, 1), firstDay.Date);
     }
 
@@ -45,11 +45,11 @@ public class AttendanceTimesheetReaderTests
     public void Read_MalformedMetadata_HandlesGracefully()
     {
         // Arrange
-        var filePath = Path.Combine("TestData", "invalid_attendance_malformed_metadata.xlsx");
-        using var stream = File.OpenRead(filePath);
+        string filePath = Path.Combine("TestData", "invalid_attendance_malformed_metadata.xlsx");
+        using FileStream stream = File.OpenRead(filePath);
 
         // Act
-        var result = _sut.Read(stream);
+        AttendanceTimesheet result = _reader.Read(stream);
 
         // Assert
         Assert.NotNull(result);
@@ -68,11 +68,11 @@ public class AttendanceTimesheetReaderTests
     public void Read_MalformedTimes_ReturnsNullForInvalidCells()
     {
         // Arrange
-        var filePath = Path.Combine("TestData", "invalid_attendance_malformed_times.xlsx");
-        using var stream = File.OpenRead(filePath);
+        string filePath = Path.Combine("TestData", "invalid_attendance_malformed_times.xlsx");
+        using FileStream stream = File.OpenRead(filePath);
 
         // Act
-        var result = _sut.Read(stream);
+        AttendanceTimesheet result = _reader.Read(stream);
 
         // Assert
         Assert.NotNull(result);
@@ -89,11 +89,11 @@ public class AttendanceTimesheetReaderTests
     public void Read_ShortMonth_ReturnsCorrectNumberOfDays()
     {
         // Arrange
-        var filePath = Path.Combine("TestData", "edge_case_attendance_short_month.xlsx");
-        using var stream = File.OpenRead(filePath);
+        string filePath = Path.Combine("TestData", "edge_case_attendance_short_month.xlsx");
+        using FileStream stream = File.OpenRead(filePath);
 
         // Act
-        var result = _sut.Read(stream);
+        AttendanceTimesheet result = _reader.Read(stream);
 
         // Assert
         Assert.NotNull(result);
