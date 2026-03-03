@@ -1,0 +1,29 @@
+name: Run Unit Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore Timesheets.slnx
+
+    - name: Build
+      run: dotnet build Timesheets.slnx --no-restore --configuration Release
+
+    - name: Run tests
+      # run: dotnet test Timesheets.Api.Tests/Timesheets.Api.Tests.csproj --no-build --configuration Release --verbosity normal
+      run: dotnet test Timesheets.slnx --no-build --configuration Release --verbosity normal
