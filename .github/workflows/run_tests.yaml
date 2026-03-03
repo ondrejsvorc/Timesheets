@@ -19,10 +19,10 @@ jobs:
         dotnet-version: '10.0.x'
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore Timesheets.slnx
 
     - name: Build
-      run: dotnet build --no-restore --configuration Release
+      run: dotnet build Timesheets.slnx --no-restore --configuration Release
 
     - name: Run tests
       # run: dotnet test Timesheets.Api.Tests/Timesheets.Api.Tests.csproj --no-build --configuration Release --verbosity normal
