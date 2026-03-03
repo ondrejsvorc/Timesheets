@@ -1,0 +1,44 @@
+name: Run CI Pipeline 
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+        cache: true
+        cache-dependency-path: backend/Timesheets.slnx
+
+    - name: Restore dependencies
+      run: dotnet restore Timesheets.slnx
+
+    - name: Build
+      run: dotnet build Timesheets.slnx --no-restore --configuration Release
+
+    - name: Run tests
+      # run: dotnet test Timesheets.Api.Tests/Timesheets.Api.Tests.csproj --no-build --configuration Release --verbosity normal
+      run: dotnet test Timesheets.slnx --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+    - name: Test Report
+      uses: dorny/test-reporter@v2
+      if: ${{ !cancelled() }} 
+      with:
+        name: .NET Unit Tests
+        path: './backend/**/TestResults/test-results.trx' 
+        reporter: dotnet-trx
