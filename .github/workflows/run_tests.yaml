@@ -26,4 +26,4 @@ jobs:
 
     - name: Run tests
       # run: dotnet test Timesheets.Api.Tests/Timesheets.Api.Tests.csproj --no-build --configuration Release --verbosity normal
-      run: dotnet test --no-build --configuration Release --verbosity normal
+      run: dotnet test Timesheets.slnx --no-build --configuration Release --verbosity normal
