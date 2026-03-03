@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Employees.Endpoints;
@@ -9,11 +10,36 @@ public sealed class GetEmployeeTimesheets : IEndpoint
         app.MapGet("/{id}/timesheets", Handle)
            .WithSummary("Get Employee Timesheets");
 
-    public sealed record EmployeeTimesheetItem();
-    public sealed record Response(IEnumerable<EmployeeTimesheetItem> Timesheets);
+    public sealed record EmployeeTimesheetItem(Guid Id, Guid ContractId, string ContractName, int Year, int Month, Guid StatusId, string Status);
+    public sealed record Response(Guid EmployeeId, IEnumerable<EmployeeTimesheetItem> Timesheets);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        bool employeeExists = await dbContext.Employees
+            .AsNoTracking()
+            .AnyAsync(e => e.Id == id, cancellationToken);
+
+        if (!employeeExists)
+        {
+            return TypedResults.NotFound();
+        }
+
+        List<EmployeeTimesheetItem> timesheets = await dbContext.AttendanceTimesheets
+            .AsNoTracking()
+            .Where(timesheet => timesheet.EmployeeId == id)
+            .Select(timesheet => new EmployeeTimesheetItem(
+                timesheet.Id,
+                timesheet.ContractId,
+                timesheet.Contract.Name,
+                timesheet.Year,
+                timesheet.Month,
+                timesheet.TimesheetStatusId,
+                timesheet.TimesheetStatus.Name
+            ))
+            .OrderBy(timesheet => timesheet.Year)
+            .ThenBy(timesheet => timesheet.Month)
+            .ToListAsync(cancellationToken);
+
+        return TypedResults.Ok(new Response(id, timesheets));
     }
 }

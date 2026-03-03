@@ -8,8 +8,10 @@ import { getProjectContract } from "./features/contract/api/getProjectContract";
 import { ContractPage } from "./features/contract/ContractPage";
 import { getEmployee } from "./features/employee/api/getEmployee";
 import { getEmployeePositions } from "./features/employee/api/getEmployeePositions";
+import { getEmployeeTimesheets } from "./features/employee/api/getEmployeeTimesheets";
 import { EmployeePage } from "./features/employee/EmployeePage";
 import { EmployeePositions } from "./features/employee/EmployeePositions";
+import { EmployeeTimesheets } from "./features/employee/EmployeeTimesheets";
 import { getEmployees } from "./features/employees/api/getEmployees";
 import { EmployeesPage } from "./features/employees/EmployeesPage";
 import { getProject } from "./features/project/api/getProject";
@@ -116,11 +118,11 @@ export const router = createBrowserRouter([
             element: <EmployeePositions />,
             loader: ({ params }) => getEmployeePositions(requireEmployeeId(params)),
           },
-          // {
-          //   path: "timesheets",
-          //   element: <EmployeeTimesheets />,
-          //   loader: ({ params }) => getEmployeeTimesheets(requireEmployeeId(params)),
-          // },
+          {
+            path: "timesheets",
+            element: <EmployeeTimesheets />,
+            loader: ({ params }) => getEmployeeTimesheets(requireEmployeeId(params)),
+          },
         ],
       },
       {

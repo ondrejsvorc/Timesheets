@@ -54,29 +54,34 @@ export const ContractTimesheets = () => {
 
   const monthsView = data ? buildMonthsView(data) : [];
   const employeesView = data ? buildEmployeesView(data) : [];
+  const contentReady = !isLoading || data != null;
 
   return (
     <>
-      <SubPageHeader>
-        <SubPageTitle>Výkazy</SubPageTitle>
-      </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<Button onClick={handleFilter}>Filtrovat</Button>}>
-        <ContractTimesheetsFilterControls />
-      </FilterBar>
-      {isLoading && !data ? (
+      {!contentReady ? (
         <GenericSkeleton />
-      ) : filter.groupBy === "Month" ? (
-        <TimesheetsByMonth
-          months={monthsView}
-          employeesCount={data?.employees.length ?? 0}
-          isLoading={isLoading}
-        />
       ) : (
-        <TimesheetsByEmployee
-          employees={employeesView}
-          monthsCount={monthsView.length}
-          isLoading={isLoading}
-        />
+        <>
+          <SubPageHeader>
+            <SubPageTitle>Výkazy</SubPageTitle>
+          </SubPageHeader>
+          <FilterBar filter={filter} setFilter={setFilter} actions={<Button onClick={handleFilter}>Filtrovat</Button>}>
+            <ContractTimesheetsFilterControls />
+          </FilterBar>
+          {filter.groupBy === "Month" ? (
+            <TimesheetsByMonth
+              months={monthsView}
+              employeesCount={data?.employees.length ?? 0}
+              isLoading={isLoading}
+            />
+          ) : (
+            <TimesheetsByEmployee
+              employees={employeesView}
+              monthsCount={monthsView.length}
+              isLoading={isLoading}
+            />
+          )}
+        </>
       )}
     </>
   );
