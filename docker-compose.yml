@@ -1,0 +1,57 @@
+services:
+  timesheets.backend:
+    container_name: timesheets.backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=5000
+    ports:
+      - "5000:5000"
+    depends_on:
+      timesheets.database:
+        condition: service_healthy
+
+  timesheets.frontend:
+    container_name: timesheets.frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:5000/api
+    depends_on:
+      - timesheets.backend
+
+  timesheets.database:
+    image: postgres:17-alpine
+    container_name: timesheets.database
+    environment:
+      - POSTGRES_DB=timesheets
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - ./.containers/timesheets-db:/va5050r/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  timesheets.pgAdmin:
+    image: dpage/pgadmin4
+    container_name: timesheets.pgAdmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - timesheets.database
