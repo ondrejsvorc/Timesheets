@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense, useState, useRef } from "react";
 import { Await, useAsyncValue, useLoaderData } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
@@ -27,19 +27,22 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Texts } from "@/constants/texts";
-import { CheckCircle, XCircle, ChevronDown } from "lucide-react";
+import { CheckCircle, XCircle, ChevronDown, Upload } from "lucide-react";
 import { CZECH_MONTH_NAMES, formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { EmployeeTimesheetItem, GetEmployeeTimesheetsResponse } from "./api/getEmployeeTimesheets";
+import type { EmployeePositionItem } from "./api/getEmployeePositions";
 import { useEmployeeTimesheetsFilter, type EmployeeTimesheetsFilterCriteria } from "./hooks/useEmployeeTimesheetsFilter";
+import { UploadTimesheetsDialog } from "./UploadTimesheetsDialog";
 
 export const EmployeeTimesheets = () => {
-  const { promise } = useLoaderData() as {
+  const loaderData = useLoaderData() as {
     promise: Promise<GetEmployeeTimesheetsResponse>;
+    positionsPromise: Promise<{ employeeId: string; positions: unknown[] }>;
   };
 
   return (
     <Suspense fallback={<GenericSkeleton />}>
-      <Await resolve={promise}>
+      <Await resolve={loaderData.promise}>
         <EmployeeTimesheetsContent />
       </Await>
     </Suspense>
@@ -51,9 +54,32 @@ const YEAR_OPTIONS = [CURRENT_YEAR - 2, CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_
 const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 const EmployeeTimesheetsContent = () => {
+  const loaderData = useLoaderData() as {
+    promise: Promise<GetEmployeeTimesheetsResponse>;
+    positionsPromise: Promise<{ employeeId: string; positions: unknown[] }>;
+  };
   const response = useAsyncValue() as GetEmployeeTimesheetsResponse;
   const { filter, setFilter } = useEmployeeTimesheetsFilter();
   const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length > 0) {
+      setSelectedFiles(files);
+      setIsUploadDialogOpen(true);
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   // Group timesheets by month
   const groupedByMonth = groupTimesheetsByMonth(response.timesheets, filter);
@@ -74,10 +100,49 @@ const EmployeeTimesheetsContent = () => {
         <SubPageHeader>
           <SubPageTitle>Výkazy</SubPageTitle>
         </SubPageHeader>
-        <FilterBar filter={filter} setFilter={setFilter}>
+        <FilterBar
+          filter={filter}
+          setFilter={setFilter}
+          actions={
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".xls,.xlsx"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button variant="outline" onClick={handleUploadClick}>
+                <Upload className="mr-2 h-4 w-4" />
+                Nahrát výkazy
+              </Button>
+            </>
+          }
+        >
           <EmployeeTimesheetsFilterControls />
         </FilterBar>
         <EmptyState />
+        {isUploadDialogOpen && (
+          <Suspense fallback={null}>
+            <Await resolve={loaderData.positionsPromise}>
+              {(positionsData) => (
+                <UploadTimesheetsDialog
+                  open={isUploadDialogOpen}
+                  files={selectedFiles}
+                  onClose={() => {
+                    setIsUploadDialogOpen(false);
+                    setSelectedFiles([]);
+                  }}
+                  onSuccess={() => {
+                    // Optionally refresh data here
+                  }}
+                  positionsPromise={Promise.resolve(positionsData as { employeeId: string; positions: EmployeePositionItem[] })}
+                />
+              )}
+            </Await>
+          </Suspense>
+        )}
       </>
     );
   }
@@ -87,7 +152,26 @@ const EmployeeTimesheetsContent = () => {
       <SubPageHeader>
         <SubPageTitle>Výkazy</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter}>
+      <FilterBar
+        filter={filter}
+        setFilter={setFilter}
+        actions={
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".xls,.xlsx"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
+            <Button variant="outline" onClick={handleUploadClick}>
+              <Upload className="mr-2 h-4 w-4" />
+              Nahrát výkazy
+            </Button>
+          </>
+        }
+      >
         <EmployeeTimesheetsFilterControls />
       </FilterBar>
       <Accordion type="multiple" value={expandedMonths} onValueChange={setExpandedMonths} className="space-y-2">
@@ -139,6 +223,26 @@ const EmployeeTimesheetsContent = () => {
           );
         })}
       </Accordion>
+      {isUploadDialogOpen && (
+        <Suspense fallback={null}>
+          <Await resolve={loaderData.positionsPromise}>
+            {(positionsData) => (
+              <UploadTimesheetsDialog
+                open={isUploadDialogOpen}
+                files={selectedFiles}
+                onClose={() => {
+                  setIsUploadDialogOpen(false);
+                  setSelectedFiles([]);
+                }}
+                onSuccess={() => {
+                  // Optionally refresh data here
+                }}
+                positionsPromise={Promise.resolve(positionsData as { employeeId: string; positions: EmployeePositionItem[] })}
+              />
+            )}
+          </Await>
+        </Suspense>
+      )}
     </>
   );
 };
