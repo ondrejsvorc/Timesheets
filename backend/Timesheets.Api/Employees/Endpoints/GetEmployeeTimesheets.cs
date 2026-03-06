@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
 
@@ -10,10 +11,11 @@ public sealed class GetEmployeeTimesheets : IEndpoint
         app.MapGet("/{id}/timesheets", Handle)
            .WithSummary("Get Employee Timesheets");
 
+    public sealed record Request([FromQuery] int? Year, [FromQuery] List<int>? Months);
     public sealed record EmployeeTimesheetItem(Guid Id, Guid ContractId, string ContractName, int Year, int Month, Guid StatusId, string Status);
     public sealed record Response(Guid EmployeeId, IEnumerable<EmployeeTimesheetItem> Timesheets);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, [AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         bool employeeExists = await dbContext.Employees
             .AsNoTracking()
@@ -24,9 +26,25 @@ public sealed class GetEmployeeTimesheets : IEndpoint
             return TypedResults.NotFound();
         }
 
-        List<EmployeeTimesheetItem> timesheets = await dbContext.AttendanceTimesheets
+        IQueryable<Data.Models.AttendanceTimesheet> query = dbContext.AttendanceTimesheets
             .AsNoTracking()
-            .Where(timesheet => timesheet.EmployeeId == id)
+            .Where(timesheet => timesheet.EmployeeId == id);
+
+        if (request.Year.HasValue)
+        {
+            query = query.Where(timesheet => timesheet.Year == request.Year.Value);
+        }
+
+        if (request.Months is { Count: > 0 } months)
+        {
+            List<int> validMonths = months.Where(m => m >= 1 && m <= 12).ToList();
+            if (validMonths.Count > 0)
+            {
+                query = query.Where(timesheet => validMonths.Contains(timesheet.Month));
+            }
+        }
+
+        List<EmployeeTimesheetItem> timesheets = await query
             .Select(timesheet => new EmployeeTimesheetItem(
                 timesheet.Id,
                 timesheet.ContractId,
