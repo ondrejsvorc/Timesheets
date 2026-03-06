@@ -11,7 +11,7 @@ public sealed class GetEmployeeTimesheets : IEndpoint
         app.MapGet("/{id}/timesheets", Handle)
            .WithSummary("Get Employee Timesheets");
 
-    public sealed record Request([FromQuery] int? Year, [FromQuery] List<int>? Months);
+    public sealed record Request([FromQuery] int? Year, [FromQuery] string? Months);
     public sealed record EmployeeTimesheetItem(Guid Id, Guid ContractId, string ContractName, int Year, int Month, Guid StatusId, string Status);
     public sealed record Response(Guid EmployeeId, IEnumerable<EmployeeTimesheetItem> Timesheets);
 
@@ -35,9 +35,13 @@ public sealed class GetEmployeeTimesheets : IEndpoint
             query = query.Where(timesheet => timesheet.Year == request.Year.Value);
         }
 
-        if (request.Months is { Count: > 0 } months)
+        if (!string.IsNullOrWhiteSpace(request.Months))
         {
-            List<int> validMonths = months.Where(m => m >= 1 && m <= 12).ToList();
+            List<int> validMonths = request.Months
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(s => int.TryParse(s, out int m) ? m : 0)
+                .Where(m => m >= 1 && m <= 12)
+                .ToList();
             if (validMonths.Count > 0)
             {
                 query = query.Where(timesheet => validMonths.Contains(timesheet.Month));
