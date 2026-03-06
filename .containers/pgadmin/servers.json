@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "db",
+      "Group": "Servers",
+      "Host": "timesheets.database",
+      "Port": 5432,
+      "MaintenanceDB": "timesheets",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}
