@@ -121,7 +121,17 @@ export const router = createBrowserRouter([
           {
             path: "timesheets",
             element: <EmployeeTimesheets />,
-            loader: ({ params }) => getEmployeeTimesheets(requireEmployeeId(params)),
+            loader: ({ params, request }) => {
+              const url = new URL(request.url);
+              const year = url.searchParams.get("year") ? parseInt(url.searchParams.get("year")!, 10) : undefined;
+              const monthsParam = url.searchParams.get("months");
+              const months = monthsParam ? monthsParam.split(",").map((m) => parseInt(m, 10)) : undefined;
+              const employeeId = requireEmployeeId(params);
+              return {
+                promise: getEmployeeTimesheets(employeeId, year, months).promise,
+                positionsPromise: getEmployeePositions(employeeId).promise,
+              };
+            },
           },
         ],
       },

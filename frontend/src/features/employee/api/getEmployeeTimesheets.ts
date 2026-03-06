@@ -77,11 +77,26 @@ const mockResponse: GetEmployeeTimesheetsResponse = {
   timesheets: generateMockTimesheets(),
 };
 
-export const getEmployeeTimesheets = (_employeeId: string) => {
+export const getEmployeeTimesheets = (employeeId: string, year?: number, months?: number[]) => {
   return {
     promise: (async (): Promise<GetEmployeeTimesheetsResponse> => {
+      // TODO: Replace with real API call
+      // const params = new URLSearchParams();
+      // if (year) params.set('year', String(year));
+      // if (months?.length) months.forEach((m) => params.append('months', String(m)));
+      // const response = await fetch(`${ApiUrl}/employees/${employeeId}/timesheets?${params}`);
+      // return response.json();
+      
       await new Promise((resolve) => setTimeout(resolve, 1200));
-      return mockResponse;
+      // Filter mock data by year and months if provided
+      let filtered = mockResponse.timesheets;
+      if (year) {
+        filtered = filtered.filter(t => t.year === year);
+      }
+      if (months && months.length > 0) {
+        filtered = filtered.filter(t => months.includes(t.month));
+      }
+      return { ...mockResponse, timesheets: filtered };
     })(),
   };
 };
