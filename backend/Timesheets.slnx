@@ -1,7 +1,4 @@
 <Solution>
-  <Project Path="docker-compose.dcproj">
-    <Build />
-  </Project>
   <Project Path="Timesheets.Api.Tests/Timesheets.Api.Tests.csproj" Id="5e376c1c-f438-40e4-a944-de0f9867d8b5" />
   <Project Path="Timesheets.Api/Timesheets.Api.csproj" />
 </Solution>
