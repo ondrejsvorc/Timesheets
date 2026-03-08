@@ -39,6 +39,7 @@ public static class DatabaseSeeder
                 }
             ];
             context.Employees.AddRange(employees);
+            await context.SaveChangesAsync();
         }
 
         if (!context.Projects.Any())
@@ -62,6 +63,7 @@ public static class DatabaseSeeder
                 }
             ];
             context.Projects.AddRange(projects);
+            await context.SaveChangesAsync();
         }
 
         if (!context.Contracts.Any())
@@ -84,6 +86,7 @@ public static class DatabaseSeeder
                 }
             ];
             context.Contracts.AddRange(contracts);
+            await context.SaveChangesAsync();
         }
 
         if (!context.ProjectManagers.Any())

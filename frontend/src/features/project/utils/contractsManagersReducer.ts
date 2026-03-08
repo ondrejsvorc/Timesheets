@@ -1,14 +1,19 @@
 import { compareIds } from "@/utils/compareIds";
 import type { ProjectContractManagerItem } from "../api/getProjectContractsManagers";
 
+export interface PendingDelete {
+  contractId: string;
+  employeeId: string;
+}
+
 export interface ContractsManagersState {
   managers: ProjectContractManagerItem[];
-  pendingDeleteId: string | null;
+  pendingDelete: PendingDelete | null;
 }
 
 export type ContractsManagersAction =
   | { type: "add"; contractManager: ProjectContractManagerItem }
-  | { type: "requestDelete"; contractManagerId: string }
+  | { type: "requestDelete"; contractId: string; employeeId: string }
   | { type: "confirmDelete" }
   | { type: "cancelDelete" };
 
@@ -19,22 +24,25 @@ export const contractsManagersReducer = (draft: ContractsManagersState, action: 
       return;
     }
     case "requestDelete": {
-      draft.pendingDeleteId = action.contractManagerId;
+      draft.pendingDelete = { contractId: action.contractId, employeeId: action.employeeId };
       return;
     }
     case "cancelDelete": {
-      draft.pendingDeleteId = null;
+      draft.pendingDelete = null;
       return;
     }
     case "confirmDelete": {
-      if (draft.pendingDeleteId === null) {
+      if (draft.pendingDelete === null) {
         return;
       }
-      const index = draft.managers.findIndex((manager) => compareIds(manager.employeeId, draft.pendingDeleteId));
+      const { contractId, employeeId } = draft.pendingDelete;
+      const index = draft.managers.findIndex(
+        (m) => compareIds(m.contractId, contractId) && compareIds(m.employeeId, employeeId),
+      );
       if (index !== -1) {
         draft.managers.splice(index, 1);
       }
-      draft.pendingDeleteId = null;
+      draft.pendingDelete = null;
       return;
     }
   }

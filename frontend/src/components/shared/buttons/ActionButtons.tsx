@@ -5,10 +5,14 @@ import type { MouseEvent, ReactNode } from "react";
 import { toast } from "sonner";
 import { BusyButton } from "./BusyButton";
 
+export const ActionButtons = ({ children }: { children: ReactNode }) => (
+  <div className="flex items-center gap-2">{children}</div>
+);
+
 interface AddButtonProps {
   onClick: (event: MouseEvent<HTMLButtonElement>) => void | Promise<void>;
   disabled?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export const AddIcon = () => <Plus className="size-4" />;
@@ -24,7 +28,7 @@ export const AddButton = ({ onClick, disabled, children }: AddButtonProps) => (
 interface EditButtonProps {
   onClick: (event: MouseEvent<HTMLButtonElement>) => void | Promise<void>;
   disabled?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export const EditIcon = () => <Pencil className="size-4" />;
@@ -40,7 +44,7 @@ export const EditButton = ({ onClick, disabled, children }: EditButtonProps) => 
 interface DeleteButtonProps {
   onClick: (event: MouseEvent<HTMLButtonElement>) => void | Promise<void>;
   disabled?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export const DeleteIcon = () => <Trash2 className="size-4" />;
@@ -56,7 +60,7 @@ export const DeleteButton = ({ onClick, disabled, children }: DeleteButtonProps)
 interface SaveButtonProps {
   onClick: (event: MouseEvent<HTMLButtonElement>, signal: AbortSignal) => Promise<void>;
   disabled?: boolean;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 export const SaveIcon = () => <Save className="size-4" />;
@@ -69,7 +73,7 @@ export const SaveButton = ({ onClick, disabled, children }: SaveButtonProps) => 
     onSuccess={() => toast.success(Texts.actionSuccessful)}
     onError={() => toast.error(Texts.actionFailed)}
   >
-    {children}
+    {children ?? null}
   </BusyButton>
 );
 

@@ -7,10 +7,12 @@ import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageH
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
-import { Suspense } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { Suspense, useState } from "react";
+import { Await, useAsyncValue, useLoaderData, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
+import { AddContractManagerDialog } from "./AddContractManagerDialog";
 import type { GetProjectContractsManagersResponse, ProjectContractManagerItem } from "./api/getProjectContractsManagers";
+import { removeContractManager } from "./api/removeContractManager";
 import type { ContractsFilterCriteria } from "./hooks/useContractsFilter";
 import { useContractsManagersDispatch } from "./hooks/useContractsManagersDispatch";
 import { useContractsManagersFilter } from "./hooks/useContractsManagersFilter";
@@ -34,11 +36,13 @@ export const ProjectContractsManagers = () => {
 const { FilterSearchInput } = createFilterControls<ContractsFilterCriteria>();
 
 const ProjectContractsManagersContent = () => {
+  const { id: projectId } = useParams<{ id: string }>();
   const response = useAsyncValue() as GetProjectContractsManagersResponse;
   const [state, dispatch] = useImmerReducer(contractsManagersReducer, {
     managers: response.managers,
-    pendingDeleteId: null,
+    pendingDelete: null,
   });
+  const [isAddOpen, setIsAddOpen] = useState(false);
   const { filter, setFilter, filtered } = useContractsManagersFilter(state.managers);
 
   return (
@@ -46,18 +50,29 @@ const ProjectContractsManagersContent = () => {
       <SubPageHeader>
         <SubPageTitle>{Texts.contractsManagers}</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => {}}>{Texts.addManager}</AddButton>}>
+      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addManager}</AddButton>}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <ContractsManagersTable managers={filtered} />
+      <AddContractManagerDialog
+        projectId={projectId ?? ""}
+        existingManagers={state.managers}
+        open={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        onSaved={(manager) => {
+          dispatch({ type: "add", contractManager: manager });
+          setIsAddOpen(false);
+        }}
+      />
       <ConfirmationDialog
-        open={state.pendingDeleteId !== null}
+        open={state.pendingDelete !== null}
         onCancel={() => dispatch({ type: "cancelDelete" })}
         onConfirm={async (_event, signal) => {
-          dispatch({ type: "confirmDelete" });
-          await Promise.resolve();
-          if (signal.aborted) {
-            return;
+          if (!state.pendingDelete || !projectId) return;
+          const { contractId, employeeId } = state.pendingDelete;
+          await removeContractManager(contractId, employeeId, signal);
+          if (!signal.aborted) {
+            dispatch({ type: "confirmDelete" });
           }
         }}
       />
@@ -104,7 +119,7 @@ export const ContractManagerRow = ({ manager }: ContractManagerRowProps) => {
   const dispatch = useContractsManagersDispatch();
 
   return (
-    <TableRow className="cursor-pointer">
+    <TableRow>
       <TableCell>{manager.contractName}</TableCell>
       <TableCell>{manager.employeePersonalNumber}</TableCell>
       <TableCell>{manager.employeeFullName}</TableCell>
@@ -115,12 +130,11 @@ export const ContractManagerRow = ({ manager }: ContractManagerRowProps) => {
             e.stopPropagation();
             dispatch({
               type: "requestDelete",
-              contractManagerId: manager.employeeId,
+              contractId: manager.contractId,
+              employeeId: manager.employeeId,
             });
           }}
-        >
-          {"Odebrat"}
-        </DeleteButton>
+        />
       </TableCell>
     </TableRow>
   );

@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +34,8 @@ public sealed class CreateProjectContract : IEndpoint
         {
             Id = Guid.NewGuid(),
             ProjectId = id,
+            Name = request.Name,
+            RegistrationNumber = request.RegistrationNumber,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null
         };

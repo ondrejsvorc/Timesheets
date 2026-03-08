@@ -1,4 +1,4 @@
-﻿using Timesheets.Api.Auth.Endpoints;
+using Timesheets.Api.Auth.Endpoints;
 using Timesheets.Api.Contracts.Endpoints;
 using Timesheets.Api.Employees.Endpoints;
 using Timesheets.Api.Notifications;
@@ -48,7 +48,9 @@ public static class Endpoints
         .MapEndpoint<CreateProject>()
         .MapEndpoint<GetProjectContracts>()
         .MapEndpoint<GetProjectContractsManagers>()
-        .MapEndpoint<CreateProjectContract>();
+        .MapEndpoint<CreateProjectContract>()
+        .MapEndpoint<UpdateProjectContract>()
+        .MapEndpoint<DeleteProjectContract>();
 
     private static void MapContractEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/contracts").WithTags("Contracts")

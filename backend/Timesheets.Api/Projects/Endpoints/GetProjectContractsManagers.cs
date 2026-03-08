@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
 
@@ -15,22 +15,19 @@ public sealed class GetProjectContractsManagers : IEndpoint
 
     private static async Task<Ok<Response>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        List<ContractManagerItem> managers = await dbContext.Contracts
+        List<ContractManagerItem> managers = await dbContext.ContractManagers
             .AsNoTracking()
-            .Where(c => c.ProjectId == id)
-            .SelectMany(
-                c => c.ContractManagers,
-                (contract, manager) => new ContractManagerItem(
-                    contract.Id,
-                    manager.Employee.Id,
-                    contract.Name,
-                    manager.Employee.PersonalNumber,
-                    manager.Employee.FullName,
-                    manager.Employee.Email
-                )
-            )
-            .OrderBy(m => m.ContractName)
-            .ThenBy(m => m.EmployeeFullName)
+            .Where(cm => cm.Contract.ProjectId == id)
+            .OrderBy(cm => cm.Contract.Name)
+            .ThenBy(cm => cm.Employee.FullName)
+            .Select(cm => new ContractManagerItem(
+                cm.ContractId,
+                cm.EmployeeId,
+                cm.Contract.Name,
+                cm.Employee.PersonalNumber,
+                cm.Employee.FullName,
+                cm.Employee.Email
+            ))
             .ToListAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(managers));

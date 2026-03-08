@@ -14,7 +14,7 @@ import { EmployeePositions } from "./features/employee/EmployeePositions";
 import { EmployeeTimesheets } from "./features/employee/EmployeeTimesheets";
 import { getEmployees } from "./features/employees/api/getEmployees";
 import { EmployeesPage } from "./features/employees/EmployeesPage";
-import { getProject } from "./features/project/api/getProject";
+import { getProject, type GetProjectResponse } from "./features/project/api/getProject";
 import { getProjectContracts } from "./features/project/api/getProjectContracts";
 import { getProjectContractsManagers } from "./features/project/api/getProjectContractsManagers";
 import { ProjectContracts } from "./features/project/ProjectContracts";

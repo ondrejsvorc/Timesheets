@@ -1,3 +1,4 @@
+import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
 import type { ProjectContractItem } from "./shared/projectContractItem";
 
 export type CreateProjectContractRequest = {
@@ -9,20 +10,20 @@ export type CreateProjectContractResponse = {
   projectContract: ProjectContractItem;
 };
 
-// TODO: Pass signal to fetch
 export const createProjectContract = async (
   projectId: string,
   request: CreateProjectContractRequest,
   signal: AbortSignal,
 ): Promise<CreateProjectContractResponse> => {
-  const mockResponse: CreateProjectContractResponse = {
-    projectContract: {
-      id: crypto.randomUUID(),
-      name: request.name,
-      registrationNumber: request.registrationNumber,
-      employeeCount: 0,
-    },
-  };
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-  return mockResponse;
+  return withOptionalDelay("fast", () =>
+    customFetch<CreateProjectContractResponse>(`${ApiUrl}/projects/${projectId}/contracts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: request.name,
+        registrationNumber: request.registrationNumber,
+      }),
+      signal,
+    }),
+  );
 };

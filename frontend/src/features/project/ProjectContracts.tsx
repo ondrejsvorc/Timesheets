@@ -1,4 +1,5 @@
-import { AddButton, EditButton } from "@/components/shared/buttons/ActionButtons";
+import { ActionButtons, AddButton, DeleteButton, EditButton } from "@/components/shared/buttons/ActionButtons";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
@@ -13,6 +14,7 @@ import { useImmerReducer } from "use-immer";
 import { AddContractDialog } from "./AddContractDialog";
 import type { GetProjectContractsResponse } from "./api/getProjectContracts";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
+import { deleteProjectContract } from "./api/deleteProjectContract";
 import { EditContractDialog } from "./EditContractDialog";
 import { type ContractsFilterCriteria, useContractsFilter } from "./hooks/useContractsFilter";
 import { useProjectContractsDispatch } from "./hooks/useProjectContractsDispatch";
@@ -36,8 +38,9 @@ export const ProjectContracts = () => {
 const { FilterSearchInput } = createFilterControls<ContractsFilterCriteria>();
 
 const ProjectContractsContent = () => {
+  const { id: projectId } = useParams<{ id: string }>();
   const response = useAsyncValue() as GetProjectContractsResponse;
-  const [state, dispatch] = useImmerReducer(projectContractsReducer, response.contracts);
+  const [state, dispatch] = useImmerReducer(projectContractsReducer, response.projectContracts);
   const { filter, setFilter, filtered } = useContractsFilter(state);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
@@ -52,7 +55,7 @@ const ProjectContractsContent = () => {
       <ContractsTable contracts={filtered} />
       <AddContractDialog
         open={isAddOpen}
-        projectId=""
+        projectId={projectId ?? ""}
         onClose={() => setIsAddOpen(false)}
         onSaved={(contract) => {
           dispatch({ type: "add", contract });
@@ -67,7 +70,9 @@ interface ContractsTableProps {
   contracts: ProjectContractItem[];
 }
 export const ContractsTable = ({ contracts }: ContractsTableProps) => {
+  const { id: projectId } = useParams<{ id: string }>();
   const [contractToEdit, setContractToEdit] = useState<ProjectContractItem | null>(null);
+  const [contractToDelete, setContractToDelete] = useState<ProjectContractItem | null>(null);
   const dispatch = useProjectContractsDispatch();
 
   if (contracts.length === 0) {
@@ -87,7 +92,12 @@ export const ContractsTable = ({ contracts }: ContractsTableProps) => {
           </TableHeader>
           <TableBody>
             {contracts.map((contract) => (
-              <ContractRow key={contract.id} contract={contract} onEdit={setContractToEdit} />
+              <ContractRow
+                key={contract.id}
+                contract={contract}
+                onEdit={setContractToEdit}
+                onDelete={setContractToDelete}
+              />
             ))}
           </TableBody>
         </Table>
@@ -98,12 +108,25 @@ export const ContractsTable = ({ contracts }: ContractsTableProps) => {
           open
           contract={contractToEdit}
           onClose={() => setContractToEdit(null)}
-          onSaved={() => {
-            dispatch({ type: "edit", contract: contractToEdit });
+          onSaved={(updatedContract) => {
+            dispatch({ type: "edit", contract: updatedContract });
             setContractToEdit(null);
           }}
         />
       )}
+
+      <ConfirmationDialog
+        open={contractToDelete !== null}
+        onCancel={() => setContractToDelete(null)}
+        onConfirm={async (_event, signal) => {
+          if (!contractToDelete || !projectId) return;
+          await deleteProjectContract(projectId, contractToDelete.id, signal);
+          if (!signal.aborted) {
+            dispatch({ type: "delete", contractId: contractToDelete.id });
+            setContractToDelete(null);
+          }
+        }}
+      />
     </>
   );
 };
@@ -111,9 +134,10 @@ export const ContractsTable = ({ contracts }: ContractsTableProps) => {
 interface ContractRowProps {
   contract: ProjectContractItem;
   onEdit: (contract: ProjectContractItem) => void;
+  onDelete: (contract: ProjectContractItem) => void;
 }
 
-export const ContractRow = ({ contract, onEdit }: ContractRowProps) => {
+export const ContractRow = ({ contract, onEdit, onDelete }: ContractRowProps) => {
   const navigate = useNavigate();
   const projectId = useParams().id;
 
@@ -122,14 +146,22 @@ export const ContractRow = ({ contract, onEdit }: ContractRowProps) => {
       <TableCell>{contract.registrationNumber}</TableCell>
       <TableCell>{contract.name}</TableCell>
       <TableCell>
+        <ActionButtons>
         <EditButton
           onClick={(e) => {
             e.stopPropagation();
             onEdit(contract);
           }}
         >
-          {Texts.editContract}
         </EditButton>
+        <DeleteButton
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(contract);
+          }}
+        >
+        </DeleteButton>
+        </ActionButtons>
       </TableCell>
     </TableRow>
   );

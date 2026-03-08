@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
 
@@ -11,9 +11,9 @@ public sealed class GetProject : IEndpoint
            .WithSummary("Get Project");
 
     public sealed record ProjectItem(Guid Id, string Name, string RegistrationNumber);
-    public sealed record Response(IEnumerable<ProjectItem> Projects);
+    public sealed record Response(ProjectItem Project);
 
-    private static async Task<Results<Ok<ProjectItem>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         ProjectItem? project = await dbContext.Projects
             .AsNoTracking()
@@ -30,7 +30,7 @@ public sealed class GetProject : IEndpoint
             return TypedResults.NotFound();
         }
 
-        return TypedResults.Ok(project);
+        return TypedResults.Ok(new Response(project));
     }
 }
 

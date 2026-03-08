@@ -1,7 +1,9 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Texts } from "@/constants/texts";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
+import { updateProjectContract } from "./api/updateProjectContract";
 import { ContractForm, type ContractFormValues } from "./ContractForm";
+import { useParams } from "react-router";
 
 interface EditContractDialogProps {
   open: boolean;
@@ -11,20 +13,25 @@ interface EditContractDialogProps {
 }
 
 export const EditContractDialog = ({ open, contract, onClose, onSaved }: EditContractDialogProps) => {
+  const { id: projectId } = useParams<{ id: string }>();
+
   const handleSubmit = async (values: ContractFormValues, signal: AbortSignal) => {
-    // const response = await updateContract(
-    //   contract.id,
-    //   {
-    //     name: values.name,
-    //     registrationNumber: values.contractId,
-    //     startDate: values.startDate,
-    //     endDate: values.endDate,
-    //     description: values.description,
-    //   },
-    //   signal,
-    // );
-    // onSaved(response.projectContract);
-    // onClose();
+    if (!projectId) return;
+    await updateProjectContract(
+      projectId,
+      contract.id,
+      {
+        name: values.name,
+        registrationNumber: values.contractId,
+      },
+      signal,
+    );
+    onSaved({
+      ...contract,
+      name: values.name,
+      registrationNumber: values.contractId,
+    });
+    onClose();
   };
 
   return (
@@ -37,8 +44,6 @@ export const EditContractDialog = ({ open, contract, onClose, onSaved }: EditCon
           initialValues={{
             name: contract.name,
             contractId: contract.registrationNumber,
-            startDate: contract.startDate,
-            endDate: contract.endDate ?? undefined,
           }}
           onSubmit={handleSubmit}
           onCancel={onClose}
