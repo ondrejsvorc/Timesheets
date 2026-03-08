@@ -1,4 +1,4 @@
-﻿using CzechHolidays;
+using CzechHolidays;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -16,6 +16,13 @@ public static class ConfigureServices
     public static void AddServices(this WebApplicationBuilder builder)
     {
         builder.AddOpenApi();
+        builder.Services.AddCors(options =>
+        {
+            options.AddDefaultPolicy(policy =>
+            {
+                policy.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod();
+            });
+        });
         //builder.AddAuthentication();
         builder.AddDatabase();
         builder.AddAppServices();

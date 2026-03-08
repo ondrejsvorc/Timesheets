@@ -1,4 +1,4 @@
-﻿using Timesheets.Api.Common.Extensions;
+using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api;
@@ -16,14 +16,15 @@ public static class ConfigureApp
         //app.UseAuthentication();
         //app.UseAuthorization();
         app.ApplyMigrations();
-        
+
         if (app.Environment.IsDevelopment())
         {
             using var scope = app.Services.CreateScope();
             using var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             DatabaseSeeder.SeedTestDataAsync(context).GetAwaiter().GetResult();
         }
-        
+
+        app.UseCors();
         app.UseHttpsRedirection();
         app.MapEndpoints();
     }
