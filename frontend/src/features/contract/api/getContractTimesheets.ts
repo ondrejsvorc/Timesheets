@@ -1,3 +1,5 @@
+import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+
 export type GroupByOption = "Employee" | "Month";
 
 /** Request sent to API (no groupBy – grouping is frontend-only). */
@@ -39,63 +41,28 @@ export interface ContractTimesheetsFilterCriteria extends GetContractTimesheetsR
   groupBy: GroupByOption;
 }
 
-const MOCK_EMPLOYEES: EmployeeItem[] = [
-  { id: "e1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c", personalNumber: 2154, fullName: "Jan Novák", employeeType: "Neakademik" },
-  { id: "e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d", personalNumber: 2987, fullName: "Petra Malá", employeeType: "Akademik" },
-  { id: "e3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e", personalNumber: 2647, fullName: "Karel Nový", employeeType: "Neakademik" },
-];
-
-const STATUS_IN_PROGRESS = "Rozpracovaný";
-const STATUS_PENDING = "Ke schválení";
-const STATUS_APPROVED = "Schválený";
-
-const MOCK_TIMESHEETS: TimesheetItem[] = [
-  { id: "t1", employeeId: "e1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c", year: 2025, month: 1, position: "01-01 název pozice", workload: 0.1, statusId: "s1", status: STATUS_IN_PROGRESS },
-  { id: "t2", employeeId: "e1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c", year: 2025, month: 1, position: "01-02 název pozice", workload: 0.2, statusId: "s1", status: STATUS_IN_PROGRESS },
-  { id: "t3", employeeId: "e1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c", year: 2025, month: 2, position: "01-01 název pozice", workload: 0.7, statusId: "s2", status: STATUS_PENDING },
-  { id: "t4", employeeId: "e1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c", year: 2025, month: 3, position: "01-02 název pozice", workload: 0.4, statusId: "s3", status: STATUS_APPROVED },
-  { id: "t5", employeeId: "e2b3c4d5-e6f7-4a8b-9c0d-1e2f3a4b5c6d", year: 2025, month: 2, position: "01-01 název pozice", workload: 0.7, statusId: "s2", status: STATUS_PENDING },
-  { id: "t6", employeeId: "e3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e", year: 2025, month: 1, position: "01-01 název pozice", workload: 0.1, statusId: "s3", status: STATUS_APPROVED },
-  { id: "t7", employeeId: "e3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e", year: 2025, month: 1, position: "01-02 název pozice", workload: 0.2, statusId: "s3", status: STATUS_APPROVED },
-  { id: "t8", employeeId: "e3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e", year: 2025, month: 2, position: "01-01 název pozice", workload: 0.7, statusId: "s3", status: STATUS_APPROVED },
-  { id: "t9", employeeId: "e3c4d5e6-f7a8-4b9c-0d1e-2f3a4b5c6d7e", year: 2025, month: 3, position: "01-02 název pozice", workload: 0.4, statusId: "s3", status: STATUS_APPROVED },
-];
-
-function filterTimesheetsByRequest(
-  timesheets: TimesheetItem[],
-  request: GetContractTimesheetsRequest,
-): TimesheetItem[] {
-  return timesheets.filter((t) => {
-    if (t.year < request.fromYear || (t.year === request.fromYear && t.month < request.fromMonth)) return false;
-    if (t.year > request.toYear || (t.year === request.toYear && t.month > request.toMonth)) return false;
-    if (request.statuses?.length && !request.statuses.includes(t.status)) return false;
-    return true;
-  });
+/** Build query string for contract timesheets API. */
+function buildTimesheetsQuery(request: GetContractTimesheetsRequest): string {
+  const params = new URLSearchParams();
+  params.set("fromYear", String(request.fromYear));
+  params.set("fromMonth", String(request.fromMonth));
+  params.set("toYear", String(request.toYear));
+  params.set("toMonth", String(request.toMonth));
+  if (request.statuses?.length) {
+    request.statuses.forEach((s) => params.append("status", s));
+  }
+  return params.toString();
 }
 
-/** Mock: returns flat employees + timesheets for the requested range (and status filter). */
-export function getContractTimesheetsMock(
-  _projectId: string,
-  _contractId: string,
-  request: GetContractTimesheetsRequest,
-): Promise<GetContractTimesheetsResponse> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const filtered = filterTimesheetsByRequest(MOCK_TIMESHEETS, request);
-      const employeeIds = [...new Set(filtered.map((t) => t.employeeId))];
-      const employees = MOCK_EMPLOYEES.filter((e) => employeeIds.includes(e.id));
-      resolve({ employees, timesheets: filtered });
-    }, 800);
-  });
-}
-
-/** Lokálně vždy mock. Reálné API volání se zatím neřeší. */
+/** Call real API for contract timesheets. */
 export function getContractTimesheets(
-  projectId: string,
+  _projectId: string,
   contractId: string,
   request: GetContractTimesheetsRequest,
 ): Promise<GetContractTimesheetsResponse> {
-  return getContractTimesheetsMock(projectId, contractId, request);
+  const query = buildTimesheetsQuery(request);
+  const url = `${ApiUrl}/contracts/${contractId}/timesheets${query ? `?${query}` : ""}`;
+  return withOptionalDelay("slow", () => customFetch<GetContractTimesheetsResponse>(url));
 }
 
 export function buildTimesheetsRequestFromUrl(url: URL): ContractTimesheetsFilterCriteria {
