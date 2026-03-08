@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Data;
@@ -136,15 +136,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.Property(p => p.RegistrationNumber)
             .HasMaxLength(100);
 
-        builder.Property(p => p.RecipientName)
-            .HasMaxLength(200);
-
         builder.Property(p => p.StartDate)
             .IsRequired();
 
         builder.Property(p => p.EndDate);
-
-        builder.Property(p => p.Description);
 
         builder.Property(p => p.CreatedAt)
             .IsRequired();

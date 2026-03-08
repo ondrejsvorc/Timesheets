@@ -1,14 +1,12 @@
-﻿namespace Timesheets.Api.Data.Models;
+namespace Timesheets.Api.Data.Models;
 
 public sealed class Project
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string RegistrationNumber { get; set; } = string.Empty;
-    public string RecipientName { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
-    public string? Description { get; set; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 

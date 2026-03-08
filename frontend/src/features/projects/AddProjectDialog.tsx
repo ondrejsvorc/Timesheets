@@ -22,8 +22,7 @@ const addProjectSchema = z.object({
   name: z.string().nonempty(),
   registrationNumber: z.string().nonempty(),
   startDate: z.string().nonempty(),
-  endDate: z.string().nonempty(),
-  description: z.string().optional(),
+  endDate: z.string().nonempty()
 });
 
 interface AddProjectDialogProps {
@@ -32,13 +31,24 @@ interface AddProjectDialogProps {
   onSaved: (project: ProjectItem) => void;
 }
 
+const defaultValues: AddProjectFormValues = {
+  name: "",
+  registrationNumber: "",
+  startDate: "",
+  endDate: "",
+};
+
 export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogProps) => {
-  const form = useForm<AddProjectFormValues>({ resolver: zodResolver(addProjectSchema), mode: "onChange" });
+  const form = useForm<AddProjectFormValues>({
+    defaultValues,
+    resolver: zodResolver(addProjectSchema),
+    mode: "onChange",
+  });
   const startDate = form.watch("startDate");
   const endDate = form.watch("endDate");
 
   const handleClose = () => {
-    form.reset();
+    form.reset(defaultValues);
     onClose();
   };
 
@@ -48,11 +58,10 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
       registrationNumber: values.registrationNumber,
       startDate: values.startDate,
       endDate: values.endDate,
-      description: values.description,
     };
     const response = await createProject(request, signal);
     onSaved(response.project);
-    form.reset();
+    form.reset(defaultValues);
   };
 
   return (

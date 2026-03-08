@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Timesheets.Api.Common.Extensions;
@@ -15,7 +15,7 @@ public sealed class CreateProject : IEndpoint
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(string Name, string RegistrationNumber, string RecipientName, DateTime StartDate, DateTime? EndDate, string? Description);
+    public sealed record Request(string Name, string RegistrationNumber, DateTime StartDate, DateTime? EndDate);
     public sealed record Response(ProjectItem Project);
     public sealed class Validator : AbstractValidator<Request> { }
 
@@ -26,10 +26,8 @@ public sealed class CreateProject : IEndpoint
             Id = Guid.NewGuid(),
             Name = request.Name,
             RegistrationNumber = request.RegistrationNumber,
-            RecipientName = request.RecipientName,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
-            Description = request.Description,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null
         };

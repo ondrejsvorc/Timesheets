@@ -50,19 +50,15 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("20000000-0000-0000-0000-000000000001"),
                     Name = "Výzkumný projekt Alpha",
                     RegistrationNumber = "PROJ-2024-001",
-                    RecipientName = "Univerzita XYZ",
                     StartDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     EndDate = new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc),
-                    Description = "Hlavní výzkumný projekt"
                 },
                 new()
                 {
                     Id = Guid.Parse("20000000-0000-0000-0000-000000000002"),
                     Name = "Vývojový projekt Beta",
                     RegistrationNumber = "PROJ-2024-002",
-                    RecipientName = "Společnost ABC",
                     StartDate = new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc),
-                    Description = "Vývoj nového systému"
                 }
             ];
             context.Projects.AddRange(projects);
