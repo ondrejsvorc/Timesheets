@@ -2,45 +2,58 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Texts } from "@/constants/texts";
-import { type CreateProjectRequest, createProject } from "./api/createProject";
+import { updateProject } from "./api/updateProject";
 import type { ProjectItem } from "./api/shared/projectItem";
 import { ProjectFormFields, projectFormDefaultValues, projectFormSchema, type ProjectFormValues } from "./ProjectFormFields";
 
-interface AddProjectDialogProps {
+interface UpdateProjectDialogProps {
   open: boolean;
+  project: ProjectItem | null;
   onClose: () => void;
   onSaved: (project: ProjectItem) => void;
 }
 
-export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogProps) => {
+const projectToFormValues = (project: ProjectItem): ProjectFormValues => ({
+  name: project.name,
+  registrationNumber: project.registrationNumber,
+  startDate: project.startDate,
+  endDate: project.endDate ?? undefined,
+});
+
+export const UpdateProjectDialog = ({ open, project, onClose, onSaved }: UpdateProjectDialogProps) => {
+  const defaultValues: ProjectFormValues = project ? projectToFormValues(project) : projectFormDefaultValues;
   const form = useForm<ProjectFormValues>({
-    defaultValues: projectFormDefaultValues,
+    defaultValues,
     resolver: zodResolver(projectFormSchema),
     mode: "onChange",
   });
 
   const handleClose = () => {
-    form.reset(projectFormDefaultValues);
+    form.reset(defaultValues);
     onClose();
   };
 
   const handleSubmit = async (values: ProjectFormValues, signal: AbortSignal) => {
-    const request: CreateProjectRequest = {
+    if (!project) return;
+    await updateProject(project.id, values, signal);
+    onSaved({
+      ...project,
       name: values.name,
       registrationNumber: values.registrationNumber,
       startDate: values.startDate,
       endDate: values.endDate ?? null,
-    };
-    const response = await createProject(request, signal);
-    onSaved(response.project);
-    form.reset(projectFormDefaultValues);
+    });
+    form.reset(values);
+    onClose();
   };
+
+  if (!project) return null;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{Texts.newProject}</DialogTitle>
+          <DialogTitle>{Texts.editProject}</DialogTitle>
         </DialogHeader>
         <ProjectFormFields form={form} onSubmit={handleSubmit} onCancel={handleClose} />
       </DialogContent>

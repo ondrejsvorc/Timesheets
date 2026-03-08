@@ -33,13 +33,16 @@ export const customFetch = async <T>(input: RequestInfo | URL, init?: RequestIni
   return withErrorHandling(async () => {
     const response = await fetch(input, init);
     if (!response.ok) {
+      console.log(init);
       throw new Error(`${response.status} ${response.statusText}`);
     }
-    const data = await response.json();
     if (apiLoggingEnabled) {
       console.log(`${label} (${(performance.now() - start).toFixed(1)}ms)`);
     }
-    return data;
+    if (response.status === 204) {
+      return undefined as T;
+    }
+    return response.json();
   }, label);
 };
 

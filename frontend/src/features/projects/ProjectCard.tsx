@@ -9,10 +9,13 @@ import { cn } from "@/utils/cn";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { MoreHorizontal } from "lucide-react";
+import { startTransition } from "react";
 import { useNavigate } from "react-router";
 import { useImmer } from "use-immer";
 import type { ProjectItem } from "./api/shared/projectItem";
+import { deleteProject } from "./api/deleteProject";
 import { useProjectsDispatch } from "./hooks/useProjectsDispatch";
+import { UpdateProjectDialog } from "./UpdateProjectDialog";
 import { isProjectActive } from "./utils/isProjectActive";
 
 interface ProjectCardProps {
@@ -51,7 +54,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsEditOpen(true);
+                    startTransition(() => setIsEditOpen(true));
                   }}
                 >
                   <EditIcon />
@@ -60,7 +63,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
                 <DropdownMenuItem
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsConfirmOpen(true);
+                    startTransition(() => setIsConfirmOpen(true));
                   }}
                 >
                   <DeleteIcon />
@@ -87,15 +90,22 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
           </div>
         </CardContent>
       </Card>
+      <UpdateProjectDialog
+        open={isEditOpen}
+        project={project}
+        onClose={() => setIsEditOpen(false)}
+        onSaved={(updated) => {
+          dispatch({ type: "update", project: updated });
+          setIsEditOpen(false);
+        }}
+      />
       <ConfirmationDialog
         open={isConfirmOpen}
-        onCancel={() => {
-          setIsConfirmOpen(false);
-        }}
+        onCancel={() => setIsConfirmOpen(false)}
         onConfirm={async (_event, signal) => {
-          dispatch({ type: "delete", projectId: project.id });
-          await Promise.resolve();
+          await deleteProject(project.id, signal);
           if (!signal.aborted) {
+            dispatch({ type: "delete", projectId: project.id });
             setIsConfirmOpen(false);
           }
         }}

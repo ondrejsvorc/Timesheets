@@ -9,6 +9,13 @@ export const projectsReducer = (draft: ProjectItem[], action: ProjectsAction) =>
       draft.push(action.project);
       break;
     }
+    case "update": {
+      const index = draft.findIndex((p) => compareIds(p.id, action.project.id));
+      if (index !== -1) {
+        draft[index] = action.project;
+      }
+      break;
+    }
     case "delete": {
       const index = draft.findIndex((p) => compareIds(p.id, action.projectId));
       if (index !== -1) {
