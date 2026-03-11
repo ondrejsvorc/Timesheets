@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
 
@@ -15,9 +15,21 @@ public sealed class GetEmployeePositions : IEndpoint
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
+        bool employeeExists = await dbContext.Employees
+            .AsNoTracking()
+            .AnyAsync(e => e.Id == id, cancellationToken);
+
+        if (!employeeExists)
+        {
+            return TypedResults.NotFound();
+        }
+
         List<EmployeePositionItem> positions = await dbContext.ContractEmployees
             .AsNoTracking()
             .Where(e => e.EmployeeId == id)
+            .OrderBy(e => e.Contract.Project.Name)
+            .ThenBy(e => e.Contract.Name)
+            .ThenBy(e => e.StartDate)
             .Select(e => new EmployeePositionItem(
                 e.Contract.Project.Id,
                 e.Contract.Project.Name,
@@ -27,9 +39,6 @@ public sealed class GetEmployeePositions : IEndpoint
                 e.StartDate,
                 e.EndDate
             ))
-            .OrderBy(p => p.ProjectName)
-            .ThenBy(p => p.ContractName)
-            .ThenBy(p => p.StartDate)
             .ToListAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(id, positions));
