@@ -38,7 +38,7 @@ Deletes all containers, images, and volumes so the project starts from scratch n
 
 #### Rebuild backend
 ```
-docker compose restart timesheets.backend
+docker compose up --build timesheets.backend
 ```
 
 #### URLs
