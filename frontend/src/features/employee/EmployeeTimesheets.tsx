@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useNavigate } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { CheckCircle, XCircle, ChevronDown, Upload } from "lucide-react";
 import { CZECH_MONTH_NAMES, formatMonthYear } from "@/features/contract/utils/czechMonths";
@@ -33,6 +34,7 @@ export const EmployeeTimesheets = () => {
 const EmployeeTimesheetsContent = () => {
   const response = useAsyncValue() as GetEmployeeTimesheetsResponse;
   const { filter, setFilter } = useEmployeeTimesheetsFilter();
+  const navigate = useNavigate();
   const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const availableYears = response.availableYears;
@@ -165,7 +167,7 @@ const EmployeeTimesheetsContent = () => {
                     </TableBody>
                   </Table>
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm">Spravovat výkazy</Button>
+                    <Button variant="outline" size="sm" onClick={() => navigate(Routes.timesheet(response.employeeId, monthGroup.year, monthGroup.month))}>Spravovat výkazy</Button>
                   </div>
                 </div>
               </AccordionContent>

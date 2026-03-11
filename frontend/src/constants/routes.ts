@@ -9,4 +9,5 @@ export const Routes = {
   employees: () => "/employees",
   employee: (id: string) => `/employees/${id}`,
   employeeTimesheets: (id: string) => `/employees/${id}/timesheets`,
+  timesheet: (employeeId: string, year: number, month: number) => `/timesheet?employeeId=${employeeId}&year=${year}&month=${month}`,
 };

@@ -1,5 +1,7 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
+import { getCombinedTimesheet } from "./components/poc/api/getCombinedTimesheet";
+import { getCombinedTimesheetOverview } from "./components/poc/api/getCombinedTimesheetOverview";
 import { TimesheetPage } from "./components/poc/TimesheetPage";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { Routes } from "./constants/routes";
@@ -14,7 +16,7 @@ import { EmployeePositions } from "./features/employee/EmployeePositions";
 import { EmployeeTimesheets } from "./features/employee/EmployeeTimesheets";
 import { getEmployees } from "./features/employees/api/getEmployees";
 import { EmployeesPage } from "./features/employees/EmployeesPage";
-import { getProject, type GetProjectResponse } from "./features/project/api/getProject";
+import { getProject } from "./features/project/api/getProject";
 import { getProjectContracts } from "./features/project/api/getProjectContracts";
 import { getProjectContractsManagers } from "./features/project/api/getProjectContractsManagers";
 import { ProjectContracts } from "./features/project/ProjectContracts";
@@ -128,6 +130,22 @@ export const router = createBrowserRouter([
       {
         path: "timesheet",
         element: <TimesheetPage />,
+        loader: ({ request }) => {
+          const url = new URL(request.url);
+          const employeeId = url.searchParams.get("employeeId");
+          const year = Number(url.searchParams.get("year"));
+          const month = Number(url.searchParams.get("month"));
+
+          if (!employeeId || !Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+            throw redirect(Routes.employees());
+          }
+
+          return {
+            employeePromise: getEmployee(employeeId).promise,
+            overviewPromise: getCombinedTimesheetOverview(employeeId, year, month).promise,
+            timesheetPromise: getCombinedTimesheet(employeeId, year, month).promise,
+          };
+        },
       },
     ],
   },

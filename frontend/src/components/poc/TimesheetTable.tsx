@@ -15,9 +15,10 @@ import { TimesheetValidations } from "./TimesheetValidations";
 interface TimesheetTableProps {
   timesheet: Timesheet;
   onUpdateDay: (date: string, recipe: (draftDay: TimesheetDay) => void) => void;
+  className?: string;
 }
 
-export const TimesheetTable = ({ timesheet, onUpdateDay }: TimesheetTableProps) => {
+export const TimesheetTable = ({ timesheet, onUpdateDay, className }: TimesheetTableProps) => {
   const [editingDay, setEditingDay] = useState<{ date: string; schedules: TimeRange[] } | null>(null);
 
   const updateDaySchedules = (date: string, newSchedules: TimeRange[]) => {
@@ -34,7 +35,7 @@ export const TimesheetTable = ({ timesheet, onUpdateDay }: TimesheetTableProps) 
   );
 
   return (
-    <div className="rounded-md border-t border-l border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full relative border-separate border-spacing-0 shadow-sm">
+    <div className={cn("rounded-md border-t border-l border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full relative border-separate border-spacing-0 shadow-sm", className)}>
       <Table className="min-w-max w-full border-separate border-spacing-0">
         <TableHeader className="sticky top-0 z-20 bg-muted">
           <TableRow>
