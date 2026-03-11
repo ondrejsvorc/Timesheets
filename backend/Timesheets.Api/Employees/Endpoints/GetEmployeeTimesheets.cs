@@ -49,6 +49,8 @@ public sealed class GetEmployeeTimesheets : IEndpoint
         }
 
         List<EmployeeTimesheetItem> timesheets = await query
+            .OrderBy(timesheet => timesheet.Year)
+            .ThenBy(timesheet => timesheet.Month)
             .Select(timesheet => new EmployeeTimesheetItem(
                 timesheet.Id,
                 timesheet.ContractId,
@@ -58,8 +60,6 @@ public sealed class GetEmployeeTimesheets : IEndpoint
                 timesheet.TimesheetStatusId,
                 timesheet.TimesheetStatus.Name
             ))
-            .OrderBy(timesheet => timesheet.Year)
-            .ThenBy(timesheet => timesheet.Month)
             .ToListAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(id, timesheets));
