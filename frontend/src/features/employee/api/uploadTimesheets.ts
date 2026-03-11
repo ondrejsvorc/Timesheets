@@ -1,54 +1,47 @@
-import { ApiUrl } from "@/constants/api";
-
-export interface DetectedFile {
-  fileName: string;
-  employeeId: string | null;
-  employeePersonalNumber: number | null;
-  employeeName: string | null;
-  year: number | null;
-  month: number | null;
-  canImport: boolean;
-  errorMessage: string | null;
-}
-
-export interface FileSelection {
-  fileName: string;
-  employeeId: string;
-  contractId: string;
-  year: number;
-  month: number;
-}
+import { ApiUrl, customFetch } from "@/constants/api";
 
 export interface ImportResult {
   fileName: string;
   success: boolean;
   errorMessage: string | null;
   timesheetId: string | null;
+  year: number | null;
+  month: number | null;
 }
 
-export interface ConfirmImportResponse {
-  results: ImportResult[];
+export interface TimesheetDetectionResult {
+  fileName: string;
+  canImport: boolean;
+  errorMessage: string | null;
+  employeePersonalNumber: number | null;
+  employeeName: string | null;
+  year: number | null;
+  month: number | null;
 }
 
-export const confirmTimesheetImport = async (
-  files: File[],
-  selections: FileSelection[],
-): Promise<ConfirmImportResponse> => {
+interface ImportTimesheetResponse {
+  result: ImportResult;
+}
+
+interface DetectTimesheetResponse {
+  result: TimesheetDetectionResult;
+}
+
+export const detectTimesheetImport = async (employeeId: string, file: File, signal?: AbortSignal): Promise<TimesheetDetectionResult> => {
   const formData = new FormData();
-  files.forEach((file) => {
-    formData.append("files", file);
-  });
-  formData.append("selectionsJson", JSON.stringify(selections));
+  formData.append("employeeId", employeeId);
+  formData.append("file", file);
 
-  const response = await fetch(`${ApiUrl}/timesheets/import`, {
-    method: "POST",
-    body: formData,
-  });
+  const response = await customFetch<DetectTimesheetResponse>(`${ApiUrl}/timesheets/detect`, { method: "POST", body: formData, signal });
+  return response.result;
+};
 
-  if (!response.ok) {
-    throw new Error("Failed to import timesheets");
-  }
+export const importTimesheet = async (employeeId: string, file: File, signal?: AbortSignal): Promise<ImportResult> => {
+  const formData = new FormData();
+  formData.append("employeeId", employeeId);
+  formData.append("file", file);
 
-  return response.json();
+  const response = await customFetch<ImportTimesheetResponse>(`${ApiUrl}/timesheets/`, { method: "POST", body: formData, signal });
+  return response.result;
 };
 

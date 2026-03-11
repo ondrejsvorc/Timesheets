@@ -13,7 +13,9 @@ public sealed class GetEmployeeTimesheets : IEndpoint
 
     public sealed record Request([FromQuery] int? Year, [FromQuery] string? Months);
     public sealed record EmployeeTimesheetItem(Guid Id, Guid ContractId, string ContractName, int Year, int Month, Guid StatusId, string Status);
-    public sealed record Response(Guid EmployeeId, IEnumerable<EmployeeTimesheetItem> Timesheets);
+    public sealed record AvailableMonthItem(int Year, int Month, bool HasUnapproved);
+    private sealed record AvailableMonthSourceItem(int Year, int Month, string Status);
+    public sealed record Response(Guid EmployeeId, IEnumerable<EmployeeTimesheetItem> Timesheets, IEnumerable<int> AvailableYears, IEnumerable<AvailableMonthItem> AvailableMonths);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, [AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -26,9 +28,32 @@ public sealed class GetEmployeeTimesheets : IEndpoint
             return TypedResults.NotFound();
         }
 
-        IQueryable<Data.Models.AttendanceTimesheet> query = dbContext.AttendanceTimesheets
+        IQueryable<Data.Models.AttendanceTimesheet> baseQuery = dbContext.AttendanceTimesheets
             .AsNoTracking()
             .Where(timesheet => timesheet.EmployeeId == id);
+
+        List<AvailableMonthSourceItem> monthRows = await baseQuery
+            .Select(timesheet => new AvailableMonthSourceItem(timesheet.Year, timesheet.Month, timesheet.TimesheetStatus.Name))
+            .ToListAsync(cancellationToken);
+
+        List<AvailableMonthItem> availableMonths = monthRows
+            .GroupBy(item => new { item.Year, item.Month })
+            .OrderBy(group => group.Key.Year)
+            .ThenBy(group => group.Key.Month)
+            .Select(group => new AvailableMonthItem(
+                group.Key.Year,
+                group.Key.Month,
+                group.Any(item => item.Status != "Schválený")
+            ))
+            .ToList();
+
+        List<int> availableYears = availableMonths
+            .Select(item => item.Year)
+            .Distinct()
+            .OrderBy(year => year)
+            .ToList();
+
+        IQueryable<Data.Models.AttendanceTimesheet> query = baseQuery;
 
         if (request.Year.HasValue)
         {
@@ -62,6 +87,6 @@ public sealed class GetEmployeeTimesheets : IEndpoint
             ))
             .ToListAsync(cancellationToken);
 
-        return TypedResults.Ok(new Response(id, timesheets));
+        return TypedResults.Ok(new Response(id, timesheets, availableYears, availableMonths));
     }
 }

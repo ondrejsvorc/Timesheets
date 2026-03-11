@@ -1,6 +1,5 @@
-﻿using ClosedXML.Excel;
+using ClosedXML.Excel;
 using System.Globalization;
-using System.Text.RegularExpressions;
 
 namespace Timesheets.Api.Timesheets;
 
@@ -9,68 +8,25 @@ public interface ITimesheetReader<T> where T : ITimesheet
     T Read(Stream stream);
 }
 
-public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : ITimesheetReader<AttendanceTimesheet>
+public sealed class AttendanceTimesheetReader(ICellParser cellParser) : ITimesheetReader<AttendanceTimesheet>
 {
-    [GeneratedRegex(@"^(\d+)\s+(.+)$")]
-    private static partial Regex EmployeeRegex();
-
-    [GeneratedRegex(@"(\d{2})\.(\d{2})\.(\d{4})")]
-    private static partial Regex PeriodRegex();
-
-    [GeneratedRegex(@"(\d+)\s*%")]
-    private static partial Regex WorkloadRegex();
-
     public AttendanceTimesheet Read(Stream stream)
     {
         using XLWorkbook workbook = new(stream);
         IXLWorksheet sheet = workbook.Worksheets.Worksheet(1);
-
-        // Načtení kódu a jména zaměstnance z A1
-        string cellA1 = sheet.Cell("A1").GetString();
-        var employeeMatch = EmployeeRegex().Match(cellA1);
-
-        int employeePersonalNumber = 0;
-        string? employeeName = null;
-
-        if (employeeMatch.Success)
-        {
-            employeePersonalNumber = int.Parse(employeeMatch.Groups[1].Value);
-            employeeName = employeeMatch.Groups[2].Value.Trim();
-        }
-
-        // Načtení období a úvazku z A2
-        string cellA2 = sheet.Cell("A2").GetString();
-        var periodMatch = PeriodRegex().Match(cellA2);
-        var workloadMatch = WorkloadRegex().Match(cellA2);
-
-        int year = 0;
-        int month = 0;
-        int daysInMonth = 31;
-        decimal workload = 1m;
-
-        if (periodMatch.Success)
-        {
-            year = int.Parse(periodMatch.Groups[3].Value);
-            month = int.Parse(periodMatch.Groups[2].Value);
-            daysInMonth = DateTime.DaysInMonth(year, month);
-        }
-
-        if (workloadMatch.Success)
-        {
-            workload = decimal.Parse(workloadMatch.Groups[1].Value, CultureInfo.InvariantCulture) / 100m;
-        }
+        AttendanceTimesheetMetadata metadata = AttendanceTimesheetWorksheetParser.ReadMetadata(sheet);
 
         // Načtení řádků - od řádku 4 do (4 + daysInMonth - 1)
         List<AttendanceDay> rows = [];
         const int headerOffset = 3;
 
-        for (int i = 0; i < daysInMonth; i++)
+        for (int i = 0; i < metadata.DaysInMonth; i++)
         {
             int rowNum = headerOffset + 1 + i;
 
             var row = new AttendanceDay
             (
-                Date: new DateTime(year, month, i + 1),
+                Date: new DateTime(metadata.Year, metadata.Month, i + 1),
                 ClockIn: cellParser.ParseTime(sheet.Cell($"B{rowNum}")),
                 ClockOut: cellParser.ParseTime(sheet.Cell($"C{rowNum}")),
                 BreakStart: cellParser.ParseTime(sheet.Cell($"D{rowNum}")),
@@ -78,7 +34,7 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
                 OtherInterruption: cellParser.ParseString(sheet.Cell($"F{rowNum}")),
                 Schedules: cellParser.ParseTimeRanges(sheet.Cell($"K{rowNum}")),
                 IsHoliday: false,
-                Workload: workload
+                Workload: metadata.Workload
             );
 
             rows.Add(row);
@@ -86,11 +42,11 @@ public sealed partial class AttendanceTimesheetReader(ICellParser cellParser) : 
 
         return new AttendanceTimesheet
         (
-            EmployeePersonalNumber: employeePersonalNumber,
-            EmployeeName: employeeName,
-            Workload: workload,
-            Year: year,
-            Month: month,
+            EmployeePersonalNumber: metadata.EmployeePersonalNumber,
+            EmployeeName: metadata.EmployeeName,
+            Workload: metadata.Workload,
+            Year: metadata.Year,
+            Month: metadata.Month,
             Days: rows
         );
     }

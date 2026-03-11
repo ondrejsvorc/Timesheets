@@ -70,8 +70,8 @@ public static class Endpoints
         .MapEndpoint<CreateTimesheet>()
         .MapEndpoint<UpdateTimesheet>()
         .MapEndpoint<ReviewTimesheet>()
-        .MapEndpoint<ImportTimesheet>()
-        .MapEndpoint<ConfirmTimesheetImport>();
+        .MapEndpoint<DetectTimesheetImport>()
+        .MapEndpoint<ImportTimesheet>();
 
     private static void MapEmployeeEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/employees").WithTags("Employees")

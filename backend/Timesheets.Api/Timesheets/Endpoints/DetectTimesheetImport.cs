@@ -6,16 +6,17 @@ using Timesheets.Api.Timesheets;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
 
-public sealed class ImportTimesheet : IEndpoint
+public sealed class DetectTimesheetImport : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) => app
-        .MapPost("/", Handle)
-        .WithSummary("Create Attendance Timesheet")
+        .MapPost("/detect", Handle)
+        .WithSummary("Detect Attendance Timesheet Metadata")
         .DisableAntiforgery()
         .WithRequestValidation<Request>();
 
     public sealed record Request(Guid EmployeeId, IFormFile File);
-    public sealed record Response(AttendanceTimesheetImportResult Result);
+    public sealed record Response(AttendanceTimesheetDetectionResult Result);
+
     public sealed class Validator : AbstractValidator<Request>
     {
         public Validator()
@@ -32,7 +33,7 @@ public sealed class ImportTimesheet : IEndpoint
 
     private static async Task<Results<Ok<Response>, BadRequest<string>>> Handle([FromForm] Request request, [FromServices] IAttendanceTimesheetImportService importService, CancellationToken cancellationToken)
     {
-        AttendanceTimesheetImportResult result = await importService.ImportAsync(request.EmployeeId, request.File, cancellationToken);
+        AttendanceTimesheetDetectionResult result = await importService.DetectAsync(request.EmployeeId, request.File, cancellationToken);
         return TypedResults.Ok(new Response(result));
     }
 }

@@ -1,4 +1,4 @@
-import { Suspense, useState, useRef } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Await, useAsyncValue, useLoaderData } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
@@ -14,16 +14,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Texts } from "@/constants/texts";
 import { CheckCircle, XCircle, ChevronDown, Upload } from "lucide-react";
 import { CZECH_MONTH_NAMES, formatMonthYear } from "@/features/contract/utils/czechMonths";
-import type { EmployeeTimesheetItem, GetEmployeeTimesheetsResponse } from "./api/getEmployeeTimesheets";
-import type { EmployeePositionItem } from "./api/getEmployeePositions";
+import type { EmployeeTimesheetItem, EmployeeTimesheetMonthOption, GetEmployeeTimesheetsResponse } from "./api/getEmployeeTimesheets";
 import { useEmployeeTimesheetsFilter, type EmployeeTimesheetsFilterCriteria } from "./hooks/useEmployeeTimesheetsFilter";
 import { UploadTimesheetsDialog } from "./UploadTimesheetsDialog";
 
 export const EmployeeTimesheets = () => {
-  const loaderData = useLoaderData() as {
-    promise: Promise<GetEmployeeTimesheetsResponse>;
-    positionsPromise: Promise<{ employeeId: string; positions: unknown[] }>;
-  };
+  const loaderData = useLoaderData() as { promise: Promise<GetEmployeeTimesheetsResponse> };
 
   return (
     <Suspense fallback={<GenericSkeleton />}>
@@ -34,47 +30,56 @@ export const EmployeeTimesheets = () => {
   );
 };
 
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = [CURRENT_YEAR - 2, CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
-const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
-
 const EmployeeTimesheetsContent = () => {
-  const loaderData = useLoaderData() as {
-    promise: Promise<GetEmployeeTimesheetsResponse>;
-    positionsPromise: Promise<{ employeeId: string; positions: unknown[] }>;
-  };
   const response = useAsyncValue() as GetEmployeeTimesheetsResponse;
   const { filter, setFilter } = useEmployeeTimesheetsFilter();
   const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const availableYears = response.availableYears;
+  const availableMonths = useMemo(
+    () => getAvailableMonthsForYear(response.availableMonths, filter.year, filter.onlyUnapproved),
+    [response.availableMonths, filter.year, filter.onlyUnapproved],
+  );
 
   const handleUploadClick = () => {
-    fileInputRef.current?.click();
+    setIsUploadDialogOpen(true);
   };
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files || []);
-    if (files.length > 0) {
-      setSelectedFiles(files);
-      setIsUploadDialogOpen(true);
-    }
-    // Reset input so same file can be selected again
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
+  useEffect(() => {
+    const fallbackYear = getFallbackYear(availableYears, filter.year);
+    const yearToUse = fallbackYear ?? filter.year;
+    const nextAvailableMonthSet = new Set(getAvailableMonthsForYear(response.availableMonths, yearToUse, filter.onlyUnapproved).map((item) => item.month));
 
-  // Group timesheets by month
+    if (filter.months === null) {
+      if (fallbackYear !== null) {
+        setFilter((draft) => {
+          draft.year = fallbackYear;
+        });
+      }
+      return;
+    }
+
+    const nextMonths = filter.months.filter((month) => nextAvailableMonthSet.has(month));
+    const monthsChanged = nextMonths.length !== filter.months.length;
+
+    if (fallbackYear !== null || monthsChanged) {
+      setFilter((draft) => {
+        if (fallbackYear !== null) {
+          draft.year = fallbackYear;
+        }
+        if (monthsChanged) {
+          draft.months = nextMonths.length > 0 ? nextMonths : null;
+        }
+      });
+    }
+  }, [availableYears, filter.months, filter.onlyUnapproved, filter.year, response.availableMonths, setFilter]);
+
   const groupedByMonth = groupTimesheetsByMonth(response.timesheets, filter);
 
-  // Filter by unapproved if needed
   let filteredMonths = filter.onlyUnapproved
     ? groupedByMonth.filter((month) => !month.allApproved)
     : groupedByMonth;
 
-  // Filter by selected months
   if (filter.months !== null && filter.months.length > 0) {
     filteredMonths = filteredMonths.filter((month) => filter.months!.includes(month.month));
   }
@@ -89,45 +94,16 @@ const EmployeeTimesheetsContent = () => {
           filter={filter}
           setFilter={setFilter}
           actions={
-            <>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".xls,.xlsx"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-              <Button variant="outline" onClick={handleUploadClick}>
-                <Upload className="mr-2 h-4 w-4" />
-                Nahrát výkazy
-              </Button>
-            </>
+            <Button variant="outline" onClick={handleUploadClick}>
+              <Upload className="mr-2 h-4 w-4" />
+              {Texts.importFiles}
+            </Button>
           }
         >
-          <EmployeeTimesheetsFilterControls />
+          <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} />
         </FilterBar>
         <EmptyState />
-        {isUploadDialogOpen && (
-          <Suspense fallback={null}>
-            <Await resolve={loaderData.positionsPromise}>
-              {(positionsData) => (
-                <UploadTimesheetsDialog
-                  open={isUploadDialogOpen}
-                  files={selectedFiles}
-                  onClose={() => {
-                    setIsUploadDialogOpen(false);
-                    setSelectedFiles([]);
-                  }}
-                  onSuccess={() => {
-                    // Optionally refresh data here
-                  }}
-                  positionsPromise={Promise.resolve(positionsData as { employeeId: string; positions: EmployeePositionItem[] })}
-                />
-              )}
-            </Await>
-          </Suspense>
-        )}
+        {isUploadDialogOpen && <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => {}} />}
       </>
     );
   }
@@ -141,23 +117,13 @@ const EmployeeTimesheetsContent = () => {
         filter={filter}
         setFilter={setFilter}
         actions={
-          <>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".xls,.xlsx"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-            <Button variant="outline" onClick={handleUploadClick}>
-              <Upload className="mr-2 h-4 w-4" />
-              Nahrát výkazy
-            </Button>
-          </>
+          <Button variant="outline" onClick={handleUploadClick}>
+            <Upload className="mr-2 h-4 w-4" />
+            {Texts.importFiles}
+          </Button>
         }
       >
-        <EmployeeTimesheetsFilterControls />
+        <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} />
       </FilterBar>
       <Accordion type="multiple" value={expandedMonths} onValueChange={setExpandedMonths} className="space-y-2">
         {filteredMonths.map((monthGroup) => {
@@ -207,33 +173,20 @@ const EmployeeTimesheetsContent = () => {
           );
         })}
       </Accordion>
-      {isUploadDialogOpen && (
-        <Suspense fallback={null}>
-          <Await resolve={loaderData.positionsPromise}>
-            {(positionsData) => (
-              <UploadTimesheetsDialog
-                open={isUploadDialogOpen}
-                files={selectedFiles}
-                onClose={() => {
-                  setIsUploadDialogOpen(false);
-                  setSelectedFiles([]);
-                }}
-                onSuccess={() => {
-                  // Optionally refresh data here
-                }}
-                positionsPromise={Promise.resolve(positionsData as { employeeId: string; positions: EmployeePositionItem[] })}
-              />
-            )}
-          </Await>
-        </Suspense>
-      )}
+      {isUploadDialogOpen && <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => {}} />}
     </>
   );
 };
 
-function EmployeeTimesheetsFilterControls() {
+interface EmployeeTimesheetsFilterControlsProps {
+  availableYears: number[];
+  availableMonths: EmployeeTimesheetMonthOption[];
+}
+
+function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: EmployeeTimesheetsFilterControlsProps) {
   const { filter, setFilter } = useFilterContext<EmployeeTimesheetsFilterCriteria>();
   const [monthPopoverOpen, setMonthPopoverOpen] = useState(false);
+  const selectedYear = availableYears.includes(filter.year) ? String(filter.year) : undefined;
 
   const handleMonthToggle = (month: number | null) => {
     setFilter((draft) => {
@@ -269,7 +222,8 @@ function EmployeeTimesheetsFilterControls() {
       <div className="flex flex-col gap-1.5">
         <Label className="text-muted-foreground text-sm">Rok</Label>
         <Select
-          value={String(filter.year)}
+          value={selectedYear}
+          disabled={availableYears.length === 0}
           onValueChange={(v) =>
             setFilter((draft) => {
               draft.year = parseInt(v, 10);
@@ -277,10 +231,10 @@ function EmployeeTimesheetsFilterControls() {
           }
         >
           <SelectTrigger className="w-[100px]">
-            <SelectValue />
+            <SelectValue placeholder={Texts.noItems} />
           </SelectTrigger>
           <SelectContent>
-            {YEAR_OPTIONS.map((y) => (
+            {availableYears.map((y) => (
               <SelectItem key={y} value={String(y)}>
                 {y}
               </SelectItem>
@@ -292,9 +246,11 @@ function EmployeeTimesheetsFilterControls() {
         <Label className="text-muted-foreground text-sm">Měsíc</Label>
         <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-[180px] justify-between">
+            <Button variant="outline" className="w-[180px] justify-between" disabled={availableMonths.length === 0}>
               <span className="truncate">
-                {isAllMonthsSelected
+                {availableMonths.length === 0
+                  ? Texts.noItems
+                  : isAllMonthsSelected
                   ? "Všechny měsíce"
                   : selectedMonthsCount === 0
                     ? "Vyberte měsíce"
@@ -315,7 +271,7 @@ function EmployeeTimesheetsFilterControls() {
                 <Label className="text-sm font-normal cursor-pointer">Všechny měsíce</Label>
               </div>
               <div className="border-t my-1" />
-              {MONTH_OPTIONS.map((month) => {
+              {availableMonths.map(({ month }) => {
                 const isSelected = filter.months?.includes(month) ?? false;
                 return (
                   <div
@@ -355,6 +311,23 @@ interface MonthGroup {
   month: number;
   timesheets: EmployeeTimesheetItem[];
   allApproved: boolean;
+}
+
+function getAvailableMonthsForYear(
+  availableMonths: EmployeeTimesheetMonthOption[],
+  year: number,
+  onlyUnapproved: boolean,
+) {
+  return availableMonths.filter((item) => item.year === year && (!onlyUnapproved || item.hasUnapproved));
+}
+
+function getFallbackYear(availableYears: number[], selectedYear: number) {
+  if (availableYears.length === 0 || availableYears.includes(selectedYear)) {
+    return null;
+  }
+
+  const currentYear = new Date().getFullYear();
+  return availableYears.includes(currentYear) ? currentYear : availableYears[availableYears.length - 1]!;
 }
 
 function groupTimesheetsByMonth(
