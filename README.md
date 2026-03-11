@@ -36,6 +36,11 @@ docker compose down --volumes --rmi all --remove-orphans
 ```
 Deletes all containers, images, and volumes so the project starts from scratch next time it's composed.
 
+#### Rebuild backend
+```
+docker compose restart timesheets.backend
+```
+
 #### URLs
 - http://localhost:3000 (frontend)
 - http://localhost:5000/swagger/index.html (API documentation)
