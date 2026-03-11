@@ -8,24 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Texts } from "@/constants/texts";
 import { CheckCircle, XCircle, ChevronDown, Upload } from "lucide-react";
 import { CZECH_MONTH_NAMES, formatMonthYear } from "@/features/contract/utils/czechMonths";
@@ -215,7 +200,6 @@ const EmployeeTimesheetsContent = () => {
                   </Table>
                   <div className="flex gap-2 pt-2">
                     <Button variant="outline" size="sm">Spravovat výkazy</Button>
-                    <Button variant="outline" size="sm">Nahrát pracovní docházku</Button>
                   </div>
                 </div>
               </AccordionContent>
