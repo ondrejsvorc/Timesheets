@@ -1,8 +1,7 @@
-import { BackButton, EditButton } from "@/components/shared/buttons/ActionButtons";
+import { BackButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Routes } from "@/constants/routes";
-import { Texts } from "@/constants/texts";
 import { Suspense } from "react";
 import { Await, Outlet, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
 import type { GetProjectContractResponse } from "./api/getProjectContract";
@@ -30,14 +29,11 @@ export const ContractPage = () => {
 const ContractPageHeader = () => {
   const contract = useAsyncValue() as GetProjectContractResponse;
   const navigate = useNavigate();
-  const projectId = useParams().id;
+  const { id: projectId } = useParams<{ id: string }>();
 
   return (
     <>
-      <PageHeader
-        leading={<BackButton onClick={() => navigate(Routes.project(projectId ?? ""))} />}
-        actions={<EditButton onClick={() => {}}>{Texts.editContract}</EditButton>}
-      >
+      <PageHeader leading={<BackButton onClick={() => navigate(Routes.project(projectId ?? ""))} />}>
         <PageTitle>{contract.name}</PageTitle>
         <PageSubtitle>{contract.registrationNumber}</PageSubtitle>
       </PageHeader>

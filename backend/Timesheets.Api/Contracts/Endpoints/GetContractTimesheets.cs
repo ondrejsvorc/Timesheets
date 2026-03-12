@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -94,8 +94,13 @@ public sealed class GetContractTimesheets : IEndpoint
                 ContractEmployee = dbContext.ContractEmployees
                     .Where(employee => employee.ContractId == id)
                     .Where(employee => employee.EmployeeId == timesheet.EmployeeId)
-                    .Where(employee => employee.StartDate <= new DateTime(timesheet.Year, timesheet.Month, 1))
-                    .Where(employee => employee.EndDate == null || employee.EndDate >= new DateTime(timesheet.Year, timesheet.Month, 1))
+                    .Where(employee =>
+                        employee.StartDate.Year < timesheet.Year ||
+                        (employee.StartDate.Year == timesheet.Year && employee.StartDate.Month <= timesheet.Month))
+                    .Where(employee =>
+                        employee.EndDate == null ||
+                        employee.EndDate.Value.Year > timesheet.Year ||
+                        (employee.EndDate.Value.Year == timesheet.Year && employee.EndDate.Value.Month >= timesheet.Month))
                     .OrderByDescending(employee => employee.StartDate)
                     .Select(employee => new { employee.Position, employee.Workload })
                     .FirstOrDefault()
