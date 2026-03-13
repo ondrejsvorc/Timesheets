@@ -1,8 +1,8 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
-import { getCombinedTimesheet } from "./components/poc/api/getCombinedTimesheet";
-import { getCombinedTimesheetOverview } from "./components/poc/api/getCombinedTimesheetOverview";
-import { TimesheetPage } from "./components/poc/TimesheetPage";
+import { getCombinedTimesheet } from "./components/poc/timesheet/api/getCombinedTimesheet";
+import { getCombinedTimesheetOverview } from "./components/poc/timesheet/api/getCombinedTimesheetOverview";
+import { TimesheetPage } from "./components/poc/timesheet/TimesheetPage";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { Routes } from "./constants/routes";
 import { getContractEmployees } from "./features/contract/api/getContractEmployees";

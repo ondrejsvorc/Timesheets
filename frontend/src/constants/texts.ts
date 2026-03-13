@@ -98,4 +98,10 @@ export const Texts = {
   importDetecting: "Načítají se metadata",
   importBack: "Zpět",
   close: "Zavřít",
+  combinedTimesheet: "Kombinovaný výkaz",
+  changeTimesheetStatus: "Změnit stav výkazu",
+  export: "Exportovat",
+  enterFullscreen: "Fullscreen",
+  exitFullscreen: "Ukončit fullscreen",
+  saveChanges: "Uložit změny",
 };

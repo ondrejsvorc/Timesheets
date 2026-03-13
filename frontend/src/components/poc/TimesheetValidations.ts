@@ -93,6 +93,110 @@ export const TimesheetValidations = {
       });
     }
 
+    // Validace přestávky (platí každý den, když je něco vyplněno)
+    // ERR-ATT-08B: MissingBreakEnd (pokud je vyplněn začátek, musí být i konec)
+    if (day.attendance.breakStart && !day.attendance.breakEnd) {
+      validations.push({
+        code: "ERR-ATT-08B",
+        type: "error",
+        message: "Není vyplněn konec přestávky.",
+        field: "breakEnd",
+      });
+    }
+
+    // ERR-ATT-08C: MissingBreakStart (pokud je vyplněn konec, musí být i začátek)
+    if (!day.attendance.breakStart && day.attendance.breakEnd) {
+      validations.push({
+        code: "ERR-ATT-08C",
+        type: "error",
+        message: "Není vyplněn začátek přestávky.",
+        field: "breakStart",
+      });
+    }
+
+    // ERR-ATT-08: ShortBreak a BreakEndBeforeBreakStart
+    if (day.attendance.breakStart && day.attendance.breakEnd) {
+      const breakStart = toMinutes(day.attendance.breakStart);
+      const breakEnd = toMinutes(day.attendance.breakEnd);
+
+      let actualBreakEnd = breakEnd;
+      const isBreakOverMidnight = breakEnd < breakStart;
+      let isInvalidBreak = false;
+
+      if (isBreakOverMidnight) {
+        const breakDuration = breakEnd + 24 * 60 - breakStart;
+        if (breakDuration > 12 * 60) {
+          isInvalidBreak = true;
+          validations.push({
+            code: "ERR-ATT-08A",
+            type: "error",
+            message: "Konec přestávky musí být později než začátek přestávky.",
+            field: "breakEnd",
+          });
+        } else {
+          actualBreakEnd = breakEnd + 24 * 60;
+        }
+      }
+
+      if (!isInvalidBreak) {
+        if (actualBreakEnd <= breakStart) {
+          validations.push({
+            code: "ERR-ATT-08A",
+            type: "error",
+            message: "Konec přestávky musí být později než začátek přestávky.",
+            field: "breakEnd",
+          });
+        } else {
+          const breakDuration = toHours(actualBreakEnd - breakStart);
+          if (breakDuration < MIN_BREAK_DURATION_HOURS) {
+            validations.push({
+              code: "ERR-ATT-08",
+              type: "error",
+              message: `Délka přestávky musí být alespoň ${MIN_BREAK_DURATION_HOURS * 60} minut.`,
+              field: "breakEnd",
+            });
+          }
+        }
+      }
+    }
+
+    // ERR-ATT-09: BreakOutsideWorkInterval
+    if (day.attendance.clockIn && day.attendance.clockOut && (day.attendance.breakStart || day.attendance.breakEnd)) {
+      const clockIn = toMinutes(day.attendance.clockIn);
+      const clockOut = toMinutes(day.attendance.clockOut);
+      const isNightShift = clockOut < clockIn;
+
+      if (day.attendance.breakStart) {
+        const breakStart = toMinutes(day.attendance.breakStart);
+        const breakStartValid = isNightShift
+          ? (breakStart >= clockIn && breakStart <= 24 * 60 - 1) || (breakStart >= 0 && breakStart <= clockOut)
+          : breakStart >= clockIn && breakStart <= clockOut;
+        if (!breakStartValid) {
+          validations.push({
+            code: "ERR-ATT-09",
+            type: "error",
+            message: "Začátek přestávky musí být mezi příchodem a odchodem.",
+            field: "breakStart",
+          });
+        }
+      }
+
+      if (day.attendance.breakEnd) {
+        const breakEnd = toMinutes(day.attendance.breakEnd);
+        const breakEndValid = isNightShift
+          ? (breakEnd >= clockIn && breakEnd <= 24 * 60 - 1) || (breakEnd >= 0 && breakEnd <= clockOut)
+          : breakEnd >= clockIn && breakEnd <= clockOut;
+        if (!breakEndValid) {
+          validations.push({
+            code: "ERR-ATT-09",
+            type: "error",
+            message: "Konec přestávky musí být mezi příchodem a odchodem.",
+            field: "breakEnd",
+          });
+        }
+      }
+    }
+
     if (!day.isWeekend && !day.isHoliday) {
       // ERR-ATT-06: MissingBreak
       if (day.attendance.clockIn && day.attendance.clockOut) {
@@ -144,133 +248,6 @@ export const TimesheetValidations = {
         }
       }
 
-      // ERR-ATT-08B: MissingBreakEnd (pokud je vyplněn začátek, musí být i konec)
-      if (day.attendance.breakStart && !day.attendance.breakEnd) {
-        validations.push({
-          code: "ERR-ATT-08B",
-          type: "error",
-          message: "Není vyplněn konec přestávky.",
-          field: "breakEnd",
-        });
-      }
-
-      // ERR-ATT-08C: MissingBreakStart (pokud je vyplněn konec, musí být i začátek)
-      if (!day.attendance.breakStart && day.attendance.breakEnd) {
-        validations.push({
-          code: "ERR-ATT-08C",
-          type: "error",
-          message: "Není vyplněn začátek přestávky.",
-          field: "breakStart",
-        });
-      }
-
-      // ERR-ATT-08: ShortBreak a BreakEndBeforeBreakStart
-      if (day.attendance.breakStart && day.attendance.breakEnd) {
-        const breakStart = toMinutes(day.attendance.breakStart);
-        const breakEnd = toMinutes(day.attendance.breakEnd);
-
-        // Pokud je konec přestávky < začátek, může to být přestávka přes půlnoc
-        let actualBreakEnd = breakEnd;
-        const isBreakOverMidnight = breakEnd < breakStart;
-        let isInvalidBreak = false;
-
-        if (isBreakOverMidnight) {
-          const breakDuration = breakEnd + 24 * 60 - breakStart;
-          // Pokud by přestávka přes půlnoc byla víc než 12 hodin, je to nevalidní
-          // (např. 12:30-12:00 není přestávka přes půlnoc, ale nevalidní přestávka)
-          if (breakDuration > 12 * 60) {
-            // Nevalidní přestávka - konec před začátkem
-            isInvalidBreak = true;
-            validations.push({
-              code: "ERR-ATT-08A",
-              type: "error",
-              message: "Konec přestávky musí být později než začátek přestávky.",
-              field: "breakEnd",
-            });
-          } else {
-            actualBreakEnd = breakEnd + 24 * 60;
-          }
-        }
-
-        // Pokud není nevalidní, pokračujeme s dalšími kontrolami
-        if (!isInvalidBreak) {
-          // Začátek přestávky musí být menší než konec přestávky
-          if (actualBreakEnd <= breakStart) {
-            validations.push({
-              code: "ERR-ATT-08A",
-              type: "error",
-              message: "Konec přestávky musí být později než začátek přestávky.",
-              field: "breakEnd",
-            });
-          } else {
-            const breakDuration = toHours(actualBreakEnd - breakStart);
-            if (breakDuration < MIN_BREAK_DURATION_HOURS) {
-              validations.push({
-                code: "ERR-ATT-08",
-                type: "error",
-                message: `Délka přestávky musí být alespoň ${MIN_BREAK_DURATION_HOURS * 60} minut.`,
-                field: "breakEnd",
-              });
-            }
-          }
-        }
-      }
-
-      // ERR-ATT-09: BreakOutsideWorkInterval
-      if (day.attendance.clockIn && day.attendance.clockOut && (day.attendance.breakStart || day.attendance.breakEnd)) {
-        const clockIn = toMinutes(day.attendance.clockIn);
-        const clockOut = toMinutes(day.attendance.clockOut);
-
-        // Pokud je odchod < příchod, znamená to noční směnu přes půlnoc
-        const isNightShift = clockOut < clockIn;
-
-        if (day.attendance.breakStart) {
-          const breakStart = toMinutes(day.attendance.breakStart);
-          let breakStartValid = false;
-
-          if (isNightShift) {
-            // Pro noční směnu: přestávka může být buď před půlnocí (např. 22:00-23:59) nebo po půlnoci (00:00-08:00)
-            // Musí být v rozmezí [clockIn, 23:59] nebo [00:00, clockOut]
-            breakStartValid = (breakStart >= clockIn && breakStart <= 24 * 60 - 1) || (breakStart >= 0 && breakStart <= clockOut);
-          } else {
-            // Pro běžnou směnu: přestávka musí být mezi příchodem a odchodem
-            breakStartValid = breakStart >= clockIn && breakStart <= clockOut;
-          }
-
-          if (!breakStartValid) {
-            validations.push({
-              code: "ERR-ATT-09",
-              type: "error",
-              message: "Začátek přestávky musí být mezi příchodem a odchodem.",
-              field: "breakStart",
-            });
-          }
-        }
-
-        if (day.attendance.breakEnd) {
-          const breakEnd = toMinutes(day.attendance.breakEnd);
-          let breakEndValid = false;
-
-          if (isNightShift) {
-            // Pro noční směnu: přestávka může být buď před půlnocí (např. 22:00-23:59) nebo po půlnoci (00:00-08:00)
-            // Musí být v rozmezí [clockIn, 23:59] nebo [00:00, clockOut]
-            breakEndValid = (breakEnd >= clockIn && breakEnd <= 24 * 60 - 1) || (breakEnd >= 0 && breakEnd <= clockOut);
-          } else {
-            // Pro běžnou směnu: přestávka musí být mezi příchodem a odchodem
-            breakEndValid = breakEnd >= clockIn && breakEnd <= clockOut;
-          }
-
-          if (!breakEndValid) {
-            validations.push({
-              code: "ERR-ATT-09",
-              type: "error",
-              message: "Konec přestávky musí být mezi příchodem a odchodem.",
-              field: "breakEnd",
-            });
-          }
-        }
-      }
-
       // WAR-ATT-04: NightShift
       if (day.attendance.clockIn || day.attendance.clockOut) {
         const clockIn = day.attendance.clockIn ? toMinutes(day.attendance.clockIn) : null;
@@ -293,8 +270,8 @@ export const TimesheetValidations = {
       }
     }
 
-    // WAR-COM-01: WeekendWork
-    if (day.isWeekend && TimesheetLogic.calculateWorkedHours(day.attendance) > 0) {
+    // WAR-COM-01: WeekendWork (pokud je vyplněn alespoň příchod nebo odchod – nezávisle na platnosti rozsahu)
+    if (day.isWeekend && (day.attendance.clockIn || day.attendance.clockOut)) {
       validations.push({
         code: "WAR-COM-01",
         type: "warning",
@@ -302,8 +279,8 @@ export const TimesheetValidations = {
       });
     }
 
-    // WAR-COM-02: HolidayWork
-    if (day.isHoliday && TimesheetLogic.calculateWorkedHours(day.attendance) > 0) {
+    // WAR-COM-02: HolidayWork (pokud je vyplněn alespoň příchod nebo odchod)
+    if (day.isHoliday && (day.attendance.clockIn || day.attendance.clockOut)) {
       validations.push({
         code: "WAR-COM-02",
         type: "warning",

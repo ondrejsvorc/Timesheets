@@ -1,20 +1,20 @@
-import { Suspense, useState, type Dispatch, type SetStateAction } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useNavigate } from "react-router";
 import { useImmer } from "use-immer";
-import { BackButton, SaveButton } from "@/components/shared/buttons/ActionButtons";
+import { BackButton, FullscreenButton, SaveButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Button } from "@/components/ui/button";
+import { Texts } from "@/constants/texts";
 import { Routes } from "@/constants/routes";
 import type { GetEmployeeResponse } from "@/features/employee/api/getEmployee";
 import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
 import { cn } from "@/utils/cn";
-import { Maximize2, Minimize2 } from "lucide-react";
-import { EmployeeTimesheetsOverview } from "./EmployeeTimesheetsOverview";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
-import type { Timesheet, TimesheetDay } from "./Timesheet";
-import { TimesheetTable } from "./TimesheetTable";
+import type { Timesheet, TimesheetDay } from "../Timesheet";
+import { TimesheetGrid } from "./grid/TimesheetGrid";
+import { TimesheetsOverview } from "./TimesheetsOverview";
 
 interface TimesheetPageLoaderData {
   employeePromise: Promise<GetEmployeeResponse>;
@@ -28,23 +28,23 @@ export const TimesheetPage = () => {
 
   return (
     <>
-      {!isFullscreen && (
+      <div className={cn(isFullscreen && "hidden")}>
         <Suspense fallback={<GenericSkeleton />}>
           <Await resolve={loaderData.employeePromise}>
             <TimesheetPageHeader />
           </Await>
         </Suspense>
-      )}
-      {!isFullscreen && (
+      </div>
+      <div className={cn(isFullscreen && "hidden")}>
         <Suspense fallback={<GenericSkeleton />}>
           <Await resolve={loaderData.overviewPromise}>
-            <EmployeeTimesheetsOverview />
+            <TimesheetsOverview />
           </Await>
         </Suspense>
-      )}
+      </div>
       <Suspense fallback={<GenericSkeleton />}>
         <Await resolve={loaderData.timesheetPromise}>
-          <TimesheetPageContent isFullscreen={isFullscreen} setIsFullscreen={setIsFullscreen} />
+          <TimesheetPageContent isFullscreen={isFullscreen} onToggleFullscreen={() => setIsFullscreen((current) => !current)} />
         </Await>
       </Suspense>
     </>
@@ -66,26 +66,27 @@ const TimesheetPageHeader = () => {
   );
 };
 
-const TimesheetPageContent = ({
-  isFullscreen,
-  setIsFullscreen,
-}: {
-  isFullscreen: boolean;
-  setIsFullscreen: Dispatch<SetStateAction<boolean>>;
-}) => {
+const TimesheetPageContent = ({ isFullscreen, onToggleFullscreen }: { isFullscreen: boolean; onToggleFullscreen: () => void }) => {
   const initialTimesheet = useAsyncValue() as Timesheet;
-  const [timesheet, updateTimesheet] = useImmer<Timesheet>(initialTimesheet);
+  const [timesheet, setTimesheet] = useImmer<Timesheet>(initialTimesheet);
 
-  const handleUpdateDay = (date: string, recipe: (day: TimesheetDay) => void) => {
-    updateTimesheet((draft) => {
-      const day = draft.days.find((dayInstance) => dayInstance.date === date);
-      if (day) {
-        recipe(day);
-      }
-    });
-  };
+  const handleUpdateDay = useCallback(
+    (dayIndex: number, updater: (day: TimesheetDay) => void) => {
+      setTimesheet((draft) => {
+        const day = draft.days[dayIndex];
+        if (!day) {
+          throw new RangeError(`Invalid day index: ${dayIndex}`);
+        }
+        updater(day);
+      });
+    },
+    [setTimesheet]
+  );
+
+  console.log(timesheet);
 
   const handleSave = async (_event: React.MouseEvent<HTMLButtonElement>, _signal: AbortSignal) => {
+    // TODO: Implement save
     return Promise.resolve();
   };
 
@@ -93,24 +94,21 @@ const TimesheetPageContent = ({
     <div className={cn(isFullscreen && "fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background p-4 md:p-6")}>
       {!isFullscreen && (
         <SubPageHeader>
-          <SubPageTitle>Kombinovaný výkaz</SubPageTitle>
+          <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
         </SubPageHeader>
       )}
       <div className={cn("mb-6 flex flex-wrap items-center justify-between gap-3", isFullscreen && "bg-background/95")}>
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="button" variant="outline">Upravit</Button>
-          <Button type="button" variant="outline">Změnit stav výkazu</Button>
-          <Button type="button" variant="outline">Exportovat</Button>
+          <Button type="button" variant="outline">{Texts.edit}</Button>
+          <Button type="button" variant="outline">{Texts.changeTimesheetStatus}</Button>
+          <Button type="button" variant="outline">{Texts.export}</Button>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <Button type="button" variant="outline" onClick={() => setIsFullscreen((current) => !current)}>
-            {isFullscreen ? <Minimize2 /> : <Maximize2 />}
-            {isFullscreen ? "Ukončit fullscreen" : "Fullscreen"}
-          </Button>
-          <SaveButton onClick={handleSave}>Uložit změny</SaveButton>
+          <FullscreenButton onClick={onToggleFullscreen} isFullscreen={isFullscreen} />
+          <SaveButton onClick={handleSave}>{Texts.saveChanges}</SaveButton>
         </div>
       </div>
-      <TimesheetTable timesheet={timesheet} onUpdateDay={handleUpdateDay} className={isFullscreen ? "min-h-0 flex-1 max-h-none" : undefined} />
+      <TimesheetGrid timesheet={timesheet} onUpdateDay={handleUpdateDay} className={isFullscreen ? "min-h-0 flex-1 max-h-none" : undefined} />
     </div>
   );
 };

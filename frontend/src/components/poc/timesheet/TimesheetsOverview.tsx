@@ -7,7 +7,7 @@ import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTime
 
 const formatWorkload = (value: number) => `${Number((value * 100).toFixed(2)).toString().replace(".", ",")} %`;
 
-export const EmployeeTimesheetsOverview = () => {
+export const TimesheetsOverview = () => {
   const overview = useAsyncValue() as GetCombinedTimesheetOverviewResponse;
 
   if (overview.items.length === 0) {

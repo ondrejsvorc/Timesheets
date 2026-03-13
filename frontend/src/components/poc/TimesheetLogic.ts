@@ -1,4 +1,5 @@
 import type { Attendance, TimeRange, Timesheet, TimesheetDay } from "./Timesheet";
+import { TimesheetLogic2 } from "./timesheet/TimesheetLogic2";
 
 /**
  * Converts "HH:mm" time format to minutes.
@@ -88,63 +89,47 @@ export const TimesheetLogic = {
   /**
    * Vypočítá počet nočních hodin (22:00 - 05:59) v pracovní době
    */
-  calculateNightHours: (attendance: Attendance): number => {
-    if (!attendance.clockIn || !attendance.clockOut) {
+  calculateNightHours: (clockIn: string, clockOut: string): number => {
+    const overlap = (a1: number, a2: number, b1: number, b2: number): number => {
+      const start = Math.max(a1, b1);
+      const end = Math.min(a2, b2);
+      return Math.max(0, end - start);
+    };
+  
+    const clockInMinutes = toMinutes(clockIn);
+    const clockOutMinutes = toMinutes(clockOut);
+  
+    const crossesMidnight = clockOutMinutes < clockInMinutes;
+  
+    const duration = crossesMidnight
+      ? clockOutMinutes + 1440 - clockInMinutes
+      : clockOutMinutes - clockInMinutes;
+  
+    if (duration > 12 * 60) {
       return 0;
     }
-
-    const clockIn = toMinutes(attendance.clockIn);
-    const clockOut = toMinutes(attendance.clockOut);
-
-    const nightStart = 22 * 60; // 22:00 = 1320 minut
-    const nightEnd = 5 * 60 + 59; // 05:59 = 359 minut
-
-    // Pokud je odchod < příchod, znamená to noční směnu přes půlnoc
-    let actualClockOut = clockOut;
-    const isNightShift = clockOut < clockIn;
-    if (isNightShift) {
-      actualClockOut = clockOut + 24 * 60;
-      // Pokud je to víc než 12h, není to validní noční směna
-      if (actualClockOut - clockIn > 12 * 60) {
-        return 0;
-      }
+  
+    const night1Start = 22 * 60;
+    const night1End = 24 * 60;
+  
+    const night2Start = 0;
+    const night2End = 6 * 60;
+  
+    let nightMinutes: number;
+  
+    if (!crossesMidnight) {
+      nightMinutes =
+        overlap(clockInMinutes, clockOutMinutes, night1Start, night1End) +
+        overlap(clockInMinutes, clockOutMinutes, night2Start, night2End);
+    } else {
+      nightMinutes =
+        overlap(clockInMinutes, 1440, night1Start, night1End) +
+        overlap(clockInMinutes, 1440, night2Start, night2End) +
+        overlap(0, clockOutMinutes, night1Start, night1End) +
+        overlap(0, clockOutMinutes, night2Start, night2End);
     }
-
-    let nightMinutes = 0;
-
-    // Noční čas je 22:00-05:59 (přes půlnoc)
-    // Projdeme každou minutu pracovní doby a zkontrolujeme, zda je v nočním čase
-    for (let minute = clockIn; minute < actualClockOut; minute++) {
-      const minuteOfDay = minute % (24 * 60); // Minuta v rámci dne (0-1439)
-      
-      // Zkontrolujeme, zda je minuta v nočním čase (22:00-05:59)
-      if (minuteOfDay >= nightStart || minuteOfDay <= nightEnd) {
-        nightMinutes++;
-      }
-    }
-
-    // Odečteme přestávku, pokud zasahuje do nočního času (22:00-05:59)
-    if (attendance.breakStart && attendance.breakEnd) {
-      const breakStart = toMinutes(attendance.breakStart);
-      const breakEnd = toMinutes(attendance.breakEnd);
-      
-      // Pokud je konec přestávky < začátek, znamená to přestávku přes půlnoc
-      let actualBreakEnd = breakEnd;
-      if (breakEnd < breakStart) {
-        actualBreakEnd = breakEnd + 24 * 60;
-      }
-      
-      // Projdeme každou minutu přestávky a zkontrolujeme, zda je v nočním čase
-      for (let minute = breakStart; minute < actualBreakEnd; minute++) {
-        const minuteOfDay = minute % (24 * 60);
-        // Zkontrolujeme, zda je minuta v nočním čase (22:00-05:59)
-        if (minuteOfDay >= nightStart || minuteOfDay <= nightEnd) {
-          nightMinutes--;
-        }
-      }
-    }
-
-    return Number((Math.max(0, nightMinutes) / 60).toFixed(2));
+  
+    return Number((nightMinutes / 60).toFixed(2));
   },
 
   calculateSchedulesTotal: (schedules: TimeRange[]): number => {
@@ -392,6 +377,16 @@ export const TimesheetLogic = {
     const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
     const allocated = day.coreHours + Object.values(day.projectHours).reduce((sum, h) => sum + h, 0);
     return Number((worked - allocated).toFixed(2));
+  },
+
+  /** Single call for day row: workedHours, nightHours, stagHours, balance. */
+  getDayTotals: (day: TimesheetDay): { workedHours: number; nightHours: number; stagHours: number; balance: number } => {
+    const workedHours = TimesheetLogic.calculateWorkedHours(day.attendance);
+    const nightHours = TimesheetLogic.calculateNightHours(day.attendance.clockIn, day.attendance.clockOut);
+    const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
+    const allocated = day.coreHours + Object.values(day.projectHours).reduce((sum, h) => sum + h, 0);
+    const balance = TimesheetLogic2.calculateDayBalance(workedHours, day.coreHours, day.projectHours);
+    return { workedHours, nightHours, stagHours, balance };
   },
 
   isValidTime: (time: string): boolean => {

@@ -1,12 +1,34 @@
 import { startTransition, useState } from "react";
-import { Input } from "../ui/input";
+import { Input } from "../../ui/input";
 
-interface TimeSmartInputProps {
+const formatSmartTime = (value: string): string => {
+  const clean = value.replace(/\D/g, "");
+  if (!clean) return "";
+
+  let hours = 0;
+  let minutes = 0;
+
+  if (clean.length <= 2) {
+    // Vstup "8" -> 08:00, "12" -> 12:00
+    hours = parseInt(clean);
+  } else {
+    // Vstup "1230" -> 12:30, "815" -> 08:15
+    hours = parseInt(clean.slice(0, -2));
+    minutes = parseInt(clean.slice(-2));
+  }
+
+  const h = Math.min(hours, 23);
+  const m = Math.min(minutes, 59);
+
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+};
+
+interface SmartTimeInputProps {
   value: string;
   onChange: (formattedValue: string) => void;
 }
 
-export const TimeSmartInput = ({ value, onChange }: TimeSmartInputProps) => {
+export const SmartTimeInput = ({ value, onChange }: SmartTimeInputProps) => {
   const [draft, setDraft] = useState<string>(value);
 
   const commit = () => {
@@ -36,24 +58,4 @@ export const TimeSmartInput = ({ value, onChange }: TimeSmartInputProps) => {
   );
 };
 
-const formatSmartTime = (value: string): string => {
-  const clean = value.replace(/\D/g, "");
-  if (!clean) return "";
 
-  let hours = 0;
-  let minutes = 0;
-
-  if (clean.length <= 2) {
-    // Vstup "8" -> 08:00, "12" -> 12:00
-    hours = parseInt(clean);
-  } else {
-    // Vstup "1230" -> 12:30, "815" -> 08:15
-    hours = parseInt(clean.slice(0, -2));
-    minutes = parseInt(clean.slice(-2));
-  }
-
-  const h = Math.min(hours, 23);
-  const m = Math.min(minutes, 59);
-
-  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-};

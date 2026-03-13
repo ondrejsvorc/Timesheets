@@ -2,7 +2,6 @@ import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
 
 export type GroupByOption = "Employee" | "Month";
 
-/** Request sent to API (no groupBy – grouping is frontend-only). */
 export interface GetContractTimesheetsRequest {
   fromYear: number;
   fromMonth: number;
@@ -11,7 +10,6 @@ export interface GetContractTimesheetsRequest {
   statuses?: string[];
 }
 
-/** One row per timesheet. */
 export interface TimesheetItem {
   id: string;
   employeeId: string;
@@ -23,7 +21,6 @@ export interface TimesheetItem {
   status: string;
 }
 
-/** Unique employees in the result (join by id). */
 export interface EmployeeItem {
   id: string;
   personalNumber: number;
@@ -36,12 +33,10 @@ export interface GetContractTimesheetsResponse {
   timesheets: TimesheetItem[];
 }
 
-/** Filter state in UI (includes groupBy for view only). */
 export interface ContractTimesheetsFilterCriteria extends GetContractTimesheetsRequest {
   groupBy: GroupByOption;
 }
 
-/** Build query string for contract timesheets API. */
 function buildTimesheetsQuery(request: GetContractTimesheetsRequest): string {
   const params = new URLSearchParams();
   params.set("fromYear", String(request.fromYear));
@@ -54,7 +49,6 @@ function buildTimesheetsQuery(request: GetContractTimesheetsRequest): string {
   return params.toString();
 }
 
-/** Call real API for contract timesheets. */
 export function getContractTimesheets(
   _projectId: string,
   contractId: string,
@@ -77,7 +71,6 @@ export function buildTimesheetsRequestFromUrl(url: URL): ContractTimesheetsFilte
   return { fromYear, fromMonth, toYear, toMonth, groupBy, statuses: statuses ?? undefined };
 }
 
-/** Compare statuses array (order-independent). */
 export function statusesEqual(a: string[] | undefined, b: string[] | undefined): boolean {
   if (!a && !b) return true;
   if (!a || !b || a.length !== b.length) return false;
@@ -85,7 +78,6 @@ export function statusesEqual(a: string[] | undefined, b: string[] | undefined):
   return a.every((s) => set.has(s));
 }
 
-/** True if (year, month) is inside [fromYear/fromMonth, toYear/toMonth] inclusive. */
 export function monthInRange(
   year: number,
   month: number,
@@ -100,7 +92,6 @@ export function monthInRange(
   return true;
 }
 
-/** Request range is fully inside cached range. */
 export function rangeIsSubset(
   reqFromYear: number,
   reqFromMonth: number,
@@ -117,7 +108,6 @@ export function rangeIsSubset(
   );
 }
 
-/** View shape for UI: one row in a table (no employeeId/year/month in month view). */
 export interface TimesheetRowView {
   id: string;
   position: string | null;
@@ -127,7 +117,6 @@ export interface TimesheetRowView {
   month?: number;
 }
 
-/** View shape for UI: employee with timesheets (for both month and employee views). */
 export interface EmployeeGroupView {
   id: string;
   allTimesheetsApproved: boolean;
@@ -145,7 +134,6 @@ export interface MonthGroupView {
 
 const APPROVED_STATUS = "Schválený";
 
-/** Build "by month" view from flat data. */
 export function buildMonthsView(data: GetContractTimesheetsResponse): MonthGroupView[] {
   const byEmployee = new Map<string, EmployeeItem>();
   data.employees.forEach((e) => byEmployee.set(e.id, e));
@@ -191,7 +179,6 @@ export function buildMonthsView(data: GetContractTimesheetsResponse): MonthGroup
   return months;
 }
 
-/** Build "by employee" view from flat data. */
 export function buildEmployeesView(data: GetContractTimesheetsResponse): EmployeeGroupView[] {
   const byEmployee = new Map<string, EmployeeItem>();
   data.employees.forEach((e) => byEmployee.set(e.id, e));
@@ -225,7 +212,6 @@ export function buildEmployeesView(data: GetContractTimesheetsResponse): Employe
   return out;
 }
 
-/** Months in [req] that are outside [cache]. Returns list of { year, month } to fetch. */
 export function getDeltaMonths(
   reqFromYear: number,
   reqFromMonth: number,

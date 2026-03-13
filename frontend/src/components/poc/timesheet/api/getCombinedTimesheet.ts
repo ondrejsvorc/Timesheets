@@ -1,5 +1,5 @@
 import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
-import type { Timesheet } from "../Timesheet";
+import type { Timesheet } from "../../Timesheet";
 
 export const getCombinedTimesheet = (employeeId: string, year: number, month: number) => {
   const params = new URLSearchParams({
@@ -9,6 +9,6 @@ export const getCombinedTimesheet = (employeeId: string, year: number, month: nu
   });
 
   return {
-    promise: withOptionalDelay("slow", () => customFetch<Timesheet>(`${ApiUrl}/timesheets/combined?${params.toString()}`)),
+    promise: withOptionalDelay("slowest", () => customFetch<Timesheet>(`${ApiUrl}/timesheets/combined?${params.toString()}`)),
   };
 };

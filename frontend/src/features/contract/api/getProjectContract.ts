@@ -6,10 +6,7 @@ export interface GetProjectContractResponse {
   registrationNumber: string;
 }
 
-export const getProjectContract = (
-  projectId: string,
-  contractId: string,
-): { promise: Promise<GetProjectContractResponse | null> } => {
+export const getProjectContract = (projectId: string, contractId: string): { promise: Promise<GetProjectContractResponse | null> } => {
   return {
     promise: withOptionalDelay("fast", async () => {
       const response = await fetch(`${ApiUrl}/projects/${projectId}/contracts/${contractId}`);

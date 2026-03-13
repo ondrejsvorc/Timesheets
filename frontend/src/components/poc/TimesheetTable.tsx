@@ -7,14 +7,14 @@ import { cn } from "@/utils/cn";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "../shared/inputs/MultiSelectComboBox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { ScheduleCell, ScheduleEditorModal } from "./ScheduleCell";
-import { TimeSmartInput } from "./TimeSmartInput";
+import { TimeSmartInput } from "../shared/inputs/SmartTimeInput";
 import type { TimeRange, Timesheet, TimesheetDay } from "./Timesheet";
 import { TimesheetLogic } from "./TimesheetLogic";
 import { TimesheetValidations } from "./TimesheetValidations";
 
 interface TimesheetTableProps {
   timesheet: Timesheet;
-  onUpdateDay: (date: string, recipe: (draftDay: TimesheetDay) => void) => void;
+  onUpdateDay: (date: string, updater: (draftDay: TimesheetDay) => void) => void;
   className?: string;
 }
 
@@ -28,8 +28,8 @@ export const TimesheetTable = ({ timesheet, onUpdateDay, className }: TimesheetT
   };
 
   const onUpdateByDate = useCallback(
-    (date: string, recipe: (draftDay: TimesheetDay) => void) => {
-      onUpdateDay(date, recipe);
+    (date: string, updater: (draftDay: TimesheetDay) => void) => {
+      onUpdateDay(date, updater);
     },
     [onUpdateDay],
   );
@@ -108,7 +108,6 @@ export const TimesheetTable = ({ timesheet, onUpdateDay, className }: TimesheetT
     </div>
   );
 };
-
 interface TimesheetRowProps {
   day: TimesheetDay;
   timesheet: Timesheet;
@@ -198,8 +197,7 @@ const DecimalInput = ({ value, onChange }: { value: number; onChange: (val: numb
   );
 };
 
-export const TimesheetRow = React.memo(
-  ({ day, timesheet, onUpdate, setEditingDay }: TimesheetRowProps) => {
+export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDay }: TimesheetRowProps) => {
     const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
     const workedReadable = TimesheetLogic.formatWorkedHoursToHuman(worked);
     const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
@@ -269,8 +267,6 @@ export const TimesheetRow = React.memo(
         </TooltipProvider>
       );
     };
-
-    console.log("render row", day.date);
 
     return (
       <TableRow
@@ -567,3 +563,4 @@ export const TimesheetTableFooter = ({ timesheet }: TimesheetTableFooterProps) =
     </TableFooter>
   );
 };
+

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
-import { ArrowLeft, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Maximize2, Minimize2, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import type { MouseEvent, ReactNode } from "react";
 import { toast } from "sonner";
 import { BusyButton } from "./BusyButton";
@@ -75,6 +75,23 @@ export const SaveButton = ({ onClick, disabled, children }: SaveButtonProps) => 
   >
     {children ?? null}
   </BusyButton>
+);
+
+interface FullscreenButtonProps {
+  onClick: (event: MouseEvent<HTMLButtonElement>) => void | Promise<void>;
+  disabled?: boolean;
+  isFullscreen?: boolean;
+  children?: ReactNode;
+}
+
+export const FullscreenIcon = ({ isFullscreen = false }: { isFullscreen?: boolean }) => isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />;
+export const FullscreenButton = ({ onClick, disabled, isFullscreen = false, children }: FullscreenButtonProps) => (
+  <Button type="button" variant="outline" onClick={onClick} disabled={disabled}>
+    <span className="inline-flex items-center gap-2">
+      <FullscreenIcon isFullscreen={isFullscreen} />
+      {children ?? (isFullscreen ? Texts.exitFullscreen : Texts.enterFullscreen)}
+    </span>
+  </Button>
 );
 
 interface BackButtonProps {
