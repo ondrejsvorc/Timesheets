@@ -41,7 +41,9 @@ public sealed class AddContractEmployee : IEndpoint
         }
 
         bool alreadyExists = await dbContext.ContractEmployees
-        .AnyAsync(ce => ce.ContractId == id && ce.EmployeeId == request.EmployeeId && ce.Position == request.Position, cancellationToken);
+            .AsNoTracking()
+            .AnyAsync(ce => ce.ContractId == id && ce.EmployeeId == request.EmployeeId && ce.Position == request.Position, cancellationToken);
+
         if (alreadyExists)
         {
             return TypedResults.BadRequest("Employee already has this position in contract.");
