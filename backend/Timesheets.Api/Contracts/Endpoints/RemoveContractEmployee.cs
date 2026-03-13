@@ -1,5 +1,6 @@
-﻿using FluentValidation;
-using Microsoft.AspNetCore.Http.HttpResults;
+﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 
@@ -12,12 +13,17 @@ public sealed class RemoveContractEmployee : IEndpoint
            .WithSummary("Remove Employee from Contract")
            .WithRequestValidation<Request>();
 
-    public sealed record Request;
-    public sealed record Response;
-    public sealed class Validator : AbstractValidator<Request> { }
-
-    private static async Task<Results<NoContent, NotFound>> Handle(Guid id, Guid employeeId, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound>> Handle(Guid id, Guid employeeId, [FromQuery] string position, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        int affected = await dbContext.ContractEmployees
+            .Where(ce => ce.ContractId == id && ce.EmployeeId == employeeId && ce.Position == position)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        if (affected == 0)
+        {
+            return TypedResults.NotFound();
+        }
+
+        return TypedResults.NoContent();
     }
 }
