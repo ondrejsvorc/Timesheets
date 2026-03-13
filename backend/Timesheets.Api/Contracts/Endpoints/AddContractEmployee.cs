@@ -16,8 +16,8 @@ public sealed class AddContractEmployee : IEndpoint
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(Guid EmployeeId, string? Position, decimal? Workload, DateTime StartDate, DateTime? EndDate);
-    public sealed record Response(Guid ContractId, Guid EmployeeId, string? Position, decimal? Workload, DateTime StartDate, DateTime? EndDate, int PersonalNumber, string FullName, Guid? EmployeeTypeId);
+    public sealed record Request(Guid EmployeeId, string Position, decimal Workload, DateTime StartDate, DateTime? EndDate);
+    public sealed record Response(Guid ContractId, Guid EmployeeId, string Position, decimal Workload, DateTime StartDate, DateTime? EndDate, int PersonalNumber, string FullName, Guid? EmployeeTypeId);
     public sealed class Validator : AbstractValidator<Request> { }
 
     private static async Task<Results<Created<Response>, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -52,8 +52,8 @@ public sealed class AddContractEmployee : IEndpoint
             Id = Guid.NewGuid(),
             ContractId = id,
             EmployeeId = request.EmployeeId,
-            Position = request.Position ?? string.Empty,
-            Workload = request.Workload ?? 0,
+            Position = request.Position,
+            Workload = request.Workload,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
         };
@@ -61,7 +61,7 @@ public sealed class AddContractEmployee : IEndpoint
         dbContext.ContractEmployees.Add(newContractEmployee);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        Employee employee = await dbContext.Employees
+        var employee = await dbContext.Employees
             .AsNoTracking()
             .Where(e => e.Id == request.EmployeeId)
             .Select(e => new { e.PersonalNumber, e.FullName, e.EmployeeTypeId })
