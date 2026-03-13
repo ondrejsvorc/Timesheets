@@ -10,9 +10,7 @@ public sealed class RemoveContractEmployee : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
         app.MapDelete("/{id}/employees/{employeeId}", Handle)
-           .WithSummary("Remove Employee from Contract")
-           .WithRequestValidation<Request>();
-
+           .WithSummary("Remove Employee from Contract");
     private static async Task<Results<NoContent, NotFound>> Handle(Guid id, Guid employeeId, [FromQuery] string position, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         int affected = await dbContext.ContractEmployees
