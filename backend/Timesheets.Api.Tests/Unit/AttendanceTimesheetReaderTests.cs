@@ -18,7 +18,7 @@ public class AttendanceTimesheetReaderTests
     public void Read_ValidFile_ReturnsCorrectTimesheet()
     {
         // Arrange
-        string filePath = Path.Combine("TestData", "valid_attendance.xlsx");
+        string filePath = Path.Combine("Unit", "TestData", "valid_attendance.xlsx");
         using FileStream stream = File.OpenRead(filePath);
 
         // Act
@@ -45,7 +45,7 @@ public class AttendanceTimesheetReaderTests
     public void Read_MalformedMetadata_HandlesGracefully()
     {
         // Arrange
-        string filePath = Path.Combine("TestData", "invalid_attendance_malformed_metadata.xlsx");
+        string filePath = Path.Combine("Unit", "TestData", "invalid_attendance_malformed_metadata.xlsx");
         using FileStream stream = File.OpenRead(filePath);
 
         // Act
@@ -68,7 +68,7 @@ public class AttendanceTimesheetReaderTests
     public void Read_MalformedTimes_ReturnsNullForInvalidCells()
     {
         // Arrange
-        string filePath = Path.Combine("TestData", "invalid_attendance_malformed_times.xlsx");
+        string filePath = Path.Combine("Unit", "TestData", "invalid_attendance_malformed_times.xlsx");
         using FileStream stream = File.OpenRead(filePath);
 
         // Act
@@ -89,7 +89,7 @@ public class AttendanceTimesheetReaderTests
     public void Read_ShortMonth_ReturnsCorrectNumberOfDays()
     {
         // Arrange
-        string filePath = Path.Combine("TestData", "edge_case_attendance_short_month.xlsx");
+        string filePath = Path.Combine("Unit", "TestData", "edge_case_attendance_short_month.xlsx");
         using FileStream stream = File.OpenRead(filePath);
 
         // Act
