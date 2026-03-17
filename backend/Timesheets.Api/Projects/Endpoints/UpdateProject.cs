@@ -16,7 +16,13 @@ public sealed class UpdateProject : IEndpoint
            .WithRequestValidation<Request>();
 
     public sealed record Request(string Name, string RegistrationNumber, DateTime StartDate, DateTime? EndDate);
-    public sealed class Validator : AbstractValidator<Request> { }
+    public sealed class Validator : AbstractValidator<Request>
+    {
+        public Validator()
+        {
+            RuleFor(x => x.Name).NotEmpty();
+        }
+    }
 
     private static async Task<Results<NoContent, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {

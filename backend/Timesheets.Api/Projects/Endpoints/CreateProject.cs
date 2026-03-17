@@ -17,7 +17,13 @@ public sealed class CreateProject : IEndpoint
 
     public sealed record Request(string Name, string RegistrationNumber, DateTime StartDate, DateTime? EndDate);
     public sealed record Response(ProjectItem Project);
-    public sealed class Validator : AbstractValidator<Request> { }
+    public sealed class Validator : AbstractValidator<Request>
+    {
+        public Validator()
+        {
+            RuleFor(x => x.Name).NotEmpty();
+        }
+    }
 
     private static async Task<Results<Created<Response>, BadRequest<string>>> Handle([FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
