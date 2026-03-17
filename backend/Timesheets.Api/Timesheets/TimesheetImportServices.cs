@@ -214,7 +214,7 @@ public sealed class AttendanceTimesheetImportService(
         {
             return new DetectionAttempt(
                 metadata,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, "Výkaz pro toto období již existuje.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
+                new AttendanceTimesheetDetectionResult(file.FileName, false, "Docházka pro toto období již existuje.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
             );
         }
 
@@ -236,6 +236,18 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
 
     public async Task<Guid> PersistAsync(Guid employeeId, AttendanceTimesheet importedTimesheet, CancellationToken cancellationToken)
     {
+        decimal projectWorkload = await dbContext.ProjectTimesheets
+            .AsNoTracking()
+            .Where(t => t.EmployeeId == employeeId && t.Year == importedTimesheet.Year && t.Month == importedTimesheet.Month)
+            .SumAsync(t => (decimal?)t.Workload, cancellationToken) ?? 0m;
+
+        if (projectWorkload > importedTimesheet.Workload)
+        {
+            throw new InvalidOperationException(
+                $"Nelze importovat. Projektové úvazky pro {importedTimesheet.Month:00}/{importedTimesheet.Year} jsou {projectWorkload:0.##}, ale importovaný celkový úvazek je {importedTimesheet.Workload:0.##}. Nejdřív upravte přiřazení na zakázky."
+            );
+        }
+
         bool timesheetExists = await dbContext.AttendanceTimesheets
             .AsNoTracking()
             .AnyAsync(
@@ -258,7 +270,6 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
         {
             Id = Guid.NewGuid(),
             EmployeeId = employeeId,
-            ContractId = DefaultImportContractId,
             TimesheetStatusId = draftStatus.Id,
             Year = importedTimesheet.Year,
             Month = importedTimesheet.Month,
@@ -286,8 +297,33 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
         }
 
         dbContext.AttendanceTimesheets.Add(timesheet);
+
+        // Persist monthly base workload for correct "kmene" calculation.
+        await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
+
         await dbContext.SaveChangesAsync(cancellationToken);
         return timesheet.Id;
+    }
+
+    private async Task UpsertEmployeeWorkloadAsync(Guid employeeId, int year, int month, decimal workload, CancellationToken cancellationToken)
+    {
+        Data.Models.EmployeeWorkload? existing = await dbContext.EmployeeWorkloads
+            .FirstOrDefaultAsync(w => w.EmployeeId == employeeId && w.Year == year && w.Month == month, cancellationToken);
+
+        if (existing is null)
+        {
+            dbContext.EmployeeWorkloads.Add(new Data.Models.EmployeeWorkload
+            {
+                Id = Guid.NewGuid(),
+                EmployeeId = employeeId,
+                Year = year,
+                Month = month,
+                Workload = workload,
+            });
+            return;
+        }
+
+        existing.Workload = workload;
     }
 
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);

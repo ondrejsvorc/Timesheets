@@ -21,6 +21,7 @@ export interface ProjectDefinition {
   id: string;
   registrationNumber: string;
   name: string;
+  position: string;
   workload: number;
 }
 
@@ -37,6 +38,7 @@ export interface Timesheet {
   year: number;
   month: number;
   totalWorkload: number;
+  hasBaseWorkload: boolean;
   core: CoreDefinition;
   projects: ProjectDefinition[];
   days: TimesheetDay[];

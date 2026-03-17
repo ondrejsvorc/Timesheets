@@ -7,7 +7,7 @@ import { cn } from "@/utils/cn";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "../shared/inputs/MultiSelectComboBox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { ScheduleCell, ScheduleEditorModal } from "./ScheduleCell";
-import { TimeSmartInput } from "../shared/inputs/SmartTimeInput";
+import { SmartTimeInput } from "../shared/inputs/SmartTimeInput";
 import type { TimeRange, Timesheet, TimesheetDay } from "./Timesheet";
 import { TimesheetLogic } from "./TimesheetLogic";
 import { TimesheetValidations } from "./TimesheetValidations";
@@ -234,7 +234,7 @@ export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDa
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="relative inline-block">
-                <TimeSmartInput value={value} onChange={onChange} />
+                <SmartTimeInput value={value} onChange={onChange} />
                 {(fieldErrors.length > 0 || fieldWarnings.length > 0) && (
                   <span
                     className={cn(
@@ -391,7 +391,7 @@ export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDa
 
         {/* Noční práce - readonly, automaticky dopočítané */}
         <TableCell className="text-center">
-          <span className="font-bold tabular-nums text-slate-600">{TimesheetLogic.calculateNightHours(day.attendance).toFixed(2)}</span>
+          <span className="font-bold tabular-nums text-slate-600">{TimesheetLogic.calculateNightHours(day.attendance.clockIn, day.attendance.clockOut).toFixed(2)}</span>
         </TableCell>
 
         {/* STAG (hod) */}

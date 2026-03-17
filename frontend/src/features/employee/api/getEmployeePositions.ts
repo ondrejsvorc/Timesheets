@@ -5,6 +5,7 @@ export interface EmployeePositionItem {
   projectName: string;
   contractId: string;
   contractName: string;
+  positionCode: string;
   position: string;
   startDate: string;
   endDate: string | null;

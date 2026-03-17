@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Timesheets.Api.Data;
@@ -11,9 +12,11 @@ using Timesheets.Api.Data;
 namespace Timesheets.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260317093655_AddContractEmployeePositionCode")]
+    partial class AddContractEmployeePositionCode
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -68,7 +71,7 @@ namespace Timesheets.Api.Data.Migrations
                         .HasColumnType("jsonb")
                         .HasDefaultValueSql("'[]'::jsonb");
 
-                    b.Property<decimal>("Workload")
+                    b.Property<decimal?>("Workload")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
 
@@ -90,6 +93,9 @@ namespace Timesheets.Api.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("ApprovedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ContractId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
@@ -117,9 +123,11 @@ namespace Timesheets.Api.Data.Migrations
 
                     b.HasIndex("ApprovedBy");
 
+                    b.HasIndex("ContractId");
+
                     b.HasIndex("TimesheetStatusId");
 
-                    b.HasIndex("EmployeeId", "Year", "Month")
+                    b.HasIndex("EmployeeId", "ContractId", "Year", "Month")
                         .IsUnique();
 
                     b.ToTable("AttendanceTimesheet", (string)null);
@@ -173,19 +181,17 @@ namespace Timesheets.Api.Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Position")
-                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
                     b.Property<string>("PositionCode")
-                        .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal>("Workload")
+                    b.Property<decimal?>("Workload")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
 
@@ -749,9 +755,6 @@ namespace Timesheets.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ContractEmployeeId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("ContractId")
                         .HasColumnType("uuid");
 
@@ -778,9 +781,7 @@ namespace Timesheets.Api.Data.Migrations
 
                     b.HasIndex("ContractId");
 
-                    b.HasIndex("EmployeeId");
-
-                    b.HasIndex("ContractEmployeeId", "Year", "Month")
+                    b.HasIndex("EmployeeId", "Year", "Month")
                         .IsUnique();
 
                     b.ToTable("ProjectTimesheet", (string)null);
@@ -837,6 +838,12 @@ namespace Timesheets.Api.Data.Migrations
                         .HasForeignKey("ApprovedBy")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Timesheets.Api.Data.Models.Contract", "Contract")
+                        .WithMany("AttendanceTimesheets")
+                        .HasForeignKey("ContractId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("Timesheets.Api.Data.Models.Employee", "Employee")
                         .WithMany("AttendanceTimesheets")
                         .HasForeignKey("EmployeeId")
@@ -850,6 +857,8 @@ namespace Timesheets.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("ApprovedByEmployee");
+
+                    b.Navigation("Contract");
 
                     b.Navigation("Employee");
 
@@ -999,12 +1008,6 @@ namespace Timesheets.Api.Data.Migrations
 
             modelBuilder.Entity("Timesheets.Api.Data.Models.ProjectTimesheet", b =>
                 {
-                    b.HasOne("Timesheets.Api.Data.Models.ContractEmployee", null)
-                        .WithMany()
-                        .HasForeignKey("ContractEmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Timesheets.Api.Data.Models.Contract", null)
                         .WithMany("ProjectTimesheets")
                         .HasForeignKey("ContractId")
@@ -1030,6 +1033,8 @@ namespace Timesheets.Api.Data.Migrations
 
             modelBuilder.Entity("Timesheets.Api.Data.Models.Contract", b =>
                 {
+                    b.Navigation("AttendanceTimesheets");
+
                     b.Navigation("ContractEmployees");
 
                     b.Navigation("ContractManagers");

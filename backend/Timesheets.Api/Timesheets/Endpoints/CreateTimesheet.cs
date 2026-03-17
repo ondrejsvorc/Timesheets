@@ -15,7 +15,7 @@ public sealed class CreateTimesheet : IEndpoint
            .WithSummary("Create Timesheet")
            .WithRequestValidation<Request>();
 
-    public sealed record Request(Guid EmployeeId, Guid ContractId, int Year, int Month);
+    public sealed record Request(Guid EmployeeId, int Year, int Month);
     public sealed record Response(Guid Id);
     public sealed class Validator : AbstractValidator<Request>
     {
@@ -25,82 +25,12 @@ public sealed class CreateTimesheet : IEndpoint
         }
     }
 
-    private static async Task<Results<Created<Response>, BadRequest<string>, NotFound>> Handle([FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static Task<Results<Created<Response>, BadRequest<string>, NotFound>> Handle([FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        bool employeeExists = await dbContext.Employees
-            .AsNoTracking()
-            .AnyAsync(e => e.Id == request.EmployeeId, cancellationToken);
-
-        if (!employeeExists)
-        {
-            return TypedResults.BadRequest("Employee not found.");
-        }
-
-        bool contractExists = await dbContext.Contracts
-            .AsNoTracking()
-            .AnyAsync(c => c.Id == request.ContractId, cancellationToken);
-
-        if (!contractExists)
-        {
-            return TypedResults.BadRequest("Contract not found.");
-        }
-
-        bool timesheetExists = await dbContext.AttendanceTimesheets
-            .AsNoTracking()
-            .AnyAsync(t => t.EmployeeId == request.EmployeeId
-                && t.ContractId == request.ContractId
-                && t.Year == request.Year
-                && t.Month == request.Month, cancellationToken);
-
-        if (timesheetExists)
-        {
-            return TypedResults.BadRequest("Timesheet for this employee, contract, and period already exists.");
-        }
-
-        TimesheetStatus? draftStatus = await dbContext.TimesheetStatuses
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Name == "Rozpracovaný", cancellationToken);
-
-        if (draftStatus is null)
-        {
-            return TypedResults.BadRequest("Draft status not found in database.");
-        }
-
-        Data.Models.AttendanceTimesheet timesheet = new()
-        {
-            Id = Guid.NewGuid(),
-            EmployeeId = request.EmployeeId,
-            ContractId = request.ContractId,
-            TimesheetStatusId = draftStatus.Id,
-            Year = request.Year,
-            Month = request.Month
-        };
-
-        for (int day = 1; day <= DateTime.DaysInMonth(request.Year, request.Month); day++)
-        {
-            DateTime date = new(request.Year, request.Month, day);
-            timesheet.Days.Add(new Data.Models.AttendanceDay()
-            {
-                Id = Guid.NewGuid(),
-                AttendanceTimesheetId = timesheet.Id,
-                Date = date,
-                ClockIn = null,
-                ClockOut = null,
-                BreakStart = null,
-                BreakEnd = null,
-                Workload = null,
-                HoursWithoutBreak = 0, // TODO
-                HoursObligation = 0, // TODO
-                IsHoliday = false, // TODO
-                Description = null, // TODO
-                Schedules = "[]"
-            });
-        }
-
-        dbContext.AttendanceTimesheets.Add(timesheet);
-        await dbContext.SaveChangesAsync(cancellationToken);
-
-        return TypedResults.Created($"/timesheets/{timesheet.Id}", new Response(timesheet.Id));
+        // Manual creation of empty attendance timesheets is intentionally not supported.
+        return Task.FromResult<Results<Created<Response>, BadRequest<string>, NotFound>>(
+            TypedResults.BadRequest("Ruční vytvoření prázdného docházkového výkazu není podporováno. Použijte import z IMIS.")
+        );
     }
 }
 

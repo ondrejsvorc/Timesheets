@@ -40,14 +40,14 @@ public sealed class ReviewTimesheet : IEndpoint
                 OtherInterruption: null, // TODO
                 Schedules: schedules,
                 IsHoliday: d.IsHoliday,
-                Workload: d.Workload ?? 0
+                Workload: d.Workload
             );
         }).ToList();
 
         AttendanceTimesheet attendanceTimesheet = new(
             EmployeePersonalNumber: timesheet.Employee.PersonalNumber, // TODO
             EmployeeName: timesheet.Employee.FullName,
-            Workload: attendanceDays.FirstOrDefault()?.Workload ?? 0,
+            Workload: attendanceDays.FirstOrDefault()?.Workload ?? 0m,
             Year: timesheet.Year,
             Month: timesheet.Month,
             Days: attendanceDays

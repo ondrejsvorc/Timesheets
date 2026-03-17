@@ -16,12 +16,12 @@ public sealed class GetCombinedTimesheet : IEndpoint
     public sealed record TimeRange(string Start, string End);
     public sealed record AttendanceItem(string ClockIn, string ClockOut, string BreakStart, string BreakEnd, string Interruptions, decimal NightHours, IEnumerable<TimeRange> Schedules);
     public sealed record CoreDefinition(decimal Workload);
-    public sealed record ProjectDefinition(string Id, string RegistrationNumber, string Name, decimal Workload);
+    public sealed record ProjectDefinition(string Id, string RegistrationNumber, string Name, string Position, decimal Workload);
     public sealed record DayItem(string Date, AttendanceItem Attendance, decimal CoreHours, Dictionary<string, decimal> ProjectHours, bool IsHoliday, bool IsWeekend);
-    public sealed record Response(int Year, int Month, decimal TotalWorkload, CoreDefinition Core, IEnumerable<ProjectDefinition> Projects, IEnumerable<DayItem> Days);
-    private sealed record AttendanceDaySource(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal? Workload, decimal HoursWithoutBreak, bool IsHoliday, string? Description, string Schedules);
+    public sealed record Response(int Year, int Month, decimal TotalWorkload, bool HasBaseWorkload, CoreDefinition Core, IEnumerable<ProjectDefinition> Projects, IEnumerable<DayItem> Days);
+    private sealed record AttendanceDaySource(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal Workload, decimal HoursWithoutBreak, bool IsHoliday, string? Description, string Schedules);
     private sealed record ProjectDaySource(DateTime Date, decimal Hours, bool IsHoliday);
-    private sealed record ProjectTimesheetSource(Guid ProjectId, string RegistrationNumber, string ProjectName, decimal Workload, List<ProjectDaySource> Days);
+    private sealed record ProjectTimesheetSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, List<ProjectDaySource> Days);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle([AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -42,52 +42,50 @@ public sealed class GetCombinedTimesheet : IEndpoint
 
         List<ProjectTimesheetSource> projectTimesheets = await (
             from timesheet in dbContext.ProjectTimesheets.AsNoTracking()
-            join contract in dbContext.Contracts.AsNoTracking() on timesheet.ContractId equals contract.Id
+            join contractEmployee in dbContext.ContractEmployees.AsNoTracking() on timesheet.ContractEmployeeId equals contractEmployee.Id
+            join contract in dbContext.Contracts.AsNoTracking() on contractEmployee.ContractId equals contract.Id
             join project in dbContext.Projects.AsNoTracking() on contract.ProjectId equals project.Id
             where timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month
             select new ProjectTimesheetSource(
+                contractEmployee.Id,
                 project.Id,
                 project.RegistrationNumber,
                 project.Name,
+                contractEmployee.Position,
                 timesheet.Workload,
                 timesheet.Days.Select(d => new ProjectDaySource(d.Date, d.Hours, d.IsHoliday)).ToList()
             )
         ).ToListAsync(cancellationToken);
 
         decimal totalProjectWorkload = projectTimesheets.Sum(t => t.Workload);
-        decimal totalWorkload = attendanceTimesheet.Days
-            .Select(d => d.Workload)
-            .FirstOrDefault(workload => workload.HasValue)
-            ?? (totalProjectWorkload > 0 ? totalProjectWorkload : 1m);
-
+        decimal? baseWorkload = await GetBaseWorkloadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
+        decimal totalWorkload = baseWorkload ?? 0m;
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
         List<ProjectDefinition> projects = projectTimesheets
-            .GroupBy(
-                timesheet => new { timesheet.ProjectId, timesheet.RegistrationNumber, timesheet.ProjectName },
-                timesheet => timesheet.Workload
-            )
-            .Select(group => new ProjectDefinition(
-                group.Key.ProjectId.ToString(),
-                group.Key.RegistrationNumber,
-                group.Key.ProjectName,
-                group.Sum()
+            .Select(t => new ProjectDefinition(
+                t.ActivityId.ToString(),
+                t.RegistrationNumber,
+                t.ProjectName,
+                t.Position,
+                t.Workload
             ))
-            .OrderBy(project => project.RegistrationNumber)
-            .ThenBy(project => project.Name)
+            .OrderBy(p => p.RegistrationNumber)
+            .ThenBy(p => p.Name)
+            .ThenBy(p => p.Position)
             .ToList();
 
         Dictionary<DateOnly, Dictionary<string, decimal>> projectHoursByDate = projectTimesheets
             .SelectMany(timesheet => timesheet.Days.Select(day => new
             {
                 Date = DateOnly.FromDateTime(day.Date),
-                timesheet.ProjectId,
+                timesheet.ActivityId,
                 day.Hours
             }))
             .GroupBy(item => item.Date)
             .ToDictionary(
                 group => group.Key,
                 group => group
-                    .GroupBy(item => item.ProjectId.ToString())
+                    .GroupBy(item => item.ActivityId.ToString())
                     .ToDictionary(projectGroup => projectGroup.Key, projectGroup => projectGroup.Sum(item => item.Hours))
             );
 
@@ -135,7 +133,35 @@ public sealed class GetCombinedTimesheet : IEndpoint
             })
             .ToList();
 
-        return TypedResults.Ok(new Response(request.Year, request.Month, totalWorkload, new CoreDefinition(coreWorkload), projects, days));
+        return TypedResults.Ok(new Response(request.Year, request.Month, totalWorkload, baseWorkload.HasValue, new CoreDefinition(coreWorkload), projects, days));
+    }
+
+    private static async Task<decimal?> GetBaseWorkloadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);
+
+        // 1) monthly override (EmployeeWorkload)
+        decimal? monthly = await dbContext.EmployeeWorkloads
+            .AsNoTracking()
+            .Where(w => w.EmployeeId == employeeId && w.Year == year && w.Month == month)
+            .Select(w => (decimal?)w.Workload)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (monthly.HasValue)
+        {
+            return monthly.Value;
+        }
+
+        // 2) core employment (time ranged)
+        decimal? workload = await dbContext.CoreEmployments
+            .AsNoTracking()
+            .Where(e => e.EmployeeId == employeeId)
+            .Where(e => e.StartDate <= periodEnd && (e.EndDate == null || e.EndDate >= periodStart))
+            .OrderByDescending(e => e.StartDate)
+            .Select(e => (decimal?)e.Workload)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return workload;
     }
 
     private static string FormatTime(TimeSpan? value) => value?.ToString(@"hh\:mm") ?? string.Empty;

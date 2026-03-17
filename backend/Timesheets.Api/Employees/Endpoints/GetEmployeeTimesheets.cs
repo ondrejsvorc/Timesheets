@@ -12,10 +12,8 @@ public sealed class GetEmployeeTimesheets : IEndpoint
            .WithSummary("Get Employee Timesheets");
 
     public sealed record Request([FromQuery] int? Year, [FromQuery] string? Months);
-    public sealed record EmployeeTimesheetItem(Guid Id, Guid ContractId, string ContractName, int Year, int Month, Guid StatusId, string Status);
-    public sealed record AvailableMonthItem(int Year, int Month, bool HasUnapproved);
-    private sealed record AvailableMonthSourceItem(int Year, int Month, string Status);
-    public sealed record Response(Guid EmployeeId, IEnumerable<EmployeeTimesheetItem> Timesheets, IEnumerable<int> AvailableYears, IEnumerable<AvailableMonthItem> AvailableMonths);
+    public sealed record MonthItem(int Year, int Month, bool HasAttendanceImport);
+    public sealed record Response(Guid EmployeeId, IEnumerable<MonthItem> Months, IEnumerable<int> AvailableYears, IEnumerable<int> AvailableMonths);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, [AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -28,65 +26,67 @@ public sealed class GetEmployeeTimesheets : IEndpoint
             return TypedResults.NotFound();
         }
 
-        IQueryable<Data.Models.AttendanceTimesheet> baseQuery = dbContext.AttendanceTimesheets
-            .AsNoTracking()
-            .Where(timesheet => timesheet.EmployeeId == id);
-
-        List<AvailableMonthSourceItem> monthRows = await baseQuery
-            .Select(timesheet => new AvailableMonthSourceItem(timesheet.Year, timesheet.Month, timesheet.TimesheetStatus.Name))
-            .ToListAsync(cancellationToken);
-
-        List<AvailableMonthItem> availableMonths = monthRows
-            .GroupBy(item => new { item.Year, item.Month })
-            .OrderBy(group => group.Key.Year)
-            .ThenBy(group => group.Key.Month)
-            .Select(group => new AvailableMonthItem(
-                group.Key.Year,
-                group.Key.Month,
-                group.Any(item => item.Status != "Schválený")
-            ))
-            .ToList();
-
-        List<int> availableYears = availableMonths
-            .Select(item => item.Year)
-            .Distinct()
-            .OrderBy(year => year)
-            .ToList();
-
-        IQueryable<Data.Models.AttendanceTimesheet> query = baseQuery;
+        // Build month list from either assigned projects (ProjectTimesheets) or imported attendance (AttendanceTimesheets).
+        var monthKeysQuery =
+            dbContext.ProjectTimesheets.AsNoTracking()
+                .Where(t => t.EmployeeId == id)
+                .Select(t => new { t.Year, t.Month })
+                .Union(
+                    dbContext.AttendanceTimesheets.AsNoTracking()
+                        .Where(t => t.EmployeeId == id)
+                        .Select(t => new { t.Year, t.Month })
+                );
 
         if (request.Year.HasValue)
         {
-            query = query.Where(timesheet => timesheet.Year == request.Year.Value);
+            monthKeysQuery = monthKeysQuery.Where(m => m.Year == request.Year.Value);
         }
 
+        List<int>? requestedMonths = null;
         if (!string.IsNullOrWhiteSpace(request.Months))
         {
-            List<int> validMonths = request.Months
+            requestedMonths = request.Months
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Select(s => int.TryParse(s, out int m) ? m : 0)
                 .Where(m => m >= 1 && m <= 12)
+                .Distinct()
                 .ToList();
-            if (validMonths.Count > 0)
+            if (requestedMonths.Count > 0)
             {
-                query = query.Where(timesheet => validMonths.Contains(timesheet.Month));
+                monthKeysQuery = monthKeysQuery.Where(m => requestedMonths.Contains(m.Month));
             }
         }
 
-        List<EmployeeTimesheetItem> timesheets = await query
-            .OrderBy(timesheet => timesheet.Year)
-            .ThenBy(timesheet => timesheet.Month)
-            .Select(timesheet => new EmployeeTimesheetItem(
-                timesheet.Id,
-                timesheet.ContractId,
-                timesheet.Contract.Name,
-                timesheet.Year,
-                timesheet.Month,
-                timesheet.TimesheetStatusId,
-                timesheet.TimesheetStatus.Name
-            ))
+        List<(int Year, int Month)> monthKeys = await monthKeysQuery
+            .Distinct()
+            .OrderBy(m => m.Year)
+            .ThenBy(m => m.Month)
+            .Select(m => new ValueTuple<int, int>(m.Year, m.Month))
             .ToListAsync(cancellationToken);
 
-        return TypedResults.Ok(new Response(id, timesheets, availableYears, availableMonths));
+        HashSet<(int Year, int Month)> importedAttendance = await dbContext.EmployeeWorkloads
+            .AsNoTracking()
+            .Where(w => w.EmployeeId == id)
+            .Select(w => new ValueTuple<int, int>(w.Year, w.Month))
+            .ToHashSetAsync(cancellationToken);
+
+        List<MonthItem> months = monthKeys
+            .Select(k => new MonthItem(k.Year, k.Month, importedAttendance.Contains(k)))
+            .ToList();
+
+        List<int> availableYears = months
+            .Select(m => m.Year)
+            .Distinct()
+            .OrderBy(y => y)
+            .ToList();
+
+        List<int> availableMonths = months
+            .Where(m => !request.Year.HasValue || m.Year == request.Year.Value)
+            .Select(m => m.Month)
+            .Distinct()
+            .OrderBy(m => m)
+            .ToList();
+
+        return TypedResults.Ok(new Response(id, months, availableYears, availableMonths));
     }
 }

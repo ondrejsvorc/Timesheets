@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
@@ -11,7 +11,7 @@ public sealed class GetContractEmployees : IEndpoint
         app.MapGet("/{id}/employees", Handle)
            .WithSummary("Get Contract Employees");
 
-    public sealed record PositionItem(string? Position, decimal? Workload, DateTime StartDate, DateTime? EndDate);
+    public sealed record PositionItem(Guid Id, string PositionCode, string Position, decimal Workload, DateTime StartDate, DateTime? EndDate);
     public sealed record EmployeeItem(Guid Id, int PersonalNumber, string FullName, string EmployeeType, IReadOnlyList<PositionItem> Positions);
     public sealed record Response(IEnumerable<EmployeeItem> Employees);
 
@@ -36,8 +36,8 @@ public sealed class GetContractEmployees : IEndpoint
                 g.Key.Id,
                 g.Key.PersonalNumber,
                 g.Key.FullName,
-                g.Key.EmployeeType.Name,
-                g.Select(ce => new PositionItem(ce.Position, ce.Workload, ce.StartDate, ce.EndDate)).ToList()
+                g.Key.EmployeeTypeId != null ? g.Key.EmployeeType.Name : string.Empty,
+                g.Select(ce => new PositionItem(ce.Id, ce.PositionCode, ce.Position, ce.Workload, ce.StartDate, ce.EndDate)).ToList()
             ))
             .ToListAsync(cancellationToken);
 

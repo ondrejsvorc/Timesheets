@@ -1,8 +1,10 @@
 import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
 
 export interface PositionItem {
-  position: string | null;
-  workload: number | null;
+  id: string;
+  positionCode: string;
+  position: string;
+  workload: number;
   startDate: string;
   endDate: string | null;
 }

@@ -80,7 +80,6 @@ public sealed class UpdateTimesheetStatus : IEndpoint
             string notificationMessage = BuildNotificationMessage(
                 timesheet.Year,
                 timesheet.Month,
-                timesheet.Contract.Name,
                 timesheet.TimesheetStatus.Name,
                 newStatus.Name,
                 request.Comment);
@@ -100,10 +99,10 @@ public sealed class UpdateTimesheetStatus : IEndpoint
         _ => false
     };
 
-    private static string BuildNotificationMessage(int year, int month, string contractName, string oldStatus, string newStatus, string? comment)
+    private static string BuildNotificationMessage(int year, int month, string oldStatus, string newStatus, string? comment)
     {
         string monthName = new DateTime(year, month, 1).ToString("MMMM yyyy", CultureInfo.GetCultureInfo("cs-CZ"));
-        string message = $"Stav vašeho výkazu za {monthName} (zakázka: {contractName}) byl změněn z '{oldStatus}' na '{newStatus}'.";
+        string message = $"Stav vašeho výkazu za {monthName} byl změněn z '{oldStatus}' na '{newStatus}'.";
 
         if (!string.IsNullOrWhiteSpace(comment))
         {

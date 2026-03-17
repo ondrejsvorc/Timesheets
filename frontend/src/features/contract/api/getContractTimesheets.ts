@@ -15,8 +15,9 @@ export interface TimesheetItem {
   employeeId: string;
   year: number;
   month: number;
-  position: string | null;
-  workload: number | null;
+  positionCode: string | null;
+  position: string;
+  workload: number;
   statusId: string;
   status: string;
 }
@@ -110,8 +111,8 @@ export function rangeIsSubset(
 
 export interface TimesheetRowView {
   id: string;
-  position: string | null;
-  workload: number | null;
+  position: string;
+  workload: number;
   status: string;
   year?: number;
   month?: number;

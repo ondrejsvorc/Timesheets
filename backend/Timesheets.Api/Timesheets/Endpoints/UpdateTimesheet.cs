@@ -67,7 +67,7 @@ public sealed class UpdateTimesheet : IEndpoint
             day.ClockOut = dayUpdate.ClockOut;
             day.BreakStart = dayUpdate.BreakStart;
             day.BreakEnd = dayUpdate.BreakEnd;
-            day.Workload = dayUpdate.Workload;
+            day.Workload = dayUpdate.Workload ?? day.Workload;
             day.HoursObligation = dayUpdate.HoursObligation ?? day.HoursObligation;
             day.Description = dayUpdate.Description;
 

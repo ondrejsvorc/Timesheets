@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Timesheets.Api.Data;
@@ -11,9 +12,11 @@ using Timesheets.Api.Data;
 namespace Timesheets.Api.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260317123910_ProjectTimesheetUniqueByContractAndAutoTimesheetsOnAssignment")]
+    partial class ProjectTimesheetUniqueByContractAndAutoTimesheetsOnAssignment
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -749,9 +752,6 @@ namespace Timesheets.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("ContractEmployeeId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("ContractId")
                         .HasColumnType("uuid");
 
@@ -778,9 +778,7 @@ namespace Timesheets.Api.Data.Migrations
 
                     b.HasIndex("ContractId");
 
-                    b.HasIndex("EmployeeId");
-
-                    b.HasIndex("ContractEmployeeId", "Year", "Month")
+                    b.HasIndex("EmployeeId", "ContractId", "Year", "Month")
                         .IsUnique();
 
                     b.ToTable("ProjectTimesheet", (string)null);
@@ -999,12 +997,6 @@ namespace Timesheets.Api.Data.Migrations
 
             modelBuilder.Entity("Timesheets.Api.Data.Models.ProjectTimesheet", b =>
                 {
-                    b.HasOne("Timesheets.Api.Data.Models.ContractEmployee", null)
-                        .WithMany()
-                        .HasForeignKey("ContractEmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Timesheets.Api.Data.Models.Contract", null)
                         .WithMany("ProjectTimesheets")
                         .HasForeignKey("ContractId")

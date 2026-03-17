@@ -280,10 +280,12 @@ export const TimesheetLogic = {
       });
     });
 
-    let coreWallet = Number((Math.max(0, monthlyFund * (timesheet.core.workload / timesheet.totalWorkload)) - coreUsed).toFixed(2));
+    const denom = timesheet.totalWorkload || 0;
+    const coreShare = denom > 0 ? timesheet.core.workload / denom : 0;
+    let coreWallet = Number((Math.max(0, monthlyFund * coreShare) - coreUsed).toFixed(2));
     const pWallets = timesheet.projects.map((p) => ({
       id: p.id,
-      rem: Number((Math.max(0, monthlyFund * (p.workload / timesheet.totalWorkload)) - pUsed[p.id]).toFixed(2)),
+      rem: Number((Math.max(0, monthlyFund * (denom > 0 ? p.workload / denom : 0)) - pUsed[p.id]).toFixed(2)),
     }));
 
     const workingDays = timesheet.days.filter((d) => !d.isWeekend && !d.isHoliday);
@@ -384,7 +386,6 @@ export const TimesheetLogic = {
     const workedHours = TimesheetLogic.calculateWorkedHours(day.attendance);
     const nightHours = TimesheetLogic.calculateNightHours(day.attendance.clockIn, day.attendance.clockOut);
     const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
-    const allocated = day.coreHours + Object.values(day.projectHours).reduce((sum, h) => sum + h, 0);
     const balance = TimesheetLogic2.calculateDayBalance(workedHours, day.coreHours, day.projectHours);
     return { workedHours, nightHours, stagHours, balance };
   },

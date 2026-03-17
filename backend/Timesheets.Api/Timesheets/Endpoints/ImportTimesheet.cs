@@ -30,7 +30,10 @@ public sealed class ImportTimesheet : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, BadRequest<string>>> Handle([FromForm] Request request, [FromServices] IAttendanceTimesheetImportService importService, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, BadRequest<string>>> Handle(
+        [FromForm] Request request,
+        [FromServices] IAttendanceTimesheetImportService importService,
+        CancellationToken cancellationToken)
     {
         AttendanceTimesheetImportResult result = await importService.ImportAsync(request.EmployeeId, request.File, cancellationToken);
         return TypedResults.Ok(new Response(result));

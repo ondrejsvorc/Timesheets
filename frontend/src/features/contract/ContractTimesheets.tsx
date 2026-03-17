@@ -215,8 +215,7 @@ function ContractTimesheetsFilterControls() {
   );
 }
 
-function workloadPercent(workload: number | null): string {
-  if (workload == null) return Texts.dash;
+function workloadPercent(workload: number): string {
   return `${Math.round(workload * 100)}%`;
 }
 
@@ -282,13 +281,13 @@ const TimesheetsByMonth = ({ months, employeesCount, isLoading }: TimesheetsByMo
 };
 
 interface TimesheetItemRowProps {
-  item: { id: string; position: string | null; workload: number | null; status: string };
+  item: { id: string; position: string; workload: number; status: string };
 }
 
 function TimesheetItemRow({ item }: TimesheetItemRowProps) {
   return (
     <TableRow className="cursor-pointer">
-      <TableCell>{item.position ?? Texts.dash}</TableCell>
+      <TableCell>{item.position}</TableCell>
       <TableCell>{workloadPercent(item.workload)}</TableCell>
       <TableCell>{item.status}</TableCell>
       <TableCell>

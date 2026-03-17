@@ -20,8 +20,9 @@ public sealed class GetContractTimesheets : IEndpoint
         Guid EmployeeId,
         int Year,
         int Month,
-        string? Position,
-        decimal? Workload,
+        string? PositionCode,
+        string Position,
+        decimal Workload,
         Guid StatusId,
         string Status
     );
@@ -70,7 +71,6 @@ public sealed class GetContractTimesheets : IEndpoint
 
         IQueryable<AttendanceTimesheet> query = dbContext.AttendanceTimesheets
             .AsNoTracking()
-            .Where(timesheet => timesheet.ContractId == id)
             .Where(timesheet => timesheet.Year > request.FromYear || (timesheet.Year == request.FromYear && timesheet.Month >= request.FromMonth))
             .Where(timesheet => timesheet.Year < request.ToYear || (timesheet.Year == request.ToYear && timesheet.Month <= request.ToMonth));
 
@@ -95,14 +95,10 @@ public sealed class GetContractTimesheets : IEndpoint
                     .Where(employee => employee.ContractId == id)
                     .Where(employee => employee.EmployeeId == timesheet.EmployeeId)
                     .Where(employee =>
-                        employee.StartDate.Year < timesheet.Year ||
-                        (employee.StartDate.Year == timesheet.Year && employee.StartDate.Month <= timesheet.Month))
-                    .Where(employee =>
-                        employee.EndDate == null ||
-                        employee.EndDate.Value.Year > timesheet.Year ||
-                        (employee.EndDate.Value.Year == timesheet.Year && employee.EndDate.Value.Month >= timesheet.Month))
+                        employee.StartDate <= new DateTime(timesheet.Year, timesheet.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddDays(-1)
+                        && (employee.EndDate == null || employee.EndDate >= new DateTime(timesheet.Year, timesheet.Month, 1, 0, 0, 0, DateTimeKind.Utc)))
                     .OrderByDescending(employee => employee.StartDate)
-                    .Select(employee => new { employee.Position, employee.Workload })
+                    .Select(employee => new { employee.PositionCode, employee.Position, employee.Workload })
                     .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
@@ -113,13 +109,15 @@ public sealed class GetContractTimesheets : IEndpoint
         }
 
         List<TimesheetItem> timesheets = items
+            .Where(item => item.ContractEmployee is not null)
             .Select(item => new TimesheetItem(
                 item.Id,
                 item.EmployeeId,
                 item.Year,
                 item.Month,
-                item.ContractEmployee?.Position,
-                item.ContractEmployee?.Workload,
+                item.ContractEmployee!.PositionCode,
+                item.ContractEmployee!.Position,
+                item.ContractEmployee!.Workload,
                 item.TimesheetStatusId,
                 item.Status
             ))

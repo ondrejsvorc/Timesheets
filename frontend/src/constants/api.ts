@@ -34,9 +34,17 @@ export const customFetch = async <T>(input: RequestInfo | URL, init?: RequestIni
     const response = await fetch(input, init);
     if (!response.ok) {
       console.log(init);
-      throw new Error(`${response.status} ${response.statusText}`);
+      let details = "";
+      try {
+        const text = await response.text();
+        details = text ? `: ${text}` : "";
+      } catch {
+        // ignore
+      }
+      throw new Error(`${response.status} ${response.statusText}${details}`);
     }
     if (apiLoggingEnabled) {
+      console.log(response);
       console.log(`${label} (${(performance.now() - start).toFixed(1)}ms)`);
     }
     if (response.status === 204) {

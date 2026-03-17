@@ -3,15 +3,18 @@ import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
-import { ActionDropdownMenu, EditAction } from "@/components/shared/menus/ActionDropdownMenu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { format, isBefore, parseISO, startOfDay } from "date-fns";
-import { Suspense } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { Suspense, useState } from "react";
+import { Await, useAsyncValue, useLoaderData, useParams, useRevalidator } from "react-router";
 import type { EmployeeItem, GetContractEmployeesResponse, PositionItem } from "./api/getContractEmployees";
 import { type ContractEmployeesFilterCriteria, useContractEmployeesFilter } from "./hooks/useContractEmployeesFilter";
+import { DeleteButton } from "@/components/shared/buttons/ActionButtons";
+import { AddEmployeeDialog } from "./AddEmployeeDialog";
+import { deleteContractEmployee } from "./api/deleteContractEmployee";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 
 export const ContractEmployees = () => {
   const { promise } = useLoaderData() as {
@@ -32,25 +35,60 @@ const { FilterSearchInput } = createFilterControls<ContractEmployeesFilterCriter
 const ContractEmployeesContent = () => {
   const response = useAsyncValue() as GetContractEmployeesResponse;
   const { filter, setFilter, filtered } = useContractEmployeesFilter(response.employees);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [positionToDelete, setPositionToDelete] = useState<{ contractId: string; contractEmployeeId: string } | null>(null);
+  const { contractId } = useParams();
+  const revalidator = useRevalidator();
 
   return (
     <>
       <SubPageHeader>
         <SubPageTitle>{Texts.employees}</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => {}}>{Texts.addEmployee}</AddButton>}>
+      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployee}</AddButton>}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-      <ContractEmployeesList employees={filtered} />
+      <ContractEmployeesList
+        contractId={contractId}
+        employees={filtered}
+        onDeleteRequested={(payload) => setPositionToDelete(payload)}
+      />
+      {contractId && (
+        <AddEmployeeDialog
+          open={isAddOpen}
+          contractId={contractId}
+          existingContractEmployees={response.employees}
+          onClose={() => setIsAddOpen(false)}
+          onSaved={() => {
+            setIsAddOpen(false);
+            revalidator.revalidate();
+          }}
+        />
+      )}
+
+      <ConfirmationDialog
+        open={positionToDelete !== null}
+        onCancel={() => setPositionToDelete(null)}
+        onConfirm={async (_event, signal) => {
+          if (!positionToDelete) return;
+          await deleteContractEmployee(positionToDelete.contractId, positionToDelete.contractEmployeeId, signal);
+          if (!signal.aborted) {
+            setPositionToDelete(null);
+            revalidator.revalidate();
+          }
+        }}
+      />
     </>
   );
 };
 
 interface ContractEmployeesListProps {
+  contractId?: string;
   employees: EmployeeItem[];
+  onDeleteRequested: (payload: { contractId: string; contractEmployeeId: string }) => void;
 }
 
-const ContractEmployeesList = ({ employees }: ContractEmployeesListProps) => {
+const ContractEmployeesList = ({ contractId, employees, onDeleteRequested }: ContractEmployeesListProps) => {
   if (employees.length === 0) {
     return <EmptyState />;
   }
@@ -58,17 +96,19 @@ const ContractEmployeesList = ({ employees }: ContractEmployeesListProps) => {
   return (
     <div className="space-y-6">
       {employees.map((employee) => (
-        <EmployeeSection key={employee.id} employee={employee} />
+        <EmployeeSection key={employee.id} contractId={contractId} employee={employee} onDeleteRequested={onDeleteRequested} />
       ))}
     </div>
   );
 };
 
 interface EmployeeSectionProps {
+  contractId?: string;
   employee: EmployeeItem;
+  onDeleteRequested: (payload: { contractId: string; contractEmployeeId: string }) => void;
 }
 
-const EmployeeSection = ({ employee }: EmployeeSectionProps) => {
+const EmployeeSection = ({ contractId, employee, onDeleteRequested }: EmployeeSectionProps) => {
   return (
     <div className="rounded-md border p-4">
       <div className="mb-3 font-medium text-foreground">
@@ -88,8 +128,8 @@ const EmployeeSection = ({ employee }: EmployeeSectionProps) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {employee.positions.map((position, index) => (
-              <PositionRow key={`${employee.id}-${index}`} position={position} />
+            {employee.positions.map((position) => (
+              <PositionRow key={position.id} contractId={contractId} position={position} onDeleteRequested={onDeleteRequested} />
             ))}
           </TableBody>
         </Table>
@@ -99,10 +139,12 @@ const EmployeeSection = ({ employee }: EmployeeSectionProps) => {
 };
 
 interface PositionRowProps {
+  contractId?: string;
   position: PositionItem;
+  onDeleteRequested: (payload: { contractId: string; contractEmployeeId: string }) => void;
 }
 
-const PositionRow = ({ position }: PositionRowProps) => {
+const PositionRow = ({ contractId, position, onDeleteRequested }: PositionRowProps) => {
   const active = isPositionActive(position);
 
   return (
@@ -112,9 +154,13 @@ const PositionRow = ({ position }: PositionRowProps) => {
       <TableCell>{position.endDate ? formatDate(position.endDate) : Texts.dash}</TableCell>
       <TableCell>{active ? Texts.active : Texts.inactive}</TableCell>
       <TableCell>
-        <ActionDropdownMenu>
-          <EditAction onClick={() => {}} />
-        </ActionDropdownMenu>
+        <DeleteButton
+          onClick={async () => {
+            if (!contractId) return;
+            if (!position.id) return;
+            onDeleteRequested({ contractId, contractEmployeeId: position.id });
+          }}
+        />
       </TableCell>
     </TableRow>
   );

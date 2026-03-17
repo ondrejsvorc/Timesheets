@@ -9,13 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { CheckCircle, XCircle, ChevronDown, Upload } from "lucide-react";
-import { CZECH_MONTH_NAMES, formatMonthYear } from "@/features/contract/utils/czechMonths";
-import type { EmployeeTimesheetItem, EmployeeTimesheetMonthOption, GetEmployeeTimesheetsResponse } from "./api/getEmployeeTimesheets";
+import { CZECH_MONTH_NAMES } from "@/features/contract/utils/czechMonths";
+import type { GetEmployeeTimesheetsResponse } from "./api/getEmployeeTimesheets";
 import { useEmployeeTimesheetsFilter, type EmployeeTimesheetsFilterCriteria } from "./hooks/useEmployeeTimesheetsFilter";
 import { UploadTimesheetsDialog } from "./UploadTimesheetsDialog";
 
@@ -35,13 +35,9 @@ const EmployeeTimesheetsContent = () => {
   const response = useAsyncValue() as GetEmployeeTimesheetsResponse;
   const { filter, setFilter } = useEmployeeTimesheetsFilter();
   const navigate = useNavigate();
-  const [expandedMonths, setExpandedMonths] = useState<string[]>([]);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const availableYears = response.availableYears;
-  const availableMonths = useMemo(
-    () => getAvailableMonthsForYear(response.availableMonths, filter.year, filter.onlyUnapproved),
-    [response.availableMonths, filter.year, filter.onlyUnapproved],
-  );
+  const availableMonths = useMemo(() => getAvailableMonthsForYear(response.availableMonths, filter.year), [response.availableMonths, filter.year]);
 
   const handleUploadClick = () => {
     setIsUploadDialogOpen(true);
@@ -50,7 +46,7 @@ const EmployeeTimesheetsContent = () => {
   useEffect(() => {
     const fallbackYear = getFallbackYear(availableYears, filter.year);
     const yearToUse = fallbackYear ?? filter.year;
-    const nextAvailableMonthSet = new Set(getAvailableMonthsForYear(response.availableMonths, yearToUse, filter.onlyUnapproved).map((item) => item.month));
+    const nextAvailableMonthSet = new Set(getAvailableMonthsForYear(response.availableMonths, yearToUse));
 
     if (filter.months === null) {
       if (fallbackYear !== null) {
@@ -74,17 +70,10 @@ const EmployeeTimesheetsContent = () => {
         }
       });
     }
-  }, [availableYears, filter.months, filter.onlyUnapproved, filter.year, response.availableMonths, setFilter]);
+  }, [availableYears, filter.months, filter.year, response.availableMonths, setFilter]);
 
-  const groupedByMonth = groupTimesheetsByMonth(response.timesheets, filter);
-
-  let filteredMonths = filter.onlyUnapproved
-    ? groupedByMonth.filter((month) => !month.allApproved)
-    : groupedByMonth;
-
-  if (filter.months !== null && filter.months.length > 0) {
-    filteredMonths = filteredMonths.filter((month) => filter.months!.includes(month.month));
-  }
+  let filteredMonths = response.months.filter((m) => m.year === filter.year);
+  if (filter.months !== null && filter.months.length > 0) filteredMonths = filteredMonths.filter((m) => filter.months!.includes(m.month));
 
   if (filteredMonths.length === 0) {
     return (
@@ -127,54 +116,45 @@ const EmployeeTimesheetsContent = () => {
       >
         <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} />
       </FilterBar>
-      <Accordion type="multiple" value={expandedMonths} onValueChange={setExpandedMonths} className="space-y-2">
-        {filteredMonths.map((monthGroup) => {
-          const monthKey = `${monthGroup.year}-${monthGroup.month}`;
-          const approvedCount = monthGroup.timesheets.filter((t) => t.status === Texts.statusApproved).length;
-          const totalCount = monthGroup.timesheets.length;
-
-          return (
-            <AccordionItem key={monthKey} value={monthKey} className="rounded-md border !border-b">
-              <AccordionTrigger className="px-4 cursor-pointer">
-                <div className="flex items-center gap-3 flex-1">
-                  {monthGroup.allApproved ? (
-                    <CheckCircle className="size-5 text-green-600 shrink-0" aria-hidden />
-                  ) : (
-                    <XCircle className="size-5 text-destructive shrink-0" aria-hidden />
-                  )}
-                  <span className="font-medium">{formatMonthYear(monthGroup.month, monthGroup.year)}</span>
-                  <span className="text-muted-foreground text-sm ml-auto">
-                    Schválený: {approvedCount}/{totalCount}
-                  </span>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="px-4 pb-4 space-y-4">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Výkaz</TableHead>
-                        <TableHead>Stav</TableHead>
+      <div className="rounded-md border p-4">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[80px]">Stav</TableHead>
+              <TableHead>Měsíc</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredMonths.map((m) => {
+              const disabled = !m.hasAttendanceImport;
+              return (
+                <TooltipProvider key={`${m.year}-${m.month}`} delayDuration={150}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <TableRow
+                        className={disabled ? "opacity-50" : "cursor-pointer hover:bg-muted/50"}
+                        onClick={() => {
+                          if (!disabled) navigate(Routes.timesheet(response.employeeId, m.year, m.month));
+                        }}
+                      >
+                        <TableCell>
+                          {disabled ? (
+                            <XCircle className="size-5 text-destructive" aria-hidden />
+                          ) : (
+                            <CheckCircle className="size-5 text-green-600" aria-hidden />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">{CZECH_MONTH_NAMES[m.month]} {m.year}</TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {monthGroup.timesheets.map((timesheet) => (
-                        <TableRow key={timesheet.id} className="cursor-pointer hover:bg-muted/50">
-                          <TableCell>{timesheet.contractName}</TableCell>
-                          <TableCell>{timesheet.status}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                  <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" onClick={() => navigate(Routes.timesheet(response.employeeId, monthGroup.year, monthGroup.month))}>Spravovat výkazy</Button>
-                  </div>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          );
-        })}
-      </Accordion>
+                    </TooltipTrigger>
+                    {disabled && <TooltipContent side="top">Nejdřív naimportujte docházku pro tento měsíc.</TooltipContent>}
+                  </Tooltip>
+                </TooltipProvider>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
       {isUploadDialogOpen && <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => {}} />}
     </>
   );
@@ -182,7 +162,7 @@ const EmployeeTimesheetsContent = () => {
 
 interface EmployeeTimesheetsFilterControlsProps {
   availableYears: number[];
-  availableMonths: EmployeeTimesheetMonthOption[];
+  availableMonths: number[];
 }
 
 function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: EmployeeTimesheetsFilterControlsProps) {
@@ -273,7 +253,7 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
                 <Label className="text-sm font-normal cursor-pointer">Všechny měsíce</Label>
               </div>
               <div className="border-t my-1" />
-              {availableMonths.map(({ month }) => {
+              {availableMonths.map((month) => {
                 const isSelected = filter.months?.includes(month) ?? false;
                 return (
                   <div
@@ -291,16 +271,8 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
         </Popover>
       </div>
       <div className="flex items-center gap-3 pt-6">
-        <Checkbox
-          id="only-unapproved"
-          checked={filter.onlyUnapproved}
-          onCheckedChange={(checked) =>
-            setFilter((draft) => {
-              draft.onlyUnapproved = checked === true;
-            })
-          }
-        />
-        <Label htmlFor="only-unapproved" className="text-sm cursor-pointer">
+        <Checkbox id="only-unapproved" checked={false} disabled />
+        <Label htmlFor="only-unapproved" className="text-sm cursor-pointer opacity-50">
           Pouze měsíce s neschválenými výkazy
         </Label>
       </div>
@@ -308,19 +280,8 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
   );
 }
 
-interface MonthGroup {
-  year: number;
-  month: number;
-  timesheets: EmployeeTimesheetItem[];
-  allApproved: boolean;
-}
-
-function getAvailableMonthsForYear(
-  availableMonths: EmployeeTimesheetMonthOption[],
-  year: number,
-  onlyUnapproved: boolean,
-) {
-  return availableMonths.filter((item) => item.year === year && (!onlyUnapproved || item.hasUnapproved));
+function getAvailableMonthsForYear(availableMonths: number[], _year: number) {
+  return availableMonths;
 }
 
 function getFallbackYear(availableYears: number[], selectedYear: number) {
@@ -332,33 +293,4 @@ function getFallbackYear(availableYears: number[], selectedYear: number) {
   return availableYears.includes(currentYear) ? currentYear : availableYears[availableYears.length - 1]!;
 }
 
-function groupTimesheetsByMonth(
-  timesheets: EmployeeTimesheetItem[],
-  filter: EmployeeTimesheetsFilterCriteria,
-): MonthGroup[] {
-  // Filter by year
-  const filtered = timesheets.filter((t) => t.year === filter.year);
-
-  // Group by month
-  const byMonth = new Map<string, EmployeeTimesheetItem[]>();
-  for (const t of filtered) {
-    const key = `${t.year}-${t.month}`;
-    const list = byMonth.get(key) ?? [];
-    list.push(t);
-    byMonth.set(key, list);
-  }
-
-  // Convert to array and sort
-  const groups: MonthGroup[] = Array.from(byMonth.entries()).map(([key, items]) => {
-    const [y, m] = key.split("-").map(Number) as [number, number];
-    const allApproved = items.every((t) => t.status === Texts.statusApproved);
-    return {
-      year: y,
-      month: m,
-      timesheets: items.sort((a, b) => a.contractName.localeCompare(b.contractName)),
-      allApproved,
-    };
-  });
-
-  return groups.sort((a, b) => (a.year !== b.year ? a.year - b.year : a.month - b.month));
-}
+// grouping by month is no longer needed (single row per month)

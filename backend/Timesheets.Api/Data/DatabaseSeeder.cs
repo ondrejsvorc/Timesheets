@@ -139,6 +139,7 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("60000000-0000-0000-0000-000000000001"),
                     ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
+                    PositionCode = "VP",
                     Position = "Výzkumný pracovník",
                     Workload = 1.0m,
                     StartDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
@@ -148,6 +149,7 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("60000000-0000-0000-0000-000000000003"),
                     ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
+                    PositionCode = "KOORD",
                     Position = "Koordinátor",
                     Workload = 0.25m,
                     StartDate = new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc)
@@ -159,6 +161,7 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("60000000-0000-0000-0000-000000000002"),
                     ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000003"),
+                    PositionCode = "TECH",
                     Position = "Technik",
                     Workload = 0.5m,
                     StartDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
@@ -175,7 +178,6 @@ public static class DatabaseSeeder
                 {
                     Id = Guid.Parse("70000000-0000-0000-0000-000000000001"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
-                    ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000022"), // Schválený
                     Year = 2024,
                     Month = 11,
@@ -189,7 +191,6 @@ public static class DatabaseSeeder
                 {
                     Id = Guid.Parse("70000000-0000-0000-0000-000000000002"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
-                    ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000021"), // Ke schválení
                     Year = 2024,
                     Month = 12,
@@ -201,7 +202,6 @@ public static class DatabaseSeeder
                 {
                     Id = Guid.Parse("70000000-0000-0000-0000-000000000003"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000003"),
-                    ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000020"), // Rozpracovaný
                     Year = 2024,
                     Month = 12,
@@ -350,6 +350,7 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("90000000-0000-0000-0000-000000000001"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
                     ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
+                    ContractEmployeeId = Guid.Parse("60000000-0000-0000-0000-000000000001"),
                     Year = 2024,
                     Month = 11,
                     Workload = 1.0m,
@@ -361,6 +362,7 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("90000000-0000-0000-0000-000000000002"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
                     ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
+                    ContractEmployeeId = Guid.Parse("60000000-0000-0000-0000-000000000001"),
                     Year = 2024,
                     Month = 12,
                     Workload = 1.0m,
@@ -371,6 +373,7 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("90000000-0000-0000-0000-000000000003"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000003"),
                     ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
+                    ContractEmployeeId = Guid.Parse("60000000-0000-0000-0000-000000000002"),
                     Year = 2024,
                     Month = 12,
                     Workload = 0.5m,

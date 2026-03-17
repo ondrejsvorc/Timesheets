@@ -34,7 +34,6 @@ public sealed class Contract
     public DateTime? UpdatedAt { get; set; }
 
     public Project Project { get; set; } = null!;
-    public ICollection<AttendanceTimesheet> AttendanceTimesheets { get; set; } = [];
     public ICollection<ProjectTimesheet> ProjectTimesheets { get; set; } = [];
     public ICollection<ContractManager> ContractManagers { get; set; } = [];
     public ICollection<ContractEmployee> ContractEmployees { get; set; } = [];
@@ -55,8 +54,9 @@ public sealed class ContractEmployee
     public Guid Id { get; set; }
     public Guid ContractId { get; set; }
     public Guid EmployeeId { get; set; }
-    public string? Position { get; set; }
-    public decimal? Workload { get; set; }
+    public string PositionCode { get; set; } = string.Empty;
+    public string Position { get; set; } = string.Empty;
+    public decimal Workload { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 
@@ -128,7 +128,6 @@ public sealed class AttendanceTimesheet
 {
     public Guid Id { get; set; }
     public Guid EmployeeId { get; set; }
-    public Guid ContractId { get; set; }
     public Guid TimesheetStatusId { get; set; }
     public Guid? ApprovedBy { get; set; }
     public int Year { get; set; }
@@ -139,7 +138,6 @@ public sealed class AttendanceTimesheet
     public DateTime? UpdatedAt { get; set; }
 
     public Employee Employee { get; set; } = null!;
-    public Contract Contract { get; set; } = null!;
     public TimesheetStatus TimesheetStatus { get; set; } = null!;
     public Employee ApprovedByEmployee { get; set; } = null!;
     public ICollection<AttendanceDay> Days { get; set; } = [];
@@ -154,7 +152,7 @@ public sealed class AttendanceDay
     public TimeSpan? ClockOut { get; set; }
     public TimeSpan? BreakStart { get; set; }
     public TimeSpan? BreakEnd { get; set; }
-    public decimal? Workload { get; set; }
+    public decimal Workload { get; set; }
     public decimal HoursWithoutBreak { get; set; }
     public decimal HoursObligation { get; set; }
     public bool IsHoliday { get; set; }
@@ -188,6 +186,7 @@ public sealed class ProjectTimesheet
     public Guid Id { get; set; }
     public Guid EmployeeId { get; set; }
     public Guid ContractId { get; set; }
+    public Guid ContractEmployeeId { get; set; }
     public int Year { get; set; }
     public int Month { get; set; }
     public decimal Workload { get; set; }

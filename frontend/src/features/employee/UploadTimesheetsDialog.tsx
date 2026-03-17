@@ -223,6 +223,17 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
         onSuccess?.();
       }
 
+      if (successCount > 0 && failCount === 0 && !signal.aborted) {
+        // Close dialog immediately on full success (no need to show result screen).
+        setMode("selection");
+        setUploadItems([]);
+        setIsDragging(false);
+        setHasSuccessfulImport(false);
+        onClose();
+        navigate(0);
+        return;
+      }
+
       setMode("result");
     } catch (error) {
       if (!(error instanceof DOMException && error.name === "AbortError")) {
@@ -357,13 +368,17 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
           {mode === "selection" ? (
             <>
               <DialogCancelButton onClick={handleClose} />
-              <DialogConfirmButton disabled={uploadItems.length === 0 || readyItemsCount === 0 || isImporting || isDetecting} onClick={(_, signal) => handleImport(signal)} />
+              <DialogConfirmButton
+                disabled={uploadItems.length === 0 || readyItemsCount === 0 || isImporting || isDetecting}
+                onClick={(_, signal) => handleImport(signal)}
+              />
             </>
           ) : (
             <Button type="button" variant="outline" onClick={handleClose}>{Texts.close}</Button>
           )}
         </DialogFooter>
       </DialogContent>
+
     </Dialog>
   );
 };

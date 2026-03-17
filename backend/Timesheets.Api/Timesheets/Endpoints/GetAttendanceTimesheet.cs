@@ -37,8 +37,6 @@ public sealed class GetAttendanceTimesheet : IEndpoint
         Guid Id,
         Guid EmployeeId,
         string EmployeeName,
-        Guid ContractId,
-        string ContractName,
         Guid TimesheetStatusId,
         string TimesheetStatus,
         Guid? ApprovedBy,
@@ -56,7 +54,6 @@ public sealed class GetAttendanceTimesheet : IEndpoint
         var timesheet = await dbContext.AttendanceTimesheets
             .AsNoTracking()
             .Include(t => t.Employee)
-            .Include(t => t.Contract)
             .Include(t => t.TimesheetStatus)
             .Include(t => t.Days)
                 .ThenInclude(d => d.DayInterruptions)
@@ -66,8 +63,6 @@ public sealed class GetAttendanceTimesheet : IEndpoint
                 t.Id,
                 t.EmployeeId,
                 t.Employee.FullName,
-                t.ContractId,
-                t.Contract.Name,
                 t.TimesheetStatusId,
                 t.TimesheetStatus.Name,
                 t.ApprovedBy,

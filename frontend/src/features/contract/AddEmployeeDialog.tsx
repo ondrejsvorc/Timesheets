@@ -8,156 +8,154 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/utils/cn";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useImmer } from "use-immer";
 import { z } from "zod";
-import { getContractCatalog } from "../employees/api/getContractCatalog";
-import { getProjectCatalog } from "../employees/api/getProjectCatalog";
+import { addContractEmployee } from "./api/addContractEmployee";
+import type { EmployeeItem as ContractEmployeeItem } from "./api/getContractEmployees";
+import { getEmployees } from "../employees/api/getEmployees";
 
-type AddEmployeePositionFormValues = z.infer<typeof addEmployeePositionSchema>;
-const addEmployeePositionSchema = z.object({
-  projectId: z.string().nonempty(),
-  contractId: z.string().nonempty(),
-  positionCode: z.string().nonempty(),
-  positionName: z.string().nonempty(),
-  workload: z.string().nonempty(),
-  startDate: z.string().nonempty(),
-  endDate: z.string().optional(),
-});
+type AddEmployeeToContractFormValues = z.infer<ReturnType<typeof createSchema>>;
 
-interface AddEmployeePositionDialogProps {
+const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
+
+const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
+
+const intervalsOverlapInclusive = (aStart: string, aEnd: string | null | undefined, bStart: string, bEnd: string | null | undefined) => {
+  const aS = parseISO(aStart).getTime();
+  const aE = aEnd ? parseISO(aEnd).getTime() : Number.POSITIVE_INFINITY;
+  const bS = parseISO(bStart).getTime();
+  const bE = bEnd ? parseISO(bEnd).getTime() : Number.POSITIVE_INFINITY;
+  return aS <= bE && bS <= aE;
+};
+
+const createSchema = (existing: ContractEmployeeItem[]) =>
+  z
+    .object({
+      employeeId: z.string().nonempty(),
+      positionCode: z.string().nonempty(),
+      positionName: z.string().nonempty(),
+      workload: z
+        .string()
+        .nonempty()
+        .refine((v) => {
+          const n = Number(v.replace(",", "."));
+          return Number.isFinite(n) && n > 0;
+        }, "Úvazek musí být kladné číslo."),
+      startDate: z.string().nonempty(),
+      endDate: z.string().optional(),
+    })
+    .superRefine((values, ctx) => {
+      const employee = existing.find((e) => e.id === values.employeeId);
+      if (!employee) return;
+
+      const positionName = normalize(values.positionName);
+      const startDate = values.startDate;
+      const endDate = toIsoOrEmpty(values.endDate);
+
+      const hasOverlap = employee.positions.some((p) => {
+        const pName = normalize(p.position);
+        if (pName !== positionName) return false;
+        return intervalsOverlapInclusive(p.startDate, p.endDate, startDate, endDate);
+      });
+
+      if (hasOverlap) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["positionName"],
+          message: "Zaměstnanec už má tuto pozici na zakázce v překrývajícím se období.",
+        });
+      }
+    });
+
+interface AddEmployeeDialogProps {
   open: boolean;
-  employeeId: string;
+  contractId: string;
+  existingContractEmployees: ContractEmployeeItem[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }: AddEmployeePositionDialogProps) => {
-  const [projects, setProjects] = useImmer<ComboBoxItem[]>([]);
-  const [contracts, setContracts] = useImmer<ComboBoxItem[]>([]);
-  const [projectsLoading, setProjectsLoading] = useImmer(false);
-  const [contractsLoading, setContractsLoading] = useImmer(false);
+export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees, onClose, onSaved }: AddEmployeeDialogProps) => {
+  const [employees, setEmployees] = useImmer<ComboBoxItem[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useImmer(false);
 
-  const form = useForm<AddEmployeePositionFormValues>({
-    resolver: zodResolver(addEmployeePositionSchema),
+  const resolver = useMemo(() => zodResolver(createSchema(existingContractEmployees)), [existingContractEmployees]);
+
+  const form = useForm<AddEmployeeToContractFormValues>({
+    resolver,
     mode: "onChange",
   });
 
-  const projectId = form.watch("projectId");
   const startDate = form.watch("startDate");
   const endDate = form.watch("endDate");
 
-  // Load projects on open
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
-    const loadProjects = async () => {
-      setProjectsLoading(true);
-
-      const response = await getProjectCatalog();
-      setProjects(
-        response.projects.map((p) => ({
-          value: p.id,
-          label: p.name,
+    const loadEmployees = async () => {
+      setEmployeesLoading(true);
+      const response = await getEmployees().promise;
+      setEmployees(
+        response.employees.map((e) => ({
+          value: e.id,
+          label: `${e.fullName} · ${e.personalNumber}`,
         })),
       );
-
-      setProjectsLoading(false);
+      setEmployeesLoading(false);
     };
 
-    loadProjects();
-  }, [open, setProjects, setProjectsLoading]);
-
-  // Load contracts on project change
-  useEffect(() => {
-    if (!projectId) {
-      setContracts([]);
-      return;
-    }
-
-    const loadContracts = async () => {
-      setContractsLoading(true);
-      setContracts([]);
-
-      form.setValue("contractId", "");
-
-      const response = await getContractCatalog(projectId);
-      setContracts(
-        response.contracts.map((c) => ({
-          value: c.id,
-          label: c.name,
-        })),
-      );
-
-      setContractsLoading(false);
-    };
-
-    loadContracts();
-  }, [projectId, form, setContracts, setContractsLoading]);
+    loadEmployees();
+  }, [open, setEmployees, setEmployeesLoading]);
 
   const handleClose = () => {
     form.reset();
-    setContracts([]);
     onClose();
   };
 
-  const handleSubmit = async (_values: AddEmployeePositionFormValues, _signal: AbortSignal) => {
-    void employeeId;
+  const handleSubmit = async (values: AddEmployeeToContractFormValues, signal: AbortSignal) => {
+    const position = values.positionName.trim();
+    const workload = Number(values.workload.replace(",", "."));
+    const endDateIso = toIsoOrEmpty(values.endDate) ?? null;
+
+    await addContractEmployee(
+      contractId,
+      {
+        employeeId: values.employeeId,
+        positionCode: values.positionCode.trim(),
+        position,
+        workload,
+        startDate: values.startDate,
+        endDate: endDateIso,
+      },
+      signal,
+    );
+
     onSaved();
     form.reset();
-    setContracts([]);
   };
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Přidat zaměstnanci pozici</DialogTitle>
+          <DialogTitle>Přidat zaměstnance k zakázce</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form className="space-y-4">
-            {/* Projekt */}
             <FormField
               control={form.control}
-              name="projectId"
+              name="employeeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Projekt *</FormLabel>
+                  <FormLabel>Zaměstnanec *</FormLabel>
                   <FormControl>
-                    <ComboBox
-                      value={field.value}
-                      items={projects}
-                      placeholder="Vyberte projekt"
-                      loading={projectsLoading}
-                      onChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {/* Zakázka */}
-            <FormField
-              control={form.control}
-              name="contractId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Zakázka *</FormLabel>
-                  <FormControl>
-                    <ComboBox
-                      value={field.value}
-                      items={contracts}
-                      placeholder="Vyberte zakázku"
-                      loading={contractsLoading}
-                      onChange={field.onChange}
-                    />
+                    <ComboBox value={field.value} items={employees} placeholder="Vyberte zaměstnance" loading={employeesLoading} onChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -200,7 +198,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                 <FormItem>
                   <FormLabel>Úvazek *</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input {...field} inputMode="decimal" />
                   </FormControl>
                 </FormItem>
               )}
@@ -249,7 +247,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
             <DialogFooter>
               <DialogCancelButton onClick={handleClose} />
               <DialogConfirmButton
-                disabled={!form.formState.isValid}
+                disabled={!form.formState.isValid || employeesLoading}
                 onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()}
               />
             </DialogFooter>
@@ -259,3 +257,4 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
     </Dialog>
   );
 };
+

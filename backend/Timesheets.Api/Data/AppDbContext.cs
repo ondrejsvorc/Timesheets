@@ -237,10 +237,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.Property(ce => ce.EmployeeId)
             .IsRequired();
 
+        builder.Property(ce => ce.PositionCode)
+            .IsRequired()
+            .HasMaxLength(50);
+
         builder.Property(ce => ce.Position)
+            .IsRequired()
             .HasMaxLength(200);
 
         builder.Property(ce => ce.Workload)
+            .IsRequired()
             .HasPrecision(5, 2);
 
         builder.Property(ce => ce.StartDate)
@@ -261,24 +267,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.HasKey(at => at.Id);
 
         builder.Property(at => at.EmployeeId).IsRequired();
-        builder.Property(at => at.ContractId).IsRequired();
         builder.Property(at => at.TimesheetStatusId).IsRequired();
         builder.Property(at => at.Year).IsRequired();
         builder.Property(at => at.Month).IsRequired();
         builder.Property(at => at.CreatedAt).IsRequired();
 
-        builder.HasIndex(at => new { at.EmployeeId, at.ContractId, at.Year, at.Month })
+        builder.HasIndex(at => new { at.EmployeeId, at.Year, at.Month })
             .IsUnique();
 
         builder.HasOne(at => at.Employee)
             .WithMany(e => e.AttendanceTimesheets)
             .HasForeignKey(at => at.EmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(at => at.Contract)
-            .WithMany(c => c.AttendanceTimesheets)
-            .HasForeignKey(at => at.ContractId)
-            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(at => at.TimesheetStatus)
             .WithMany(ts => ts.AttendanceTimesheets)
@@ -323,6 +323,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasDefaultValue(false);
 
         builder.Property(ad => ad.Workload)
+            .IsRequired()
             .HasPrecision(5, 2);
 
         builder.Property(ad => ad.HoursWithoutBreak)
@@ -441,6 +442,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.Property(pt => pt.ContractId)
             .IsRequired();
 
+        builder.Property(pt => pt.ContractEmployeeId)
+            .IsRequired();
+
         builder.Property(pt => pt.Year)
             .IsRequired();
 
@@ -456,8 +460,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(pt => pt.UpdatedAt);
 
-        builder.HasIndex(pt => new { pt.EmployeeId, pt.Year, pt.Month })
+        builder.HasIndex(pt => new { pt.ContractEmployeeId, pt.Year, pt.Month })
             .IsUnique();
+
+        builder.HasOne<ContractEmployee>()
+            .WithMany()
+            .HasForeignKey(pt => pt.ContractEmployeeId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(pt => pt.Days)
             .WithOne(d => d.ProjectTimesheet)
