@@ -10,7 +10,7 @@ public class AttendanceTimesheetMetadataReaderTests
     [Fact]
     public void Read_ValidFile_ReturnsCorrectMetadata()
     {
-        string filePath = Path.Combine("TestData", "valid_attendance.xlsx");
+        string filePath = Path.Combine("Unit", "TestData", "valid_attendance.xlsx");
         using FileStream stream = File.OpenRead(filePath);
 
         AttendanceTimesheetMetadata result = _reader.Read(stream);
@@ -28,7 +28,7 @@ public class AttendanceTimesheetMetadataReaderTests
     [Fact]
     public void Read_MalformedMetadata_HandlesGracefully()
     {
-        string filePath = Path.Combine("TestData", "invalid_attendance_malformed_metadata.xlsx");
+        string filePath = Path.Combine("Unit", "TestData", "invalid_attendance_malformed_metadata.xlsx");
         using FileStream stream = File.OpenRead(filePath);
 
         AttendanceTimesheetMetadata result = _reader.Read(stream);
