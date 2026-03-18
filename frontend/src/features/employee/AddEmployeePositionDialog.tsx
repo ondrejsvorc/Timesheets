@@ -1,22 +1,17 @@
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
+import { DatePicker } from "@/components/shared/inputs/DatePicker";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/utils/cn";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { cs } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useImmer } from "use-immer";
 import { z } from "zod";
 import { getContractCatalog } from "../employees/api/getContractCatalog";
 import { getProjectCatalog } from "../employees/api/getProjectCatalog";
+import { Texts } from "@/constants/texts";
 
 type AddEmployeePositionFormValues = z.infer<typeof addEmployeePositionSchema>;
 const addEmployeePositionSchema = z.object({
@@ -216,30 +211,17 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
                       <FormLabel>{name === "startDate" ? "Datum začátku *" : "Datum ukončení"}</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                              {field.value
-                                ? format(new Date(field.value), "PPP", {
-                                    locale: cs,
-                                  })
-                                : undefined}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value ? new Date(field.value) : undefined}
-                            onSelect={(date) => date && field.onChange(date.toISOString())}
-                            disabled={(date) =>
-                              name === "startDate" ? (endDate ? date >= new Date(endDate) : false) : startDate ? date <= new Date(startDate) : false
-                            }
-                          />
-                        </PopoverContent>
-                      </Popover>
+                      <FormControl>
+                        <DatePicker
+                          value={field.value}
+                          placeholder={Texts.noDate}
+                          clearable={name !== "startDate"}
+                          disabledDate={(date) =>
+                            name === "startDate" ? (endDate ? date >= new Date(endDate) : false) : startDate ? date <= new Date(startDate) : false
+                          }
+                          onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />

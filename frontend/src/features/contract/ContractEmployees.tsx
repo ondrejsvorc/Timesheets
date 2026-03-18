@@ -6,7 +6,7 @@ import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageH
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
-import { format, isBefore, parseISO, startOfDay } from "date-fns";
+import { isBefore, parseISO, startOfDay } from "date-fns";
 import { Suspense, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useParams, useRevalidator } from "react-router";
 import type { EmployeeItem, GetContractEmployeesResponse, PositionItem } from "./api/getContractEmployees";
@@ -15,6 +15,7 @@ import { DeleteButton } from "@/components/shared/buttons/ActionButtons";
 import { AddEmployeeDialog } from "./AddEmployeeDialog";
 import { deleteContractEmployee } from "./api/deleteContractEmployee";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
+import { formatDate } from "@/utils/formatDate";
 
 export const ContractEmployees = () => {
   const { promise } = useLoaderData() as {
@@ -45,7 +46,7 @@ const ContractEmployeesContent = () => {
       <SubPageHeader>
         <SubPageTitle>{Texts.employees}</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployee}</AddButton>}>
+      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>Přidat zaměstnanci pozici</AddButton>}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <ContractEmployeesList
@@ -151,7 +152,7 @@ const PositionRow = ({ contractId, position, onDeleteRequested }: PositionRowPro
     <TableRow className="cursor-pointer">
       <TableCell>{position.position ?? Texts.dash}</TableCell>
       <TableCell>{formatDate(position.startDate)}</TableCell>
-      <TableCell>{position.endDate ? formatDate(position.endDate) : Texts.dash}</TableCell>
+      <TableCell>{formatDate(position.endDate) ?? Texts.dash}</TableCell>
       <TableCell>{active ? Texts.active : Texts.inactive}</TableCell>
       <TableCell>
         <DeleteButton
@@ -173,12 +174,4 @@ function isPositionActive(position: PositionItem): boolean {
   const today = startOfDay(new Date());
   const end = parseISO(position.endDate);
   return !isBefore(end, today);
-}
-
-function formatDate(iso: string): string {
-  try {
-    return format(parseISO(iso), "dd.MM.yyyy");
-  } catch {
-    return iso;
-  }
 }

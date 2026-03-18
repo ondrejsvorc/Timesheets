@@ -11,6 +11,7 @@ import type { EmployeePositionItem, GetEmployeePositionsResponse } from "./api/g
 import { type PositionsFilterCriteria, usePositionsFilter } from "./hooks/usePositionsFilter";
 import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { AddEmployeePositionDialog } from "./AddEmployeePositionDialog";
+import { formatDate } from "@/utils/formatDate";
 
 export const EmployeePositions = () => {
   const { promise } = useLoaderData() as {
@@ -66,25 +67,21 @@ export const PositionsTable = ({ positions }: PositionsTableProps) => {
       <Table>
         <TableHeader>
           <TableRow>
+          <TableHead>{Texts.position}</TableHead>
             <TableHead>{Texts.project}</TableHead>
             <TableHead>{Texts.contract}</TableHead>
-            <TableHead>{Texts.position}</TableHead>
             <TableHead>{Texts.startDate}</TableHead>
             <TableHead>{Texts.endDate}</TableHead>
-            <TableHead>{Texts.status}</TableHead>
-            <TableHead>{Texts.actions}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {positions.map((position) => (
             <TableRow key={`${position.projectId}:${position.contractId}:${position.startDate}`} className="cursor-pointer">
+              <TableCell>{position.positionCode} · {position.position}</TableCell>
               <TableCell>{position.projectName}</TableCell>
               <TableCell>{position.contractName}</TableCell>
-              <TableCell>{position.position}</TableCell>
-              <TableCell>{position.startDate}</TableCell>
-              <TableCell>{position.endDate ?? Texts.dash}</TableCell>
-              <TableCell>TODO</TableCell>
-              <TableCell>TODO</TableCell>
+              <TableCell>{formatDate(position.startDate)}</TableCell>
+              <TableCell>{formatDate(position.endDate)}</TableCell>
             </TableRow>
           ))}
         </TableBody>

@@ -13,7 +13,7 @@ export const App = () => {
         </main>
         <AppFooter />
       </div>
-      <Toaster position="top-center" />
+      <Toaster position="bottom-center" />
     </>
   );
 };

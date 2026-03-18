@@ -6,8 +6,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
-import { format, parseISO } from "date-fns";
-import { cs } from "date-fns/locale";
+import { formatDate } from "@/utils/formatDate";
 import { MoreHorizontal } from "lucide-react";
 import { startTransition } from "react";
 import { useNavigate } from "react-router";
@@ -26,9 +25,9 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
   const dispatch = useProjectsDispatch();
   const [isEditOpen, setIsEditOpen] = useImmer(false);
   const [isConfirmOpen, setIsConfirmOpen] = useImmer(false);
-  const startDate = project.startDate ? format(parseISO(project.startDate), "d. M. yyyy", { locale: cs }) : null;
-  const endDate = project.endDate ? format(parseISO(project.endDate), "d. M. yyyy", { locale: cs }) : null;
-  const dateRange = startDate && endDate ? `${startDate} – ${endDate}` : startDate || Texts.noDate;
+  const startDate = formatDate(project.startDate);
+  const endDate = formatDate(project.endDate);
+  const dateRange = project.startDate && project.endDate ? `${startDate} – ${endDate}` : formatDate(project.startDate);
   const isActive = isProjectActive(project);
   const navigate = useNavigate();
 

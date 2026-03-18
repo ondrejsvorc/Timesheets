@@ -44,7 +44,7 @@ export const Texts = {
   noItems: "Žádné položky",
   confirmAction: "Potvrzení akce",
   confirmActionDescription: "Opravdu si přejete pokračovat? Tuto akci nelze vrátit zpět.",
-  dash: "—",
+  dash: "-",
   addPosition: "Přidat pozici",
   registrationNumber: "Číslo zakázky",
   contractName: "Název zakázky",

@@ -1,17 +1,10 @@
-import { PopoverTrigger } from "@radix-ui/react-popover";
-import { format } from "date-fns";
-import { cs } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
 import type { UseFormReturn } from "react-hook-form";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
+import { DatePicker } from "@/components/shared/inputs/DatePicker";
 import { DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent } from "@/components/ui/popover";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
 import { z } from "zod";
 
 export const projectFormSchema = z.object({
@@ -82,30 +75,15 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
                 <FormLabel>
                   {Texts.startDate} <span className="text-destructive">*</span>
                 </FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value ? format(field.value, "PPP", { locale: cs }) : undefined}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value ? new Date(field.value) : undefined}
-                      onSelect={(date) => {
-                        if (!date) return;
-                        const selected = field.value ? new Date(field.value) : null;
-                        if (selected && date.toDateString() === selected.toDateString()) return;
-                        field.onChange(date.toISOString());
-                      }}
-                      disabled={(date) => (endDate ? date >= new Date(endDate) : false)}
-                      autoFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <FormControl>
+                  <DatePicker
+                    value={field.value}
+                    placeholder={Texts.noDate}
+                    clearable
+                    disabledDate={(date) => (endDate ? date >= new Date(endDate) : false)}
+                    onChange={(next) => field.onChange(next ?? "")}
+                  />
+                </FormControl>
               </FormItem>
             )}
           />
@@ -116,30 +94,15 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>{Texts.endDate}</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value ? format(field.value, "PPP", { locale: cs }) : undefined}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value ? new Date(field.value) : undefined}
-                      onSelect={(date) => {
-                        if (!date) return;
-                        const selected = field.value ? new Date(field.value) : null;
-                        if (selected && date.toDateString() === selected.toDateString()) return;
-                        field.onChange(date.toISOString());
-                      }}
-                      disabled={(date) => (startDate ? date <= new Date(startDate) : false)}
-                      autoFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <FormControl>
+                  <DatePicker
+                    value={field.value}
+                    placeholder={Texts.noDate}
+                    clearable
+                    disabledDate={(date) => (startDate ? date <= new Date(startDate) : false)}
+                    onChange={(next) => field.onChange(next)}
+                  />
+                </FormControl>
               </FormItem>
             )}
           />
