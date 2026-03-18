@@ -17,7 +17,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
     public sealed record AttendanceItem(string ClockIn, string ClockOut, string BreakStart, string BreakEnd, string Interruptions, decimal NightHours, IEnumerable<TimeRange> Schedules);
     public sealed record CoreDefinition(decimal Workload);
     public sealed record ProjectDefinition(string Id, string RegistrationNumber, string Name, string Position, decimal Workload);
-    public sealed record DayItem(string Date, AttendanceItem Attendance, decimal CoreHours, Dictionary<string, decimal> ProjectHours, bool IsHoliday, bool IsWeekend);
+    public sealed record DayItem(string Date, AttendanceItem Attendance, decimal? CoreHours, Dictionary<string, decimal> ProjectHours, bool IsHoliday, bool IsWeekend);
     public sealed record Response(int Year, int Month, decimal TotalWorkload, bool HasBaseWorkload, CoreDefinition Core, IEnumerable<ProjectDefinition> Projects, IEnumerable<DayItem> Days);
     private sealed record AttendanceDaySource(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal Workload, decimal HoursWithoutBreak, bool IsHoliday, string? Description, string Schedules);
     private sealed record ProjectDaySource(DateTime Date, decimal Hours, bool IsHoliday);
@@ -111,8 +111,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
                 DateOnly dateOnly = DateOnly.FromDateTime(date);
                 AttendanceDaySource? attendanceDay = attendanceDaysByDate.GetValueOrDefault(dateOnly);
                 Dictionary<string, decimal> projectHours = projectHoursByDate.GetValueOrDefault(dateOnly) ?? [];
-                decimal workedHours = attendanceDay?.HoursWithoutBreak ?? 0m;
-                decimal coreHours = Math.Max(0m, workedHours - projectHours.Values.Sum());
+                decimal? coreHours = null;
 
                 return new DayItem(
                     date.ToString("dd. MM. yyyy"),

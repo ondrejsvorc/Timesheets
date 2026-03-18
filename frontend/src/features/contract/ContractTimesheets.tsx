@@ -235,8 +235,7 @@ interface TimesheetsByMonthProps {
 
 const TimesheetsByMonth = ({ months, employeesCount, isLoading }: TimesheetsByMonthProps) => {
   if (months.length === 0) {
-    const isStaleEmpty = employeesCount > 0;
-    return isStaleEmpty || isLoading ? <GenericSkeleton /> : <EmptyState />;
+    return isLoading ? <GenericSkeleton /> : <EmptyState />;
   }
   return (
     <div className="space-y-8">
@@ -325,8 +324,7 @@ interface TimesheetsByEmployeeProps {
 
 const TimesheetsByEmployee = ({ employees, monthsCount, isLoading }: TimesheetsByEmployeeProps) => {
   if (employees.length === 0) {
-    const isStaleEmpty = monthsCount > 0;
-    return isStaleEmpty || isLoading ? <GenericSkeleton /> : <EmptyState />;
+    return isLoading ? <GenericSkeleton /> : <EmptyState />;
   }
   return (
     <div className="space-y-8">

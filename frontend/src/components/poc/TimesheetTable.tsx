@@ -519,7 +519,7 @@ export const TimesheetTableFooter = ({ timesheet }: TimesheetTableFooterProps) =
         {/* Kmen: Aktuálně / Fond */}
         {(() => {
           const coreFund = TimesheetLogic.calculateWorkloadFund(timesheet, core.workload);
-          const coreCurrent = sum((d) => d.coreHours);
+          const coreCurrent = sum((d) => d.coreHours ?? 0);
           return (
             <TableCell
               className={cn(

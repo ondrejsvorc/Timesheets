@@ -108,8 +108,15 @@ public sealed class GetContractTimesheets : IEndpoint
             return TypedResults.Ok(new Response(Employees: [], Timesheets: []));
         }
 
-        List<TimesheetItem> timesheets = items
-            .Where(item => item.ContractEmployee is not null)
+        var relevant = items.Where(item => item.ContractEmployee is not null).ToList();
+
+        if (relevant.Count == 0)
+        {
+            // No contract-employee assignment for any attendance timesheet in the period.
+            return TypedResults.Ok(new Response(Employees: [], Timesheets: []));
+        }
+
+        List<TimesheetItem> timesheets = relevant
             .Select(item => new TimesheetItem(
                 item.Id,
                 item.EmployeeId,
@@ -123,7 +130,7 @@ public sealed class GetContractTimesheets : IEndpoint
             ))
             .ToList();
 
-        List<EmployeeItem> employees = items
+        List<EmployeeItem> employees = relevant
             .Select(item => new EmployeeItem(
                 item.EmployeeId,
                 item.PersonalNumber,

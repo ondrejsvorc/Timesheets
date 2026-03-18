@@ -78,7 +78,7 @@ export const TimesheetDay = React.memo(({ day, dayIndex, projects, onUpdateDay }
         <StagSchedule schedules={day.attendance.schedules} onSchedulesChange={(newSchedules) => handleUpdateDay((d) => { d.attendance.schedules = newSchedules; })} />
       </div>
       <div className={cellClass}>
-        <CoreEmployment value={day.coreHours ?? 0} onChange={(v) => handleUpdateDay((d) => { d.coreHours = v ?? 0; })} />
+        <CoreEmployment value={day.coreHours} onChange={(v) => handleUpdateDay((d) => { d.coreHours = v; })} />
       </div>
       {projects.map((project) => (
         <div key={project.id} className={cellClass}>

@@ -15,7 +15,7 @@ export const TimesheetFooter = ({ timesheet }: TimesheetFooterProps) => {
   const monthlyTotalFund = TimesheetLogic.calculateMonthlyFund(timesheet);
 
   const coreFund = TimesheetLogic.calculateWorkloadFund(timesheet, core.workload);
-  const coreCurrent = sum((d) => d.coreHours);
+  const coreCurrent = sum((d) => d.coreHours ?? 0);
 
   const footerCell = "min-w-0 flex items-center justify-center whitespace-nowrap tabular-nums text-[12px] uppercase tracking-wider";
 

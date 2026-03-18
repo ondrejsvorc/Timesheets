@@ -97,8 +97,8 @@ export const TimesheetLogic2 = {
   /**
    * Vypočítá rozdíl mezi odpracovanou dobou a alokovanými hodinami na projektech.
    */
-  calculateDayBalance: (targetCapacity: number, coreHours: number, projectHours: Record<string, number>): number => {
-    const totalAllocated = coreHours + Object.values(projectHours).reduce((sum, h) => sum + h, 0);
+  calculateDayBalance: (targetCapacity: number, coreHours: number | null, projectHours: Record<string, number>): number => {
+    const totalAllocated = (coreHours ?? 0) + Object.values(projectHours).reduce((sum, h) => sum + h, 0);
     const deviation = totalAllocated - targetCapacity;
     return Number(deviation.toFixed(2));
   }

@@ -28,7 +28,7 @@ export interface ProjectDefinition {
 export interface TimesheetDay {
   date: string;
   attendance: Attendance;
-  coreHours: number;
+  coreHours: number | null;
   projectHours: Record<string, number>;
   isHoliday: boolean;
   isWeekend: boolean;

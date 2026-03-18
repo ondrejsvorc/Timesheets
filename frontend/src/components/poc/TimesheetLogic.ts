@@ -163,12 +163,13 @@ export const TimesheetLogic = {
 
   calculateMonthlyTotalAllocated: (days: TimesheetDay[]): number => {
     return days.reduce((sum, day) => {
-      const dayAllocated = day.coreHours + Object.values(day.projectHours).reduce((a, b) => a + (b || 0), 0);
+      const dayAllocated = (day.coreHours ?? 0) + Object.values(day.projectHours).reduce((a, b) => a + (b || 0), 0);
       return sum + dayAllocated;
     }, 0);
   },
 
-  calculateWorkloadFund: (timesheet: Timesheet, workload: number): number => {
+  calculateWorkloadFund: (timesheet: Timesheet, workload: number | null | undefined): number => {
+    if (workload == null) return 0;
     const workingDaysCount = timesheet.days.filter((day) => !day.isWeekend && !day.isHoliday).length;
     const standardDayHours = 8;
     return Number((workingDaysCount * (standardDayHours * workload)).toFixed(2));
@@ -177,7 +178,7 @@ export const TimesheetLogic = {
   isCoreHoursValid: (day: TimesheetDay): boolean => {
     const stagTotal = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
     // Kmen musí být >= STAG rozvrh
-    return day.coreHours >= stagTotal;
+    return (day.coreHours ?? 0) >= stagTotal;
   },
 
   distributeRemainingHours: (day: TimesheetDay, timesheet: Timesheet) => {
@@ -188,7 +189,7 @@ export const TimesheetLogic = {
     }
 
     // 2. Spočítáme, co už uživatel vyplnil (tohle zůstane netknuté)
-    const currentAllocated = (day.coreHours || 0) + Object.values(day.projectHours).reduce((sum, val) => sum + (val || 0), 0);
+    const currentAllocated = (day.coreHours ?? 0) + Object.values(day.projectHours).reduce((sum, val) => sum + (val || 0), 0);
 
     // Rozdíl, který musíme "dogenerovat"
     let delta = Number((targetTotal - currentAllocated).toFixed(2));
@@ -201,10 +202,11 @@ export const TimesheetLogic = {
         // --- KROK 1: DOPLNĚNÍ KMENE (STAG) ---
         // Doplňujeme Kmen JEN pokud je v něm nula nebo méně než vyžaduje STAG
         const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
-        if (draft.coreHours < stagHours && delta > 0) {
-          const needed = Number((stagHours - draft.coreHours).toFixed(2));
+        const currentCore = draft.coreHours ?? 0;
+        if (currentCore < stagHours && delta > 0) {
+          const needed = Number((stagHours - currentCore).toFixed(2));
           const toAdd = Math.min(needed, delta);
-          draft.coreHours = Number((draft.coreHours + toAdd).toFixed(2));
+          draft.coreHours = Number((currentCore + toAdd).toFixed(2));
           delta = Number((delta - toAdd).toFixed(2));
         }
 
@@ -216,7 +218,7 @@ export const TimesheetLogic = {
 
         if (emptyProjectIds.length === 0) {
           // Pokud jsou všechny projekty už vyplněné, zbytek "přilepíme" ke kmeni
-          draft.coreHours = Number((draft.coreHours + delta).toFixed(2));
+          draft.coreHours = Number(((draft.coreHours ?? 0) + delta).toFixed(2));
           return;
         }
 
@@ -253,7 +255,7 @@ export const TimesheetLogic = {
         // --- KROK 4: FINÁLNÍ DOPLNĚNÍ ---
         // Pokud i po tomhle zbyla nějaká setina, hodíme ji do kmene
         if (runningDelta > 0) {
-          draft.coreHours = Number((draft.coreHours + runningDelta).toFixed(2));
+          draft.coreHours = Number(((draft.coreHours ?? 0) + runningDelta).toFixed(2));
         }
       });
     };
@@ -377,7 +379,7 @@ export const TimesheetLogic = {
 
   getDelta: (day: TimesheetDay): number => {
     const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
-    const allocated = day.coreHours + Object.values(day.projectHours).reduce((sum, h) => sum + h, 0);
+    const allocated = (day.coreHours ?? 0) + Object.values(day.projectHours).reduce((sum, h) => sum + h, 0);
     return Number((worked - allocated).toFixed(2));
   },
 
