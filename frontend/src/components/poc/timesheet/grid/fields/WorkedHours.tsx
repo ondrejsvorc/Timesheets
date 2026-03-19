@@ -1,11 +1,16 @@
+import { TimesheetLogic } from "../../../TimesheetLogic";
+import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
+
 interface WorkedHoursProps {
   value: number;
 }
 
 export const WorkedHours = ({ value }: WorkedHoursProps) => {
   return (
-    <div className="text-center font-bold tabular-nums">
-      {value.toFixed(2)}
-    </div>
+    <HoursToHumanTooltip hours={value}>
+      <div className="w-full text-right font-bold tabular-nums cursor-help border-b border-dotted border-slate-300">
+        {TimesheetLogic.formatHours(value)}
+      </div>
+    </HoursToHumanTooltip>
   );
 };

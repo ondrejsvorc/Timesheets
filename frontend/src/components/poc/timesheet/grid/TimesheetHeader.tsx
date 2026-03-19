@@ -1,11 +1,18 @@
+import { Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { CoreDefinition, ProjectDefinition } from "../../Timesheet";
 
 interface TimesheetHeaderProps {
   projects: ProjectDefinition[];
   core: CoreDefinition;
+  onGenerateMonthly: () => void;
 }
 
-export const TimesheetHeader = ({ projects, core }: TimesheetHeaderProps) => {
+const formatWorkloadPercent = (workload: number) => {
+  return Number((workload * 100).toFixed(3)).toString().replace(".", ",");
+};
+
+export const TimesheetHeader = ({ projects, core, onGenerateMonthly }: TimesheetHeaderProps) => {
   return (
     <div className="grid grid-cols-subgrid col-[1/-1] sticky top-0 z-20 self-start bg-slate-100 border-b border-slate-300">
       <div className="sticky left-0 z-40 bg-slate-100 border-r border-slate-300 h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
@@ -20,15 +27,29 @@ export const TimesheetHeader = ({ projects, core }: TimesheetHeaderProps) => {
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Noční práce</div>
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">STAG</div>
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
-        Kmen ({core.workload * 100}%)
+        Kmen ({formatWorkloadPercent(core.workload)}%)
       </div>
       {projects.map((project) => (
         <div key={project.id} className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
-          {project.workload * 100}%
+          {formatWorkloadPercent(project.workload)}%
         </div>
       ))}
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
+        Kontrola
+      </div>
       <div className="sticky right-0 z-40 bg-slate-100 border-r border-slate-300 h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
-        Generovat
+        <div className="flex items-center justify-center gap-1">
+          <span>Rozdíl</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-90"
+            onClick={onGenerateMonthly}
+            title="Doplnit chybějící hodiny v celém výkazu"
+          >
+            <Sparkles className="h-3.5 w-3.5 fill-blue-100" />
+          </Button>
+        </div>
       </div>
     </div>
   );

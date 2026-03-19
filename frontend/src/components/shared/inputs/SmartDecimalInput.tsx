@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 
 const DECIMAL_PATTERN = /^\d*(,\d*)?$/;
@@ -17,10 +17,17 @@ interface SmartDecimalInputProps {
   value: number | null
   onChange: (value: number | null) => void
   precision?: number
+  commitOnChange?: boolean
   className?: string
 }
 
-export const SmartDecimalInput = ({value, onChange, precision = 2, className}: SmartDecimalInputProps) => {
+export const SmartDecimalInput = ({
+  value,
+  onChange,
+  precision = 3,
+  commitOnChange = false,
+  className,
+}: SmartDecimalInputProps) => {
   const [displayValue, setDisplayValue] = useState(() =>
     formatDecimalForDisplay(value, precision)
   );
@@ -54,8 +61,14 @@ export const SmartDecimalInput = ({value, onChange, precision = 2, className}: S
       }
     });
 
+    if (!commitOnChange) {
+      return;
+    }
+
     if (normalizedValue === "") {
-      onChange(0);
+      startTransition(() => {
+        onChange(0);
+      });
       return;
     }
 
@@ -69,12 +82,20 @@ export const SmartDecimalInput = ({value, onChange, precision = 2, className}: S
     }
 
     const rounded = Number(parsed.toFixed(precision));
-    onChange(rounded);
+    if (!isValidHours(rounded)) {
+      return;
+    }
+
+    startTransition(() => {
+      onChange(rounded);
+    });
   };
 
-  const handleBlur = () => {
+  const commit = () => {
     if (displayValue === "") {
-      onChange(0);
+      startTransition(() => {
+        onChange(0);
+      });
       return;
     }
 
@@ -83,7 +104,9 @@ export const SmartDecimalInput = ({value, onChange, precision = 2, className}: S
     if (Number.isNaN(parsed)) {
       const revert = valueBeforeEditRef.current;
       setDisplayValue(formatDecimalForDisplay(revert, precision));
-      onChange(revert ?? 0);
+      startTransition(() => {
+        onChange(revert ?? 0);
+      });
       return;
     }
 
@@ -92,14 +115,18 @@ export const SmartDecimalInput = ({value, onChange, precision = 2, className}: S
     if (!isValidHours(rounded)) {
       const revert = valueBeforeEditRef.current;
       setDisplayValue(formatDecimalForDisplay(revert, precision));
-      onChange(revert ?? 0);
+      startTransition(() => {
+        onChange(revert ?? 0);
+      });
       return;
     }
 
     setDisplayValue(formatDecimalForDisplay(rounded, precision));
 
     if (rounded !== value) {
-      onChange(rounded);
+      startTransition(() => {
+        onChange(rounded);
+      });
     }
   };
 
@@ -111,9 +138,15 @@ export const SmartDecimalInput = ({value, onChange, precision = 2, className}: S
       value={displayValue}
       onFocus={handleFocus}
       onChange={handleChange}
-      onBlur={handleBlur}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          commit();
+          e.currentTarget.blur();
+        }
+      }}
       className={className}
-      maxLength={5}
+      maxLength={6}
     />
   );
 };

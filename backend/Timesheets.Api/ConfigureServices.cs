@@ -2,8 +2,10 @@ using CzechHolidays;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using System.IO.Compression;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 using Timesheets.Api.Notifications;
@@ -23,9 +25,30 @@ public static class ConfigureServices
                 policy.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod();
             });
         });
+        builder.AddResponseCompression();
         //builder.AddAuthentication();
         builder.AddDatabase();
         builder.AddAppServices();
+    }
+
+    private static void AddResponseCompression(this WebApplicationBuilder builder)
+    {
+        builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+        {
+            options.Level = CompressionLevel.Fastest;
+        });
+
+        builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+        {
+            options.Level = CompressionLevel.Fastest;
+        });
+
+        builder.Services.AddResponseCompression(options =>
+        {
+            options.EnableForHttps = true;
+            options.Providers.Add<BrotliCompressionProvider>();
+            options.Providers.Add<GzipCompressionProvider>();
+        });
     }
 
     private static void AddOpenApi(this WebApplicationBuilder builder)

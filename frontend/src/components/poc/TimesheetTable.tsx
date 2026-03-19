@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/utils/cn";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "../shared/inputs/MultiSelectComboBox";
+import { HoursToHumanTooltip } from "../shared/tooltips/HoursToHumanTooltip";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { ScheduleCell, ScheduleEditorModal } from "./ScheduleCell";
 import { SmartTimeInput } from "../shared/inputs/SmartTimeInput";
@@ -17,6 +18,10 @@ interface TimesheetTableProps {
   onUpdateDay: (date: string, updater: (draftDay: TimesheetDay) => void) => void;
   className?: string;
 }
+
+const formatWorkloadPercent = (workload: number) => {
+  return Number((workload * 100).toFixed(3)).toString().replace(".", ",");
+};
 
 export const TimesheetTable = ({ timesheet, onUpdateDay, className }: TimesheetTableProps) => {
   const [editingDay, setEditingDay] = useState<{ date: string; schedules: TimeRange[] } | null>(null);
@@ -49,11 +54,11 @@ export const TimesheetTable = ({ timesheet, onUpdateDay, className }: TimesheetT
             <TableHead className="min-w-[80px] text-center">Noční práce</TableHead>
             <TableHead className="min-w-[80px] text-center">STAG (hod.)</TableHead>
             <TableHead className="min-w-[80px] text-center">STAG (rozvrh)</TableHead>
-            <TableHead className="min-w-[80px] text-center border-l">Kmen ({timesheet.core.workload * 100}%)</TableHead>
+            <TableHead className="min-w-[80px] text-center border-l">Kmen ({formatWorkloadPercent(timesheet.core.workload)}%)</TableHead>
             {timesheet.projects.map((project) => (
               <TableHead key={project.id} className="min-w-[80px] text-center px-4">
                 <div className="flex flex-col">
-                  <span className="whitespace-nowrap">{project.workload * 100}%</span>
+                  <span className="whitespace-nowrap">{formatWorkloadPercent(project.workload)}%</span>
                 </div>
               </TableHead>
             ))}
@@ -154,13 +159,13 @@ export const INTERRUPTION_OPTIONS: MultiSelectComboBoxItem[] = [
 ];
 
 const DecimalInput = ({ value, onChange }: { value: number; onChange: (val: number) => void }) => {
-  const [inputValue, setInputValue] = useState<string>(value === 0 ? "" : value.toString().replace(".", ","));
+  const [inputValue, setInputValue] = useState<string>(value === 0 ? "" : TimesheetLogic.formatHours(value));
 
   useEffect(() => {
     const normalizedInput = inputValue.replace(",", ".");
     const numericInput = parseFloat(normalizedInput) || 0;
     if (numericInput !== value) {
-      const formatted = value === 0 ? "" : value.toString().replace(".", ",");
+      const formatted = value === 0 ? "" : TimesheetLogic.formatHours(value);
       setInputValue(formatted);
     }
   }, [value, inputValue]);
@@ -186,20 +191,25 @@ const DecimalInput = ({ value, onChange }: { value: number; onChange: (val: numb
       setInputValue("");
       onChange(0);
     } else {
-      const fixed = Number(parsed.toFixed(2));
-      setInputValue(fixed.toString().replace(".", ","));
+      const fixed = Number(parsed.toFixed(3));
+      setInputValue(TimesheetLogic.formatHours(fixed));
       onChange(fixed);
     }
   };
 
+  const parsedForTooltip = parseFloat(inputValue.replace(",", "."));
+  const tooltipHours = Number.isNaN(parsedForTooltip) ? 0 : parsedForTooltip;
+
   return (
-    <Input className="w-20 h-8 mx-auto text-right font-medium tabular-nums" value={inputValue} onChange={handleTextChange} onBlur={handleBlur} />
+    <HoursToHumanTooltip hours={tooltipHours}>
+      <Input className="w-20 h-8 mx-auto text-right font-medium tabular-nums" value={inputValue} onChange={handleTextChange} onBlur={handleBlur} />
+    </HoursToHumanTooltip>
   );
 };
 
 export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDay }: TimesheetRowProps) => {
     const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
-    const workedReadable = TimesheetLogic.formatWorkedHoursToHuman(worked);
+    const nightHours = TimesheetLogic.calculateNightHours(day.attendance);
     const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
     const stagReadable = TimesheetLogic.formatWorkedHoursToHuman(stagHours);
     const isCoreInvalid = !TimesheetLogic.isCoreHoursValid(day);
@@ -377,21 +387,18 @@ export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDa
 
         {/* Worked Total */}
         <TableCell className="text-center font-bold tabular-nums">
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="cursor-help border-b border-dotted border-slate-400">{worked.toFixed(2)}</span>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p className="font-medium text-xs">{workedReadable}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <HoursToHumanTooltip hours={worked}>
+                <span className="cursor-help border-b border-dotted border-slate-400">{TimesheetLogic.formatHours(worked)}</span>
+          </HoursToHumanTooltip>
         </TableCell>
 
         {/* Noční práce - readonly, automaticky dopočítané */}
         <TableCell className="text-center">
-          <span className="font-bold tabular-nums text-slate-600">{TimesheetLogic.calculateNightHours(day.attendance.clockIn, day.attendance.clockOut).toFixed(2)}</span>
+          <HoursToHumanTooltip hours={nightHours}>
+            <span className="font-bold tabular-nums text-slate-600 cursor-help border-b border-dotted border-slate-300">
+              {TimesheetLogic.formatHours(nightHours)}
+            </span>
+          </HoursToHumanTooltip>
         </TableCell>
 
         {/* STAG (hod) */}
@@ -400,7 +407,7 @@ export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDa
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="cursor-help border-b border-dotted border-slate-300 text-blue-600">
-                  {stagHours > 0 ? stagHours.toFixed(2) : "-"}
+                  {stagHours > 0 ? TimesheetLogic.formatHours(stagHours) : "-"}
                 </span>
               </TooltipTrigger>
               <TooltipContent side="top">
@@ -435,7 +442,7 @@ export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDa
               }
             />
             {isCoreInvalid && stagHours > 0 && (
-              <span className="text-[9px] text-red-500 font-bold uppercase tracking-tighter">Min: {stagHours.toFixed(1)}</span>
+              <span className="text-[9px] text-red-500 font-bold uppercase tracking-tighter">Min: {TimesheetLogic.formatHours(stagHours)}</span>
             )}
           </div>
         </TableCell>
@@ -463,7 +470,7 @@ export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDa
         >
           <div className="flex items-center justify-center gap-2 min-w-[80px]">
             {/* Číslo delty */}
-            <span className="flex-1 text-right">{delta === 0 ? "0" : delta.toFixed(2)}</span>
+            <span className="flex-1 text-right">{delta === 0 ? "0" : TimesheetLogic.formatHours(delta)}</span>
 
             {/* Tlačítko s bleskem */}
             <Button
@@ -476,7 +483,12 @@ export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDa
               )}
               onClick={() => {
                 if (delta > 0) {
-                  const magicFn = TimesheetLogic.distributeRemainingHours(day, timesheet);
+                  const magicFn = TimesheetLogic.distributeRemainingHours(
+                    day,
+                    timesheet.totalWorkload,
+                    timesheet.core.workload,
+                    timesheet.projects
+                  );
                   if (magicFn) magicFn(onUpdate);
                 }
               }}
@@ -511,7 +523,13 @@ export const TimesheetTableFooter = ({ timesheet }: TimesheetTableFooterProps) =
 
         {/* Odpracováno - celkové hodiny podle docházky */}
         <TableCell className="text-center py-1 whitespace-nowrap tabular-nums">
-          {monthlyTotalWorked.toFixed(2)} / {monthlyTotalFund.toFixed(2)}
+          <HoursToHumanTooltip hours={monthlyTotalWorked}>
+            <span className="cursor-help border-b border-dotted border-slate-300">{TimesheetLogic.formatHours(monthlyTotalWorked)}</span>
+          </HoursToHumanTooltip>
+          {" / "}
+          <HoursToHumanTooltip hours={monthlyTotalFund}>
+            <span className="cursor-help border-b border-dotted border-slate-300">{TimesheetLogic.formatHours(monthlyTotalFund)}</span>
+          </HoursToHumanTooltip>
         </TableCell>
 
         <TableCell colSpan={3} />
@@ -524,10 +542,16 @@ export const TimesheetTableFooter = ({ timesheet }: TimesheetTableFooterProps) =
             <TableCell
               className={cn(
                 "text-center py-1 whitespace-nowrap tabular-nums border-l border-slate-300",
-                coreCurrent > coreFund + 0.01 ? "text-red-600" : "text-blue-800",
+                coreCurrent > coreFund + 0.001 ? "text-red-600" : "text-blue-800",
               )}
             >
-              {coreCurrent.toFixed(2)} / {coreFund.toFixed(2)}
+              <HoursToHumanTooltip hours={coreCurrent}>
+                <span className="cursor-help border-b border-dotted border-slate-300">{TimesheetLogic.formatHours(coreCurrent)}</span>
+              </HoursToHumanTooltip>
+              {" / "}
+              <HoursToHumanTooltip hours={coreFund}>
+                <span className="cursor-help border-b border-dotted border-slate-300">{TimesheetLogic.formatHours(coreFund)}</span>
+              </HoursToHumanTooltip>
             </TableCell>
           );
         })()}
@@ -541,10 +565,16 @@ export const TimesheetTableFooter = ({ timesheet }: TimesheetTableFooterProps) =
               key={p.id}
               className={cn(
                 "text-center py-1 whitespace-nowrap tabular-nums",
-                projectCurrent > projectFund + 0.01 ? "text-red-600" : "text-blue-800",
+                projectCurrent > projectFund + 0.001 ? "text-red-600" : "text-blue-800",
               )}
             >
-              {projectCurrent.toFixed(2)} / {projectFund.toFixed(2)}
+              <HoursToHumanTooltip hours={projectCurrent}>
+                <span className="cursor-help border-b border-dotted border-slate-300">{TimesheetLogic.formatHours(projectCurrent)}</span>
+              </HoursToHumanTooltip>
+              {" / "}
+              <HoursToHumanTooltip hours={projectFund}>
+                <span className="cursor-help border-b border-dotted border-slate-300">{TimesheetLogic.formatHours(projectFund)}</span>
+              </HoursToHumanTooltip>
             </TableCell>
           );
         })}
@@ -552,7 +582,7 @@ export const TimesheetTableFooter = ({ timesheet }: TimesheetTableFooterProps) =
         {/* Kontrolní status vpravo */}
         <TableCell className="sticky right-0 bg-slate-200 border-l border-slate-300">
           <div className="flex justify-center">
-            {Math.abs(monthlyTotalAllocated - monthlyTotalFund) < 0.01 ? (
+            {Math.abs(monthlyTotalAllocated - monthlyTotalFund) < 0.001 ? (
               <span className="text-[9px] text-green-600">OK</span>
             ) : (
               <span className="text-[9px] text-red-500 font-bold">{monthlyTotalAllocated > monthlyTotalFund ? "OVER" : "DIF"}</span>

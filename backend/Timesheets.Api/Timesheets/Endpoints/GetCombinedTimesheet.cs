@@ -13,12 +13,9 @@ public sealed class GetCombinedTimesheet : IEndpoint
            .WithSummary("Get Combined Timesheet");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
-    public sealed record TimeRange(string Start, string End);
-    public sealed record AttendanceItem(string ClockIn, string ClockOut, string BreakStart, string BreakEnd, string Interruptions, decimal NightHours, IEnumerable<TimeRange> Schedules);
-    public sealed record CoreDefinition(decimal Workload);
-    public sealed record ProjectDefinition(string Id, string RegistrationNumber, string Name, string Position, decimal Workload);
-    public sealed record DayItem(string Date, AttendanceItem Attendance, decimal? CoreHours, Dictionary<string, decimal> ProjectHours, bool IsHoliday, bool IsWeekend);
-    public sealed record Response(int Year, int Month, decimal TotalWorkload, bool HasBaseWorkload, CoreDefinition Core, IEnumerable<ProjectDefinition> Projects, IEnumerable<DayItem> Days);
+    public sealed record ProjectDefinition(string Id, string Name, decimal Workload);
+    public sealed record DayItem(int Day, int?[] Work, int?[] Break, decimal[] ProjectHours, bool IsHoliday, bool IsWeekend, string? Note, IReadOnlyList<int[]>? Schedules);
+    public sealed record Response(int Year, int Month, decimal TotalWorkload, decimal CoreWorkload, IEnumerable<ProjectDefinition> Projects, IEnumerable<DayItem> Days);
     private sealed record AttendanceDaySource(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal Workload, decimal HoursWithoutBreak, bool IsHoliday, string? Description, string Schedules);
     private sealed record ProjectDaySource(DateTime Date, decimal Hours, bool IsHoliday);
     private sealed record ProjectTimesheetSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, List<ProjectDaySource> Days);
@@ -64,15 +61,15 @@ public sealed class GetCombinedTimesheet : IEndpoint
         List<ProjectDefinition> projects = projectTimesheets
             .Select(t => new ProjectDefinition(
                 t.ActivityId.ToString(),
-                t.RegistrationNumber,
                 t.ProjectName,
-                t.Position,
                 t.Workload
             ))
-            .OrderBy(p => p.RegistrationNumber)
-            .ThenBy(p => p.Name)
-            .ThenBy(p => p.Position)
+            .OrderBy(p => p.Name)
             .ToList();
+
+        Dictionary<string, int> projectIndexById = projects
+            .Select((p, index) => new { p.Id, Index = index })
+            .ToDictionary(x => x.Id, x => x.Index);
 
         Dictionary<DateOnly, Dictionary<string, decimal>> projectHoursByDate = projectTimesheets
             .SelectMany(timesheet => timesheet.Days.Select(day => new
@@ -111,28 +108,29 @@ public sealed class GetCombinedTimesheet : IEndpoint
                 DateOnly dateOnly = DateOnly.FromDateTime(date);
                 AttendanceDaySource? attendanceDay = attendanceDaysByDate.GetValueOrDefault(dateOnly);
                 Dictionary<string, decimal> projectHours = projectHoursByDate.GetValueOrDefault(dateOnly) ?? [];
-                decimal? coreHours = null;
+                decimal[] projectHoursArray = new decimal[projects.Count];
+                foreach ((string projectId, decimal hours) in projectHours)
+                {
+                    if (projectIndexById.TryGetValue(projectId, out int index))
+                    {
+                        projectHoursArray[index] = hours;
+                    }
+                }
 
                 return new DayItem(
-                    date.ToString("dd. MM. yyyy"),
-                    new AttendanceItem(
-                        FormatTime(attendanceDay?.ClockIn),
-                        FormatTime(attendanceDay?.ClockOut),
-                        FormatTime(attendanceDay?.BreakStart),
-                        FormatTime(attendanceDay?.BreakEnd),
-                        attendanceDay?.Description ?? string.Empty,
-                        0m,
-                        ParseSchedules(attendanceDay?.Schedules)
-                    ),
-                    coreHours,
-                    projects.ToDictionary(project => project.Id, project => projectHours.GetValueOrDefault(project.Id)),
+                    dayNumber,
+                    [ToMinutes(attendanceDay?.ClockIn), ToMinutes(attendanceDay?.ClockOut)],
+                    [ToMinutes(attendanceDay?.BreakStart), ToMinutes(attendanceDay?.BreakEnd)],
+                    projectHoursArray,
                     holidayByDate.GetValueOrDefault(dateOnly),
-                    date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday
+                    date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday,
+                    string.IsNullOrWhiteSpace(attendanceDay?.Description) ? null : attendanceDay.Description,
+                    ParseSchedules(attendanceDay?.Schedules)
                 );
             })
             .ToList();
 
-        return TypedResults.Ok(new Response(request.Year, request.Month, totalWorkload, baseWorkload.HasValue, new CoreDefinition(coreWorkload), projects, days));
+        return TypedResults.Ok(new Response(request.Year, request.Month, totalWorkload, coreWorkload, projects, days));
     }
 
     private static async Task<decimal?> GetBaseWorkloadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -163,22 +161,61 @@ public sealed class GetCombinedTimesheet : IEndpoint
         return workload;
     }
 
-    private static string FormatTime(TimeSpan? value) => value?.ToString(@"hh\:mm") ?? string.Empty;
+    private static int? ToMinutes(TimeSpan? value)
+    {
+        if (!value.HasValue)
+        {
+            return null;
+        }
 
-    private static IReadOnlyList<TimeRange> ParseSchedules(string? value)
+        return (int)Math.Round(value.Value.TotalMinutes);
+    }
+
+    private static IReadOnlyList<int[]>? ParseSchedules(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            return [];
+            return null;
         }
 
         try
         {
-            return JsonSerializer.Deserialize<List<TimeRange>>(value) ?? [];
+            List<JsonTimeRange>? ranges = JsonSerializer.Deserialize<List<JsonTimeRange>>(value);
+            if (ranges is null || ranges.Count == 0)
+            {
+                return null;
+            }
+
+            List<int[]> parsed = [];
+            foreach (JsonTimeRange range in ranges)
+            {
+                if (!TryParseMinutes(range.Start, out int start) || !TryParseMinutes(range.End, out int end))
+                {
+                    continue;
+                }
+
+                parsed.Add([start, end]);
+            }
+
+            return parsed.Count > 0 ? parsed : null;
         }
         catch
         {
-            return [];
+            return null;
         }
     }
+
+    private static bool TryParseMinutes(string value, out int minutes)
+    {
+        minutes = 0;
+        if (!TimeSpan.TryParse(value, out TimeSpan parsed))
+        {
+            return false;
+        }
+
+        minutes = (int)Math.Round(parsed.TotalMinutes);
+        return true;
+    }
+
+    private sealed record JsonTimeRange(string Start, string End);
 }

@@ -16,10 +16,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { CheckCircle, XCircle } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router";
 import type { EmployeeGroupView, MonthGroupView, TimesheetRowView } from "./api/getContractTimesheets";
 import { buildEmployeesView, buildMonthsView } from "./api/getContractTimesheets";
+import type { GetContractTimesheetsFilterOptionsResponse } from "./api/getContractTimesheetsFilterOptions";
+import { getContractTimesheetsFilterOptions } from "./api/getContractTimesheetsFilterOptions";
 import { CZECH_MONTH_NAMES, formatMonthYear } from "./utils/czechMonths";
 import {
   type ContractTimesheetsFilterCriteria,
@@ -27,26 +29,74 @@ import {
 } from "./hooks/useContractTimesheetsFilter";
 import { useContractTimesheets } from "./hooks/useContractTimesheets";
 
-const TIMESHEET_STATUS_OPTIONS: MultiSelectComboBoxItem[] = [
-  { value: Texts.statusInProgress, label: Texts.statusInProgress },
-  { value: Texts.statusPendingApproval, label: Texts.statusPendingApproval },
-  { value: Texts.statusApproved, label: Texts.statusApproved },
-];
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = [CURRENT_YEAR - 2, CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
-const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => i + 1);
-
 export const ContractTimesheets = () => {
   const { id: projectId, contractId } = useParams<{ id: string; contractId: string }>();
   const { filter, setFilter } = useContractTimesheetsFilter();
   const { data, isLoading, fetchTimesheets } = useContractTimesheets(projectId ?? "", contractId ?? "");
+  const [filterOptions, setFilterOptions] = useState<GetContractTimesheetsFilterOptionsResponse | null>(null);
 
   useEffect(() => {
     if (projectId && contractId) {
       fetchTimesheets(filter);
     }
   }, [projectId, contractId]); // eslint-disable-line react-hooks/exhaustive-deps -- initial fetch only
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!contractId) return;
+
+    getContractTimesheetsFilterOptions(contractId).then((res) => {
+      if (!cancelled) setFilterOptions(res);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [contractId]);
+
+  useEffect(() => {
+    if (!filterOptions?.years.length || !filterOptions.months.length) return;
+
+    const years = filterOptions.years;
+    const months = filterOptions.months;
+    const minYear = years[0]!;
+    const maxYear = years[years.length - 1]!;
+    const minMonth = months[0]!;
+    const maxMonth = months[months.length - 1]!;
+
+    const clampYear = (y: number) => (years.includes(y) ? y : y < minYear ? minYear : maxYear);
+    const clampMonth = (m: number) => (months.includes(m) ? m : m < minMonth ? minMonth : maxMonth);
+
+    const nextFromYear = clampYear(filter.fromYear);
+    const nextToYear = clampYear(filter.toYear);
+    const nextFromMonth = clampMonth(filter.fromMonth);
+    const nextToMonth = clampMonth(filter.toMonth);
+
+    const invalidRange =
+      nextFromYear > nextToYear || (nextFromYear === nextToYear && nextFromMonth > nextToMonth);
+
+    if (
+      nextFromYear !== filter.fromYear ||
+      nextToYear !== filter.toYear ||
+      nextFromMonth !== filter.fromMonth ||
+      nextToMonth !== filter.toMonth ||
+      invalidRange
+    ) {
+      setFilter((draft) => {
+        draft.fromYear = nextFromYear;
+        draft.fromMonth = nextFromMonth;
+        draft.toYear = nextToYear;
+        draft.toMonth = nextToMonth;
+
+        if (invalidRange) {
+          draft.fromYear = minYear;
+          draft.fromMonth = minMonth;
+          draft.toYear = maxYear;
+          draft.toMonth = maxMonth;
+        }
+      });
+    }
+  }, [filter.fromMonth, filter.fromYear, filter.toMonth, filter.toYear, filterOptions, setFilter]);
 
   const handleFilter = () => {
     fetchTimesheets(filter);
@@ -66,18 +116,16 @@ export const ContractTimesheets = () => {
             <SubPageTitle>Výkazy</SubPageTitle>
           </SubPageHeader>
           <FilterBar filter={filter} setFilter={setFilter} actions={<Button onClick={handleFilter}>Filtrovat</Button>}>
-            <ContractTimesheetsFilterControls />
+            <ContractTimesheetsFilterControls options={filterOptions} />
           </FilterBar>
           {filter.groupBy === "Month" ? (
             <TimesheetsByMonth
               months={monthsView}
-              employeesCount={data?.employees.length ?? 0}
               isLoading={isLoading}
             />
           ) : (
             <TimesheetsByEmployee
               employees={employeesView}
-              monthsCount={monthsView.length}
               isLoading={isLoading}
             />
           )}
@@ -87,8 +135,11 @@ export const ContractTimesheets = () => {
   );
 };
 
-function ContractTimesheetsFilterControls() {
+function ContractTimesheetsFilterControls({ options }: { options: GetContractTimesheetsFilterOptionsResponse | null }) {
   const { filter, setFilter } = useFilterContext<ContractTimesheetsFilterCriteria>();
+  const yearOptions = options?.years ?? [];
+  const monthOptions = options?.months ?? [];
+  const statusOptions: MultiSelectComboBoxItem[] = (options?.statuses ?? []).map((s) => ({ value: s, label: s }));
 
   return (
     <>
@@ -116,6 +167,7 @@ function ContractTimesheetsFilterControls() {
         <div className="flex gap-2">
         <Select
           value={String(filter.fromYear)}
+          disabled={yearOptions.length === 0}
           onValueChange={(v) =>
             setFilter((draft) => {
               draft.fromYear = parseInt(v, 10);
@@ -126,7 +178,7 @@ function ContractTimesheetsFilterControls() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {YEAR_OPTIONS.map((y) => (
+            {yearOptions.map((y) => (
               <SelectItem key={y} value={String(y)}>
                 {y}
               </SelectItem>
@@ -135,6 +187,7 @@ function ContractTimesheetsFilterControls() {
         </Select>
         <Select
           value={String(filter.fromMonth)}
+          disabled={monthOptions.length === 0}
           onValueChange={(v) =>
             setFilter((draft) => {
               draft.fromMonth = parseInt(v, 10);
@@ -145,7 +198,7 @@ function ContractTimesheetsFilterControls() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {MONTH_OPTIONS.map((m) => (
+            {monthOptions.map((m) => (
               <SelectItem key={m} value={String(m)}>
                 {CZECH_MONTH_NAMES[m]}
               </SelectItem>
@@ -159,6 +212,7 @@ function ContractTimesheetsFilterControls() {
         <div className="flex gap-2">
         <Select
           value={String(filter.toYear)}
+          disabled={yearOptions.length === 0}
           onValueChange={(v) =>
             setFilter((draft) => {
               draft.toYear = parseInt(v, 10);
@@ -169,7 +223,7 @@ function ContractTimesheetsFilterControls() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {YEAR_OPTIONS.map((y) => (
+            {yearOptions.map((y) => (
               <SelectItem key={y} value={String(y)}>
                 {y}
               </SelectItem>
@@ -178,6 +232,7 @@ function ContractTimesheetsFilterControls() {
         </Select>
         <Select
           value={String(filter.toMonth)}
+          disabled={monthOptions.length === 0}
           onValueChange={(v) =>
             setFilter((draft) => {
               draft.toMonth = parseInt(v, 10);
@@ -188,7 +243,7 @@ function ContractTimesheetsFilterControls() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {MONTH_OPTIONS.map((m) => (
+            {monthOptions.map((m) => (
               <SelectItem key={m} value={String(m)}>
                 {CZECH_MONTH_NAMES[m]}
               </SelectItem>
@@ -201,7 +256,7 @@ function ContractTimesheetsFilterControls() {
         <Label className="text-muted-foreground text-sm">{Texts.status}</Label>
         <MultiSelectComboBox
           value={filter.statuses ?? []}
-          items={TIMESHEET_STATUS_OPTIONS}
+          items={statusOptions}
           placeholder={Texts.status}
           maxVisibleItems={2}
           onChange={(value) =>
@@ -229,11 +284,10 @@ function ApprovalIcon({ approved }: { approved: boolean }) {
 
 interface TimesheetsByMonthProps {
   months: MonthGroupView[];
-  employeesCount: number;
   isLoading: boolean;
 }
 
-const TimesheetsByMonth = ({ months, employeesCount, isLoading }: TimesheetsByMonthProps) => {
+const TimesheetsByMonth = ({ months, isLoading }: TimesheetsByMonthProps) => {
   if (months.length === 0) {
     return isLoading ? <GenericSkeleton /> : <EmptyState />;
   }
@@ -318,11 +372,10 @@ function groupTimesheetsByMonth(timesheets: TimesheetRowView[]): { year: number;
 
 interface TimesheetsByEmployeeProps {
   employees: EmployeeGroupView[];
-  monthsCount: number;
   isLoading: boolean;
 }
 
-const TimesheetsByEmployee = ({ employees, monthsCount, isLoading }: TimesheetsByEmployeeProps) => {
+const TimesheetsByEmployee = ({ employees, isLoading }: TimesheetsByEmployeeProps) => {
   if (employees.length === 0) {
     return isLoading ? <GenericSkeleton /> : <EmptyState />;
   }

@@ -1,4 +1,5 @@
 import { cn } from "@/utils/cn";
+import { TimesheetLogic } from "../../../TimesheetLogic";
 
 interface BalanceProps {
   value: number;
@@ -8,11 +9,11 @@ export const Balance = ({ value }: BalanceProps) => {
   return (
     <div
       className={cn(
-        "text-center font-bold tabular-nums",
+        "w-full text-right font-bold tabular-nums",
         value === 0 ? "text-green-600" : "text-red-500"
       )}
     >
-      {value === 0 ? "0" : value.toFixed(2)}
+      {value === 0 ? "0" : TimesheetLogic.formatHours(value)}
     </div>
   );
 };

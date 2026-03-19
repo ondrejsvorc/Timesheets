@@ -12,8 +12,10 @@ export interface DayValidation {
 
 const MAX_CONTINUOUS_WORK_BEFORE_BREAK_HOURS = 6;
 const MAX_WORK_SHIFT_HOURS = 12;
+const MAX_NIGHT_WORK_HOURS = 8;
 const MIN_BREAK_DURATION_HOURS = 0.5;
 const MIN_REST_BETWEEN_SHIFTS_HOURS = 11;
+const HOURS_PRECISION = 3;
 
 const toMinutes = (time: string): number => {
   if (!time) return 0;
@@ -22,7 +24,7 @@ const toMinutes = (time: string): number => {
 };
 
 const toHours = (minutes: number): number => {
-  return Number((minutes / 60).toFixed(2));
+  return Number((minutes / 60).toFixed(HOURS_PRECISION));
 };
 
 export const TimesheetValidations = {
@@ -53,7 +55,7 @@ export const TimesheetValidations = {
         validations.push({
           code: "ERR-ATT-02",
           type: "error",
-          message: "Čas odchodu je dřívější nebo stejný jako příchod.",
+          message: "Odchod je dřív nebo ve stejný čas jako příchod.",
           field: "clockOut",
         });
       }
@@ -65,7 +67,7 @@ export const TimesheetValidations = {
       validations.push({
         code: "ERR-ATT-03",
         type: "error",
-        message: "Není vyplněn čas příchodu.",
+        message: "Chybí příchod.",
         field: "clockIn",
       });
     }
@@ -76,7 +78,7 @@ export const TimesheetValidations = {
       validations.push({
         code: "ERR-ATT-04",
         type: "error",
-        message: "Není vyplněn čas odchodu.",
+        message: "Chybí odchod.",
         field: "clockOut",
       });
     }
@@ -88,9 +90,22 @@ export const TimesheetValidations = {
       validations.push({
         code: "ERR-ATT-05",
         type: "error",
-        message: `Odpracovaný čas za den překračuje ${MAX_WORK_SHIFT_HOURS} hodin.`,
+        message: "Odpracováno více než 12 hodin.",
         field: "clockOut",
       });
+    }
+
+    // ERR-ATT-10: NightWorkOverLimit (noční práce > 8h, po odečtení přestávky)
+    if (day.attendance.clockIn && day.attendance.clockOut) {
+      const nightHours = TimesheetLogic.calculateNightHours(day.attendance);
+      if (nightHours > MAX_NIGHT_WORK_HOURS) {
+        validations.push({
+          code: "ERR-ATT-10",
+          type: "error",
+          message: "Noční práce přesahuje 8 hodin.",
+          field: "clockOut",
+        });
+      }
     }
 
     // Validace přestávky (platí každý den, když je něco vyplněno)
@@ -99,7 +114,7 @@ export const TimesheetValidations = {
       validations.push({
         code: "ERR-ATT-08B",
         type: "error",
-        message: "Není vyplněn konec přestávky.",
+        message: "Chybí konec přestávky.",
         field: "breakEnd",
       });
     }
@@ -109,7 +124,7 @@ export const TimesheetValidations = {
       validations.push({
         code: "ERR-ATT-08C",
         type: "error",
-        message: "Není vyplněn začátek přestávky.",
+        message: "Chybí začátek přestávky.",
         field: "breakStart",
       });
     }
@@ -130,7 +145,7 @@ export const TimesheetValidations = {
           validations.push({
             code: "ERR-ATT-08A",
             type: "error",
-            message: "Konec přestávky musí být později než začátek přestávky.",
+            message: "Konec přestávky musí být po jejím začátku.",
             field: "breakEnd",
           });
         } else {
@@ -143,18 +158,28 @@ export const TimesheetValidations = {
           validations.push({
             code: "ERR-ATT-08A",
             type: "error",
-            message: "Konec přestávky musí být později než začátek přestávky.",
+            message: "Konec přestávky musí být po jejím začátku.",
             field: "breakEnd",
           });
         } else {
           const breakDuration = toHours(actualBreakEnd - breakStart);
-          if (breakDuration < MIN_BREAK_DURATION_HOURS) {
-            validations.push({
-              code: "ERR-ATT-08",
-              type: "error",
-              message: `Délka přestávky musí být alespoň ${MIN_BREAK_DURATION_HOURS * 60} minut.`,
-              field: "breakEnd",
-            });
+          // Minimální délku přestávky (30 minut) vynucujeme jen tehdy, když je přestávka povinná
+          // (tj. směna přesáhne 6 hodin).
+          if (day.attendance.clockIn && day.attendance.clockOut) {
+            const clockIn = toMinutes(day.attendance.clockIn);
+            const clockOut = toMinutes(day.attendance.clockOut);
+            const actualClockOut = clockOut < clockIn ? clockOut + 24 * 60 : clockOut;
+            const shiftHours = toHours(actualClockOut - clockIn);
+            const breakIsRequired = shiftHours > MAX_CONTINUOUS_WORK_BEFORE_BREAK_HOURS;
+
+            if (breakIsRequired && breakDuration < MIN_BREAK_DURATION_HOURS) {
+              validations.push({
+                code: "ERR-ATT-06",
+                type: "error",
+                message: "Po 6 hodinách práce je nutná přestávka alespoň 30 minut.",
+                field: "breakEnd",
+              });
+            }
           }
         }
       }
@@ -175,7 +200,7 @@ export const TimesheetValidations = {
           validations.push({
             code: "ERR-ATT-09",
             type: "error",
-            message: "Začátek přestávky musí být mezi příchodem a odchodem.",
+            message: "Přestávka musí být mezi příchodem a odchodem.",
             field: "breakStart",
           });
         }
@@ -190,83 +215,95 @@ export const TimesheetValidations = {
           validations.push({
             code: "ERR-ATT-09",
             type: "error",
-            message: "Konec přestávky musí být mezi příchodem a odchodem.",
+            message: "Přestávka musí být mezi příchodem a odchodem.",
             field: "breakEnd",
           });
         }
       }
     }
 
-    if (!day.isWeekend && !day.isHoliday) {
-      // ERR-ATT-06: MissingBreak
-      if (day.attendance.clockIn && day.attendance.clockOut) {
-        const clockIn = toMinutes(day.attendance.clockIn);
-        const clockOut = toMinutes(day.attendance.clockOut);
+    // ERR-ATT-06/07: Break required (after 6h) + break too late
+    if (day.attendance.clockIn && day.attendance.clockOut) {
+      const clockIn = toMinutes(day.attendance.clockIn);
+      const clockOut = toMinutes(day.attendance.clockOut);
 
-        // Pokud je odchod < příchod, znamená to noční směnu přes půlnoc
-        let actualClockOut = clockOut;
-        if (clockOut < clockIn) {
-          actualClockOut = clockOut + 24 * 60;
-        }
+      // Pokud je odchod < příchod, znamená to noční směnu přes půlnoc
+      let actualClockOut = clockOut;
+      if (clockOut < clockIn) {
+        actualClockOut = clockOut + 24 * 60;
+      }
 
-        const workedMinutes = actualClockOut - clockIn;
-        const workedHours = toHours(workedMinutes);
+      const workedMinutes = actualClockOut - clockIn;
+      const workedHours = toHours(workedMinutes);
 
-        if (workedHours > MAX_CONTINUOUS_WORK_BEFORE_BREAK_HOURS && !day.attendance.breakStart) {
+      // Pravidlo pauzy řešíme jen pro validní délku směny.
+      // Nechceme ho ukazovat u zjevně nevalidních rozsahů (např. 08:00 -> 07:00 = 23h).
+      if (workedHours > MAX_CONTINUOUS_WORK_BEFORE_BREAK_HOURS && workedHours <= MAX_WORK_SHIFT_HOURS) {
+        const missingOrShortMsg = "Po 6 hodinách práce je nutná přestávka alespoň 30 minut.";
+        const lateMsg = "Přestávka je příliš pozdě (musí být nejpozději po 6 hodinách práce).";
+
+        // Missing any break boundary -> required break message
+        if (!day.attendance.breakStart || !day.attendance.breakEnd) {
           validations.push({
             code: "ERR-ATT-06",
             type: "error",
-            message: `Povinná přestávka musí být nejpozději po ${MAX_CONTINUOUS_WORK_BEFORE_BREAK_HOURS} hodinách práce.`,
+            message: missingOrShortMsg,
             field: "breakStart",
           });
-        }
-      }
-
-      // ERR-ATT-07: LateBreak
-      if (day.attendance.clockIn && day.attendance.breakStart) {
-        const clockIn = toMinutes(day.attendance.clockIn);
-        const breakStart = toMinutes(day.attendance.breakStart);
-
-        // Pokud je přestávka před příchodem (noční směna přes půlnoc), musíme to správně vypočítat
-        let hoursWorkedBeforeBreak: number;
-        if (breakStart < clockIn) {
-          // Přestávka je po půlnoci, příchod byl před půlnocí
-          // Např. příchod 22:00, přestávka 04:00 = 6 hodin práce
-          hoursWorkedBeforeBreak = toHours(breakStart + 24 * 60 - clockIn);
         } else {
-          // Normální případ
-          hoursWorkedBeforeBreak = toHours(breakStart - clockIn);
-        }
+          // Break duration (handles break across midnight)
+          let breakStart = toMinutes(day.attendance.breakStart);
+          let breakEnd = toMinutes(day.attendance.breakEnd);
+          if (breakEnd < breakStart) {
+            breakEnd += 24 * 60;
+          }
+          const breakDurationHours = toHours(breakEnd - breakStart);
 
-        if (hoursWorkedBeforeBreak > MAX_CONTINUOUS_WORK_BEFORE_BREAK_HOURS) {
-          validations.push({
-            code: "ERR-ATT-07",
-            type: "error",
-            message: `Po ${MAX_CONTINUOUS_WORK_BEFORE_BREAK_HOURS} hodinách práce je povinné mít alespoň 30 minut přestávku.`,
-            field: "breakStart",
-          });
+          // Break must start within 6 hours from clock-in (handles shifts across midnight)
+          if (breakStart < clockIn) {
+            breakStart += 24 * 60;
+          }
+          const hoursWorkedBeforeBreak = toHours(breakStart - clockIn);
+
+          // If break is too short -> required break message
+          if (breakDurationHours < MIN_BREAK_DURATION_HOURS) {
+            validations.push({
+              code: "ERR-ATT-06",
+              type: "error",
+              message: missingOrShortMsg,
+              field: "breakEnd",
+            });
+          } else if (hoursWorkedBeforeBreak > MAX_CONTINUOUS_WORK_BEFORE_BREAK_HOURS) {
+            // If break exists and is long enough, but starts too late -> late-break message
+            validations.push({
+              code: "ERR-ATT-07",
+              type: "error",
+              message: lateMsg,
+              field: "breakStart",
+            });
+          }
         }
       }
+    }
 
-      // WAR-ATT-04: NightShift
-      if (day.attendance.clockIn || day.attendance.clockOut) {
-        const clockIn = day.attendance.clockIn ? toMinutes(day.attendance.clockIn) : null;
-        const clockOut = day.attendance.clockOut ? toMinutes(day.attendance.clockOut) : null;
+    // WAR-ATT-04: NightShift (noční doba platí i pro víkendy a svátky)
+    if (day.attendance.clockIn || day.attendance.clockOut) {
+      const clockIn = day.attendance.clockIn ? toMinutes(day.attendance.clockIn) : null;
+      const clockOut = day.attendance.clockOut ? toMinutes(day.attendance.clockOut) : null;
 
-        const nightStart = 22 * 60; // 22:00
-        const nightEnd = 5 * 60 + 59; // 05:59
+      const nightStart = 22 * 60; // 22:00
+      const nightEnd = 5 * 60 + 59; // 05:59
 
-        const clockInStartsAtNight = clockIn !== null && (clockIn >= nightStart || clockIn <= nightEnd);
-        const clockOutEndsAtNight = clockOut !== null && (clockOut >= nightStart || clockOut <= nightEnd);
+      const clockInStartsAtNight = clockIn !== null && (clockIn >= nightStart || clockIn <= nightEnd);
+      const clockOutEndsAtNight = clockOut !== null && (clockOut >= nightStart || clockOut <= nightEnd);
 
-        if (clockInStartsAtNight || clockOutEndsAtNight) {
-          validations.push({
-            code: "WAR-ATT-04",
-            type: "warning",
-            message: "Pracovní doba spadá do nočního intervalu (22:00 – 05:59).",
-            field: "clockIn",
-          });
-        }
+      if (clockInStartsAtNight || clockOutEndsAtNight) {
+        validations.push({
+          code: "WAR-ATT-04",
+          type: "warning",
+          message: "Práce zasahuje do noční doby (22:00–05:59).",
+          field: "clockIn",
+        });
       }
     }
 

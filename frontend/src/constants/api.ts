@@ -44,7 +44,6 @@ export const customFetch = async <T>(input: RequestInfo | URL, init?: RequestIni
       throw new Error(`${response.status} ${response.statusText}${details}`);
     }
     if (apiLoggingEnabled) {
-      console.log(response);
       console.log(`${label} (${(performance.now() - start).toFixed(1)}ms)`);
     }
     if (response.status === 204) {

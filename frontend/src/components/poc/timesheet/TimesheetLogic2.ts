@@ -8,6 +8,8 @@ const MINUTES_IN_DAY = 1440;
 const NIGHT_SHIFT_START_MINUTES = 1320; // 22:00
 const NIGHT_SHIFT_END_MINUTES = 360;    // 06:00
 const STANDARD_WORK_DAY_HOURS = 8;
+const HOURS_PRECISION = 3;
+const roundHours = (value: number) => Number(value.toFixed(HOURS_PRECISION));
 
 /**
  * Převede časový řetězec ve formátu "HH:mm" na celkový počet minut od začátku dne.
@@ -55,7 +57,7 @@ export const TimesheetLogic2 = {
     }
 
     const netMinutes = grossDurationMinutes - breakDurationMinutes;
-    return Number((netMinutes / MINUTES_IN_HOUR).toFixed(2));
+    return roundHours(netMinutes / MINUTES_IN_HOUR);
   },
 
   /**
@@ -83,7 +85,7 @@ export const TimesheetLogic2 = {
       return total + calculateIntervalOverlap(startMinutes, endMinutes, window.start, window.end);
     }, 0);
 
-    return Number((totalNightMinutes / MINUTES_IN_HOUR).toFixed(2));
+    return roundHours(totalNightMinutes / MINUTES_IN_HOUR);
   },
 
   /**
@@ -91,7 +93,7 @@ export const TimesheetLogic2 = {
    */
   calculateMonthlyFund: (workingDaysInMonth: number, workload: number): number => {
     const totalFundHours = workingDaysInMonth * STANDARD_WORK_DAY_HOURS * workload;
-    return Number(totalFundHours.toFixed(2));
+    return roundHours(totalFundHours);
   },
 
   /**
@@ -100,6 +102,6 @@ export const TimesheetLogic2 = {
   calculateDayBalance: (targetCapacity: number, coreHours: number | null, projectHours: Record<string, number>): number => {
     const totalAllocated = (coreHours ?? 0) + Object.values(projectHours).reduce((sum, h) => sum + h, 0);
     const deviation = totalAllocated - targetCapacity;
-    return Number(deviation.toFixed(2));
+    return roundHours(deviation);
   }
 } as const;

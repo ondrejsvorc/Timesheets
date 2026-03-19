@@ -56,6 +56,7 @@ public static class Endpoints
     private static void MapContractEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/contracts").WithTags("Contracts")
         .MapEndpoint<GetContractCatalog>()
+        .MapEndpoint<GetContractTimesheetsFilterOptions>()
         .MapEndpoint<GetContractTimesheets>()
         .MapEndpoint<GetContractEmployees>()
         .MapEndpoint<AddContractEmployee>()

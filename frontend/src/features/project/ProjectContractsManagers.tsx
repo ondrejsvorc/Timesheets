@@ -5,10 +5,11 @@ import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDial
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useParams } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { AddContractManagerDialog } from "./AddContractManagerDialog";
 import type { GetProjectContractsManagersResponse, ProjectContractManagerItem } from "./api/getProjectContractsManagers";
@@ -117,9 +118,10 @@ interface ContractManagerRowProps {
 
 export const ContractManagerRow = ({ manager }: ContractManagerRowProps) => {
   const dispatch = useContractsManagersDispatch();
+  const navigate = useNavigate();
 
   return (
-    <TableRow>
+    <TableRow className="cursor-pointer" onClick={() => navigate(Routes.employee(manager.employeeId))}>
       <TableCell>{manager.contractName}</TableCell>
       <TableCell>{manager.employeePersonalNumber}</TableCell>
       <TableCell>{manager.employeeFullName}</TableCell>

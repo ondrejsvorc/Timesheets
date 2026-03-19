@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { cn } from "@/utils/cn";
 import type { Timesheet, TimesheetDay } from "../../Timesheet";
+import { TimesheetLogic } from "../../TimesheetLogic";
 import { TimesheetBody } from "./TimesheetBody";
 import { TimesheetFooter } from "./TimesheetFooter";
 import { TimesheetHeader } from "./TimesheetHeader";
@@ -19,8 +20,9 @@ const createGridTemplate = (projectCount: number) => {
     "minmax(5rem, 1fr)", /* Kmen */
   ];
   const projectCols = projectCount > 0 ? [`repeat(${projectCount}, minmax(max-content, 1fr))`] : [];
-  const last = "minmax(5rem, max-content)"; /* Generovat */
-  return [...base, ...projectCols, last].join(" ");
+  const control = "minmax(7rem, max-content)"; /* Kontrola */
+  const delta = "minmax(7rem, max-content)"; /* Rozdíl */
+  return [...base, ...projectCols, control, delta].join(" ");
 };
 
 interface TimesheetGridProps {
@@ -36,8 +38,25 @@ export const TimesheetGrid = ({ timesheet, onUpdateDay, className }: TimesheetGr
   return (
     <div className={cn("rounded-md border border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full shadow-sm", className)}>
       <div className="grid w-full min-w-max" style={{ gridTemplateColumns: template }}>
-        <TimesheetHeader projects={timesheet.projects} core={timesheet.core} />
-        <TimesheetBody days={timesheet.days} projects={timesheet.projects} onUpdateDay={onUpdateDay} />
+        <TimesheetHeader
+          projects={timesheet.projects}
+          core={timesheet.core}
+          onGenerateMonthly={() => {
+            const onUpdateByDate = (date: string, updater: (draftDay: TimesheetDay) => void) => {
+              const dayIndex = timesheet.days.findIndex((d) => d.date === date);
+              if (dayIndex < 0) return;
+              onUpdateDay(dayIndex, updater);
+            };
+            TimesheetLogic.distributeMonthlyHours(timesheet, onUpdateByDate);
+          }}
+        />
+        <TimesheetBody
+          days={timesheet.days}
+          projects={timesheet.projects}
+          totalWorkload={timesheet.totalWorkload}
+          coreWorkload={timesheet.core.workload}
+          onUpdateDay={onUpdateDay}
+        />
         <TimesheetFooter timesheet={timesheet} />
       </div>
     </div>
