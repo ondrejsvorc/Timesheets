@@ -85,7 +85,7 @@ export const ContractsTable = ({ contracts }: ContractsTableProps) => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{Texts.registrationNumber}</TableHead>
+              <TableHead>{Texts.contractId}</TableHead>
               <TableHead>{Texts.contractName}</TableHead>
               <TableHead>{Texts.actions}</TableHead>
             </TableRow>

@@ -9,20 +9,20 @@ import { TimesheetHeader } from "./TimesheetHeader";
 const createGridTemplate = (projectCount: number) => {
   const base = [
     "minmax(8rem, max-content)",   /* Den */
-    "minmax(7rem, max-content)", /* Příchod */
-    "minmax(7rem, max-content)", /* Odchod */
-    "minmax(7rem, max-content)", /* Pauza od */
-    "minmax(7rem, max-content)", /* Pauza do */
+    "minmax(6rem, max-content)", /* Příchod */
+    "minmax(6rem, max-content)", /* Odchod */
+    "minmax(6rem, max-content)", /* Pauza od */
+    "minmax(6rem, max-content)", /* Pauza do */
     "minmax(max-content, max-content)",   /* Přerušení */
-    "minmax(7rem, max-content)",   /* Odpracováno */
-    "minmax(7rem, max-content)",   /* Noční */
+    "minmax(4rem, max-content)",   /* Docházka */
+    "minmax(4rem, max-content)",   /* Noční */
     "minmax(7rem, max-content)",   /* STAG */
     "minmax(5rem, 1fr)", /* Kmen */
   ];
-  const projectCols = projectCount > 0 ? [`repeat(${projectCount}, minmax(max-content, 1fr))`] : [];
+  const projectColumns = projectCount > 0 ? [`repeat(${projectCount}, minmax(max-content, 1fr))`] : [];
   const control = "minmax(7rem, max-content)"; /* Kontrola */
   const delta = "minmax(7rem, max-content)"; /* Rozdíl */
-  return [...base, ...projectCols, control, delta].join(" ");
+  return [...base, ...projectColumns, control, delta].join(" ");
 };
 
 interface TimesheetGridProps {

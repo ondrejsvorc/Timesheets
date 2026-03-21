@@ -4,12 +4,12 @@ import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
@@ -73,7 +73,8 @@ const EmployeeTimesheetsContent = () => {
   }, [availableYears, filter.months, filter.year, response.availableMonths, setFilter]);
 
   let filteredMonths = response.months.filter((m) => m.year === filter.year);
-  if (filter.months !== null && filter.months.length > 0) filteredMonths = filteredMonths.filter((m) => filter.months!.includes(m.month));
+  const selectedMonths = filter.months;
+  if (selectedMonths !== null && selectedMonths.length > 0) filteredMonths = filteredMonths.filter((m) => selectedMonths.includes(m.month));
 
   if (filteredMonths.length === 0) {
     return (
@@ -198,6 +199,7 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
 
   const isAllMonthsSelected = filter.months === null;
   const selectedMonthsCount = filter.months?.length ?? 0;
+  const singleSelectedMonth = filter.months?.[0];
 
   return (
     <>
@@ -236,8 +238,8 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
                   ? "Všechny měsíce"
                   : selectedMonthsCount === 0
                     ? "Vyberte měsíce"
-                    : selectedMonthsCount === 1
-                      ? CZECH_MONTH_NAMES[filter.months![0]!]
+                    : selectedMonthsCount === 1 && singleSelectedMonth !== undefined
+                      ? CZECH_MONTH_NAMES[singleSelectedMonth]
                       : `${selectedMonthsCount} měsíců`}
               </span>
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -245,25 +247,27 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
           </PopoverTrigger>
           <PopoverContent className="w-[200px] p-2" align="start">
             <div className="space-y-1">
-              <div
-                className="flex items-center space-x-2 rounded-sm px-2 py-1.5 hover:bg-accent cursor-pointer"
+              <button
+                type="button"
+                className="flex w-full items-center space-x-2 rounded-sm px-2 py-1.5 text-left hover:bg-accent"
                 onClick={() => handleMonthToggle(null)}
               >
-                <Checkbox checked={isAllMonthsSelected} />
-                <Label className="text-sm font-normal cursor-pointer">Všechny měsíce</Label>
-              </div>
+                <Checkbox checked={isAllMonthsSelected} className="pointer-events-none" />
+                <span className="text-sm font-normal">Všechny měsíce</span>
+              </button>
               <div className="border-t my-1" />
               {availableMonths.map((month) => {
                 const isSelected = filter.months?.includes(month) ?? false;
                 return (
-                  <div
+                  <button
+                    type="button"
                     key={month}
-                    className="flex items-center space-x-2 rounded-sm px-2 py-1.5 hover:bg-accent cursor-pointer"
+                    className="flex w-full items-center space-x-2 rounded-sm px-2 py-1.5 text-left hover:bg-accent"
                     onClick={() => handleMonthToggle(month)}
                   >
-                    <Checkbox checked={isSelected} />
-                    <Label className="text-sm font-normal cursor-pointer">{CZECH_MONTH_NAMES[month]}</Label>
-                  </div>
+                    <Checkbox checked={isSelected} className="pointer-events-none" />
+                    <span className="text-sm font-normal">{CZECH_MONTH_NAMES[month]}</span>
+                  </button>
                 );
               })}
             </div>
@@ -290,7 +294,12 @@ function getFallbackYear(availableYears: number[], selectedYear: number) {
   }
 
   const currentYear = new Date().getFullYear();
-  return availableYears.includes(currentYear) ? currentYear : availableYears[availableYears.length - 1]!;
+  if (availableYears.includes(currentYear)) {
+    return currentYear;
+  }
+
+  const lastAvailableYear = availableYears[availableYears.length - 1];
+  return lastAvailableYear ?? null;
 }
 
 // grouping by month is no longer needed (single row per month)

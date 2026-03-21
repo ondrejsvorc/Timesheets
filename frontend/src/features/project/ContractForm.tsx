@@ -31,11 +31,11 @@ export const ContractForm = ({ initialValues, onSubmit, onCancel }: ContractForm
       <form className="space-y-4">
         <FormField
           control={form.control}
-          name="name"
+          name="contractId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                {Texts.contractName} <span className="text-destructive">*</span>
+                {Texts.contractId} <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
                 <Input {...field} />
@@ -46,11 +46,11 @@ export const ContractForm = ({ initialValues, onSubmit, onCancel }: ContractForm
 
         <FormField
           control={form.control}
-          name="contractId"
+          name="name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                {Texts.contractId} <span className="text-destructive">*</span>
+                {Texts.contractName} <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
                 <Input {...field} />
