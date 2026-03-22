@@ -21,7 +21,16 @@ public sealed class CreateProject : IEndpoint
     {
         public Validator()
         {
-            RuleFor(x => x.Name).NotEmpty();
+            RuleFor(x => x.Name)
+                .NotEmpty()
+                .MaximumLength(ProjectSchema.Name.MaxLength);
+
+            RuleFor(x => x.RegistrationNumber)
+                .MaximumLength(ProjectSchema.RegistrationNumber.MaxLength);
+
+            RuleFor(x => x.StartDate)
+                .LessThan(x => x.EndDate)
+                .When(x => x.EndDate.HasValue);
         }
     }
 

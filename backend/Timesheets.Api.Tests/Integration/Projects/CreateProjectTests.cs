@@ -40,4 +40,76 @@ public class CreateProjectTests : BaseIntegrationTest
         var response = await Client.PostAsJsonAsync("/api/projects", request);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task CreateProject_WithLongName_ReturnsBadRequest()
+    {
+        var request = new CreateProject.Request(
+            new string('A', 201),
+            "REG-CREATE-003",
+            DateTime.UtcNow.Date,
+            DateTime.UtcNow.Date.AddDays(10)
+        );
+
+        var response = await Client.PostAsJsonAsync("/api/projects", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateProject_WithLongRegistrationNumber_ReturnsBadRequest()
+    {
+        var request = new CreateProject.Request(
+            "Valid Name",
+            new string('B', 101),
+            DateTime.UtcNow.Date,
+            DateTime.UtcNow.Date.AddDays(10)
+        );
+
+        var response = await Client.PostAsJsonAsync("/api/projects", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateProject_WithStartDateEqualEndDate_ReturnsBadRequest()
+    {
+        var date = DateTime.UtcNow.Date;
+        var request = new CreateProject.Request(
+            "Valid Name",
+            "REG-CREATE-004",
+            date,
+            date
+        );
+
+        var response = await Client.PostAsJsonAsync("/api/projects", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateProject_WithStartDateGreaterEndDate_ReturnsBadRequest()
+    {
+        var date = DateTime.UtcNow.Date;
+        var request = new CreateProject.Request(
+            "Valid Name",
+            "REG-CREATE-005",
+            date.AddDays(1),
+            date
+        );
+
+        var response = await Client.PostAsJsonAsync("/api/projects", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateProject_WithNullEndDate_ReturnsCreated()
+    {
+        var request = new CreateProject.Request(
+            "Valid Name",
+            "REG-CREATE-006",
+            DateTime.UtcNow.Date,
+            null
+        );
+
+        var response = await Client.PostAsJsonAsync("/api/projects", request);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
 }
