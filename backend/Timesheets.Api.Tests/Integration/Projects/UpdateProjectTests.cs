@@ -42,15 +42,44 @@ public class UpdateProjectTests : BaseIntegrationTest
         var createdProject = await postResponse.Content.ReadFromJsonAsync<CreateProject.Response>();
         var projectId = createdProject!.Project.Id;
 
-        // Then try to update it with invalid data (empty name)
-        var invalidUpdateRequest = new UpdateProject.Request(
+        // 1. Empty Name
+        var emptyNameRequest = new UpdateProject.Request(
             "",
             "REG-UPD-002",
             DateTime.UtcNow.Date,
             DateTime.UtcNow.Date.AddDays(10)
         );
+        var response1 = await Client.PutAsJsonAsync($"/api/projects/{projectId}", emptyNameRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, response1.StatusCode);
 
-        var putResponse = await Client.PutAsJsonAsync($"/api/projects/{projectId}", invalidUpdateRequest);
-        Assert.Equal(HttpStatusCode.BadRequest, putResponse.StatusCode);
+        // 2. Name too long
+        var longNameRequest = new UpdateProject.Request(
+            new string('a', 201),
+            "REG-UPD-002",
+            DateTime.UtcNow.Date,
+            DateTime.UtcNow.Date.AddDays(10)
+        );
+        var response2 = await Client.PutAsJsonAsync($"/api/projects/{projectId}", longNameRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, response2.StatusCode);
+
+        // 3. RegistrationNumber too long
+        var longRegRequest = new UpdateProject.Request(
+            "Valid Name",
+            new string('b', 101),
+            DateTime.UtcNow.Date,
+            DateTime.UtcNow.Date.AddDays(10)
+        );
+        var response3 = await Client.PutAsJsonAsync($"/api/projects/{projectId}", longRegRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, response3.StatusCode);
+
+        // 4. StartDate >= EndDate
+        var invalidDatesRequest = new UpdateProject.Request(
+            "Valid Name",
+            "REG-UPD-002",
+            DateTime.UtcNow.Date.AddDays(10),
+            DateTime.UtcNow.Date
+        );
+        var response4 = await Client.PutAsJsonAsync($"/api/projects/{projectId}", invalidDatesRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, response4.StatusCode);
     }
 }

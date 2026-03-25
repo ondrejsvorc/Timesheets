@@ -131,10 +131,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(p => p.Name)
             .IsRequired()
-            .HasMaxLength(200);
+            .HasMaxLength(ProjectSchema.Name.MaxLength);
 
         builder.Property(p => p.RegistrationNumber)
-            .HasMaxLength(100);
+            .HasMaxLength(ProjectSchema.RegistrationNumber.MaxLength);
 
         builder.Property(p => p.StartDate)
             .IsRequired();
