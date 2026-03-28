@@ -10,7 +10,17 @@ public sealed class GetEmployeePositions : IEndpoint
         app.MapGet("/{id}/positions", Handle)
            .WithSummary("Get Employee Positions");
 
-    public sealed record EmployeePositionItem(Guid ProjectId, string ProjectName, Guid ContractId, string ContractName, string PositionCode, string Position, DateTime StartDate, DateTime? EndDate);
+    public sealed record EmployeePositionItem(
+        Guid ProjectId,
+        string ProjectName,
+        Guid ContractId,
+        string ContractName,
+        string PositionCode,
+        string Position,
+        decimal Workload,
+        DateTime StartDate,
+        DateTime? EndDate
+    );
     public sealed record Response(Guid EmployeeId, IEnumerable<EmployeePositionItem> Positions);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -37,6 +47,7 @@ public sealed class GetEmployeePositions : IEndpoint
                 e.Contract.Name,
                 e.PositionCode,
                 e.Position,
+                e.Workload,
                 e.StartDate,
                 e.EndDate
             ))

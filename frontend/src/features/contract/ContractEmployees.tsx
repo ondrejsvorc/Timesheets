@@ -16,6 +16,7 @@ import { AddEmployeeDialog } from "./AddEmployeeDialog";
 import { deleteContractEmployee } from "./api/deleteContractEmployee";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { formatDate } from "@/utils/formatDate";
+import { formatWorkloadPercent } from "@/utils/formatWorkload";
 
 export const ContractEmployees = () => {
   const { promise } = useLoaderData() as {
@@ -122,6 +123,7 @@ const EmployeeSection = ({ contractId, employee, onDeleteRequested }: EmployeeSe
           <TableHeader>
             <TableRow>
               <TableHead>{Texts.position}</TableHead>
+              <TableHead>{Texts.workload}</TableHead>
               <TableHead>{Texts.from}</TableHead>
               <TableHead>{Texts.to}</TableHead>
               <TableHead>{Texts.status}</TableHead>
@@ -151,6 +153,7 @@ const PositionRow = ({ contractId, position, onDeleteRequested }: PositionRowPro
   return (
     <TableRow className="cursor-pointer">
       <TableCell>{position.position ?? Texts.dash}</TableCell>
+      <TableCell>{formatWorkloadPercent(position.workload)}</TableCell>
       <TableCell>{formatDate(position.startDate)}</TableCell>
       <TableCell>{formatDate(position.endDate) ?? Texts.dash}</TableCell>
       <TableCell>{active ? Texts.active : Texts.inactive}</TableCell>

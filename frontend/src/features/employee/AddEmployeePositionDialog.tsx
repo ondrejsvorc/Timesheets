@@ -11,7 +11,6 @@ import { useImmer } from "use-immer";
 import { z } from "zod";
 import { getContractCatalog } from "../employees/api/getContractCatalog";
 import { getProjectCatalog } from "../employees/api/getProjectCatalog";
-import { Texts } from "@/constants/texts";
 
 type AddEmployeePositionFormValues = z.infer<typeof addEmployeePositionSchema>;
 const addEmployeePositionSchema = z.object({
@@ -214,7 +213,6 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                       <FormControl>
                         <DatePicker
                           value={field.value}
-                          placeholder={Texts.noDate}
                           clearable={name !== "startDate"}
                           disabledDate={(date) =>
                             name === "startDate" ? (endDate ? date >= new Date(endDate) : false) : startDate ? date <= new Date(startDate) : false

@@ -12,6 +12,7 @@ import { type PositionsFilterCriteria, usePositionsFilter } from "./hooks/usePos
 import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { AddEmployeePositionDialog } from "./AddEmployeePositionDialog";
 import { formatDate } from "@/utils/formatDate";
+import { formatWorkloadPercent } from "@/utils/formatWorkload";
 
 export const EmployeePositions = () => {
   const { promise } = useLoaderData() as {
@@ -67,21 +68,23 @@ export const PositionsTable = ({ positions }: PositionsTableProps) => {
       <Table>
         <TableHeader>
           <TableRow>
-          <TableHead>{Texts.position}</TableHead>
+            <TableHead>{Texts.position}</TableHead>
+            <TableHead>{Texts.workload}</TableHead>
+            <TableHead>{Texts.from}</TableHead>
+            <TableHead>{Texts.to}</TableHead>
             <TableHead>{Texts.project}</TableHead>
             <TableHead>{Texts.contract}</TableHead>
-            <TableHead>{Texts.startDate}</TableHead>
-            <TableHead>{Texts.endDate}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {positions.map((position) => (
             <TableRow key={`${position.projectId}:${position.contractId}:${position.startDate}`} className="cursor-pointer">
               <TableCell>{position.positionCode} · {position.position}</TableCell>
-              <TableCell>{position.projectName}</TableCell>
-              <TableCell>{position.contractName}</TableCell>
+              <TableCell>{formatWorkloadPercent(position.workload)}</TableCell>
               <TableCell>{formatDate(position.startDate)}</TableCell>
               <TableCell>{formatDate(position.endDate)}</TableCell>
+              <TableCell>{position.projectName}</TableCell>
+              <TableCell>{position.contractName}</TableCell>
             </TableRow>
           ))}
         </TableBody>

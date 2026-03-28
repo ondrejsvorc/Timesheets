@@ -78,7 +78,6 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
                 <FormControl>
                   <DatePicker
                     value={field.value}
-                    placeholder={Texts.noDate}
                     clearable
                     disabledDate={(date) => (endDate ? date >= new Date(endDate) : false)}
                     onChange={(next) => field.onChange(next ?? "")}
@@ -97,7 +96,6 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
                 <FormControl>
                   <DatePicker
                     value={field.value}
-                    placeholder={Texts.noDate}
                     clearable
                     disabledDate={(date) => (startDate ? date <= new Date(startDate) : false)}
                     onChange={(next) => field.onChange(next)}

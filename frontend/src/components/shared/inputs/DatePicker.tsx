@@ -9,17 +9,16 @@ import { formatDate } from "@/utils/formatDate";
 
 interface DatePickerProps {
   value?: string | null;
-  placeholder?: string;
   disabled?: boolean;
   clearable?: boolean;
   disabledDate?: (date: Date) => boolean;
   onChange: (nextValue: string | undefined) => void;
 }
 
-export const DatePicker = ({ value, placeholder, disabled, clearable = true, disabledDate, onChange }: DatePickerProps) => {
+export const DatePicker = ({ value, disabled, clearable = true, disabledDate, onChange }: DatePickerProps) => {
   const [open, setOpen] = useState(false);
   const selected = useMemo(() => (value ? new Date(value) : undefined), [value]);
-  const label = formatDate(value) ?? placeholder;
+  const label = formatDate(value);
 
   const handleSelect = useCallback(
     (date: Date | undefined) => {

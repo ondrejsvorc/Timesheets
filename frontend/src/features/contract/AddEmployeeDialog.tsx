@@ -13,7 +13,6 @@ import { z } from "zod";
 import { addContractEmployee } from "./api/addContractEmployee";
 import type { EmployeeItem as ContractEmployeeItem } from "./api/getContractEmployees";
 import { getEmployees } from "../employees/api/getEmployees";
-import { Texts } from "@/constants/texts";
 
 type AddEmployeeToContractFormValues = z.infer<ReturnType<typeof createSchema>>;
 
@@ -213,7 +212,6 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                       <FormControl>
                         <DatePicker
                           value={field.value}
-                          placeholder={Texts.noDate}
                           clearable={name !== "startDate"}
                           disabledDate={(date) =>
                             name === "startDate" ? (endDate ? date >= new Date(endDate) : false) : startDate ? date <= new Date(startDate) : false
