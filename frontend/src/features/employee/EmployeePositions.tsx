@@ -73,7 +73,7 @@ export const PositionsTable = ({ positions }: PositionsTableProps) => {
             <TableHead>{Texts.from}</TableHead>
             <TableHead>{Texts.to}</TableHead>
             <TableHead>{Texts.project}</TableHead>
-            <TableHead>{Texts.contract}</TableHead>
+            <TableHead>{Texts.contractId}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -84,7 +84,7 @@ export const PositionsTable = ({ positions }: PositionsTableProps) => {
               <TableCell>{formatDate(position.startDate)}</TableCell>
               <TableCell>{formatDate(position.endDate)}</TableCell>
               <TableCell>{position.projectName}</TableCell>
-              <TableCell>{position.contractName}</TableCell>
+              <TableCell>{position.contractRegistrationNumber || Texts.dash}</TableCell>
             </TableRow>
           ))}
         </TableBody>

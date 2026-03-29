@@ -1,5 +1,6 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/utils/cn";
 
 const DECIMAL_PATTERN = /^\d*(,\d*)?$/;
 
@@ -19,6 +20,7 @@ interface SmartDecimalInputProps {
   precision?: number
   commitOnChange?: boolean
   className?: string
+  disabled?: boolean
 }
 
 export const SmartDecimalInput = ({
@@ -27,6 +29,7 @@ export const SmartDecimalInput = ({
   precision = 3,
   commitOnChange = false,
   className,
+  disabled = false,
 }: SmartDecimalInputProps) => {
   const [displayValue, setDisplayValue] = useState(() =>
     formatDecimalForDisplay(value, precision)
@@ -129,6 +132,14 @@ export const SmartDecimalInput = ({
       });
     }
   };
+
+  if (disabled) {
+    return (
+      <div className={cn("flex h-8 min-w-[5rem] items-center justify-end tabular-nums text-muted-foreground", className)}>
+        {formatDecimalForDisplay(value, precision) || "—"}
+      </div>
+    );
+  }
 
   return (
     <Input

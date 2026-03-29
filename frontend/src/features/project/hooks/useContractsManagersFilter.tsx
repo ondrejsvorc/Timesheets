@@ -11,5 +11,5 @@ export const useContractsManagersFilter = (items: ProjectContractManagerItem[]) 
   useFilter<ProjectContractManagerItem, ContractsManagersFilterCriteria>({
     items,
     initialFilter,
-    keys: [(item) => item.employeeFullName],
+    keys: [(item) => item.employeeFullName, (item) => item.contractRegistrationNumber],
   });

@@ -1,5 +1,14 @@
 import type { Attendance, ProjectDefinition, TimeRange, Timesheet, TimesheetDay } from "./Timesheet";
-const HOURS_PRECISION = 3;
+
+const HOURS_PRECISION = 2;
+
+/** Kódy přerušení — služební cesty se nealokují automaticky do kmene/projektů. */
+const BUSINESS_TRIP_INTERRUPTION_CODES = new Set(["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"]);
+
+const attendanceHasBusinessTripInterruption = (attendance: Attendance): boolean => {
+  if (!attendance.interruptions?.trim()) return false;
+  return attendance.interruptions.split(",").some((c) => BUSINESS_TRIP_INTERRUPTION_CODES.has(c.trim()));
+};
 
 /**
  * Konvertuje časový formát "HH:mm" na minuty.
@@ -13,6 +22,13 @@ const roundHours = (value: number): number => Number(value.toFixed(HOURS_PRECISI
 const hasAttendanceFilled = (attendance: Attendance): boolean => Boolean(attendance.clockIn || attendance.clockOut);
 
 export const TimesheetLogic = {
+  /**
+   * Celkový čas docházky (příchod–odchod mínus přestávka). Zahrnuje i práci v noční době — nesnižuje se o sloupec „Noční práce“.
+   */
+  calculateAttendanceTotalHours: (attendance: Attendance): number => {
+    return TimesheetLogic.calculateWorkedHours(attendance);
+  },
+
   calculateWorkedHours: (attendance: Attendance): number => {
     if (!attendance.clockIn || !attendance.clockOut) {
       return 0;
@@ -131,8 +147,11 @@ export const TimesheetLogic = {
     day: TimesheetDay,
     totalWorkload: number,
     coreWorkload: number,
-    projects: Pick<ProjectDefinition, "id" | "workload">[]
+    projects: Pick<ProjectDefinition, "id" | "workload" | "lockedAt">[]
   ) => {
+    if (attendanceHasBusinessTripInterruption(day.attendance)) {
+      return null;
+    }
     const safeTotalWorkload = totalWorkload || 1;
     const coreRatio = coreWorkload / safeTotalWorkload;
     const projectRatios = projects.map((p) => ({
@@ -151,6 +170,10 @@ export const TimesheetLogic = {
           draft.coreHours = roundHours((draft.coreHours ?? 0) + remaining * coreRatio);
         }
         projectRatios.forEach((p) => {
+          const meta = projects.find((proj) => proj.id === p.id);
+          if (meta?.lockedAt) {
+            return;
+          }
           const current = draft.projectHours[p.id] || 0;
           if (current === 0) {
             draft.projectHours[p.id] = roundHours(current + remaining * p.ratio);
@@ -169,6 +192,9 @@ export const TimesheetLogic = {
     }));
 
     timesheet.days.forEach((day) => {
+      if (attendanceHasBusinessTripInterruption(day.attendance)) {
+        return;
+      }
       const isWorkable = !day.isWeekend && !day.isHoliday;
       let dayTotal = TimesheetLogic.calculateWorkedHours(day.attendance);
       
@@ -184,6 +210,10 @@ export const TimesheetLogic = {
             draft.coreHours = roundHours(dayTotal * coreRatio);
           }
           projectRatios.forEach((p) => {
+            const meta = timesheet.projects.find((proj) => proj.id === p.id);
+            if (meta?.lockedAt) {
+              return;
+            }
             const current = draft.projectHours[p.id] || 0;
             if (current === 0) {
               draft.projectHours[p.id] = roundHours(dayTotal * p.ratio);
@@ -210,8 +240,9 @@ export const TimesheetLogic = {
   },
 
   getDayTotals: (day: TimesheetDay): { workedHours: number; nightHours: number; stagHours: number; controlTotal: number; balance: number } => {
-    const workedHours = TimesheetLogic.calculateWorkedHours(day.attendance);
-    const nightHours = TimesheetLogic.calculateNightHours(day.attendance);
+    const workedHours = TimesheetLogic.calculateAttendanceTotalHours(day.attendance);
+    const nightRaw = TimesheetLogic.calculateNightHours(day.attendance);
+    const nightHours = roundHours(Math.min(nightRaw, workedHours));
     const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
     const controlTotal = TimesheetLogic.calculateControlTotal(day);
     const balance = hasAttendanceFilled(day.attendance) ? roundHours(workedHours - controlTotal) : 0;

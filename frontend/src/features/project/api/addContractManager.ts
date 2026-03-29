@@ -4,7 +4,7 @@ import type { ProjectContractManagerItem } from "./getProjectContractsManagers";
 export type AddContractManagerResponse = {
   contractId: string;
   employeeId: string;
-  contractName: string;
+  contractRegistrationNumber: string;
   employeePersonalNumber: number;
   employeeFullName: string;
   employeeEmail: string;
@@ -29,7 +29,7 @@ export function toProjectContractManagerItem(response: AddContractManagerRespons
   return {
     contractId: response.contractId,
     employeeId: response.employeeId,
-    contractName: response.contractName,
+    contractRegistrationNumber: response.contractRegistrationNumber,
     employeePersonalNumber: response.employeePersonalNumber,
     employeeFullName: response.employeeFullName,
     employeeEmail: response.employeeEmail,

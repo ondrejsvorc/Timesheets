@@ -11,5 +11,5 @@ export const useContractsFilter = (items: ProjectContractItem[]) =>
   useFilter<ProjectContractItem, ContractsFilterCriteria>({
     items,
     initialFilter,
-    keys: [(item) => item.name],
+    keys: [(item) => item.name, (item) => item.registrationNumber],
   });

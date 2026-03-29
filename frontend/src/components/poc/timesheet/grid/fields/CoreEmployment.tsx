@@ -9,6 +9,7 @@ export const CoreEmployment = ({ value, onChange }: EditableFieldProps<number | 
         value={value}
         onChange={onChange}
         commitOnChange
+        precision={2}
         className="h-8 w-20 max-w-full text-right tabular-nums"
       />
     </HoursToHumanTooltip>

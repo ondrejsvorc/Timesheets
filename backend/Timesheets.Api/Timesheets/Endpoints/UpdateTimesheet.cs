@@ -79,7 +79,7 @@ public sealed class UpdateTimesheet : IEndpoint
                 {
                     breakHours = (decimal)(day.BreakEnd.Value - day.BreakStart.Value).TotalHours;
                 }
-                day.HoursWithoutBreak = Math.Max(0, workedHours - breakHours);
+                day.HoursWithoutBreak = decimal.Round(Math.Max(0, workedHours - breakHours), 2, MidpointRounding.AwayFromZero);
             }
             else
             {

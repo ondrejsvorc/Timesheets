@@ -28,10 +28,11 @@ const createGridTemplate = (projectCount: number) => {
 interface TimesheetGridProps {
   timesheet: Timesheet;
   onUpdateDay: (index: number, updater: (day: TimesheetDay) => void) => void;
+  onToggleProjectLock: (projectId: string) => void;
   className?: string;
 }
 
-export const TimesheetGrid = ({ timesheet, onUpdateDay, className }: TimesheetGridProps) => {
+export const TimesheetGrid = ({ timesheet, onUpdateDay, onToggleProjectLock, className }: TimesheetGridProps) => {
   const projectCount = timesheet.projects.length;
   const template = useMemo(() => createGridTemplate(projectCount), [projectCount]);
 
@@ -41,6 +42,7 @@ export const TimesheetGrid = ({ timesheet, onUpdateDay, className }: TimesheetGr
         <TimesheetHeader
           projects={timesheet.projects}
           core={timesheet.core}
+          onToggleProjectLock={onToggleProjectLock}
           onGenerateMonthly={() => {
             const onUpdateByDate = (date: string, updater: (draftDay: TimesheetDay) => void) => {
               const dayIndex = timesheet.days.findIndex((d) => d.date === date);

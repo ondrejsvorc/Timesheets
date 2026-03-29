@@ -14,7 +14,7 @@ public sealed class GetEmployeePositions : IEndpoint
         Guid ProjectId,
         string ProjectName,
         Guid ContractId,
-        string ContractName,
+        string ContractRegistrationNumber,
         string PositionCode,
         string Position,
         decimal Workload,
@@ -38,13 +38,13 @@ public sealed class GetEmployeePositions : IEndpoint
             .AsNoTracking()
             .Where(e => e.EmployeeId == id)
             .OrderBy(e => e.Contract.Project.Name)
-            .ThenBy(e => e.Contract.Name)
+            .ThenBy(e => e.Contract.RegistrationNumber)
             .ThenBy(e => e.StartDate)
             .Select(e => new EmployeePositionItem(
                 e.Contract.Project.Id,
                 e.Contract.Project.Name,
                 e.Contract.Id,
-                e.Contract.Name,
+                e.Contract.RegistrationNumber,
                 e.PositionCode,
                 e.Position,
                 e.Workload,

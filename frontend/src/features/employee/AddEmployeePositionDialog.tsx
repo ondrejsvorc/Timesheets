@@ -11,6 +11,8 @@ import { useImmer } from "use-immer";
 import { z } from "zod";
 import { getContractCatalog } from "../employees/api/getContractCatalog";
 import { getProjectCatalog } from "../employees/api/getProjectCatalog";
+import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
+import { isWholeWorkloadPercentInRange } from "@/utils/workloadPercentForm";
 
 type AddEmployeePositionFormValues = z.infer<typeof addEmployeePositionSchema>;
 const addEmployeePositionSchema = z.object({
@@ -18,7 +20,13 @@ const addEmployeePositionSchema = z.object({
   contractId: z.string().nonempty(),
   positionCode: z.string().nonempty(),
   positionName: z.string().nonempty(),
-  workload: z.string().nonempty(),
+  workload: z
+    .string()
+    .nonempty()
+    .refine(
+      (v) => isWholeWorkloadPercentInRange(v, 0, 100),
+      "Zadejte celé číslo 0–100 (procenta úvazku).",
+    ),
   startDate: z.string().nonempty(),
   endDate: z.string().optional(),
 });
@@ -194,7 +202,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                 <FormItem>
                   <FormLabel>Úvazek *</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <WorkloadPercentInput {...field} />
                   </FormControl>
                 </FormItem>
               )}

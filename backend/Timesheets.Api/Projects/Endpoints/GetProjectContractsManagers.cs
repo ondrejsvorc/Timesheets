@@ -10,7 +10,13 @@ public sealed class GetProjectContractsManagers : IEndpoint
         app.MapGet("/{id}/contracts/managers", Handle)
            .WithSummary("Get Project Contracts Managers");
 
-    public sealed record ContractManagerItem(Guid ContractId, Guid EmployeeId, string ContractName, int EmployeePersonalNumber, string EmployeeFullName, string EmployeeEmail);
+    public sealed record ContractManagerItem(
+        Guid ContractId,
+        Guid EmployeeId,
+        string ContractRegistrationNumber,
+        int EmployeePersonalNumber,
+        string EmployeeFullName,
+        string EmployeeEmail);
     public sealed record Response(IEnumerable<ContractManagerItem> Managers);
 
     private static async Task<Ok<Response>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -18,12 +24,12 @@ public sealed class GetProjectContractsManagers : IEndpoint
         List<ContractManagerItem> managers = await dbContext.ContractManagers
             .AsNoTracking()
             .Where(cm => cm.Contract.ProjectId == id)
-            .OrderBy(cm => cm.Contract.Name)
+            .OrderBy(cm => cm.Contract.RegistrationNumber)
             .ThenBy(cm => cm.Employee.FullName)
             .Select(cm => new ContractManagerItem(
                 cm.ContractId,
                 cm.EmployeeId,
-                cm.Contract.Name,
+                cm.Contract.RegistrationNumber,
                 cm.Employee.PersonalNumber,
                 cm.Employee.FullName,
                 cm.Employee.Email

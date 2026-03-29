@@ -52,6 +52,8 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
     name: project.name,
     position: "",
     workload: project.workload,
+    lockedAt: null,
+    lockedByEmployeeId: null,
   }));
 
   const days = response.days.map((day) => {

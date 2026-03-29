@@ -115,7 +115,11 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
       </div>
       {projects.map((project) => (
         <div key={project.id} className={cellClass}>
-          <ProjectField value={Number(day.projectHours[project.id] ?? 0)} onChange={(v) => handleUpdateDay((d) => { d.projectHours[project.id] = v ?? 0; })} />
+          <ProjectField
+            value={Number(day.projectHours[project.id] ?? 0)}
+            locked={project.lockedAt != null}
+            onChange={(v) => handleUpdateDay((d) => { d.projectHours[project.id] = v ?? 0; })}
+          />
         </div>
       ))}
       <div className={cn(cellClass, numericCellClass)}>

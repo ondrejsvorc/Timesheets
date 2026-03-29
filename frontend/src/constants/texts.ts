@@ -103,4 +103,5 @@ export const Texts = {
   enterFullscreen: "Fullscreen",
   exitFullscreen: "Ukončit fullscreen",
   saveChanges: "Uložit změny",
+  clearAttendanceEntryAndBreak: "Vymazat příchody, odchody a přestávku",
 };

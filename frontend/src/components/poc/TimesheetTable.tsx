@@ -20,7 +20,7 @@ interface TimesheetTableProps {
 }
 
 const formatWorkloadPercent = (workload: number) => {
-  return Number((workload * 100).toFixed(3)).toString().replace(".", ",");
+  return Number((workload * 100).toFixed(2)).toString().replace(".", ",");
 };
 
 export const TimesheetTable = ({ timesheet, onUpdateDay, className }: TimesheetTableProps) => {

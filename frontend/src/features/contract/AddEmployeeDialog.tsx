@@ -13,6 +13,8 @@ import { z } from "zod";
 import { addContractEmployee } from "./api/addContractEmployee";
 import type { EmployeeItem as ContractEmployeeItem } from "./api/getContractEmployees";
 import { getEmployees } from "../employees/api/getEmployees";
+import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
+import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 
 type AddEmployeeToContractFormValues = z.infer<ReturnType<typeof createSchema>>;
 
@@ -37,10 +39,10 @@ const createSchema = (existing: ContractEmployeeItem[]) =>
       workload: z
         .string()
         .nonempty()
-        .refine((v) => {
-          const n = Number(v.replace(",", "."));
-          return Number.isFinite(n) && n > 0;
-        }, "Úvazek musí být kladné číslo."),
+        .refine(
+          (v) => isWholeWorkloadPercentInRange(v, 1, 100),
+          "Zadejte celé číslo 1–100 (procenta úvazku).",
+        ),
       startDate: z.string().nonempty(),
       endDate: z.string().optional(),
     })
@@ -114,7 +116,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
 
   const handleSubmit = async (values: AddEmployeeToContractFormValues, signal: AbortSignal) => {
     const position = values.positionName.trim();
-    const workload = Number(values.workload.replace(",", "."));
+    const workload = workloadPercentToFraction(values.workload);
     const endDateIso = toIsoOrEmpty(values.endDate) ?? null;
 
     await addContractEmployee(
@@ -193,7 +195,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                 <FormItem>
                   <FormLabel>Úvazek *</FormLabel>
                   <FormControl>
-                    <Input {...field} inputMode="decimal" />
+                    <WorkloadPercentInput {...field} />
                   </FormControl>
                 </FormItem>
               )}

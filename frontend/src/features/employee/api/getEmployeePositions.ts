@@ -4,7 +4,7 @@ export interface EmployeePositionItem {
   projectId: string;
   projectName: string;
   contractId: string;
-  contractName: string;
+  contractRegistrationNumber: string;
   positionCode: string;
   position: string;
   workload: number;

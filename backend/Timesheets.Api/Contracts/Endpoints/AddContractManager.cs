@@ -17,7 +17,7 @@ public sealed class AddContractManager : IEndpoint
            .WithRequestValidation<Request>();
 
     public sealed record Request(Guid ContractId, Guid EmployeeId);
-    public sealed record Response(Guid ContractId, Guid EmployeeId, string ContractName, int EmployeePersonalNumber, string EmployeeFullName, string EmployeeEmail);
+    public sealed record Response(Guid ContractId, Guid EmployeeId, string ContractRegistrationNumber, int EmployeePersonalNumber, string EmployeeFullName, string EmployeeEmail);
     public sealed class Validator : AbstractValidator<Request> { }
 
     private static async Task<Results<Created<Response>, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -62,7 +62,7 @@ public sealed class AddContractManager : IEndpoint
         var contract = await dbContext.Contracts
             .AsNoTracking()
             .Where(c => c.Id == id)
-            .Select(c => new { c.Name })
+            .Select(c => new { c.RegistrationNumber })
             .FirstAsync(cancellationToken);
         var employee = await dbContext.Employees
             .AsNoTracking()
@@ -73,7 +73,7 @@ public sealed class AddContractManager : IEndpoint
         var response = new Response(
             id,
             request.EmployeeId,
-            contract.Name,
+            contract.RegistrationNumber,
             employee.PersonalNumber,
             employee.FullName,
             employee.Email ?? string.Empty);

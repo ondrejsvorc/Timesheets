@@ -1,5 +1,5 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { BackButton, FullscreenButton, SaveButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
@@ -69,6 +69,8 @@ const TimesheetPageHeader = () => {
 const TimesheetPageContent = () => {
   const initialTimesheet = useAsyncValue() as Timesheet;
   const [timesheet, setTimesheet] = useImmer<Timesheet>(initialTimesheet);
+  const [searchParams] = useSearchParams();
+  const lockActorEmployeeId = searchParams.get("employeeId") ?? "";
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -86,6 +88,34 @@ const TimesheetPageContent = () => {
     },
     [setTimesheet]
   );
+
+  const handleToggleProjectLock = useCallback(
+    (projectId: string) => {
+      setTimesheet((draft) => {
+        const project = draft.projects.find((p) => p.id === projectId);
+        if (!project) return;
+        if (project.lockedAt) {
+          project.lockedAt = null;
+          project.lockedByEmployeeId = null;
+        } else {
+          project.lockedAt = new Date().toISOString();
+          project.lockedByEmployeeId = lockActorEmployeeId || null;
+        }
+      });
+    },
+    [setTimesheet, lockActorEmployeeId]
+  );
+
+  const handleClearAttendanceFields = useCallback(() => {
+    setTimesheet((draft) => {
+      draft.days.forEach((day) => {
+        day.attendance.clockIn = "";
+        day.attendance.clockOut = "";
+        day.attendance.breakStart = "";
+        day.attendance.breakEnd = "";
+      });
+    });
+  }, [setTimesheet]);
 
   const handleSave = async (_event: React.MouseEvent<HTMLButtonElement>, _signal: AbortSignal) => {
     // TODO: Implement save
@@ -142,6 +172,9 @@ const TimesheetPageContent = () => {
           <div className="flex flex-wrap items-center gap-3">
             <Button type="button" variant="outline">{Texts.changeTimesheetStatus}</Button>
             <Button type="button" variant="outline">{Texts.export}</Button>
+            <Button type="button" variant="outline" onClick={handleClearAttendanceFields}>
+              {Texts.clearAttendanceEntryAndBreak}
+            </Button>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <FullscreenButton onClick={() => setIsFullscreen((current) => !current)} isFullscreen={isFullscreen} />
@@ -149,7 +182,12 @@ const TimesheetPageContent = () => {
           </div>
         </div>
         {showGrid ? (
-          <TimesheetGrid timesheet={timesheet} onUpdateDay={handleUpdateDay} className={isFullscreen ? "min-h-0 flex-1 max-h-none" : undefined} />
+          <TimesheetGrid
+            timesheet={timesheet}
+            onUpdateDay={handleUpdateDay}
+            onToggleProjectLock={handleToggleProjectLock}
+            className={isFullscreen ? "min-h-0 flex-1 max-h-none" : undefined}
+          />
         ) : (
           <div className={cn(isFullscreen ? "min-h-0 flex-1" : "h-[420px]")}>
             <GenericSkeleton />

@@ -3,7 +3,7 @@ import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
 export interface ProjectContractManagerItem {
   contractId: string;
   employeeId: string;
-  contractName: string;
+  contractRegistrationNumber: string;
   employeePersonalNumber: number;
   employeeFullName: string;
   employeeEmail: string;

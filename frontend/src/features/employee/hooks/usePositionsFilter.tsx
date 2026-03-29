@@ -11,5 +11,11 @@ export const usePositionsFilter = (items: EmployeePositionItem[]) =>
   useFilter<EmployeePositionItem, PositionsFilterCriteria>({
     items,
     initialFilter,
-    keys: [(item) => item.position, (item) => item.projectName, (item) => item.contractName, (item) => item.startDate, (item) => item.endDate ?? ""],
+    keys: [
+      (item) => item.position,
+      (item) => item.projectName,
+      (item) => item.contractRegistrationNumber,
+      (item) => item.startDate,
+      (item) => item.endDate ?? "",
+    ],
   });

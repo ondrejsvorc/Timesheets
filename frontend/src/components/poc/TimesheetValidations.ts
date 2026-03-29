@@ -15,7 +15,9 @@ const MAX_WORK_SHIFT_HOURS = 12;
 const MAX_NIGHT_WORK_HOURS = 8;
 const MIN_BREAK_DURATION_HOURS = 0.5;
 const MIN_REST_BETWEEN_SHIFTS_HOURS = 11;
-const HOURS_PRECISION = 3;
+/** Minimální odpracované hodiny před začátkem přestávky (interní pravidlo univerzity). */
+const MIN_HOURS_WORKED_BEFORE_BREAK_ALLOWED = 4;
+const HOURS_PRECISION = 2;
 
 const toMinutes = (time: string): number => {
   if (!time) return 0;
@@ -127,6 +129,24 @@ export const TimesheetValidations = {
         message: "Chybí začátek přestávky.",
         field: "breakStart",
       });
+    }
+
+    // ERR-ATT-11: Přestávka až po 4 hodinách od příchodu (nezávisle na limitu délky směny 12 h).
+    if (day.attendance.breakStart && day.attendance.breakEnd && day.attendance.clockIn && day.attendance.clockOut) {
+      const clockIn = toMinutes(day.attendance.clockIn);
+      let breakStart = toMinutes(day.attendance.breakStart);
+      if (breakStart < clockIn) {
+        breakStart += 24 * 60;
+      }
+      const hoursWorkedBeforeBreak = toHours(breakStart - clockIn);
+      if (hoursWorkedBeforeBreak + 1e-9 < MIN_HOURS_WORKED_BEFORE_BREAK_ALLOWED) {
+        validations.push({
+          code: "ERR-ATT-11",
+          type: "error",
+          message: "Přestávku lze čerpat až po 4 odpracovaných hodinách.",
+          field: "breakStart",
+        });
+      }
     }
 
     // ERR-ATT-08: ShortBreak a BreakEndBeforeBreakStart

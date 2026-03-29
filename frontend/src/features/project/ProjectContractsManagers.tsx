@@ -95,7 +95,7 @@ export const ContractsManagersTable = ({ managers }: ContractsManagersTableProps
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>{Texts.contractName}</TableHead>
+            <TableHead>{Texts.contractId}</TableHead>
             <TableHead>{Texts.personalNumber}</TableHead>
             <TableHead>{Texts.fullName}</TableHead>
             <TableHead>{Texts.email}</TableHead>
@@ -122,7 +122,7 @@ export const ContractManagerRow = ({ manager }: ContractManagerRowProps) => {
 
   return (
     <TableRow className="cursor-pointer" onClick={() => navigate(Routes.employee(manager.employeeId))}>
-      <TableCell>{manager.contractName}</TableCell>
+      <TableCell>{manager.contractRegistrationNumber || Texts.dash}</TableCell>
       <TableCell>{manager.employeePersonalNumber}</TableCell>
       <TableCell>{manager.employeeFullName}</TableCell>
       <TableCell>{manager.employeeEmail}</TableCell>
