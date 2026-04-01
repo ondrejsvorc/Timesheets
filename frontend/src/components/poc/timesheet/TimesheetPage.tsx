@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { startTransition, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { BackButton, FullscreenButton, SaveButton } from "@/components/shared/buttons/ActionButtons";
@@ -91,16 +91,18 @@ const TimesheetPageContent = () => {
 
   const handleToggleProjectLock = useCallback(
     (projectId: string) => {
-      setTimesheet((draft) => {
-        const project = draft.projects.find((p) => p.id === projectId);
-        if (!project) return;
-        if (project.lockedAt) {
-          project.lockedAt = null;
-          project.lockedByEmployeeId = null;
-        } else {
-          project.lockedAt = new Date().toISOString();
-          project.lockedByEmployeeId = lockActorEmployeeId || null;
-        }
+      startTransition(() => {
+        setTimesheet((draft) => {
+          const project = draft.projects.find((p) => p.id === projectId);
+          if (!project) return;
+          if (project.lockedAt) {
+            project.lockedAt = null;
+            project.lockedByEmployeeId = null;
+          } else {
+            project.lockedAt = new Date().toISOString();
+            project.lockedByEmployeeId = lockActorEmployeeId || null;
+          }
+        });
       });
     },
     [setTimesheet, lockActorEmployeeId]

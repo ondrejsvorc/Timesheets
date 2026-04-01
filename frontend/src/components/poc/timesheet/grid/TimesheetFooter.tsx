@@ -20,6 +20,7 @@ export const TimesheetFooter = ({ timesheet }: TimesheetFooterProps) => {
   const coreCurrent = sum((d) => d.coreHours ?? 0);
 
   const footerCell = "min-w-0 flex items-center justify-end whitespace-nowrap tabular-nums text-[12px] uppercase tracking-wider px-2";
+  const footerCenteredCell = "min-w-0 flex items-center justify-center whitespace-nowrap tabular-nums text-[12px] uppercase tracking-wider px-2";
 
   return (
     <div className="grid grid-cols-subgrid col-[1/-1] sticky bottom-0 z-20 self-end bg-slate-100 font-bold border-t-2 border-slate-300">
@@ -47,7 +48,7 @@ export const TimesheetFooter = ({ timesheet }: TimesheetFooterProps) => {
       {/* Kmen */}
       <div
         className={cn(
-          footerCell,
+          footerCenteredCell,
           coreCurrent > coreFund + 0.001 ? "text-red-600" : "text-blue-800"
         )}
       >
@@ -67,7 +68,7 @@ export const TimesheetFooter = ({ timesheet }: TimesheetFooterProps) => {
         return (
           <div
             key={p.id}
-            className={cn(footerCell, projectCurrent > projectFund + 0.001 ? "text-red-600" : "text-blue-800")}
+            className={cn(footerCenteredCell, projectCurrent > projectFund + 0.001 ? "text-red-600" : "text-blue-800")}
           >
             <HoursToHumanTooltip hours={projectCurrent}>
               <span className="cursor-help border-b border-dotted border-slate-300">{TimesheetLogic.formatHours(projectCurrent)}</span>

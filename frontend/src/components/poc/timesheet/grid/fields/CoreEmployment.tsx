@@ -2,7 +2,11 @@ import type { EditableFieldProps } from "./FieldProps";
 import { SmartDecimalInput } from "@/components/shared/inputs/SmartDecimalInput";
 import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
 
-export const CoreEmployment = ({ value, onChange }: EditableFieldProps<number | null>) => {
+interface CoreEmploymentProps extends EditableFieldProps<number | null> {
+  disabled?: boolean;
+}
+
+export const CoreEmployment = ({ value, onChange, disabled = false }: CoreEmploymentProps) => {
   return (
     <HoursToHumanTooltip hours={value ?? 0}>
       <SmartDecimalInput
@@ -10,6 +14,7 @@ export const CoreEmployment = ({ value, onChange }: EditableFieldProps<number | 
         onChange={onChange}
         commitOnChange
         precision={2}
+        disabled={disabled}
         className="h-8 w-20 max-w-full text-right tabular-nums"
       />
     </HoursToHumanTooltip>

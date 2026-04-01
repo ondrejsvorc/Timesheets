@@ -131,6 +131,32 @@ export const TimesheetValidations = {
       });
     }
 
+    // ERR-ATT-12: BreakWithoutClockInOut
+    // Pokud je vyplněná přestávka, musí být vyplněn příchod i odchod.
+    const hasAnyBreak = Boolean(day.attendance.breakStart || day.attendance.breakEnd);
+    if (hasAnyBreak && !day.attendance.clockIn && !day.attendance.clockOut) {
+      validations.push({
+        code: "ERR-ATT-12",
+        type: "error",
+        message: "Aby šlo zadat přestávku, je potřeba vyplnit příchod i odchod.",
+        field: "breakStart",
+      });
+    } else if (hasAnyBreak && !day.attendance.clockIn) {
+      validations.push({
+        code: "ERR-ATT-12A",
+        type: "error",
+        message: "Aby šlo zadat přestávku, doplňte prosím příchod",
+        field: "breakStart",
+      });
+    } else if (hasAnyBreak && !day.attendance.clockOut) {
+      validations.push({
+        code: "ERR-ATT-12B",
+        type: "error",
+        message: "Aby šlo zadat přestávku, doplňte prosím odchod.",
+        field: "breakStart",
+      });
+    }
+
     // ERR-ATT-11: Přestávka až po 4 hodinách od příchodu (nezávisle na limitu délky směny 12 h).
     if (day.attendance.breakStart && day.attendance.breakEnd && day.attendance.clockIn && day.attendance.clockOut) {
       const clockIn = toMinutes(day.attendance.clockIn);
@@ -196,7 +222,7 @@ export const TimesheetValidations = {
               validations.push({
                 code: "ERR-ATT-06",
                 type: "error",
-                message: "Po 6 hodinách práce je nutná přestávka alespoň 30 minut.",
+                message: "Po 6 odpracovaných hodinách je nutná přestávka alespoň 30 minut.",
                 field: "breakEnd",
               });
             }
@@ -259,7 +285,7 @@ export const TimesheetValidations = {
       // Pravidlo pauzy řešíme jen pro validní délku směny.
       // Nechceme ho ukazovat u zjevně nevalidních rozsahů (např. 08:00 -> 07:00 = 23h).
       if (workedHours > MAX_CONTINUOUS_WORK_BEFORE_BREAK_HOURS && workedHours <= MAX_WORK_SHIFT_HOURS) {
-        const missingOrShortMsg = "Po 6 hodinách práce je nutná přestávka alespoň 30 minut.";
+        const missingOrShortMsg = "Po 6 odpracovaných hodinách je nutná přestávka alespoň 30 minut.";
         const lateMsg = "Přestávka je příliš pozdě (musí být nejpozději po 6 hodinách práce).";
 
         // Missing any break boundary -> required break message

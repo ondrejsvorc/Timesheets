@@ -19,6 +19,7 @@ import { Project as ProjectField } from "./fields/Project";
 import { StagSchedule } from "./fields/StagSchedule";
 import { ValidationField } from "./ValidationField";
 import { WorkedHours } from "./fields/WorkedHours";
+import { LockableField } from "./LockableField";
 
 const cellClass = "min-w-0 p-2 flex items-center justify-center border-border/50";
 const numericCellClass = "justify-end text-right tabular-nums";
@@ -65,6 +66,18 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
   };
 
   const isWeekendOrHoliday = day.isWeekend || day.isHoliday;
+  const hasInterruption = Boolean(day.attendance.interruptions?.trim());
+
+  const applyInterruptionAutofill = (draft: TimesheetDayModel) => {
+    if (!draft.attendance.interruptions?.trim()) {
+      return;
+    }
+
+    draft.coreHours = TimesheetLogic.calculateInterruptionCoreHours(draft, totalWorkload);
+    Object.keys(draft.projectHours).forEach((projectId) => {
+      draft.projectHours[projectId] = 0;
+    });
+  };
 
   return (
     <div
@@ -80,26 +93,32 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
       </div>
       <div className={cellClass}>
         <ValidationField validations={getFieldValidations("clockIn")}>
-          <ClockIn value={day.attendance.clockIn} onChange={(v) => handleUpdateDay((d) => { d.attendance.clockIn = v; })} />
+          <ClockIn value={day.attendance.clockIn} onChange={(v) => handleUpdateDay((d) => { d.attendance.clockIn = v; applyInterruptionAutofill(d); })} />
         </ValidationField>
       </div>
       <div className={cellClass}>
         <ValidationField validations={getFieldValidations("clockOut")}>
-          <ClockOut value={day.attendance.clockOut} onChange={(v) => handleUpdateDay((d) => { d.attendance.clockOut = v; })} />
+          <ClockOut value={day.attendance.clockOut} onChange={(v) => handleUpdateDay((d) => { d.attendance.clockOut = v; applyInterruptionAutofill(d); })} />
         </ValidationField>
       </div>
       <div className={cellClass}>
         <ValidationField validations={getFieldValidations("breakStart")}>
-          <BreakStart value={day.attendance.breakStart} onChange={(v) => handleUpdateDay((d) => { d.attendance.breakStart = v; })} />
+          <BreakStart value={day.attendance.breakStart} onChange={(v) => handleUpdateDay((d) => { d.attendance.breakStart = v; applyInterruptionAutofill(d); })} />
         </ValidationField>
       </div>
       <div className={cellClass}>
         <ValidationField validations={getFieldValidations("breakEnd")}>
-          <BreakEnd value={day.attendance.breakEnd} onChange={(v) => handleUpdateDay((d) => { d.attendance.breakEnd = v; })} />
+          <BreakEnd value={day.attendance.breakEnd} onChange={(v) => handleUpdateDay((d) => { d.attendance.breakEnd = v; applyInterruptionAutofill(d); })} />
         </ValidationField>
       </div>
       <div className={cellClass}>
-        <Interruption value={day.attendance.interruptions} onChange={(v) => handleUpdateDay((d) => { d.attendance.interruptions = v; })} />
+        <Interruption
+          value={day.attendance.interruptions}
+          onChange={(v) => handleUpdateDay((d) => {
+            d.attendance.interruptions = v;
+            applyInterruptionAutofill(d);
+          })}
+        />
       </div>
       <div className={cn(cellClass, numericCellClass)}>
         <WorkedHours value={workedHours} />
@@ -108,18 +127,22 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
         <NightHours value={nightHours} />
       </div>
       <div className={cellClass}>
-        <StagSchedule schedules={day.attendance.schedules} onSchedulesChange={(newSchedules) => handleUpdateDay((d) => { d.attendance.schedules = newSchedules; })} />
+        <StagSchedule schedules={day.attendance.schedules} onSchedulesChange={(newSchedules) => handleUpdateDay((d) => { d.attendance.schedules = newSchedules; applyInterruptionAutofill(d); })} />
       </div>
       <div className={cellClass}>
-        <CoreEmployment value={day.coreHours} onChange={(v) => handleUpdateDay((d) => { d.coreHours = v; })} />
+        <LockableField locked={hasInterruption}>
+          <CoreEmployment value={day.coreHours} disabled={hasInterruption} onChange={(v) => handleUpdateDay((d) => { d.coreHours = v; })} />
+        </LockableField>
       </div>
       {projects.map((project) => (
         <div key={project.id} className={cellClass}>
-          <ProjectField
-            value={Number(day.projectHours[project.id] ?? 0)}
-            locked={project.lockedAt != null}
-            onChange={(v) => handleUpdateDay((d) => { d.projectHours[project.id] = v ?? 0; })}
-          />
+          <LockableField locked={project.lockedAt != null || hasInterruption}>
+            <ProjectField
+              value={Number(day.projectHours[project.id] ?? 0)}
+              locked={project.lockedAt != null || hasInterruption}
+              onChange={(v) => handleUpdateDay((d) => { d.projectHours[project.id] = v ?? 0; })}
+            />
+          </LockableField>
         </div>
       ))}
       <div className={cn(cellClass, numericCellClass)}>

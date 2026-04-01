@@ -1,6 +1,8 @@
 import type { Attendance, ProjectDefinition, TimeRange, Timesheet, TimesheetDay } from "./Timesheet";
+import { generateTimesheetData } from "./TimesheetGenerator";
 
 const HOURS_PRECISION = 2;
+const MAX_WORK_SHIFT_HOURS = 12;
 
 /** Kódy přerušení — služební cesty se nealokují automaticky do kmene/projektů. */
 const BUSINESS_TRIP_INTERRUPTION_CODES = new Set(["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"]);
@@ -20,6 +22,17 @@ const toMinutes = (time: string): number => {
 
 const roundHours = (value: number): number => Number(value.toFixed(HOURS_PRECISION));
 const hasAttendanceFilled = (attendance: Attendance): boolean => Boolean(attendance.clockIn || attendance.clockOut);
+const GENERATOR_CONFIG = { roundingStep: 0.01, defaultDailyWorkHours: 8 } as const;
+
+const cloneTimesheet = (timesheet: Timesheet): Timesheet => ({
+  ...timesheet,
+  projects: timesheet.projects.map((p) => ({ ...p })),
+  days: timesheet.days.map((d) => ({
+    ...d,
+    attendance: { ...d.attendance, schedules: d.attendance.schedules.map((s) => ({ ...s })) },
+    projectHours: { ...d.projectHours },
+  })),
+});
 
 export const TimesheetLogic = {
   /**
@@ -120,6 +133,16 @@ export const TimesheetLogic = {
     return roundHours(totalMinutes / 60);
   },
 
+  calculateInterruptionCoreHours: (day: TimesheetDay, totalWorkload: number): number => {
+    const attendanceWorked = TimesheetLogic.calculateWorkedHours(day.attendance);
+    if (attendanceWorked > 0 && attendanceWorked <= MAX_WORK_SHIFT_HOURS) {
+      return roundHours(Math.min(MAX_WORK_SHIFT_HOURS, attendanceWorked));
+    }
+
+    const standard = 8 * totalWorkload;
+    return roundHours(Math.min(MAX_WORK_SHIFT_HOURS, Math.max(0, standard)));
+  },
+
   calculateMonthlyFund: (timesheet: Timesheet): number => {
     const workingDaysCount = timesheet.days.filter((day) => !day.isWeekend && !day.isHoliday).length;
     return roundHours(workingDaysCount * 8 * timesheet.totalWorkload);
@@ -152,75 +175,83 @@ export const TimesheetLogic = {
     if (attendanceHasBusinessTripInterruption(day.attendance)) {
       return null;
     }
-    const safeTotalWorkload = totalWorkload || 1;
-    const coreRatio = coreWorkload / safeTotalWorkload;
-    const projectRatios = projects.map((p) => ({
-      id: p.id,
-      ratio: p.workload / safeTotalWorkload,
-    }));
 
-    const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
-    const allocated = TimesheetLogic.calculateControlTotal(day);
-    const remaining = roundHours(worked - allocated);
-    if (remaining <= 0) return null;
+    const synthetic: Timesheet = {
+      year: 2000,
+      month: 1,
+      totalWorkload,
+      hasBaseWorkload: true,
+      core: { workload: coreWorkload },
+      projects: projects.map((p) => ({
+        id: p.id,
+        registrationNumber: "",
+        name: "",
+        position: "",
+        workload: p.workload,
+        lockedAt: p.lockedAt ?? null,
+        lockedByEmployeeId: null,
+      })),
+      days: [{ ...day, attendance: { ...day.attendance, schedules: [...day.attendance.schedules] }, projectHours: { ...day.projectHours } }],
+    };
+
+    generateTimesheetData(synthetic, GENERATOR_CONFIG);
+    const generatedDay = synthetic.days[0];
+    if (!generatedDay) return null;
+
+    const coreDelta = roundHours((generatedDay.coreHours ?? 0) - (day.coreHours ?? 0));
+    const projectDeltas = projects
+      .map((p) => ({
+        id: p.id,
+        delta: roundHours((generatedDay.projectHours[p.id] ?? 0) - (day.projectHours[p.id] ?? 0)),
+        lockedAt: p.lockedAt,
+      }))
+      .filter((x) => !x.lockedAt && x.delta !== 0);
+
+    if (coreDelta === 0 && projectDeltas.length === 0) {
+      return null;
+    }
 
     return (onUpdate: (recipe: (draftDay: TimesheetDay) => void) => void) => {
       onUpdate((draft) => {
-        if ((draft.coreHours ?? 0) === 0) {
-          draft.coreHours = roundHours((draft.coreHours ?? 0) + remaining * coreRatio);
+        if (coreDelta !== 0) {
+          draft.coreHours = roundHours(Math.max(0, (draft.coreHours ?? 0) + coreDelta));
         }
-        projectRatios.forEach((p) => {
-          const meta = projects.find((proj) => proj.id === p.id);
-          if (meta?.lockedAt) {
-            return;
-          }
-          const current = draft.projectHours[p.id] || 0;
-          if (current === 0) {
-            draft.projectHours[p.id] = roundHours(current + remaining * p.ratio);
-          }
+        projectDeltas.forEach(({ id, delta }) => {
+          draft.projectHours[id] = roundHours(Math.max(0, (draft.projectHours[id] ?? 0) + delta));
         });
       });
     };
   },
 
   distributeMonthlyHours: (timesheet: Timesheet, onUpdateDay: (date: string, recipe: any) => void) => {
-    const totalWorkload = timesheet.totalWorkload || 1;
-    const coreRatio = timesheet.core.workload / totalWorkload;
-    const projectRatios = timesheet.projects.map(p => ({
-      id: p.id,
-      ratio: p.workload / totalWorkload
-    }));
+    const generated = cloneTimesheet(timesheet);
+    generateTimesheetData(generated, GENERATOR_CONFIG);
 
-    timesheet.days.forEach((day) => {
-      if (attendanceHasBusinessTripInterruption(day.attendance)) {
+    generated.days.forEach((nextDay, index) => {
+      const prevDay = timesheet.days[index];
+      if (!prevDay) return;
+
+      const coreDelta = roundHours((nextDay.coreHours ?? 0) - (prevDay.coreHours ?? 0));
+      const projectDeltas = generated.projects
+        .map((p) => ({
+          id: p.id,
+          delta: roundHours((nextDay.projectHours[p.id] ?? 0) - (prevDay.projectHours[p.id] ?? 0)),
+          lockedAt: p.lockedAt,
+        }))
+        .filter((x) => !x.lockedAt && x.delta !== 0);
+
+      if (coreDelta === 0 && projectDeltas.length === 0) {
         return;
       }
-      const isWorkable = !day.isWeekend && !day.isHoliday;
-      let dayTotal = TimesheetLogic.calculateWorkedHours(day.attendance);
-      
-      // Fallback na denní úvazek (např. 8h * workload) pro pracovní dny bez docházky
-      if (dayTotal === 0 && isWorkable) {
-        dayTotal = 8 * totalWorkload;
-      }
 
-      if (dayTotal > 0) {
-        onUpdateDay(day.date, (draft: TimesheetDay) => {
-          const currentCore = draft.coreHours ?? 0;
-          if (currentCore === 0) {
-            draft.coreHours = roundHours(dayTotal * coreRatio);
-          }
-          projectRatios.forEach((p) => {
-            const meta = timesheet.projects.find((proj) => proj.id === p.id);
-            if (meta?.lockedAt) {
-              return;
-            }
-            const current = draft.projectHours[p.id] || 0;
-            if (current === 0) {
-              draft.projectHours[p.id] = roundHours(dayTotal * p.ratio);
-            }
-          });
+      onUpdateDay(prevDay.date, (draft: TimesheetDay) => {
+        if (coreDelta !== 0) {
+          draft.coreHours = roundHours(Math.max(0, (draft.coreHours ?? 0) + coreDelta));
+        }
+        projectDeltas.forEach(({ id, delta }) => {
+          draft.projectHours[id] = roundHours(Math.max(0, (draft.projectHours[id] ?? 0) + delta));
         });
-      }
+      });
     });
   },
 
@@ -229,6 +260,9 @@ export const TimesheetLogic = {
       return 0;
     }
     const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
+    if (worked > MAX_WORK_SHIFT_HOURS) {
+      return 0;
+    }
     const allocated = TimesheetLogic.calculateControlTotal(day);
     return roundHours(worked - allocated);
   },
@@ -245,7 +279,8 @@ export const TimesheetLogic = {
     const nightHours = roundHours(Math.min(nightRaw, workedHours));
     const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
     const controlTotal = TimesheetLogic.calculateControlTotal(day);
-    const balance = hasAttendanceFilled(day.attendance) ? roundHours(workedHours - controlTotal) : 0;
+    const balance =
+      hasAttendanceFilled(day.attendance) && workedHours <= MAX_WORK_SHIFT_HOURS ? roundHours(workedHours - controlTotal) : 0;
     return { workedHours, nightHours, stagHours, controlTotal, balance };
   },
 

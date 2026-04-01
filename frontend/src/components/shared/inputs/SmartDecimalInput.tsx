@@ -133,20 +133,12 @@ export const SmartDecimalInput = ({
     }
   };
 
-  if (disabled) {
-    return (
-      <div className={cn("flex h-8 min-w-[5rem] items-center justify-end tabular-nums text-muted-foreground", className)}>
-        {formatDecimalForDisplay(value, precision) || "—"}
-      </div>
-    );
-  }
-
   return (
     <Input
       ref={inputRef}
       type="text"
       inputMode="decimal"
-      value={displayValue}
+      value={disabled ? formatDecimalForDisplay(value, precision) : displayValue}
       onFocus={handleFocus}
       onChange={handleChange}
       onBlur={commit}
@@ -156,7 +148,12 @@ export const SmartDecimalInput = ({
           e.currentTarget.blur();
         }
       }}
-      className={className}
+      disabled={disabled}
+      className={cn(
+        "tabular-nums",
+        disabled && "cursor-not-allowed border-dashed border-slate-300 bg-slate-100/80 text-slate-600 opacity-100",
+        className
+      )}
       maxLength={6}
     />
   );
