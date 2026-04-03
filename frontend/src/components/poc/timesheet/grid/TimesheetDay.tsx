@@ -67,15 +67,67 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
 
   const isWeekendOrHoliday = day.isWeekend || day.isHoliday;
   const hasInterruption = Boolean(day.attendance.interruptions?.trim());
+  const hasBusinessTripInterruption = TimesheetLogic.hasBusinessTripInterruption(day.attendance);
+  const hasProportionalInterruption = hasInterruption && !hasBusinessTripInterruption && !TimesheetLogic.hasCoreOnlyInterruption(day.attendance);
+  const shouldAutoAllocateInterruption = hasInterruption && !hasBusinessTripInterruption;
+  const shouldLockByInterruption = shouldAutoAllocateInterruption;
 
   const applyInterruptionAutofill = (draft: TimesheetDayModel) => {
     if (!draft.attendance.interruptions?.trim()) {
       return;
     }
 
-    draft.coreHours = TimesheetLogic.calculateInterruptionCoreHours(draft, totalWorkload);
-    Object.keys(draft.projectHours).forEach((projectId) => {
-      draft.projectHours[projectId] = 0;
+    if (TimesheetLogic.hasBusinessTripInterruption(draft.attendance)) {
+      return;
+    }
+
+    const isProportionalInterruption = !TimesheetLogic.hasCoreOnlyInterruption(draft.attendance);
+    if (isProportionalInterruption) {
+      // For proportional interruptions (e.g. vacation), attendance/stag inputs are not applicable.
+      draft.attendance.clockIn = "";
+      draft.attendance.clockOut = "";
+      draft.attendance.breakStart = "";
+      draft.attendance.breakEnd = "";
+      draft.attendance.schedules = [];
+    }
+
+    const interruptionHours = TimesheetLogic.calculateInterruptionCoreHours(draft, totalWorkload);
+    const projectsTotalWorkload = projects.reduce((sum, p) => sum + p.workload, 0);
+    const workloadSum = Math.max(0, coreWorkload + projectsTotalWorkload);
+
+    if (workloadSum <= 0) {
+      draft.coreHours = 0;
+      Object.keys(draft.projectHours).forEach((projectId) => {
+        draft.projectHours[projectId] = 0;
+      });
+      return;
+    }
+
+    if (TimesheetLogic.hasCoreOnlyInterruption(draft.attendance)) {
+      draft.coreHours = interruptionHours;
+      Object.keys(draft.projectHours).forEach((projectId) => {
+        draft.projectHours[projectId] = 0;
+      });
+      return;
+    }
+
+    const toCents = (value: number): number => Math.max(0, Math.round(value * 100));
+    const fromCents = (value: number): number => Number((Math.max(0, value) / 100).toFixed(2));
+    const totalCents = toCents(interruptionHours);
+    const projectIds = projects.map((p) => p.id);
+    const nextProjectCents: Record<string, number> = {};
+
+    let allocatedProjectCents = 0;
+    projects.forEach((project) => {
+      const cents = Math.round((totalCents * project.workload) / workloadSum);
+      nextProjectCents[project.id] = Math.max(0, cents);
+      allocatedProjectCents += Math.max(0, cents);
+    });
+
+    const coreCents = Math.max(0, totalCents - allocatedProjectCents);
+    draft.coreHours = fromCents(coreCents);
+    projectIds.forEach((projectId) => {
+      draft.projectHours[projectId] = fromCents(nextProjectCents[projectId] ?? 0);
     });
   };
 
@@ -127,19 +179,23 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
         <NightHours value={nightHours} />
       </div>
       <div className={cellClass}>
-        <StagSchedule schedules={day.attendance.schedules} onSchedulesChange={(newSchedules) => handleUpdateDay((d) => { d.attendance.schedules = newSchedules; applyInterruptionAutofill(d); })} />
+        <StagSchedule
+          schedules={day.attendance.schedules}
+          onSchedulesChange={(newSchedules) => handleUpdateDay((d) => { d.attendance.schedules = newSchedules; applyInterruptionAutofill(d); })}
+          disabled={hasProportionalInterruption}
+        />
       </div>
       <div className={cellClass}>
-        <LockableField locked={hasInterruption}>
-          <CoreEmployment value={day.coreHours} disabled={hasInterruption} onChange={(v) => handleUpdateDay((d) => { d.coreHours = v; })} />
+        <LockableField locked={shouldLockByInterruption}>
+          <CoreEmployment value={day.coreHours} disabled={shouldLockByInterruption} onChange={(v) => handleUpdateDay((d) => { d.coreHours = v; })} />
         </LockableField>
       </div>
       {projects.map((project) => (
         <div key={project.id} className={cellClass}>
-          <LockableField locked={project.lockedAt != null || hasInterruption}>
+          <LockableField locked={project.lockedAt != null || shouldLockByInterruption}>
             <ProjectField
               value={Number(day.projectHours[project.id] ?? 0)}
-              locked={project.lockedAt != null || hasInterruption}
+              locked={project.lockedAt != null || shouldLockByInterruption}
               onChange={(v) => handleUpdateDay((d) => { d.projectHours[project.id] = v ?? 0; })}
             />
           </LockableField>

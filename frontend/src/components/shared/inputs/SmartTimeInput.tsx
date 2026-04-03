@@ -1,4 +1,4 @@
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { Input } from "../../ui/input";
 
 const formatSmartTime = (value: string): string => {
@@ -30,6 +30,10 @@ interface SmartTimeInputProps {
 
 export const SmartTimeInput = ({ value, onChange }: SmartTimeInputProps) => {
   const [draft, setDraft] = useState<string>(value);
+
+  useEffect(() => {
+    setDraft(value);
+  }, [value]);
 
   const commit = () => {
     const formatted = formatSmartTime(draft);

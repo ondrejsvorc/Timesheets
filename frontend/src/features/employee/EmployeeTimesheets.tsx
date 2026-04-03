@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useNavigate, useRevalidator } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
@@ -35,6 +35,7 @@ const EmployeeTimesheetsContent = () => {
   const response = useAsyncValue() as GetEmployeeTimesheetsResponse;
   const { filter, setFilter } = useEmployeeTimesheetsFilter();
   const navigate = useNavigate();
+  const revalidator = useRevalidator();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const availableYears = response.availableYears;
   const availableMonths = useMemo(() => getAvailableMonthsForYear(response.availableMonths, filter.year), [response.availableMonths, filter.year]);
@@ -95,7 +96,13 @@ const EmployeeTimesheetsContent = () => {
           <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} />
         </FilterBar>
         <EmptyState />
-        {isUploadDialogOpen && <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => {}} />}
+        {isUploadDialogOpen && (
+          <UploadTimesheetsDialog
+            open={isUploadDialogOpen}
+            onClose={() => setIsUploadDialogOpen(false)}
+            onSuccess={() => revalidator.revalidate()}
+          />
+        )}
       </>
     );
   }
@@ -156,7 +163,13 @@ const EmployeeTimesheetsContent = () => {
           </TableBody>
         </Table>
       </div>
-      {isUploadDialogOpen && <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => {}} />}
+      {isUploadDialogOpen && (
+        <UploadTimesheetsDialog
+          open={isUploadDialogOpen}
+          onClose={() => setIsUploadDialogOpen(false)}
+          onSuccess={() => revalidator.revalidate()}
+        />
+      )}
     </>
   );
 };

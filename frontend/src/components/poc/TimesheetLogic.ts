@@ -6,10 +6,19 @@ const MAX_WORK_SHIFT_HOURS = 12;
 
 /** Kódy přerušení — služební cesty se nealokují automaticky do kmene/projektů. */
 const BUSINESS_TRIP_INTERRUPTION_CODES = new Set(["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"]);
+const CORE_INTERRUPTION_CODES = new Set(["M"]);
+
+const parseInterruptionCodes = (raw: string): string[] => {
+  if (!raw.trim()) return [];
+  return raw.split(",").map((c) => c.trim().toUpperCase()).filter(Boolean);
+};
 
 const attendanceHasBusinessTripInterruption = (attendance: Attendance): boolean => {
-  if (!attendance.interruptions?.trim()) return false;
-  return attendance.interruptions.split(",").some((c) => BUSINESS_TRIP_INTERRUPTION_CODES.has(c.trim()));
+  return parseInterruptionCodes(attendance.interruptions).some((code) => BUSINESS_TRIP_INTERRUPTION_CODES.has(code));
+};
+
+const attendanceHasCoreOnlyInterruption = (attendance: Attendance): boolean => {
+  return parseInterruptionCodes(attendance.interruptions).some((code) => CORE_INTERRUPTION_CODES.has(code) || code.startsWith("N"));
 };
 
 /**
@@ -142,6 +151,10 @@ export const TimesheetLogic = {
     const standard = 8 * totalWorkload;
     return roundHours(Math.min(MAX_WORK_SHIFT_HOURS, Math.max(0, standard)));
   },
+
+  hasBusinessTripInterruption: (attendance: Attendance): boolean => attendanceHasBusinessTripInterruption(attendance),
+
+  hasCoreOnlyInterruption: (attendance: Attendance): boolean => attendanceHasCoreOnlyInterruption(attendance),
 
   calculateMonthlyFund: (timesheet: Timesheet): number => {
     const workingDaysCount = timesheet.days.filter((day) => !day.isWeekend && !day.isHoliday).length;

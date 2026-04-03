@@ -1,6 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { ProjectLockToggleButton } from "@/components/shared/buttons/ActionButtons";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CoreDefinition, ProjectDefinition } from "../../Timesheet";
 
 interface TimesheetHeaderProps {
@@ -33,7 +34,14 @@ export const TimesheetHeader = ({ projects, core, onGenerateMonthly, onTogglePro
       </div>
       {projects.map((project) => (
         <div key={project.id} className="h-10 px-2 flex items-center justify-center gap-1 text-center font-medium whitespace-nowrap min-w-0">
-          <span>{formatWorkloadPercent(project.workload)}%</span>
+          <Tooltip delayDuration={120}>
+            <TooltipTrigger asChild>
+              <span className="cursor-help border-b border-dotted border-slate-400">{formatWorkloadPercent(project.workload)}%</span>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              {project.registrationNumber || "Bez čísla zakázky"}
+            </TooltipContent>
+          </Tooltip>
           <ProjectLockToggleButton locked={project.lockedAt != null} onClick={() => onToggleProjectLock(project.id)} />
         </div>
       ))}

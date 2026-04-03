@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
 using System.Text.Json;
 using Timesheets.Api.Data;
 
@@ -236,6 +237,11 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
 
     public async Task<Guid> PersistAsync(Guid employeeId, AttendanceTimesheet importedTimesheet, CancellationToken cancellationToken)
     {
+        HashSet<string> validInterruptionCodes = await dbContext.Interruptions
+            .AsNoTracking()
+            .Select(i => i.Name)
+            .ToHashSetAsync(StringComparer.OrdinalIgnoreCase, cancellationToken);
+
         decimal projectWorkload = await dbContext.ProjectTimesheets
             .AsNoTracking()
             .Where(t => t.EmployeeId == employeeId && t.Year == importedTimesheet.Year && t.Month == importedTimesheet.Month)
@@ -291,7 +297,7 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
                 HoursWithoutBreak = day.TotalHours,
                 HoursObligation = day.TotalHoursObligation,
                 IsHoliday = day.IsHoliday,
-                Description = day.OtherInterruption,
+                Description = NormalizeImportedInterruptions(day.OtherInterruption, validInterruptionCodes),
                 Schedules = JsonSerializer.Serialize(day.Schedules)
             });
         }
@@ -327,4 +333,65 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
     }
 
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+
+    private static string? NormalizeImportedInterruptions(string? raw, HashSet<string> validCodes)
+    {
+        if (string.IsNullOrWhiteSpace(raw) || validCodes.Count == 0)
+        {
+            return null;
+        }
+
+        // Remove parenthetical noise like "(0)" and normalize separators.
+        string cleaned = Regex.Replace(raw, @"\([^)]*\)", " ");
+        cleaned = cleaned.Replace(";", " ").Replace(",", " ").Replace("|", " ");
+
+        List<string> normalized = [];
+        string[] chunks = cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        foreach (string chunk in chunks)
+        {
+            string token = Regex.Replace(chunk.ToUpperInvariant(), @"[^A-Z/]", "");
+            if (token.Length == 0)
+            {
+                continue;
+            }
+
+            if (TryResolveInterruptionCode(token, validCodes, out string? resolved) && resolved is not null)
+            {
+                if (!normalized.Contains(resolved, StringComparer.OrdinalIgnoreCase))
+                {
+                    normalized.Add(resolved);
+                }
+            }
+        }
+
+        return normalized.Count == 0 ? null : string.Join(",", normalized);
+    }
+
+    private static bool TryResolveInterruptionCode(string token, HashSet<string> validCodes, out string? resolved)
+    {
+        if (validCodes.Contains(token))
+        {
+            resolved = token;
+            return true;
+        }
+
+        // "SCT0" -> "SCT", "NL123" -> "NL"
+        string alpha = Regex.Replace(token, @"[^A-Z/]", "");
+        if (alpha.Length > 0 && validCodes.Contains(alpha))
+        {
+            resolved = alpha;
+            return true;
+        }
+
+        // Best-effort fallback: choose closest prefix match from known DB codes.
+        string? prefixMatch = validCodes
+            .Where(code => alpha.StartsWith(code, StringComparison.OrdinalIgnoreCase) || code.StartsWith(alpha, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(code => Math.Abs(code.Length - alpha.Length))
+            .ThenBy(code => code.Length)
+            .FirstOrDefault();
+
+        resolved = prefixMatch;
+        return resolved is not null;
+    }
 }

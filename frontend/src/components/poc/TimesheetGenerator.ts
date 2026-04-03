@@ -36,6 +36,7 @@ export interface TimesheetGenerationConfig {
 }
 
 const BUSINESS_TRIP_INTERRUPTION_CODES = new Set(["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"]);
+const CORE_INTERRUPTION_CODES = new Set(["M"]);
 const PREFERRED_STEPS_CENTS = [100, 50, 5, 1] as const; // 1h, 0.5h, 0.05h, 0.01h
 
 // ==============================
@@ -119,7 +120,7 @@ const allocateMonth = (timesheet: Timesheet, remaining: RemainingTargets, config
 
 const computeDayAllocation = (day: TimesheetDay, remaining: RemainingTargets, timesheet: Timesheet, config: TimesheetGenerationConfig): Allocation => {
   if (hasInterruption(day)) {
-    return allocateFromInterruption(day, config);
+    return allocateFromInterruption(day, timesheet, config);
   }
 
   if (hasBusinessTripInterruption(day)) {
@@ -158,17 +159,50 @@ const hasInterruption = (day: TimesheetDay): boolean => {
 };
 
 const hasBusinessTripInterruption = (day: TimesheetDay): boolean => {
-  const raw = day.attendance.interruptions;
-  if (!raw?.trim()) return false;
-  return raw.split(",").some((code) => BUSINESS_TRIP_INTERRUPTION_CODES.has(code.trim()));
+  return parseInterruptionCodes(day).some((code) => BUSINESS_TRIP_INTERRUPTION_CODES.has(code));
 };
 
-const allocateFromInterruption = (day: TimesheetDay, config: TimesheetGenerationConfig): Allocation => {
+const hasCoreOnlyInterruption = (day: TimesheetDay): boolean => {
+  return parseInterruptionCodes(day).some((code) => CORE_INTERRUPTION_CODES.has(code) || code.startsWith("N"));
+};
+
+const parseInterruptionCodes = (day: TimesheetDay): string[] => {
+  const raw = day.attendance.interruptions;
+  if (!raw?.trim()) return [];
+  return raw.split(",").map((code) => code.trim().toUpperCase()).filter(Boolean);
+};
+
+const allocateFromInterruption = (day: TimesheetDay, timesheet: Timesheet, config: TimesheetGenerationConfig): Allocation => {
     const hours: number = Math.min(12, computeInterruptionHours(day, config));
+    const totalCents = toCents(hours);
+
+    if (hasCoreOnlyInterruption(day)) {
+      return {
+        core: fromCents(totalCents),
+        projects: {}
+      };
+    }
+
+    const projectsWorkloadSum = timesheet.projects.reduce((sum, p) => sum + normalizeWorkloadRatio(p.workload), 0);
+    const coreWorkload = Math.max(0, normalizeWorkloadRatio(timesheet.totalWorkload) - projectsWorkloadSum);
+    const totalWorkload = coreWorkload + projectsWorkloadSum;
+    if (totalWorkload <= 0) {
+      return { core: 0, projects: {} };
+    }
+
+    const projects: ProjectMap = {};
+    let allocatedProjectCents = 0;
+    for (const project of timesheet.projects) {
+      if (project.lockedAt) continue;
+      const ratio = normalizeWorkloadRatio(project.workload);
+      const cents = Math.max(0, Math.round((totalCents * ratio) / totalWorkload));
+      projects[project.id] = fromCents(cents);
+      allocatedProjectCents += cents;
+    }
 
     return {
-        core: hours,
-        projects: {}
+        core: fromCents(Math.max(0, totalCents - allocatedProjectCents)),
+        projects
     };
 };
 

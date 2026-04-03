@@ -7,7 +7,7 @@ import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
 import { CheckCircle2, CircleDashed, FileText, Loader2, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate, useParams } from "react-router";
+import { useParams } from "react-router";
 import { detectTimesheetImport, importTimesheet, type ImportResult, type TimesheetDetectionResult } from "./api/uploadTimesheets";
 
 interface UploadTimesheetsDialogProps {
@@ -45,7 +45,6 @@ const getResultDescription = (successCount: number, failCount: number) => {
 
 export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimesheetsDialogProps) => {
   const { id: employeeIdFromUrl } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [mode, setMode] = useState<UploadDialogMode>("selection");
   const [isImporting, setIsImporting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -230,7 +229,6 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
         setIsDragging(false);
         setHasSuccessfulImport(false);
         onClose();
-        navigate(0);
         return;
       }
 
@@ -256,9 +254,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
     setIsDragging(false);
     setHasSuccessfulImport(false);
     onClose();
-    if (shouldRefresh) {
-      navigate(0);
-    }
+    if (shouldRefresh) onSuccess?.();
   };
 
   const readyItemsCount = uploadItems.filter((item) => item.status === "ready").length;
