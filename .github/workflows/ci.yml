@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   backend:
-    name: Backend (.NET): format, analyzers, tests, vulnerability scan
+    name: "Backend (.NET): format, analyzers, tests, vulnerability scan"
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -60,7 +60,7 @@ jobs:
         reporter: dotnet-trx
 
   frontend:
-    name: Frontend: biome check + npm audit
+    name: "Frontend: biome check + npm audit"
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -87,7 +87,7 @@ jobs:
       run: npm audit --audit-level=high
 
   runtime:
-    name: Runtime (Docker Compose): health checks + ZAP DAST
+    name: "Runtime (Docker Compose): health checks + ZAP DAST"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [backend, frontend]
