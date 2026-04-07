@@ -8,16 +8,16 @@ import { TimesheetHeader } from "./TimesheetHeader";
 
 const createGridTemplate = (projectCount: number) => {
   const base = [
-    "minmax(8rem, max-content)",   /* Den */
-    "minmax(6rem, max-content)", /* Příchod */
-    "minmax(6rem, max-content)", /* Odchod */
-    "minmax(6rem, max-content)", /* Pauza od */
-    "minmax(6rem, max-content)", /* Pauza do */
-    "minmax(max-content, max-content)",   /* Přerušení */
-    "minmax(4rem, max-content)",   /* Docházka */
-    "minmax(4rem, max-content)",   /* Noční */
-    "minmax(7rem, max-content)",   /* STAG */
-    "minmax(5rem, 1fr)", /* Kmen */
+    "minmax(8rem, max-content)" /* Den */,
+    "minmax(6rem, max-content)" /* Příchod */,
+    "minmax(6rem, max-content)" /* Odchod */,
+    "minmax(6rem, max-content)" /* Pauza od */,
+    "minmax(6rem, max-content)" /* Pauza do */,
+    "minmax(max-content, max-content)" /* Přerušení */,
+    "minmax(4rem, max-content)" /* Docházka */,
+    "minmax(4rem, max-content)" /* Noční */,
+    "minmax(7rem, max-content)" /* STAG */,
+    "minmax(5rem, 1fr)" /* Kmen */,
   ];
   const projectColumns = projectCount > 0 ? [`repeat(${projectCount}, minmax(max-content, 1fr))`] : [];
   const control = "minmax(7rem, max-content)"; /* Kontrola */

@@ -7,8 +7,6 @@ export interface GetProjectContractsResponse {
 
 export const getProjectContracts = (id: string) => {
   return {
-    promise: withOptionalDelay("slow", () =>
-      customFetch<GetProjectContractsResponse>(`${ApiUrl}/projects/${id}/contracts`),
-    ),
+    promise: withOptionalDelay("slow", () => customFetch<GetProjectContractsResponse>(`${ApiUrl}/projects/${id}/contracts`)),
   };
 };

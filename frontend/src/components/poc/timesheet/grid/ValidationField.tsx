@@ -14,34 +14,18 @@ export const ValidationField = ({ validations, children }: ValidationFieldProps)
   const warnings = validations.filter((v) => v.type === "warning");
   const hasAny = errors.length > 0 || warnings.length > 0;
 
-  const tooltipText = hasAny
-    ? [...errors, ...warnings].map((v) => v.message).join("\n")
-    : undefined;
+  const tooltipText = hasAny ? [...errors, ...warnings].map((v) => v.message).join("\n") : undefined;
 
   const isRowLevel = validations.every((v) => v.field == null);
-  const dotClass = cn(
-    "size-3 rounded-full border-2 border-white shrink-0 pointer-events-none",
-    errors.length > 0 ? "bg-[#FF9692]" : "bg-[#FFD465]",
-  );
+  const dotClass = cn("size-3 rounded-full border-2 border-white shrink-0 pointer-events-none", errors.length > 0 ? "bg-[#FF9692]" : "bg-[#FFD465]");
 
   return (
     <div className="flex justify-center w-full min-w-0">
       <Tooltip>
         <TooltipTrigger asChild>
-          <div
-            className={cn(
-              isRowLevel ? "inline-flex items-center gap-1.5" : "relative inline-block",
-            )}
-            title={tooltipText}
-          >
+          <div className={cn(isRowLevel ? "inline-flex items-center gap-1.5" : "relative inline-block")} title={tooltipText}>
             {children}
-            {hasAny && (
-              isRowLevel ? (
-                <span className={dotClass} />
-              ) : (
-                <span className={cn("absolute -top-1 -right-1", dotClass)} />
-              )
-            )}
+            {hasAny && (isRowLevel ? <span className={dotClass} /> : <span className={cn("absolute -top-1 -right-1", dotClass)} />)}
           </div>
         </TooltipTrigger>
         {hasAny && (

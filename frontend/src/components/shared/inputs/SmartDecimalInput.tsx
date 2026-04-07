@@ -15,12 +15,12 @@ const isValidDecimalInput = (displayValue: string) => DECIMAL_PATTERN.test(displ
 const isValidHours = (value: number) => value >= 0 && value <= 24;
 
 interface SmartDecimalInputProps {
-  value: number | null
-  onChange: (value: number | null) => void
-  precision?: number
-  commitOnChange?: boolean
-  className?: string
-  disabled?: boolean
+  value: number | null;
+  onChange: (value: number | null) => void;
+  precision?: number;
+  commitOnChange?: boolean;
+  className?: string;
+  disabled?: boolean;
 }
 
 export const SmartDecimalInput = ({
@@ -31,9 +31,7 @@ export const SmartDecimalInput = ({
   className,
   disabled = false,
 }: SmartDecimalInputProps) => {
-  const [displayValue, setDisplayValue] = useState(() =>
-    formatDecimalForDisplay(value, precision)
-  );
+  const [displayValue, setDisplayValue] = useState(() => formatDecimalForDisplay(value, precision));
 
   const valueBeforeEditRef = useRef<number | null>(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -152,7 +150,7 @@ export const SmartDecimalInput = ({
       className={cn(
         "tabular-nums",
         disabled && "cursor-not-allowed border-dashed border-slate-300 bg-slate-100/80 text-slate-600 opacity-100",
-        className
+        className,
       )}
       maxLength={6}
     />

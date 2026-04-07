@@ -113,15 +113,15 @@
   --sidebar-ring: oklch(0.55 0.12 250);
 }
 
-
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
   html {
     scroll-behavior: smooth;

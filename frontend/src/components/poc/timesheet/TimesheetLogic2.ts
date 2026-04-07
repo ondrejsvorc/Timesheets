@@ -6,7 +6,7 @@
 const MINUTES_IN_HOUR = 60;
 const MINUTES_IN_DAY = 1440;
 const NIGHT_SHIFT_START_MINUTES = 1320; // 22:00
-const NIGHT_SHIFT_END_MINUTES = 360;    // 06:00
+const NIGHT_SHIFT_END_MINUTES = 360; // 06:00
 const STANDARD_WORK_DAY_HOURS = 8;
 const HOURS_PRECISION = 3;
 const roundHours = (value: number) => Number(value.toFixed(HOURS_PRECISION));
@@ -25,7 +25,7 @@ const convertTimeToMinutes = (time: string): number => {
  */
 const calculateDurationMinutes = (startMinutes: number, endMinutes: number): number => {
   if (endMinutes < startMinutes) {
-    return (endMinutes + MINUTES_IN_DAY) - startMinutes;
+    return endMinutes + MINUTES_IN_DAY - startMinutes;
   }
   return endMinutes - startMinutes;
 };
@@ -72,7 +72,7 @@ export const TimesheetLogic2 = {
 
     const nightWindows = [
       { start: NIGHT_SHIFT_START_MINUTES, end: MINUTES_IN_DAY }, // 22:00 - 24:00
-      { start: 0, end: NIGHT_SHIFT_END_MINUTES }                 // 00:00 - 06:00
+      { start: 0, end: NIGHT_SHIFT_END_MINUTES }, // 00:00 - 06:00
     ];
 
     const totalNightMinutes = nightWindows.reduce((total, window) => {
@@ -103,5 +103,5 @@ export const TimesheetLogic2 = {
     const totalAllocated = (coreHours ?? 0) + Object.values(projectHours).reduce((sum, h) => sum + h, 0);
     const deviation = totalAllocated - targetCapacity;
     return roundHours(deviation);
-  }
+  },
 } as const;

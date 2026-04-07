@@ -12,7 +12,9 @@ interface TimesheetHeaderProps {
 }
 
 const formatWorkloadPercent = (workload: number) => {
-  return Number((workload * 100).toFixed(2)).toString().replace(".", ",");
+  return Number((workload * 100).toFixed(2))
+    .toString()
+    .replace(".", ",");
 };
 
 export const TimesheetHeader = ({ projects, core, onGenerateMonthly, onToggleProjectLock }: TimesheetHeaderProps) => {
@@ -38,16 +40,12 @@ export const TimesheetHeader = ({ projects, core, onGenerateMonthly, onTogglePro
             <TooltipTrigger asChild>
               <span className="cursor-help border-b border-dotted border-slate-400">{formatWorkloadPercent(project.workload)}%</span>
             </TooltipTrigger>
-            <TooltipContent side="top">
-              {project.registrationNumber || "Bez čísla zakázky"}
-            </TooltipContent>
+            <TooltipContent side="top">{project.registrationNumber || "Bez čísla zakázky"}</TooltipContent>
           </Tooltip>
           <ProjectLockToggleButton locked={project.lockedAt != null} onClick={() => onToggleProjectLock(project.id)} />
         </div>
       ))}
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
-        Kontrola
-      </div>
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Kontrola</div>
       <div className="sticky right-0 z-40 bg-slate-100 border-r border-slate-300 h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
         <div className="flex items-center justify-center gap-1">
           <span>Rozdíl</span>

@@ -10,11 +10,7 @@ export type AddContractManagerResponse = {
   employeeEmail: string;
 };
 
-export const addContractManager = async (
-  contractId: string,
-  employeeId: string,
-  signal: AbortSignal,
-): Promise<AddContractManagerResponse> => {
+export const addContractManager = async (contractId: string, employeeId: string, signal: AbortSignal): Promise<AddContractManagerResponse> => {
   return withOptionalDelay("fast", () =>
     customFetch<AddContractManagerResponse>(`${ApiUrl}/contracts/${contractId}/managers`, {
       method: "POST",

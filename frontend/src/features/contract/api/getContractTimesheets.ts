@@ -45,7 +45,9 @@ function buildTimesheetsQuery(request: GetContractTimesheetsRequest): string {
   params.set("toYear", String(request.toYear));
   params.set("toMonth", String(request.toMonth));
   if (request.statuses?.length) {
-    request.statuses.forEach((s) => params.append("status", s));
+    request.statuses.forEach((s) => {
+      params.append("status", s);
+    });
   }
   return params.toString();
 }
@@ -79,14 +81,7 @@ export function statusesEqual(a: string[] | undefined, b: string[] | undefined):
   return a.every((s) => set.has(s));
 }
 
-export function monthInRange(
-  year: number,
-  month: number,
-  fromYear: number,
-  fromMonth: number,
-  toYear: number,
-  toMonth: number,
-): boolean {
+export function monthInRange(year: number, month: number, fromYear: number, fromMonth: number, toYear: number, toMonth: number): boolean {
   if (year < fromYear || year > toYear) return false;
   if (year === fromYear && month < fromMonth) return false;
   if (year === toYear && month > toMonth) return false;
@@ -137,7 +132,9 @@ const APPROVED_STATUS = "Schválený";
 
 export function buildMonthsView(data: GetContractTimesheetsResponse): MonthGroupView[] {
   const byEmployee = new Map<string, EmployeeItem>();
-  data.employees.forEach((e) => byEmployee.set(e.id, e));
+  data.employees.forEach((e) => {
+    byEmployee.set(e.id, e);
+  });
   const byMonth = new Map<string, TimesheetItem[]>();
   for (const t of data.timesheets) {
     const key = `${t.year}-${t.month}`;
@@ -182,7 +179,9 @@ export function buildMonthsView(data: GetContractTimesheetsResponse): MonthGroup
 
 export function buildEmployeesView(data: GetContractTimesheetsResponse): EmployeeGroupView[] {
   const byEmployee = new Map<string, EmployeeItem>();
-  data.employees.forEach((e) => byEmployee.set(e.id, e));
+  data.employees.forEach((e) => {
+    byEmployee.set(e.id, e);
+  });
   const byEmp = new Map<string, TimesheetItem[]>();
   for (const t of data.timesheets) {
     const list = byEmp.get(t.employeeId) ?? [];

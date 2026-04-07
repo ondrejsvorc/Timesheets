@@ -28,7 +28,7 @@ public class ProjectLifecycleTests : BaseIntegrationTest
         // 1. POST /api/projects
         var postResponse = await Client.PostAsJsonAsync("/api/projects", createRequest);
         Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
-        
+
         var createdProject = await postResponse.Content.ReadFromJsonAsync<CreateProject.Response>();
         Assert.NotNull(createdProject);
         var projectId = createdProject!.Project.Id;
@@ -36,7 +36,7 @@ public class ProjectLifecycleTests : BaseIntegrationTest
         // 2. GET /api/projects/{id}
         var getResponse1 = await Client.GetAsync($"/api/projects/{projectId}");
         Assert.Equal(HttpStatusCode.OK, getResponse1.StatusCode);
-        
+
         var projectData1 = await getResponse1.Content.ReadFromJsonAsync<GetProject.Response>();
         Assert.NotNull(projectData1);
         Assert.Equal(createRequest.Name, projectData1!.Project.Name);
@@ -55,7 +55,7 @@ public class ProjectLifecycleTests : BaseIntegrationTest
         // 4. GET /api/projects/{id}
         var getResponse2 = await Client.GetAsync($"/api/projects/{projectId}");
         Assert.Equal(HttpStatusCode.OK, getResponse2.StatusCode);
-        
+
         var projectData2 = await getResponse2.Content.ReadFromJsonAsync<GetProject.Response>();
         Assert.NotNull(projectData2);
         Assert.Equal(updateRequest.Name, projectData2!.Project.Name);

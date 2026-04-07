@@ -1,20 +1,20 @@
+import { Suspense, useState } from "react";
+import { Await, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
+import { useImmerReducer } from "use-immer";
 import { ActionButtons, AddButton, DeleteButton, EditButton } from "@/components/shared/buttons/ActionButtons";
-import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
-import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
-import { useImmerReducer } from "use-immer";
 import { AddContractDialog } from "./AddContractDialog";
+import { deleteProjectContract } from "./api/deleteProjectContract";
 import type { GetProjectContractsResponse } from "./api/getProjectContracts";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
-import { deleteProjectContract } from "./api/deleteProjectContract";
 import { EditContractDialog } from "./EditContractDialog";
 import { type ContractsFilterCriteria, useContractsFilter } from "./hooks/useContractsFilter";
 import { useProjectContractsDispatch } from "./hooks/useProjectContractsDispatch";
@@ -92,12 +92,7 @@ export const ContractsTable = ({ contracts }: ContractsTableProps) => {
           </TableHeader>
           <TableBody>
             {contracts.map((contract) => (
-              <ContractRow
-                key={contract.id}
-                contract={contract}
-                onEdit={setContractToEdit}
-                onDelete={setContractToDelete}
-              />
+              <ContractRow key={contract.id} contract={contract} onEdit={setContractToEdit} onDelete={setContractToDelete} />
             ))}
           </TableBody>
         </Table>
@@ -147,20 +142,18 @@ export const ContractRow = ({ contract, onEdit, onDelete }: ContractRowProps) =>
       <TableCell>{contract.name}</TableCell>
       <TableCell>
         <ActionButtons>
-        <EditButton
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(contract);
-          }}
-        >
-        </EditButton>
-        <DeleteButton
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(contract);
-          }}
-        >
-        </DeleteButton>
+          <EditButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(contract);
+            }}
+          ></EditButton>
+          <DeleteButton
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(contract);
+            }}
+          ></DeleteButton>
         </ActionButtons>
       </TableCell>
     </TableRow>

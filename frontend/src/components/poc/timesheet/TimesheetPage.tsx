@@ -1,4 +1,4 @@
-import { startTransition, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { BackButton, FullscreenButton, SaveButton } from "@/components/shared/buttons/ActionButtons";
@@ -6,16 +6,16 @@ import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Button } from "@/components/ui/button";
-import { Texts } from "@/constants/texts";
 import { Routes } from "@/constants/routes";
+import { Texts } from "@/constants/texts";
 import type { GetEmployeeResponse } from "@/features/employee/api/getEmployee";
-import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
 import { cn } from "@/utils/cn";
-import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
+import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
 import type { Timesheet, TimesheetDay } from "../Timesheet";
+import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
+import { TimesheetComments } from "./comments/TimesheetComments";
 import { TimesheetGrid } from "./grid/TimesheetGrid";
 import { TimesheetsOverview } from "./TimesheetsOverview";
-import { TimesheetComments } from "./comments/TimesheetComments";
 
 interface TimesheetPageLoaderData {
   employeePromise: Promise<GetEmployeeResponse>;
@@ -86,7 +86,7 @@ const TimesheetPageContent = () => {
         updater(day);
       });
     },
-    [setTimesheet]
+    [setTimesheet],
   );
 
   const handleToggleProjectLock = useCallback(
@@ -105,7 +105,7 @@ const TimesheetPageContent = () => {
         });
       });
     },
-    [setTimesheet, lockActorEmployeeId]
+    [setTimesheet, lockActorEmployeeId],
   );
 
   const handleClearAttendanceFields = useCallback(() => {
@@ -172,8 +172,12 @@ const TimesheetPageContent = () => {
         )}
         <div className={cn("mb-6 flex flex-wrap items-center justify-between gap-3", isFullscreen && "bg-background/95")}>
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" variant="outline">{Texts.changeTimesheetStatus}</Button>
-            <Button type="button" variant="outline">{Texts.export}</Button>
+            <Button type="button" variant="outline">
+              {Texts.changeTimesheetStatus}
+            </Button>
+            <Button type="button" variant="outline">
+              {Texts.export}
+            </Button>
             <Button type="button" variant="outline" onClick={handleClearAttendanceFields}>
               {Texts.clearAttendanceEntryAndBreak}
             </Button>

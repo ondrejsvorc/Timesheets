@@ -9,4 +9,4 @@ export const formatDate = (iso: string | null | undefined): string => {
   } catch {
     return Texts.dash;
   }
-}
+};

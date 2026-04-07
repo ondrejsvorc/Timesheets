@@ -1,20 +1,20 @@
-import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
-import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
-import { DatePicker } from "@/components/shared/inputs/DatePicker";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { parseISO } from "date-fns";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useImmer } from "use-immer";
 import { z } from "zod";
+import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
+import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
+import { DatePicker } from "@/components/shared/inputs/DatePicker";
+import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
+import { getEmployees } from "../employees/api/getEmployees";
 import { addContractEmployee } from "./api/addContractEmployee";
 import type { EmployeeItem as ContractEmployeeItem } from "./api/getContractEmployees";
-import { getEmployees } from "../employees/api/getEmployees";
-import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
-import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 
 type AddEmployeeToContractFormValues = z.infer<ReturnType<typeof createSchema>>;
 
@@ -39,10 +39,7 @@ const createSchema = (existing: ContractEmployeeItem[]) =>
       workload: z
         .string()
         .nonempty()
-        .refine(
-          (v) => isWholeWorkloadPercentInRange(v, 1, 100),
-          "Zadejte celé číslo 1–100 (procenta úvazku).",
-        ),
+        .refine((v) => isWholeWorkloadPercentInRange(v, 1, 100), "Zadejte celé číslo 1–100 (procenta úvazku)."),
       startDate: z.string().nonempty(),
       endDate: z.string().optional(),
     })
@@ -152,7 +149,13 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                 <FormItem>
                   <FormLabel>Zaměstnanec *</FormLabel>
                   <FormControl>
-                    <ComboBox value={field.value} items={employees} placeholder="Vyberte zaměstnance" loading={employeesLoading} onChange={field.onChange} />
+                    <ComboBox
+                      value={field.value}
+                      items={employees}
+                      placeholder="Vyberte zaměstnance"
+                      loading={employeesLoading}
+                      onChange={field.onChange}
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -240,4 +243,3 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
     </Dialog>
   );
 };
-

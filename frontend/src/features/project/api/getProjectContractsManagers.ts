@@ -15,8 +15,6 @@ export interface GetProjectContractsManagersResponse {
 
 export const getProjectContractsManagers = (id: string) => {
   return {
-    promise: withOptionalDelay("slow", () =>
-      customFetch<GetProjectContractsManagersResponse>(`${ApiUrl}/projects/${id}/contracts/managers`),
-    ),
+    promise: withOptionalDelay("slow", () => customFetch<GetProjectContractsManagersResponse>(`${ApiUrl}/projects/${id}/contracts/managers`)),
   };
 };

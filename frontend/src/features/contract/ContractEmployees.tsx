@@ -1,22 +1,21 @@
-import { AddButton } from "@/components/shared/buttons/ActionButtons";
+import { isBefore, parseISO, startOfDay } from "date-fns";
+import { Suspense, useState } from "react";
+import { Await, useAsyncValue, useLoaderData, useParams, useRevalidator } from "react-router";
+import { AddButton, DeleteButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
-import { isBefore, parseISO, startOfDay } from "date-fns";
-import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useParams, useRevalidator } from "react-router";
-import type { EmployeeItem, GetContractEmployeesResponse, PositionItem } from "./api/getContractEmployees";
-import { type ContractEmployeesFilterCriteria, useContractEmployeesFilter } from "./hooks/useContractEmployeesFilter";
-import { DeleteButton } from "@/components/shared/buttons/ActionButtons";
-import { AddEmployeeDialog } from "./AddEmployeeDialog";
-import { deleteContractEmployee } from "./api/deleteContractEmployee";
-import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { formatDate } from "@/utils/formatDate";
 import { formatWorkloadPercent } from "@/utils/formatWorkload";
+import { AddEmployeeDialog } from "./AddEmployeeDialog";
+import { deleteContractEmployee } from "./api/deleteContractEmployee";
+import type { EmployeeItem, GetContractEmployeesResponse, PositionItem } from "./api/getContractEmployees";
+import { type ContractEmployeesFilterCriteria, useContractEmployeesFilter } from "./hooks/useContractEmployeesFilter";
 
 export const ContractEmployees = () => {
   const { promise } = useLoaderData() as {
@@ -50,11 +49,7 @@ const ContractEmployeesContent = () => {
       <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>Přidat zaměstnanci pozici</AddButton>}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-      <ContractEmployeesList
-        contractId={contractId}
-        employees={filtered}
-        onDeleteRequested={(payload) => setPositionToDelete(payload)}
-      />
+      <ContractEmployeesList contractId={contractId} employees={filtered} onDeleteRequested={(payload) => setPositionToDelete(payload)} />
       {contractId && (
         <AddEmployeeDialog
           open={isAddOpen}

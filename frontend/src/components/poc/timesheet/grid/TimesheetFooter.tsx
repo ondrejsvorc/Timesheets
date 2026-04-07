@@ -1,5 +1,5 @@
-import { cn } from "@/utils/cn";
 import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
+import { cn } from "@/utils/cn";
 import type { Timesheet, TimesheetDay } from "../../Timesheet";
 import { TimesheetLogic } from "../../TimesheetLogic";
 
@@ -46,12 +46,7 @@ export const TimesheetFooter = ({ timesheet }: TimesheetFooterProps) => {
       ))}
 
       {/* Kmen */}
-      <div
-        className={cn(
-          footerCenteredCell,
-          coreCurrent > coreFund + 0.001 ? "text-red-600" : "text-blue-800"
-        )}
-      >
+      <div className={cn(footerCenteredCell, coreCurrent > coreFund + 0.001 ? "text-red-600" : "text-blue-800")}>
         <HoursToHumanTooltip hours={coreCurrent}>
           <span className="cursor-help border-b border-dotted border-slate-300">{TimesheetLogic.formatHours(coreCurrent)}</span>
         </HoursToHumanTooltip>
@@ -66,10 +61,7 @@ export const TimesheetFooter = ({ timesheet }: TimesheetFooterProps) => {
         const projectFund = TimesheetLogic.calculateWorkloadFund(timesheet, p.workload);
         const projectCurrent = sum((d) => d.projectHours[p.id] ?? 0);
         return (
-          <div
-            key={p.id}
-            className={cn(footerCenteredCell, projectCurrent > projectFund + 0.001 ? "text-red-600" : "text-blue-800")}
-          >
+          <div key={p.id} className={cn(footerCenteredCell, projectCurrent > projectFund + 0.001 ? "text-red-600" : "text-blue-800")}>
             <HoursToHumanTooltip hours={projectCurrent}>
               <span className="cursor-help border-b border-dotted border-slate-300">{TimesheetLogic.formatHours(projectCurrent)}</span>
             </HoursToHumanTooltip>

@@ -1,17 +1,17 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Texts } from "@/constants/texts";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { addContractManager, toProjectContractManagerItem } from "./api/addContractManager";
-import type { ProjectContractManagerItem } from "./api/getProjectContractsManagers";
-import { getProjectContracts } from "./api/getProjectContracts";
-import { getEmployees } from "@/features/employees/api/getEmployees";
 import type { EmployeeItem } from "@/features/employees/api/getEmployees";
+import { getEmployees } from "@/features/employees/api/getEmployees";
+import { addContractManager, toProjectContractManagerItem } from "./api/addContractManager";
+import { getProjectContracts } from "./api/getProjectContracts";
+import type { ProjectContractManagerItem } from "./api/getProjectContractsManagers";
 
 const schema = z.object({
   contractId: z.string().min(1, Texts.contract),
@@ -42,14 +42,8 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
 
   const employeeItems = useMemo(() => {
     if (!selectedContractId) return [];
-    const managerEmployeeIds = new Set(
-      existingManagers
-        .filter((m) => m.contractId === selectedContractId)
-        .map((m) => m.employeeId),
-    );
-    return allEmployees
-      .filter((e) => !managerEmployeeIds.has(e.id))
-      .map((e) => ({ value: e.id, label: e.fullName }));
+    const managerEmployeeIds = new Set(existingManagers.filter((m) => m.contractId === selectedContractId).map((m) => m.employeeId));
+    return allEmployees.filter((e) => !managerEmployeeIds.has(e.id)).map((e) => ({ value: e.id, label: e.fullName }));
   }, [selectedContractId, existingManagers, allEmployees]);
 
   useEffect(() => {
@@ -57,9 +51,7 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
     setLoading(true);
     Promise.all([getProjectContracts(projectId).promise, getEmployees().promise])
       .then(([contractsRes, employeesRes]) => {
-        setContractItems(
-          contractsRes.projectContracts.map((c) => ({ value: c.id, label: c.name })),
-        );
+        setContractItems(contractsRes.projectContracts.map((c) => ({ value: c.id, label: c.name })));
         setAllEmployees(employeesRes.employees);
       })
       .finally(() => setLoading(false));
@@ -98,13 +90,7 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
                 <FormItem>
                   <FormLabel>{Texts.contract}</FormLabel>
                   <FormControl>
-                    <ComboBox
-                      value={field.value}
-                      items={contractItems}
-                      placeholder={Texts.contract}
-                      loading={loading}
-                      onChange={field.onChange}
-                    />
+                    <ComboBox value={field.value} items={contractItems} placeholder={Texts.contract} loading={loading} onChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}

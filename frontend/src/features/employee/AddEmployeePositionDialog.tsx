@@ -1,18 +1,18 @@
-import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
-import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
-import { DatePicker } from "@/components/shared/inputs/DatePicker";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useImmer } from "use-immer";
 import { z } from "zod";
+import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
+import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
+import { DatePicker } from "@/components/shared/inputs/DatePicker";
+import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { isWholeWorkloadPercentInRange } from "@/utils/workloadPercentForm";
 import { getContractCatalog } from "../employees/api/getContractCatalog";
 import { getProjectCatalog } from "../employees/api/getProjectCatalog";
-import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
-import { isWholeWorkloadPercentInRange } from "@/utils/workloadPercentForm";
 
 type AddEmployeePositionFormValues = z.infer<typeof addEmployeePositionSchema>;
 const addEmployeePositionSchema = z.object({
@@ -23,10 +23,7 @@ const addEmployeePositionSchema = z.object({
   workload: z
     .string()
     .nonempty()
-    .refine(
-      (v) => isWholeWorkloadPercentInRange(v, 0, 100),
-      "Zadejte celé číslo 0–100 (procenta úvazku).",
-    ),
+    .refine((v) => isWholeWorkloadPercentInRange(v, 0, 100), "Zadejte celé číslo 0–100 (procenta úvazku)."),
   startDate: z.string().nonempty(),
   endDate: z.string().optional(),
 });

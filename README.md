@@ -18,6 +18,19 @@ Web application for **managing** and **auditing employee timesheets**.
 1. ```cd Timesheets```
 1. ```docker compose up --build```
 
+### Code style & quality
+Backend:
+- **Format (writes)**:
+  - `cd backend`
+  - `dotnet format Timesheets.slnx`
+- **Verify formatting (no changes)**:
+  - `cd backend`
+  - `dotnet format Timesheets.slnx --verify-no-changes`
+
+Frontend:
+- **Format (writes)**: `cd frontend && npm run format`
+- **Lint/format check (no writes)**: `cd frontend && npm run lint`
+
 #### pgAdmin
 1. Go to http://localhost:5050
 1. Email Address: **admin@admin.com**

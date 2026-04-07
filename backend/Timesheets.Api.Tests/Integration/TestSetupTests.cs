@@ -21,7 +21,7 @@ public class TestSetupTests : BaseIntegrationTest
         // Assert
         Assert.True(canConnect, "The database should be accessible.");
     }
-    
+
     [Fact]
     public void AuthMock_ClientIsCreated()
     {

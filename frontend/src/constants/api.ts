@@ -21,7 +21,7 @@ const withErrorHandling = async <T>(fn: () => Promise<T>, label: string): Promis
     return await fn();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`[API ERROR] ${label}: ${message}`); 
+    console.error(`[API ERROR] ${label}: ${message}`);
     throw error;
   }
 };

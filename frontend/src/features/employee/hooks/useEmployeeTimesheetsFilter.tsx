@@ -18,4 +18,3 @@ export const useEmployeeTimesheetsFilter = () => {
   const [filter, setFilter] = useImmer<EmployeeTimesheetsFilterCriteria>(initialFilter);
   return { filter, setFilter };
 };
-

@@ -23,6 +23,8 @@ export const getCombinedTimesheetOverview = (employeeId: string, year: number, m
   });
 
   return {
-    promise: withOptionalDelay("slow", () => customFetch<GetCombinedTimesheetOverviewResponse>(`${ApiUrl}/timesheets/combined/overview?${params.toString()}`)),
+    promise: withOptionalDelay("slow", () =>
+      customFetch<GetCombinedTimesheetOverviewResponse>(`${ApiUrl}/timesheets/combined/overview?${params.toString()}`),
+    ),
   };
 };

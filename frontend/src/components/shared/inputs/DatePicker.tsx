@@ -1,6 +1,6 @@
+import { cs } from "date-fns/locale";
 import { CalendarIcon, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { cs } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -83,4 +83,3 @@ export const DatePicker = ({ value, disabled, clearable = true, disabledDate, on
     </Popover>
   );
 };
-

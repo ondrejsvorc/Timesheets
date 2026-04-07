@@ -1,14 +1,14 @@
+import { CheckCircle2, CircleDashed, FileText, Loader2, Upload, XCircle } from "lucide-react";
+import { useRef, useState } from "react";
+import { useParams } from "react-router";
+import { toast } from "sonner";
 import { DeleteButton } from "@/components/shared/buttons/ActionButtons";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
-import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
-import { CheckCircle2, CircleDashed, FileText, Loader2, Upload, XCircle } from "lucide-react";
-import { toast } from "sonner";
-import { useParams } from "react-router";
-import { detectTimesheetImport, importTimesheet, type ImportResult, type TimesheetDetectionResult } from "./api/uploadTimesheets";
+import { detectTimesheetImport, type ImportResult, importTimesheet, type TimesheetDetectionResult } from "./api/uploadTimesheets";
 
 interface UploadTimesheetsDialogProps {
   open: boolean;
@@ -29,8 +29,7 @@ interface UploadItem {
 
 const formatCountText = (template: string, count: number) => template.replace("{count}", String(count));
 const getFileKey = (file: File) => `${file.name}-${file.size}-${file.lastModified}`;
-const formatPeriod = (year: number | null, month: number | null) =>
-  year && month ? `${String(month).padStart(2, "0")}/${year}` : null;
+const formatPeriod = (year: number | null, month: number | null) => (year && month ? `${String(month).padStart(2, "0")}/${year}` : null);
 const getResultDescription = (successCount: number, failCount: number) => {
   if (successCount > 0 && failCount > 0) {
     return `${formatCountText(Texts.importSuccessCount, successCount)} ${formatCountText(Texts.importFailureCount, failCount)}`;
@@ -133,9 +132,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
           month: null,
         };
 
-        setUploadItems((current) =>
-          current.map((item) => (item.key === key ? { ...item, status: "invalid", detection } : item)),
-        );
+        setUploadItems((current) => current.map((item) => (item.key === key ? { ...item, status: "invalid", detection } : item)));
         // eslint-disable-next-line no-console
         console.error(error);
       }
@@ -179,7 +176,9 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
           break;
         }
 
-        setUploadItems((current) => current.map((currentItem) => (currentItem.key === item.key ? { ...currentItem, status: "importing" } : currentItem)));
+        setUploadItems((current) =>
+          current.map((currentItem) => (currentItem.key === item.key ? { ...currentItem, status: "importing" } : currentItem)),
+        );
 
         try {
           const result = await importTimesheet(employeeIdFromUrl, item.file, signal);
@@ -188,9 +187,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
           failCount += result.success ? 0 : 1;
 
           setUploadItems((current) =>
-            current.map((currentItem) =>
-              currentItem.key === item.key ? { ...currentItem, status, result } : currentItem,
-            ),
+            current.map((currentItem) => (currentItem.key === item.key ? { ...currentItem, status, result } : currentItem)),
           );
         } catch (error) {
           if (error instanceof DOMException && error.name === "AbortError") {
@@ -208,9 +205,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
           };
 
           setUploadItems((current) =>
-            current.map((currentItem) =>
-              currentItem.key === item.key ? { ...currentItem, status: "error", result } : currentItem,
-            ),
+            current.map((currentItem) => (currentItem.key === item.key ? { ...currentItem, status: "error", result } : currentItem)),
           );
           // eslint-disable-next-line no-console
           console.error(error);
@@ -267,18 +262,17 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{mode === "selection" ? Texts.import : Texts.importResultTitle}</DialogTitle>
-          <DialogDescription>
-            {mode === "selection"
-              ? Texts.importAttendanceOnly
-              : getResultDescription(successCount, failCount)}
-          </DialogDescription>
+          <DialogDescription>{mode === "selection" ? Texts.importAttendanceOnly : getResultDescription(successCount, failCount)}</DialogDescription>
         </DialogHeader>
 
         {mode === "selection" ? (
           <div className="space-y-4">
             <input ref={fileInputRef} type="file" multiple accept=".xls,.xlsx" onChange={handleFileInputChange} className="hidden" />
             <div
-              className={cn("flex min-h-64 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 text-center transition-colors", isDragging ? "border-primary bg-primary/5" : "border-border")}
+              className={cn(
+                "flex min-h-64 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 text-center transition-colors",
+                isDragging ? "border-primary bg-primary/5" : "border-border",
+              )}
               onClick={() => fileInputRef.current?.click()}
               onDragEnter={(event) => {
                 event.preventDefault();
@@ -309,14 +303,28 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
                         <div className="flex min-w-0 max-w-[18rem] flex-1 items-start gap-2 overflow-hidden">
                           <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                           <div className="min-w-0 flex-1">
-                            <span className="block min-w-0 truncate text-sm font-medium" title={item.file.name}>{item.file.name}</span>
+                            <span className="block min-w-0 truncate text-sm font-medium" title={item.file.name}>
+                              {item.file.name}
+                            </span>
                             <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                               <UploadItemStatusIcon status={item.status} />
                               <span>{getSelectionStatusLabel(item.status, metadata)}</span>
                             </div>
-                            {metadata?.employeeName && <div className="mt-1 text-xs text-muted-foreground">{Texts.importEmployeeLabel}: {metadata.employeeName}</div>}
-                            {metadata?.employeePersonalNumber && <div className="mt-1 text-xs text-muted-foreground">{Texts.importPersonalNumberLabel}: {metadata.employeePersonalNumber}</div>}
-                            {period && <div className="mt-1 text-xs text-muted-foreground">{Texts.importPeriodLabel}: {period}</div>}
+                            {metadata?.employeeName && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {Texts.importEmployeeLabel}: {metadata.employeeName}
+                              </div>
+                            )}
+                            {metadata?.employeePersonalNumber && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {Texts.importPersonalNumberLabel}: {metadata.employeePersonalNumber}
+                              </div>
+                            )}
+                            {period && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {Texts.importPeriodLabel}: {period}
+                              </div>
+                            )}
                             {metadata?.errorMessage && <div className="mt-1 text-xs text-destructive">{metadata.errorMessage}</div>}
                           </div>
                         </div>
@@ -341,16 +349,32 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
                       <FileText className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="block min-w-0 truncate text-sm font-medium" title={item.file.name}>{item.file.name}</span>
+                          <span className="block min-w-0 truncate text-sm font-medium" title={item.file.name}>
+                            {item.file.name}
+                          </span>
                         </div>
                         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                           <UploadItemStatusIcon status={item.status} />
                           <span>{getResultStatusLabel(item.status, item.result, metadata)}</span>
                         </div>
-                        {metadata?.employeeName && <div className="mt-1 text-xs text-muted-foreground">{Texts.importEmployeeLabel}: {metadata.employeeName}</div>}
-                        {metadata?.employeePersonalNumber && <div className="mt-1 text-xs text-muted-foreground">{Texts.importPersonalNumberLabel}: {metadata.employeePersonalNumber}</div>}
-                        {period && <div className="mt-1 text-xs text-muted-foreground">{Texts.importPeriodLabel}: {period}</div>}
-                        {(item.result?.errorMessage ?? metadata?.errorMessage) && <div className="mt-1 text-xs text-destructive">{item.result?.errorMessage ?? metadata?.errorMessage}</div>}
+                        {metadata?.employeeName && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {Texts.importEmployeeLabel}: {metadata.employeeName}
+                          </div>
+                        )}
+                        {metadata?.employeePersonalNumber && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {Texts.importPersonalNumberLabel}: {metadata.employeePersonalNumber}
+                          </div>
+                        )}
+                        {period && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {Texts.importPeriodLabel}: {period}
+                          </div>
+                        )}
+                        {(item.result?.errorMessage ?? metadata?.errorMessage) && (
+                          <div className="mt-1 text-xs text-destructive">{item.result?.errorMessage ?? metadata?.errorMessage}</div>
+                        )}
                       </div>
                     </div>
                   </li>
@@ -370,11 +394,12 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
               />
             </>
           ) : (
-            <Button type="button" variant="outline" onClick={handleClose}>{Texts.close}</Button>
+            <Button type="button" variant="outline" onClick={handleClose}>
+              {Texts.close}
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>
-
     </Dialog>
   );
 };

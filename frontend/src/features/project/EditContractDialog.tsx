@@ -1,9 +1,9 @@
+import { useParams } from "react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Texts } from "@/constants/texts";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
 import { updateProjectContract } from "./api/updateProjectContract";
 import { ContractForm, type ContractFormValues } from "./ContractForm";
-import { useParams } from "react-router";
 
 interface EditContractDialogProps {
   open: boolean;

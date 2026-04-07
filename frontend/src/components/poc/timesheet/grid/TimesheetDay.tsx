@@ -1,11 +1,11 @@
-import React from "react";
 import { Sparkles } from "lucide-react";
+import React from "react";
+import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
-import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
 import type { ProjectDefinition as Project, TimesheetDay as TimesheetDayModel } from "../../Timesheet";
 import { TimesheetLogic } from "../../TimesheetLogic";
-import { TimesheetValidations, type DayValidation } from "../../TimesheetValidations";
+import { type DayValidation, TimesheetValidations } from "../../TimesheetValidations";
 import { Balance } from "./fields/Balance";
 import { BreakEnd } from "./fields/BreakEnd";
 import { BreakStart } from "./fields/BreakStart";
@@ -17,9 +17,9 @@ import { Label } from "./fields/Label";
 import { NightHours } from "./fields/NightHours";
 import { Project as ProjectField } from "./fields/Project";
 import { StagSchedule } from "./fields/StagSchedule";
-import { ValidationField } from "./ValidationField";
 import { WorkedHours } from "./fields/WorkedHours";
 import { LockableField } from "./LockableField";
+import { ValidationField } from "./ValidationField";
 
 const cellClass = "min-w-0 p-2 flex items-center justify-center border-border/50";
 const numericCellClass = "justify-end text-right tabular-nums";
@@ -56,10 +56,7 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
     });
     return { grouped, rowLevel };
   }, [validations]);
-  const getFieldValidations = React.useCallback(
-    (field: string) => validationsByField.grouped.get(field) ?? [],
-    [validationsByField]
-  );
+  const getFieldValidations = React.useCallback((field: string) => validationsByField.grouped.get(field) ?? [], [validationsByField]);
 
   const handleUpdateDay = (updater: (day: TimesheetDayModel) => void) => {
     onUpdateDay(dayIndex, updater);
@@ -132,12 +129,7 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
   };
 
   return (
-    <div
-      className={cn(
-        "grid grid-cols-subgrid col-[1/-1] border-b border-border/50",
-        isWeekendOrHoliday && "bg-slate-100"
-      )}
-    >
+    <div className={cn("grid grid-cols-subgrid col-[1/-1] border-b border-border/50", isWeekendOrHoliday && "bg-slate-100")}>
       <div className={cn(cellClass, cellFirstClass, isWeekendOrHoliday && "!bg-slate-200")}>
         <ValidationField validations={validationsByField.rowLevel}>
           <Label label={day.date} />
@@ -145,31 +137,65 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
       </div>
       <div className={cellClass}>
         <ValidationField validations={getFieldValidations("clockIn")}>
-          <ClockIn value={day.attendance.clockIn} onChange={(v) => handleUpdateDay((d) => { d.attendance.clockIn = v; applyInterruptionAutofill(d); })} />
+          <ClockIn
+            value={day.attendance.clockIn}
+            onChange={(v) =>
+              handleUpdateDay((d) => {
+                d.attendance.clockIn = v;
+                applyInterruptionAutofill(d);
+              })
+            }
+          />
         </ValidationField>
       </div>
       <div className={cellClass}>
         <ValidationField validations={getFieldValidations("clockOut")}>
-          <ClockOut value={day.attendance.clockOut} onChange={(v) => handleUpdateDay((d) => { d.attendance.clockOut = v; applyInterruptionAutofill(d); })} />
+          <ClockOut
+            value={day.attendance.clockOut}
+            onChange={(v) =>
+              handleUpdateDay((d) => {
+                d.attendance.clockOut = v;
+                applyInterruptionAutofill(d);
+              })
+            }
+          />
         </ValidationField>
       </div>
       <div className={cellClass}>
         <ValidationField validations={getFieldValidations("breakStart")}>
-          <BreakStart value={day.attendance.breakStart} onChange={(v) => handleUpdateDay((d) => { d.attendance.breakStart = v; applyInterruptionAutofill(d); })} />
+          <BreakStart
+            value={day.attendance.breakStart}
+            onChange={(v) =>
+              handleUpdateDay((d) => {
+                d.attendance.breakStart = v;
+                applyInterruptionAutofill(d);
+              })
+            }
+          />
         </ValidationField>
       </div>
       <div className={cellClass}>
         <ValidationField validations={getFieldValidations("breakEnd")}>
-          <BreakEnd value={day.attendance.breakEnd} onChange={(v) => handleUpdateDay((d) => { d.attendance.breakEnd = v; applyInterruptionAutofill(d); })} />
+          <BreakEnd
+            value={day.attendance.breakEnd}
+            onChange={(v) =>
+              handleUpdateDay((d) => {
+                d.attendance.breakEnd = v;
+                applyInterruptionAutofill(d);
+              })
+            }
+          />
         </ValidationField>
       </div>
       <div className={cellClass}>
         <Interruption
           value={day.attendance.interruptions}
-          onChange={(v) => handleUpdateDay((d) => {
-            d.attendance.interruptions = v;
-            applyInterruptionAutofill(d);
-          })}
+          onChange={(v) =>
+            handleUpdateDay((d) => {
+              d.attendance.interruptions = v;
+              applyInterruptionAutofill(d);
+            })
+          }
         />
       </div>
       <div className={cn(cellClass, numericCellClass)}>
@@ -181,13 +207,26 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
       <div className={cellClass}>
         <StagSchedule
           schedules={day.attendance.schedules}
-          onSchedulesChange={(newSchedules) => handleUpdateDay((d) => { d.attendance.schedules = newSchedules; applyInterruptionAutofill(d); })}
+          onSchedulesChange={(newSchedules) =>
+            handleUpdateDay((d) => {
+              d.attendance.schedules = newSchedules;
+              applyInterruptionAutofill(d);
+            })
+          }
           disabled={hasProportionalInterruption}
         />
       </div>
       <div className={cellClass}>
         <LockableField locked={shouldLockByInterruption}>
-          <CoreEmployment value={day.coreHours} disabled={shouldLockByInterruption} onChange={(v) => handleUpdateDay((d) => { d.coreHours = v; })} />
+          <CoreEmployment
+            value={day.coreHours}
+            disabled={shouldLockByInterruption}
+            onChange={(v) =>
+              handleUpdateDay((d) => {
+                d.coreHours = v;
+              })
+            }
+          />
         </LockableField>
       </div>
       {projects.map((project) => (
@@ -196,7 +235,11 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
             <ProjectField
               value={Number(day.projectHours[project.id] ?? 0)}
               locked={project.lockedAt != null || shouldLockByInterruption}
-              onChange={(v) => handleUpdateDay((d) => { d.projectHours[project.id] = v ?? 0; })}
+              onChange={(v) =>
+                handleUpdateDay((d) => {
+                  d.projectHours[project.id] = v ?? 0;
+                })
+              }
             />
           </LockableField>
         </div>
@@ -216,7 +259,7 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
             size="icon"
             className={cn(
               "h-7 w-7 shrink-0 transition-opacity",
-              balance <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              balance <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50",
             )}
             onClick={() => {
               if (balance > 0) {
@@ -245,5 +288,5 @@ export const TimesheetDay = React.memo(
     prev.projects === next.projects &&
     prev.totalWorkload === next.totalWorkload &&
     prev.coreWorkload === next.coreWorkload &&
-    prev.onUpdateDay === next.onUpdateDay
+    prev.onUpdateDay === next.onUpdateDay,
 );

@@ -3,13 +3,7 @@ export function formatWorkloadPercent(value: unknown): string {
     return "-";
   }
 
-  const normalized =
-    typeof value === "string"
-      ? value
-          .trim()
-          .replace("%", "")
-          .replace(",", ".")
-      : value;
+  const normalized = typeof value === "string" ? value.trim().replace("%", "").replace(",", ".") : value;
 
   const parsed = Number(normalized);
   if (!Number.isFinite(parsed)) {

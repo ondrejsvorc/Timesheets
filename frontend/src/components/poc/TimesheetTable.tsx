@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/utils/cn";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "../shared/inputs/MultiSelectComboBox";
+import { SmartTimeInput } from "../shared/inputs/SmartTimeInput";
 import { HoursToHumanTooltip } from "../shared/tooltips/HoursToHumanTooltip";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { ScheduleCell, ScheduleEditorModal } from "./ScheduleCell";
-import { SmartTimeInput } from "../shared/inputs/SmartTimeInput";
 import type { TimeRange, Timesheet, TimesheetDay } from "./Timesheet";
 import { TimesheetLogic } from "./TimesheetLogic";
 import { TimesheetValidations } from "./TimesheetValidations";
@@ -20,7 +20,9 @@ interface TimesheetTableProps {
 }
 
 const formatWorkloadPercent = (workload: number) => {
-  return Number((workload * 100).toFixed(2)).toString().replace(".", ",");
+  return Number((workload * 100).toFixed(2))
+    .toString()
+    .replace(".", ",");
 };
 
 export const TimesheetTable = ({ timesheet, onUpdateDay, className }: TimesheetTableProps) => {
@@ -40,7 +42,12 @@ export const TimesheetTable = ({ timesheet, onUpdateDay, className }: TimesheetT
   );
 
   return (
-    <div className={cn("rounded-md border-t border-l border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full relative border-separate border-spacing-0 shadow-sm", className)}>
+    <div
+      className={cn(
+        "rounded-md border-t border-l border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full relative border-separate border-spacing-0 shadow-sm",
+        className,
+      )}
+    >
       <Table className="min-w-max w-full border-separate border-spacing-0">
         <TableHeader className="sticky top-0 z-20 bg-muted">
           <TableRow>
@@ -207,7 +214,8 @@ const DecimalInput = ({ value, onChange }: { value: number; onChange: (val: numb
   );
 };
 
-export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDay }: TimesheetRowProps) => {
+export const TimesheetRow = React.memo(
+  ({ day, timesheet, onUpdate, setEditingDay }: TimesheetRowProps) => {
     const worked = TimesheetLogic.calculateWorkedHours(day.attendance);
     const nightHours = TimesheetLogic.calculateNightHours(day.attendance);
     const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
@@ -280,15 +288,11 @@ export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDa
 
     return (
       <TableRow
-        className={cn(
-          (isWeekend || isHoliday) && "bg-slate-50/50",
-          hasErrors && "bg-red-50/30",
-          hasWarnings && !hasErrors && "bg-yellow-50/30",
-        )}
+        className={cn((isWeekend || isHoliday) && "bg-slate-50/50", hasErrors && "bg-red-50/30", hasWarnings && !hasErrors && "bg-yellow-50/30")}
       >
         <TableCell className={cn("font-medium sticky text-center border-r z-10", isWeekend || isHoliday ? "bg-slate-100/80" : "bg-white")}>
           <div className="flex items-center justify-center gap-1">
-            <span className={cn(isWeekend || isHoliday && "text-slate-500")}>
+            <span className={cn(isWeekend || (isHoliday && "text-slate-500"))}>
               {day.date} {isHoliday && <span className="text-xs">S</span>}
             </span>
             {(hasErrors || hasWarnings) && (
@@ -388,7 +392,7 @@ export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDa
         {/* Worked Total */}
         <TableCell className="text-center font-bold tabular-nums">
           <HoursToHumanTooltip hours={worked}>
-                <span className="cursor-help border-b border-dotted border-slate-400">{TimesheetLogic.formatHours(worked)}</span>
+            <span className="cursor-help border-b border-dotted border-slate-400">{TimesheetLogic.formatHours(worked)}</span>
           </HoursToHumanTooltip>
         </TableCell>
 
@@ -483,12 +487,7 @@ export const TimesheetRow = React.memo(({ day, timesheet, onUpdate, setEditingDa
               )}
               onClick={() => {
                 if (delta > 0) {
-                  const magicFn = TimesheetLogic.distributeRemainingHours(
-                    day,
-                    timesheet.totalWorkload,
-                    timesheet.core.workload,
-                    timesheet.projects
-                  );
+                  const magicFn = TimesheetLogic.distributeRemainingHours(day, timesheet.totalWorkload, timesheet.core.workload, timesheet.projects);
                   if (magicFn) magicFn(onUpdate);
                 }
               }}
@@ -593,4 +592,3 @@ export const TimesheetTableFooter = ({ timesheet }: TimesheetTableFooterProps) =
     </TableFooter>
   );
 };
-

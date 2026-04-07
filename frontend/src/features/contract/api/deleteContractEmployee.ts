@@ -6,4 +6,3 @@ export const deleteContractEmployee = async (contractId: string, contractEmploye
     signal,
   });
 };
-

@@ -36,9 +36,7 @@ export const contractsManagersReducer = (draft: ContractsManagersState, action: 
         return;
       }
       const { contractId, employeeId } = draft.pendingDelete;
-      const index = draft.managers.findIndex(
-        (m) => compareIds(m.contractId, contractId) && compareIds(m.employeeId, employeeId),
-      );
+      const index = draft.managers.findIndex((m) => compareIds(m.contractId, contractId) && compareIds(m.employeeId, employeeId));
       if (index !== -1) {
         draft.managers.splice(index, 1);
       }

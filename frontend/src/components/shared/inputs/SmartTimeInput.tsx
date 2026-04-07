@@ -10,11 +10,11 @@ const formatSmartTime = (value: string): string => {
 
   if (clean.length <= 2) {
     // Vstup "8" -> 08:00, "12" -> 12:00
-    hours = parseInt(clean);
+    hours = parseInt(clean, 10);
   } else {
     // Vstup "1230" -> 12:30, "815" -> 08:15
-    hours = parseInt(clean.slice(0, -2));
-    minutes = parseInt(clean.slice(-2));
+    hours = parseInt(clean.slice(0, -2), 10);
+    minutes = parseInt(clean.slice(-2), 10);
   }
 
   const h = Math.min(hours, 23);
@@ -61,5 +61,3 @@ export const SmartTimeInput = ({ value, onChange }: SmartTimeInputProps) => {
     />
   );
 };
-
-

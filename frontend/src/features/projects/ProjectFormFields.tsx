@@ -1,11 +1,11 @@
 import type { UseFormReturn } from "react-hook-form";
+import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { DatePicker } from "@/components/shared/inputs/DatePicker";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
-import { z } from "zod";
 
 export const projectFormSchema = z.object({
   name: z.string().min(1),

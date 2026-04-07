@@ -23,10 +23,6 @@ export interface GetContractEmployeesResponse {
 
 export const getContractEmployees = (_projectId: string, contractId: string) => {
   return {
-    promise: withOptionalDelay("slow", () =>
-      customFetch<GetContractEmployeesResponse>(
-        `${ApiUrl}/contracts/${contractId}/employees`,
-      ),
-    ),
+    promise: withOptionalDelay("slow", () => customFetch<GetContractEmployeesResponse>(`${ApiUrl}/contracts/${contractId}/employees`)),
   };
 };

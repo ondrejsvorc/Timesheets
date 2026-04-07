@@ -44,4 +44,3 @@ export const importTimesheet = async (employeeId: string, file: File, signal?: A
   const response = await customFetch<ImportTimesheetResponse>(`${ApiUrl}/timesheets/`, { method: "POST", body: formData, signal });
   return response.result;
 };
-

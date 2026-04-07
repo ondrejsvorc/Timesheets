@@ -1,33 +1,24 @@
-import { EmptyState } from "@/components/shared/data/EmptyState";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
-import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
-import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
-import { ActionDropdownMenu, EditAction } from "@/components/shared/menus/ActionDropdownMenu";
-import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Texts } from "@/constants/texts";
 import { CheckCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
+import { EmptyState } from "@/components/shared/data/EmptyState";
+import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
+import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
+import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
+import { ActionDropdownMenu, EditAction } from "@/components/shared/menus/ActionDropdownMenu";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Texts } from "@/constants/texts";
 import type { EmployeeGroupView, MonthGroupView, TimesheetRowView } from "./api/getContractTimesheets";
 import { buildEmployeesView, buildMonthsView } from "./api/getContractTimesheets";
 import type { GetContractTimesheetsFilterOptionsResponse } from "./api/getContractTimesheetsFilterOptions";
 import { getContractTimesheetsFilterOptions } from "./api/getContractTimesheetsFilterOptions";
-import { CZECH_MONTH_NAMES, formatMonthYear } from "./utils/czechMonths";
-import {
-  type ContractTimesheetsFilterCriteria,
-  useContractTimesheetsFilter,
-} from "./hooks/useContractTimesheetsFilter";
 import { useContractTimesheets } from "./hooks/useContractTimesheets";
+import { type ContractTimesheetsFilterCriteria, useContractTimesheetsFilter } from "./hooks/useContractTimesheetsFilter";
+import { CZECH_MONTH_NAMES, formatMonthYear } from "./utils/czechMonths";
 
 export const ContractTimesheets = () => {
   const { id: projectId, contractId } = useParams<{ id: string; contractId: string }>();
@@ -59,10 +50,14 @@ export const ContractTimesheets = () => {
 
     const years = filterOptions.years;
     const months = filterOptions.months;
-    const minYear = years[0]!;
-    const maxYear = years[years.length - 1]!;
-    const minMonth = months[0]!;
-    const maxMonth = months[months.length - 1]!;
+    const minYear = years[0];
+    const maxYear = years[years.length - 1];
+    const minMonth = months[0];
+    const maxMonth = months[months.length - 1];
+
+    if (minYear === undefined || maxYear === undefined || minMonth === undefined || maxMonth === undefined) {
+      return;
+    }
 
     const clampYear = (y: number) => (years.includes(y) ? y : y < minYear ? minYear : maxYear);
     const clampMonth = (m: number) => (months.includes(m) ? m : m < minMonth ? minMonth : maxMonth);
@@ -72,8 +67,7 @@ export const ContractTimesheets = () => {
     const nextFromMonth = clampMonth(filter.fromMonth);
     const nextToMonth = clampMonth(filter.toMonth);
 
-    const invalidRange =
-      nextFromYear > nextToYear || (nextFromYear === nextToYear && nextFromMonth > nextToMonth);
+    const invalidRange = nextFromYear > nextToYear || (nextFromYear === nextToYear && nextFromMonth > nextToMonth);
 
     if (
       nextFromYear !== filter.fromYear ||
@@ -119,15 +113,9 @@ export const ContractTimesheets = () => {
             <ContractTimesheetsFilterControls options={filterOptions} />
           </FilterBar>
           {filter.groupBy === "Month" ? (
-            <TimesheetsByMonth
-              months={monthsView}
-              isLoading={isLoading}
-            />
+            <TimesheetsByMonth months={monthsView} isLoading={isLoading} />
           ) : (
-            <TimesheetsByEmployee
-              employees={employeesView}
-              isLoading={isLoading}
-            />
+            <TimesheetsByEmployee employees={employeesView} isLoading={isLoading} />
           )}
         </>
       )}
@@ -165,91 +153,91 @@ function ContractTimesheetsFilterControls({ options }: { options: GetContractTim
       <div className="flex flex-col gap-1.5">
         <Label className="text-muted-foreground text-sm">{Texts.periodFrom}</Label>
         <div className="flex gap-2">
-        <Select
-          value={String(filter.fromYear)}
-          disabled={yearOptions.length === 0}
-          onValueChange={(v) =>
-            setFilter((draft) => {
-              draft.fromYear = parseInt(v, 10);
-            })
-          }
-        >
-          <SelectTrigger className="w-[88px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {yearOptions.map((y) => (
-              <SelectItem key={y} value={String(y)}>
-                {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={String(filter.fromMonth)}
-          disabled={monthOptions.length === 0}
-          onValueChange={(v) =>
-            setFilter((draft) => {
-              draft.fromMonth = parseInt(v, 10);
-            })
-          }
-        >
-          <SelectTrigger className="w-[120px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {monthOptions.map((m) => (
-              <SelectItem key={m} value={String(m)}>
-                {CZECH_MONTH_NAMES[m]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select
+            value={String(filter.fromYear)}
+            disabled={yearOptions.length === 0}
+            onValueChange={(v) =>
+              setFilter((draft) => {
+                draft.fromYear = parseInt(v, 10);
+              })
+            }
+          >
+            <SelectTrigger className="w-[88px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={String(filter.fromMonth)}
+            disabled={monthOptions.length === 0}
+            onValueChange={(v) =>
+              setFilter((draft) => {
+                draft.fromMonth = parseInt(v, 10);
+              })
+            }
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((m) => (
+                <SelectItem key={m} value={String(m)}>
+                  {CZECH_MONTH_NAMES[m]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="flex flex-col gap-1.5">
         <Label className="text-muted-foreground text-sm">{Texts.periodTo}</Label>
         <div className="flex gap-2">
-        <Select
-          value={String(filter.toYear)}
-          disabled={yearOptions.length === 0}
-          onValueChange={(v) =>
-            setFilter((draft) => {
-              draft.toYear = parseInt(v, 10);
-            })
-          }
-        >
-          <SelectTrigger className="w-[88px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {yearOptions.map((y) => (
-              <SelectItem key={y} value={String(y)}>
-                {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select
-          value={String(filter.toMonth)}
-          disabled={monthOptions.length === 0}
-          onValueChange={(v) =>
-            setFilter((draft) => {
-              draft.toMonth = parseInt(v, 10);
-            })
-          }
-        >
-          <SelectTrigger className="w-[120px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {monthOptions.map((m) => (
-              <SelectItem key={m} value={String(m)}>
-                {CZECH_MONTH_NAMES[m]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select
+            value={String(filter.toYear)}
+            disabled={yearOptions.length === 0}
+            onValueChange={(v) =>
+              setFilter((draft) => {
+                draft.toYear = parseInt(v, 10);
+              })
+            }
+          >
+            <SelectTrigger className="w-[88px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={String(filter.toMonth)}
+            disabled={monthOptions.length === 0}
+            onValueChange={(v) =>
+              setFilter((draft) => {
+                draft.toMonth = parseInt(v, 10);
+              })
+            }
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((m) => (
+                <SelectItem key={m} value={String(m)}>
+                  {CZECH_MONTH_NAMES[m]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="flex flex-col gap-1.5">
@@ -275,11 +263,7 @@ function workloadPercent(workload: number): string {
 }
 
 function ApprovalIcon({ approved }: { approved: boolean }) {
-  return approved ? (
-    <CheckCircle className="size-5 text-green-600" aria-hidden />
-  ) : (
-    <XCircle className="size-5 text-destructive" aria-hidden />
-  );
+  return approved ? <CheckCircle className="size-5 text-green-600" aria-hidden /> : <XCircle className="size-5 text-destructive" aria-hidden />;
 }
 
 interface TimesheetsByMonthProps {
@@ -295,9 +279,7 @@ const TimesheetsByMonth = ({ months, isLoading }: TimesheetsByMonthProps) => {
     <div className="space-y-8">
       {months.map((monthGroup) => (
         <div key={`${monthGroup.year}-${monthGroup.month}`} className="space-y-6">
-          <div className="font-medium text-foreground">
-            {formatMonthYear(monthGroup.month, monthGroup.year)}
-          </div>
+          <div className="font-medium text-foreground">{formatMonthYear(monthGroup.month, monthGroup.year)}</div>
           {monthGroup.items.map((employee) => (
             <div key={employee.id} className="rounded-md border p-4">
               <div className="mb-3 flex items-center gap-2 font-medium text-foreground">
@@ -384,43 +366,41 @@ const TimesheetsByEmployee = ({ employees, isLoading }: TimesheetsByEmployeeProp
       {employees.map((emp) => {
         const months = groupTimesheetsByMonth(emp.timesheets);
         return (
-        <div key={emp.id} className="space-y-6">
-          <div className="font-medium text-foreground">
-            {emp.fullName} · {emp.personalNumber} · {emp.employeeType}
+          <div key={emp.id} className="space-y-6">
+            <div className="font-medium text-foreground">
+              {emp.fullName} · {emp.personalNumber} · {emp.employeeType}
+            </div>
+            {months.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{Texts.noItems}</p>
+            ) : (
+              months.map((monthGroup) => {
+                const monthApproved = monthGroup.items.every((item) => item.status === Texts.statusApproved);
+                return (
+                  <div key={`${monthGroup.year}-${monthGroup.month}`} className="rounded-md border p-4">
+                    <div className="mb-3 flex items-center gap-2 font-medium text-foreground">
+                      <ApprovalIcon approved={monthApproved} />
+                      {formatMonthYear(monthGroup.month, monthGroup.year)}
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{Texts.position}</TableHead>
+                          <TableHead>{Texts.workload}</TableHead>
+                          <TableHead>{Texts.timesheetStatus}</TableHead>
+                          <TableHead>{Texts.actions}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {monthGroup.items.map((item) => (
+                          <TimesheetItemRow key={item.id} item={item} />
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                );
+              })
+            )}
           </div>
-          {months.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{Texts.noItems}</p>
-          ) : (
-            months.map((monthGroup) => {
-              const monthApproved = monthGroup.items.every(
-                (item) => item.status === Texts.statusApproved,
-              );
-              return (
-              <div key={`${monthGroup.year}-${monthGroup.month}`} className="rounded-md border p-4">
-                <div className="mb-3 flex items-center gap-2 font-medium text-foreground">
-                  <ApprovalIcon approved={monthApproved} />
-                  {formatMonthYear(monthGroup.month, monthGroup.year)}
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{Texts.position}</TableHead>
-                      <TableHead>{Texts.workload}</TableHead>
-                      <TableHead>{Texts.timesheetStatus}</TableHead>
-                      <TableHead>{Texts.actions}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {monthGroup.items.map((item) => (
-                      <TimesheetItemRow key={item.id} item={item} />
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              );
-            })
-          )}
-        </div>
         );
       })}
     </div>

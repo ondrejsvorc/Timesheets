@@ -6,13 +6,7 @@ import type {
   GetContractTimesheetsResponse,
   TimesheetItem,
 } from "../api/getContractTimesheets";
-import {
-  getContractTimesheets,
-  getDeltaMonths,
-  monthInRange,
-  rangeIsSubset,
-  statusesEqual,
-} from "../api/getContractTimesheets";
+import { getContractTimesheets, getDeltaMonths, monthInRange, rangeIsSubset, statusesEqual } from "../api/getContractTimesheets";
 
 interface CacheEntry {
   fromYear: number;
@@ -45,8 +39,12 @@ function filterDataToRange(
 
 function mergeEmployees(a: EmployeeItem[], b: EmployeeItem[]): EmployeeItem[] {
   const byId = new Map<string, EmployeeItem>();
-  a.forEach((e) => byId.set(e.id, e));
-  b.forEach((e) => byId.set(e.id, e));
+  a.forEach((e) => {
+    byId.set(e.id, e);
+  });
+  b.forEach((e) => {
+    byId.set(e.id, e);
+  });
   return Array.from(byId.values());
 }
 
@@ -58,12 +56,14 @@ function mergeTimesheets(
   deltaToYear: number,
   deltaToMonth: number,
 ): TimesheetItem[] {
-  const outsideDelta = cached.filter(
-    (t) => !monthInRange(t.year, t.month, deltaFromYear, deltaFromMonth, deltaToYear, deltaToMonth),
-  );
+  const outsideDelta = cached.filter((t) => !monthInRange(t.year, t.month, deltaFromYear, deltaFromMonth, deltaToYear, deltaToMonth));
   const byId = new Map<string, TimesheetItem>();
-  outsideDelta.forEach((t) => byId.set(t.id, t));
-  incoming.forEach((t) => byId.set(t.id, t));
+  outsideDelta.forEach((t) => {
+    byId.set(t.id, t);
+  });
+  incoming.forEach((t) => {
+    byId.set(t.id, t);
+  });
   return Array.from(byId.values());
 }
 
@@ -85,27 +85,8 @@ export function useContractTimesheets(projectId: string, contractId: string) {
       const cached = cacheRef.current.get(cacheKey);
 
       if (cached && statusesEqual(cached.statuses, req.statuses)) {
-        if (
-          rangeIsSubset(
-            req.fromYear,
-            req.fromMonth,
-            req.toYear,
-            req.toMonth,
-            cached.fromYear,
-            cached.fromMonth,
-            cached.toYear,
-            cached.toMonth,
-          )
-        ) {
-          const view = filterDataToRange(
-            cached.employees,
-            cached.timesheets,
-            req.fromYear,
-            req.fromMonth,
-            req.toYear,
-            req.toMonth,
-            req.statuses,
-          );
+        if (rangeIsSubset(req.fromYear, req.fromMonth, req.toYear, req.toMonth, cached.fromYear, cached.fromMonth, cached.toYear, cached.toMonth)) {
+          const view = filterDataToRange(cached.employees, cached.timesheets, req.fromYear, req.fromMonth, req.toYear, req.toMonth, req.statuses);
           setData(view);
           return;
         }
@@ -137,14 +118,7 @@ export function useContractTimesheets(projectId: string, contractId: string) {
               statuses: req.statuses,
             });
             const newEmployees = mergeEmployees(cached.employees, res.employees);
-            const newTimesheets = mergeTimesheets(
-              cached.timesheets,
-              res.timesheets,
-              deltaFromYear,
-              deltaFromMonth,
-              deltaToYear,
-              deltaToMonth,
-            );
+            const newTimesheets = mergeTimesheets(cached.timesheets, res.timesheets, deltaFromYear, deltaFromMonth, deltaToYear, deltaToMonth);
             const cacheStartBefore = cached.fromYear < req.fromYear || (cached.fromYear === req.fromYear && cached.fromMonth <= req.fromMonth);
             const newFromYear = cacheStartBefore ? cached.fromYear : req.fromYear;
             const newFromMonth = cacheStartBefore ? cached.fromMonth : req.fromMonth;
@@ -161,15 +135,7 @@ export function useContractTimesheets(projectId: string, contractId: string) {
               timesheets: newTimesheets,
             };
             cacheRef.current.set(cacheKey, entry);
-            const view = filterDataToRange(
-              entry.employees,
-              entry.timesheets,
-              req.fromYear,
-              req.fromMonth,
-              req.toYear,
-              req.toMonth,
-              req.statuses,
-            );
+            const view = filterDataToRange(entry.employees, entry.timesheets, req.fromYear, req.fromMonth, req.toYear, req.toMonth, req.statuses);
             setData(view);
           } finally {
             setIsLoading(false);

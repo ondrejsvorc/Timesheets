@@ -12,17 +12,14 @@ export const updateProjectContract = async (
   signal: AbortSignal,
 ): Promise<void> => {
   return withOptionalDelay("fast", () =>
-    customFetch<void>(
-      `${ApiUrl}/projects/${projectId}/contracts/${contractId}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: request.name,
-          registrationNumber: request.registrationNumber,
-        }),
-        signal,
-      },
-    ),
+    customFetch<void>(`${ApiUrl}/projects/${projectId}/contracts/${contractId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: request.name,
+        registrationNumber: request.registrationNumber,
+      }),
+      signal,
+    }),
   );
 };

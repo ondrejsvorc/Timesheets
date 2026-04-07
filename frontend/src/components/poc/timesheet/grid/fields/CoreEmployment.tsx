@@ -1,6 +1,6 @@
-import type { EditableFieldProps } from "./FieldProps";
 import { SmartDecimalInput } from "@/components/shared/inputs/SmartDecimalInput";
 import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
+import type { EditableFieldProps } from "./FieldProps";
 
 interface CoreEmploymentProps extends EditableFieldProps<number | null> {
   disabled?: boolean;
