@@ -1,9 +1,9 @@
+import { Suspense } from "react";
+import { Await, Outlet, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
 import { BackButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Routes } from "@/constants/routes";
-import { Suspense } from "react";
-import { Await, Outlet, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
 import type { GetProjectContractResponse } from "./api/getProjectContract";
 import { ContractTabs } from "./ContractTabs";
 

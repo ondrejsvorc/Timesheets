@@ -6,10 +6,7 @@ export interface GetContractTimesheetsFilterOptionsResponse {
   statuses: string[];
 }
 
-export function getContractTimesheetsFilterOptions(
-  contractId: string,
-): Promise<GetContractTimesheetsFilterOptionsResponse> {
+export function getContractTimesheetsFilterOptions(contractId: string): Promise<GetContractTimesheetsFilterOptionsResponse> {
   const url = `${ApiUrl}/contracts/${contractId}/timesheets/filter-options`;
   return withOptionalDelay("slow", () => customFetch<GetContractTimesheetsFilterOptionsResponse>(url));
 }
-

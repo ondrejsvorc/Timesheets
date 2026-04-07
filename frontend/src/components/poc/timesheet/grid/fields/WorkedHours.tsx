@@ -1,5 +1,5 @@
-import { TimesheetLogic } from "../../../TimesheetLogic";
 import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
+import { TimesheetLogic } from "../../../TimesheetLogic";
 
 interface WorkedHoursProps {
   value: number;

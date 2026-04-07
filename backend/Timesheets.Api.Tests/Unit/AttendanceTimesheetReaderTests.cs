@@ -34,7 +34,7 @@ public class AttendanceTimesheetReaderTests
             Assert.Equal(10, result.Month);
             Assert.Equal(31, result.Days.Count);
         });
-        
+
         // Check a specific day (e.g., Oct 1st)
         // Note: headerOffset is 3, so Oct 1st is row 4.
         AttendanceDay firstDay = result.Days[0];
@@ -57,7 +57,7 @@ public class AttendanceTimesheetReaderTests
         {
             // In this file, A1 is missing the number, so personal number should be 0
             Assert.Equal(0, result.EmployeePersonalNumber);
-            
+
             // But A2 still contains "01.10.2024", so Year/Month are actually parsed!
             Assert.Equal(2024, result.Year);
             Assert.Equal(10, result.Month);

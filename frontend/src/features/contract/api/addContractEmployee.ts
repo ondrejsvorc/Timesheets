@@ -32,4 +32,3 @@ export const addContractEmployee = async (contractId: string, request: AddContra
     signal,
   });
 };
-

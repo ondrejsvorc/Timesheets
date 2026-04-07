@@ -1,5 +1,6 @@
 import { Suspense, useState } from "react";
 import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
@@ -7,12 +8,11 @@ import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageH
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
-import type { EmployeePositionItem, GetEmployeePositionsResponse } from "./api/getEmployeePositions";
-import { type PositionsFilterCriteria, usePositionsFilter } from "./hooks/usePositionsFilter";
-import { AddButton } from "@/components/shared/buttons/ActionButtons";
-import { AddEmployeePositionDialog } from "./AddEmployeePositionDialog";
 import { formatDate } from "@/utils/formatDate";
 import { formatWorkloadPercent } from "@/utils/formatWorkload";
+import { AddEmployeePositionDialog } from "./AddEmployeePositionDialog";
+import type { EmployeePositionItem, GetEmployeePositionsResponse } from "./api/getEmployeePositions";
+import { type PositionsFilterCriteria, usePositionsFilter } from "./hooks/usePositionsFilter";
 
 export const EmployeePositions = () => {
   const { promise } = useLoaderData() as {
@@ -40,7 +40,11 @@ const EmployeePositionsContent = () => {
       <SubPageHeader>
         <SubPageTitle>Pozice</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePosition}</AddButton>}>
+      <FilterBar
+        filter={filter}
+        setFilter={setFilter}
+        actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePosition}</AddButton>}
+      >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <PositionsTable positions={filtered} />
@@ -79,7 +83,9 @@ export const PositionsTable = ({ positions }: PositionsTableProps) => {
         <TableBody>
           {positions.map((position) => (
             <TableRow key={`${position.projectId}:${position.contractId}:${position.startDate}`} className="cursor-pointer">
-              <TableCell>{position.positionCode} · {position.position}</TableCell>
+              <TableCell>
+                {position.positionCode} · {position.position}
+              </TableCell>
               <TableCell>{formatWorkloadPercent(position.workload)}</TableCell>
               <TableCell>{formatDate(position.startDate)}</TableCell>
               <TableCell>{formatDate(position.endDate)}</TableCell>

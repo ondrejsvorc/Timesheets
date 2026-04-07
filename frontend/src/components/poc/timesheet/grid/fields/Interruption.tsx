@@ -1,5 +1,5 @@
-import type { EditableFieldProps } from "./FieldProps";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
+import type { EditableFieldProps } from "./FieldProps";
 
 export const Interruption = ({ value, onChange }: EditableFieldProps<string>) => {
   const selected = value ? value.split(",").filter(Boolean) : [];

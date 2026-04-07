@@ -25,6 +25,7 @@ public static class ConfigureServices
                 policy.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod();
             });
         });
+        builder.Services.AddHealthChecks();
         builder.AddResponseCompression();
         //builder.AddAuthentication();
         builder.AddDatabase();

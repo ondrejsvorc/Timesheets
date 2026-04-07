@@ -52,11 +52,7 @@ export async function listTimesheetComments(threadKey: ThreadKey, signal?: Abort
   return (store.get(threadKey) ?? []).slice();
 }
 
-export async function addTimesheetComment(
-  threadKey: ThreadKey,
-  input: { text: string },
-  signal?: AbortSignal,
-): Promise<TimesheetComment> {
+export async function addTimesheetComment(threadKey: ThreadKey, input: { text: string }, signal?: AbortSignal): Promise<TimesheetComment> {
   seedIfMissing(threadKey);
   await delay(200, signal);
 
@@ -76,4 +72,3 @@ export async function addTimesheetComment(
   store.set(threadKey, [...(store.get(threadKey) ?? []), comment]);
   return comment;
 }
-

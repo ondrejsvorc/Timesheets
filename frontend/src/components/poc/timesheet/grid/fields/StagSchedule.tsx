@@ -1,5 +1,5 @@
-import type { TimeRange } from "../../../Timesheet";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
+import type { TimeRange } from "../../../Timesheet";
 
 /** Predefined 50-minute slots from 07:00 to 21:00 (07:00–07:50, 08:00–08:50, …, 21:00–21:50). */
 const STAG_SCHEDULE_INTERVAL_OPTIONS: MultiSelectComboBoxItem[] = (() => {
@@ -15,8 +15,7 @@ const STAG_SCHEDULE_INTERVAL_OPTIONS: MultiSelectComboBoxItem[] = (() => {
 const OPTION_VALUES = STAG_SCHEDULE_INTERVAL_OPTIONS.map((o) => o.value);
 
 /** Normalize backend time (HH:mm:ss) to option format (HH:mm). */
-const toOptionTime = (t: string): string =>
-  t ? t.slice(0, 5) : "";
+const toOptionTime = (t: string): string => (t ? t.slice(0, 5) : "");
 
 /** Parse HH:mm to minutes since midnight for comparison. */
 const timeToMinutes = (hhmm: string): number => {
@@ -48,7 +47,7 @@ const rangeToOptionValues = (range: TimeRange): string[] => {
 const fromValue = (value: string): TimeRange => {
   const [start, end] = value.split("-");
   return { start: start ?? "", end: end ?? "" };
-}
+};
 
 interface StagScheduleProps {
   schedules: TimeRange[];

@@ -3,9 +3,5 @@ interface LabelProps {
 }
 
 export const Label = ({ label }: LabelProps) => {
-  return (
-    <div className="text-center font-medium">
-      {label}
-    </div>
-  );
+  return <div className="text-center font-medium">{label}</div>;
 };

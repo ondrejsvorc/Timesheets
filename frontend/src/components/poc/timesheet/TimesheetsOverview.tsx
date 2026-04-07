@@ -5,7 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Texts } from "@/constants/texts";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
 
-const formatWorkload = (value: number) => `${Number((value * 100).toFixed(2)).toString().replace(".", ",")} %`;
+const formatWorkload = (value: number) =>
+  `${Number((value * 100).toFixed(2))
+    .toString()
+    .replace(".", ",")} %`;
 
 export const TimesheetsOverview = () => {
   const overview = useAsyncValue() as GetCombinedTimesheetOverviewResponse;
@@ -37,7 +40,9 @@ export const TimesheetsOverview = () => {
                 <TableCell>{item.contractName ?? Texts.dash}</TableCell>
                 <TableCell>{item.position ?? Texts.dash}</TableCell>
                 <TableCell>{formatWorkload(item.workload)}</TableCell>
-                <TableCell className="max-w-[20rem] whitespace-normal break-words">{item.managers.length > 0 ? item.managers.join(", ") : Texts.dash}</TableCell>
+                <TableCell className="max-w-[20rem] whitespace-normal break-words">
+                  {item.managers.length > 0 ? item.managers.join(", ") : Texts.dash}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

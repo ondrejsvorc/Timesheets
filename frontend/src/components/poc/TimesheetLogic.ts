@@ -10,7 +10,10 @@ const CORE_INTERRUPTION_CODES = new Set(["M"]);
 
 const parseInterruptionCodes = (raw: string): string[] => {
   if (!raw.trim()) return [];
-  return raw.split(",").map((c) => c.trim().toUpperCase()).filter(Boolean);
+  return raw
+    .split(",")
+    .map((c) => c.trim().toUpperCase())
+    .filter(Boolean);
 };
 
 const attendanceHasBusinessTripInterruption = (attendance: Attendance): boolean => {
@@ -74,7 +77,7 @@ export const TimesheetLogic = {
     if (attendance.breakStart && attendance.breakEnd) {
       const bStart = toMinutes(attendance.breakStart);
       const bEnd = toMinutes(attendance.breakEnd);
-      
+
       if (bEnd < bStart) {
         const breakDuration = bEnd + 24 * 60 - bStart;
         if (breakDuration <= 12 * 60) breakMinutes = breakDuration;
@@ -114,8 +117,10 @@ export const TimesheetLogic = {
     const shiftEnd = crossesMidnight ? clockOutMinutes + 1440 : clockOutMinutes;
 
     const nightSegments: Array<[number, number]> = [
-      [22 * 60, 24 * 60], [0, 6 * 60],
-      [1440 + 22 * 60, 1440 + 24 * 60], [1440 + 0, 1440 + 6 * 60],
+      [22 * 60, 24 * 60],
+      [0, 6 * 60],
+      [1440 + 22 * 60, 1440 + 24 * 60],
+      [1440 + 0, 1440 + 6 * 60],
     ];
 
     const shiftNightMinutes = nightSegments.reduce((sum, [nStart, nEnd]) => sum + overlap(shiftStart, shiftEnd, nStart, nEnd), 0);
@@ -125,7 +130,10 @@ export const TimesheetLogic = {
       let bStart = toMinutes(attendance.breakStart);
       let bEnd = toMinutes(attendance.breakEnd);
       if (bEnd < bStart) bEnd += 1440;
-      if (crossesMidnight && bStart < shiftStart) { bStart += 1440; bEnd += 1440; }
+      if (crossesMidnight && bStart < shiftStart) {
+        bStart += 1440;
+        bEnd += 1440;
+      }
       breakNightMinutes = nightSegments.reduce((sum, [nStart, nEnd]) => sum + overlap(bStart, bEnd, nStart, nEnd), 0);
     }
 
@@ -137,7 +145,7 @@ export const TimesheetLogic = {
     const totalMinutes = schedules.reduce((acc, range) => {
       const start = toMinutes(range.start);
       const end = toMinutes(range.end);
-      return (range.start && range.end && end > start) ? acc + (end - start) : acc;
+      return range.start && range.end && end > start ? acc + (end - start) : acc;
     }, 0);
     return roundHours(totalMinutes / 60);
   },
@@ -183,7 +191,7 @@ export const TimesheetLogic = {
     day: TimesheetDay,
     totalWorkload: number,
     coreWorkload: number,
-    projects: Pick<ProjectDefinition, "id" | "workload" | "lockedAt">[]
+    projects: Pick<ProjectDefinition, "id" | "workload" | "lockedAt">[],
   ) => {
     if (attendanceHasBusinessTripInterruption(day.attendance)) {
       return null;
@@ -236,7 +244,7 @@ export const TimesheetLogic = {
     };
   },
 
-  distributeMonthlyHours: (timesheet: Timesheet, onUpdateDay: (date: string, recipe: any) => void) => {
+  distributeMonthlyHours: (timesheet: Timesheet, onUpdateDay: (date: string, recipe: (draftDay: TimesheetDay) => void) => void) => {
     const generated = cloneTimesheet(timesheet);
     generateTimesheetData(generated, GENERATOR_CONFIG);
 
@@ -292,8 +300,7 @@ export const TimesheetLogic = {
     const nightHours = roundHours(Math.min(nightRaw, workedHours));
     const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);
     const controlTotal = TimesheetLogic.calculateControlTotal(day);
-    const balance =
-      hasAttendanceFilled(day.attendance) && workedHours <= MAX_WORK_SHIFT_HOURS ? roundHours(workedHours - controlTotal) : 0;
+    const balance = hasAttendanceFilled(day.attendance) && workedHours <= MAX_WORK_SHIFT_HOURS ? roundHours(workedHours - controlTotal) : 0;
     return { workedHours, nightHours, stagHours, controlTotal, balance };
   },
 
@@ -302,9 +309,10 @@ export const TimesheetLogic = {
   formatSmartTime: (value: string): string => {
     const clean = value.replace(/\D/g, "");
     if (!clean) return "";
-    let h = clean.length <= 2 ? parseInt(clean) : parseInt(clean.slice(0, -2));
-    let m = clean.length <= 2 ? 0 : parseInt(clean.slice(-2));
-    h = Math.min(h, 23); m = Math.min(m, 59);
+    let h = clean.length <= 2 ? parseInt(clean, 10) : parseInt(clean.slice(0, -2), 10);
+    let m = clean.length <= 2 ? 0 : parseInt(clean.slice(-2), 10);
+    h = Math.min(h, 23);
+    m = Math.min(m, 59);
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
   },
 

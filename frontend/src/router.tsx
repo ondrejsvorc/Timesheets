@@ -7,7 +7,9 @@ import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { Routes } from "./constants/routes";
 import { getContractEmployees } from "./features/contract/api/getContractEmployees";
 import { getProjectContract } from "./features/contract/api/getProjectContract";
+import { ContractEmployees } from "./features/contract/ContractEmployees";
 import { ContractPage } from "./features/contract/ContractPage";
+import { ContractTimesheets } from "./features/contract/ContractTimesheets";
 import { getEmployee } from "./features/employee/api/getEmployee";
 import { getEmployeePositions } from "./features/employee/api/getEmployeePositions";
 import { getEmployeeTimesheets } from "./features/employee/api/getEmployeeTimesheets";
@@ -24,8 +26,6 @@ import { ProjectContractsManagers } from "./features/project/ProjectContractsMan
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api/getProjects";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
-import { ContractTimesheets } from "./features/contract/ContractTimesheets";
-import { ContractEmployees } from "./features/contract/ContractEmployees";
 
 const requireProjectId = (params: Params) => {
   if (!params.id) {

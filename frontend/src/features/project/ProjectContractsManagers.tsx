@@ -1,3 +1,6 @@
+import { Suspense, useState } from "react";
+import { Await, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
+import { useImmerReducer } from "use-immer";
 import { AddButton, DeleteButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
@@ -8,9 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
-import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
-import { useImmerReducer } from "use-immer";
 import { AddContractManagerDialog } from "./AddContractManagerDialog";
 import type { GetProjectContractsManagersResponse, ProjectContractManagerItem } from "./api/getProjectContractsManagers";
 import { removeContractManager } from "./api/removeContractManager";

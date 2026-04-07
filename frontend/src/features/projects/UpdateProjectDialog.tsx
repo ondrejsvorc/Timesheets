@@ -2,9 +2,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Texts } from "@/constants/texts";
-import { updateProject } from "./api/updateProject";
 import type { ProjectItem } from "./api/shared/projectItem";
-import { ProjectFormFields, projectFormDefaultValues, projectFormSchema, type ProjectFormValues } from "./ProjectFormFields";
+import { updateProject } from "./api/updateProject";
+import { ProjectFormFields, type ProjectFormValues, projectFormDefaultValues, projectFormSchema } from "./ProjectFormFields";
 
 interface UpdateProjectDialogProps {
   open: boolean;

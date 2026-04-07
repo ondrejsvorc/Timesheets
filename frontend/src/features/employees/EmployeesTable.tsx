@@ -1,8 +1,8 @@
+import { useNavigate } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { useNavigate } from "react-router";
 import type { EmployeeItem } from "./api/getEmployees";
 
 interface EmployeesTableProps {
@@ -15,23 +15,23 @@ export const EmployeesTable = ({ employees }: EmployeesTableProps) => {
   }
 
   return (
-      <div className="rounded-md border p-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{Texts.personalNumber}</TableHead>
-              <TableHead>{Texts.fullName}</TableHead>
-              <TableHead>{Texts.email}</TableHead>
-              <TableHead>{Texts.employeeType}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {employees.map((employee) => (
-              <EmployeeRow key={employee.id} employee={employee} />
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+    <div className="rounded-md border p-4">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{Texts.personalNumber}</TableHead>
+            <TableHead>{Texts.fullName}</TableHead>
+            <TableHead>{Texts.email}</TableHead>
+            <TableHead>{Texts.employeeType}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {employees.map((employee) => (
+            <EmployeeRow key={employee.id} employee={employee} />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 

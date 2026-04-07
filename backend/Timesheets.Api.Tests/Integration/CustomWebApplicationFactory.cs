@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -5,7 +6,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Testcontainers.PostgreSql;
 using Timesheets.Api.Data;
-using Microsoft.AspNetCore.Authentication;
 
 namespace Timesheets.Api.Tests.Integration;
 
@@ -54,7 +54,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
                 options.DefaultChallengeScheme = "TestScheme";
             }).AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestScheme", options => { });
         });
-        
+
         builder.UseEnvironment("Development");
     }
 

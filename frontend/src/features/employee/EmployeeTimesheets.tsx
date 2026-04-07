@@ -1,3 +1,4 @@
+import { CheckCircle, ChevronDown, Upload, XCircle } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useNavigate, useRevalidator } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
@@ -13,10 +14,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { CheckCircle, XCircle, ChevronDown, Upload } from "lucide-react";
 import { CZECH_MONTH_NAMES } from "@/features/contract/utils/czechMonths";
 import type { GetEmployeeTimesheetsResponse } from "./api/getEmployeeTimesheets";
-import { useEmployeeTimesheetsFilter, type EmployeeTimesheetsFilterCriteria } from "./hooks/useEmployeeTimesheetsFilter";
+import { type EmployeeTimesheetsFilterCriteria, useEmployeeTimesheetsFilter } from "./hooks/useEmployeeTimesheetsFilter";
 import { UploadTimesheetsDialog } from "./UploadTimesheetsDialog";
 
 export const EmployeeTimesheets = () => {
@@ -97,11 +97,7 @@ const EmployeeTimesheetsContent = () => {
         </FilterBar>
         <EmptyState />
         {isUploadDialogOpen && (
-          <UploadTimesheetsDialog
-            open={isUploadDialogOpen}
-            onClose={() => setIsUploadDialogOpen(false)}
-            onSuccess={() => revalidator.revalidate()}
-          />
+          <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => revalidator.revalidate()} />
         )}
       </>
     );
@@ -152,7 +148,9 @@ const EmployeeTimesheetsContent = () => {
                             <CheckCircle className="size-5 text-green-600" aria-hidden />
                           )}
                         </TableCell>
-                        <TableCell className="font-medium">{CZECH_MONTH_NAMES[m.month]} {m.year}</TableCell>
+                        <TableCell className="font-medium">
+                          {CZECH_MONTH_NAMES[m.month]} {m.year}
+                        </TableCell>
                       </TableRow>
                     </TooltipTrigger>
                     {disabled && <TooltipContent side="top">Nejdřív naimportujte docházku pro tento měsíc.</TooltipContent>}
@@ -164,11 +162,7 @@ const EmployeeTimesheetsContent = () => {
         </Table>
       </div>
       {isUploadDialogOpen && (
-        <UploadTimesheetsDialog
-          open={isUploadDialogOpen}
-          onClose={() => setIsUploadDialogOpen(false)}
-          onSuccess={() => revalidator.revalidate()}
-        />
+        <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => revalidator.revalidate()} />
       )}
     </>
   );
@@ -248,12 +242,12 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
                 {availableMonths.length === 0
                   ? Texts.noItems
                   : isAllMonthsSelected
-                  ? "Všechny měsíce"
-                  : selectedMonthsCount === 0
-                    ? "Vyberte měsíce"
-                    : selectedMonthsCount === 1 && singleSelectedMonth !== undefined
-                      ? CZECH_MONTH_NAMES[singleSelectedMonth]
-                      : `${selectedMonthsCount} měsíců`}
+                    ? "Všechny měsíce"
+                    : selectedMonthsCount === 0
+                      ? "Vyberte měsíce"
+                      : selectedMonthsCount === 1 && singleSelectedMonth !== undefined
+                        ? CZECH_MONTH_NAMES[singleSelectedMonth]
+                        : `${selectedMonthsCount} měsíců`}
               </span>
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>

@@ -1,11 +1,11 @@
-import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
+import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useEffect, useMemo, useRef, useState } from "react";
 import type { TimesheetComment } from "./Comment";
 import { addTimesheetComment, listTimesheetComments } from "./commentsApi";
-import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 
 export const TimesheetComments = () => {
   const MAX_COMMENT_LENGTH = 500;
@@ -82,8 +82,7 @@ export const TimesheetComments = () => {
                 items.map((c) =>
                   c.type === "system" ? (
                     <div key={c.id} className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground/80">Systém</span>{" "}
-                      <span className="mx-1">·</span>
+                      <span className="font-medium text-foreground/80">Systém</span> <span className="mx-1">·</span>
                       <span>{new Date(c.createdAt).toLocaleString("cs-CZ")}</span>
                       <span className="mx-1">·</span>
                       <span>{c.text}</span>

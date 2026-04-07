@@ -116,7 +116,7 @@ public sealed class CellParser : ICellParser
 
         string[] parts = text.Split(intervalSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         List<TimeRange> ranges = new(parts.Length);
-        
+
         foreach (string part in parts)
         {
             string[] tokens = part.Split(rangeSeparator, StringSplitOptions.TrimEntries);

@@ -1,10 +1,10 @@
+import { Suspense } from "react";
+import { Await, Outlet, useAsyncValue, useLoaderData, useNavigate } from "react-router";
 import { BackButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Routes } from "@/constants/routes";
 import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
-import { Suspense } from "react";
-import { Await, Outlet, useAsyncValue, useLoaderData, useNavigate } from "react-router";
 import type { GetEmployeeResponse } from "./api/getEmployee";
 import { EmployeeTabs } from "./EmployeeTabs";
 

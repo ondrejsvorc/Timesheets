@@ -1,8 +1,8 @@
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import type { TimeRange } from "./Timesheet";
-import { useMemo, useState } from "react";
 
 export const ScheduleCell = ({ schedules, onClick }: { schedules: TimeRange[]; onClick: () => void }) => {
   const label = schedules.length === 0 ? "-" : `${schedules.length}×`;
@@ -57,18 +57,14 @@ export const ScheduleEditorModal = ({
                 className="h-8"
                 placeholder="HH:MM"
                 value={range.start}
-                onChange={(e) =>
-                  setDraft((cur) => cur.map((r, i) => (i === idx ? { ...r, start: e.currentTarget.value } : r)))
-                }
+                onChange={(e) => setDraft((cur) => cur.map((r, i) => (i === idx ? { ...r, start: e.currentTarget.value } : r)))}
               />
               <span className="text-xs text-muted-foreground">–</span>
               <Input
                 className="h-8"
                 placeholder="HH:MM"
                 value={range.end}
-                onChange={(e) =>
-                  setDraft((cur) => cur.map((r, i) => (i === idx ? { ...r, end: e.currentTarget.value } : r)))
-                }
+                onChange={(e) => setDraft((cur) => cur.map((r, i) => (i === idx ? { ...r, end: e.currentTarget.value } : r)))}
               />
               <Button type="button" variant="ghost" className="h-8 px-2" onClick={() => setDraft((cur) => cur.filter((_, i) => i !== idx))}>
                 ×
@@ -101,4 +97,3 @@ export const ScheduleEditorModal = ({
     </Dialog>
   );
 };
-

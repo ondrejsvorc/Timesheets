@@ -15,8 +15,6 @@ export interface GetEmployeesResponse {
 
 export const getEmployees = () => {
   return {
-    promise: withOptionalDelay("slow", () =>
-      customFetch<GetEmployeesResponse>(`${ApiUrl}/employees`),
-    ),
+    promise: withOptionalDelay("slow", () => customFetch<GetEmployeesResponse>(`${ApiUrl}/employees`)),
   };
 };

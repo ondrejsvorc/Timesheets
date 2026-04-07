@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Texts } from "@/constants/texts";
 import { type CreateProjectRequest, createProject } from "./api/createProject";
 import type { ProjectItem } from "./api/shared/projectItem";
-import { ProjectFormFields, projectFormDefaultValues, projectFormSchema, type ProjectFormValues } from "./ProjectFormFields";
+import { ProjectFormFields, type ProjectFormValues, projectFormDefaultValues, projectFormSchema } from "./ProjectFormFields";
 
 interface AddProjectDialogProps {
   open: boolean;

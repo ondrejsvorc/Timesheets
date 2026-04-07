@@ -27,6 +27,7 @@ public static class ConfigureApp
         app.UseCors();
         app.UseHttpsRedirection();
         app.UseResponseCompression();
+        app.MapHealthChecks("/health");
         app.MapEndpoints();
     }
 }
