@@ -175,9 +175,6 @@ const TimesheetPageContent = () => {
             <Button type="button" variant="outline">
               {Texts.changeTimesheetStatus}
             </Button>
-            <Button type="button" variant="outline">
-              {Texts.export}
-            </Button>
             <Button type="button" variant="outline" onClick={handleClearAttendanceFields}>
               {Texts.clearAttendanceEntryAndBreak}
             </Button>
