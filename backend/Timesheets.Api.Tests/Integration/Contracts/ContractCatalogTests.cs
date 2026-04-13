@@ -44,7 +44,7 @@ public class ContractCatalogTests : BaseIntegrationTest
         // 3. GET /api/contracts/catalog
         var getCatalogResponse = await Client.GetAsync("/api/contracts/catalog");
         Assert.Equal(HttpStatusCode.OK, getCatalogResponse.StatusCode);
-        
+
         var catalog = await getCatalogResponse.Content.ReadFromJsonAsync<GetContractCatalog.Response>();
         Assert.NotNull(catalog);
         Assert.Contains(catalog!.Contracts, c => c.Id == contractId && c.ProjectId == projectId);
@@ -52,7 +52,7 @@ public class ContractCatalogTests : BaseIntegrationTest
         // 4. GET /api/contracts/catalog?projectId={projectId}
         var getFilteredCatalogResponse = await Client.GetAsync($"/api/contracts/catalog?projectId={projectId}");
         Assert.Equal(HttpStatusCode.OK, getFilteredCatalogResponse.StatusCode);
-        
+
         var filteredCatalog = await getFilteredCatalogResponse.Content.ReadFromJsonAsync<GetContractCatalog.Response>();
         Assert.NotNull(filteredCatalog);
         Assert.Contains(filteredCatalog!.Contracts, c => c.Id == contractId);

@@ -44,7 +44,7 @@ public class ContractManagerLifecycleTests : BaseIntegrationTest
 
         // 3. Setup: Create Employee
         var createEmployeeRequest = new CreateEmployee.Request(
-            Guid.NewGuid(), 
+            Guid.Parse("00000000-0000-0000-0000-000000000001"),
             8888,
             "Jane Manager",
             "jane.manager@contracts.com",

@@ -43,7 +43,7 @@ public class ContractEmployeeLifecycleTests : BaseIntegrationTest
 
         // 3. Setup: Create Employee
         var createEmployeeRequest = new CreateEmployee.Request(
-            Guid.NewGuid(), // EmployeeTypeId might need to be valid or we can pass a random guid if FK doesn't constrain it strictly
+            Guid.Parse("00000000-0000-0000-0000-000000000001"), // using a seeded Akademik type
             9999,
             "John Doe Contract",
             "john.doe@contracts.com",
@@ -66,6 +66,11 @@ public class ContractEmployeeLifecycleTests : BaseIntegrationTest
             DateTime.UtcNow.Date.AddDays(15)
         );
         var addResponse = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", addEmployeeRequest);
+        if (!addResponse.IsSuccessStatusCode)
+        {
+            var errorContent = await addResponse.Content.ReadAsStringAsync();
+            Assert.Fail($"AddEmployee failed with status {addResponse.StatusCode}. Error: {errorContent}");
+        }
         Assert.Equal(HttpStatusCode.Created, addResponse.StatusCode);
 
         // 5. GET /api/contracts/{id}/employees
