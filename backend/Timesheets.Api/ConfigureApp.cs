@@ -1,6 +1,6 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
-using Microsoft.AspNetCore.HttpOverrides;
 
 namespace Timesheets.Api;
 
