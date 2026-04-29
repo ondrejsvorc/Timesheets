@@ -58,7 +58,9 @@ services:
     restart: unless-stopped
 
   timesheets.certbot:
-    image: certbot/certbot
+    build:
+      context: ./deploy/certbot
+      dockerfile: Dockerfile
     container_name: timesheets.certbot
     environment:
       PUBLIC_HOST: ${PUBLIC_HOST}
@@ -66,9 +68,7 @@ services:
     volumes:
       - letsencrypt:/etc/letsencrypt
       - webroot:/var/www/certbot
-      - ./deploy/certbot:/scripts:ro
     restart: unless-stopped
-    entrypoint: ["/bin/sh", "/scripts/entrypoint.sh"]
 
 volumes:
   timesheets_db:

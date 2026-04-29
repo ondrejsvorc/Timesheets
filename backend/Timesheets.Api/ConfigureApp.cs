@@ -34,6 +34,7 @@ public static class ConfigureApp
         }
         app.UseResponseCompression();
         app.MapHealthChecks("/health");
+        app.MapHealthChecks("/api/health");
         app.MapEndpoints();
     }
 }
