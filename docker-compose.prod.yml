@@ -1,0 +1,79 @@
+services:
+  timesheets.database:
+    image: postgres:17-alpine
+    container_name: timesheets.database
+    environment:
+      POSTGRES_DB: timesheets
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - timesheets_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  timesheets.backend:
+    container_name: timesheets.backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_HTTP_PORTS: "5000"
+      ConnectionStrings__Database: Host=timesheets.database;Port=5432;Database=timesheets;Username=postgres;Password=${POSTGRES_PASSWORD}
+    depends_on:
+      timesheets.database:
+        condition: service_healthy
+    restart: unless-stopped
+
+  timesheets.frontend:
+    container_name: timesheets.frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: prod
+      args:
+        VITE_API_URL: /api
+    restart: unless-stopped
+
+  timesheets.nginx:
+    image: nginx:alpine
+    container_name: timesheets.nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/vykazy.bootstrap.conf:/etc/nginx/conf.d/default.conf:ro
+      - letsencrypt:/etc/letsencrypt
+      - webroot:/var/www/certbot
+    depends_on:
+      - timesheets.frontend
+      - timesheets.backend
+    restart: unless-stopped
+
+  timesheets.certbot:
+    image: certbot/certbot
+    container_name: timesheets.certbot
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - webroot:/var/www/certbot
+      - ./deploy/certbot:/scripts:ro
+    restart: unless-stopped
+    entrypoint:
+      - sh
+      - -c
+      - |
+        trap exit TERM;
+        while :; do
+          sleep 12h & wait $$!;
+          certbot renew --webroot -w /var/www/certbot;
+        done
+
+volumes:
+  timesheets_db:
+  letsencrypt:
+  webroot:
+

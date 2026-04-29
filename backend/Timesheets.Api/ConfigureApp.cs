@@ -1,5 +1,6 @@
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace Timesheets.Api;
 
@@ -13,6 +14,8 @@ public static class ConfigureApp
             app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "Timesheets API"));
         }
 
+        app.UseForwardedHeaders();
+
         //app.UseAuthentication();
         //app.UseAuthorization();
         app.ApplyMigrations();
@@ -25,7 +28,10 @@ public static class ConfigureApp
         }
 
         app.UseCors();
-        app.UseHttpsRedirection();
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseHttpsRedirection();
+        }
         app.UseResponseCompression();
         app.MapHealthChecks("/health");
         app.MapEndpoints();

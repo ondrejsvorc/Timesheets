@@ -5,4 +5,3 @@ dist
 README.md
 Dockerfile*
 biome.json
-tsconfig*.json

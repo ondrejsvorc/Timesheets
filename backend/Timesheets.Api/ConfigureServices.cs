@@ -2,6 +2,7 @@ using CzechHolidays;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -18,6 +19,7 @@ public static class ConfigureServices
     public static void AddServices(this WebApplicationBuilder builder)
     {
         builder.AddOpenApi();
+        builder.AddForwardedHeaders();
         builder.Services.AddCors(options =>
         {
             options.AddDefaultPolicy(policy =>
@@ -30,6 +32,16 @@ public static class ConfigureServices
         //builder.AddAuthentication();
         builder.AddDatabase();
         builder.AddAppServices();
+    }
+
+    private static void AddForwardedHeaders(this WebApplicationBuilder builder)
+    {
+        builder.Services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            options.KnownNetworks.Clear();
+            options.KnownProxies.Clear();
+        });
     }
 
     private static void AddResponseCompression(this WebApplicationBuilder builder)

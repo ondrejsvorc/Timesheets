@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+
+.containers/
+
+# local TLS/cert data (if mounted to host)
+deploy/letsencrypt/
+deploy/webroot/
+
+# OS/editor
+.DS_Store
+Thumbs.db
+
