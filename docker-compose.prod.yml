@@ -24,6 +24,14 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "5000"
       ConnectionStrings__Database: Host=timesheets.database;Port=5432;Database=timesheets;Username=postgres;Password=${POSTGRES_PASSWORD}
+      Authentication__ClientId: ${AUTHENTICATION__CLIENTID:-vykazy.ci}
+      Authentication__ClientSecret: ${AUTHENTICATION__CLIENTSECRET}
+      Authentication__MetadataAddress: ${AUTHENTICATION__METADATAADDRESS:-https://idp.ujep.cz/.well-known/openid-configuration}
+      Authentication__Issuer: ${AUTHENTICATION__ISSUER:-https://idp.ujep.cz}
+      Authentication__CallbackPath: ${AUTHENTICATION__CALLBACKPATH:-/login-oidc}
+      Authentication__SignedOutCallbackPath: ${AUTHENTICATION__SIGNEDOUTCALLBACKPATH:-/logout-oidc}
+      Authentication__RemoteSignOutPath: ${AUTHENTICATION__REMOTESIGNOUTPATH:-/logout-oidc}
+      Authentication__SignedOutRedirectUri: ${AUTHENTICATION__SIGNEDOUTREDIRECTURI:-/login}
     depends_on:
       timesheets.database:
         condition: service_healthy
