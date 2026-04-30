@@ -194,7 +194,8 @@ public sealed class AttendanceTimesheetImportService(
             );
         }
 
-        if (metadata.EmployeePersonalNumber != employee.PersonalNumber)
+        // Accept variants like "ST101972" vs "101972" (e.g. "ST101972".Contains("101972")).
+        if (!employee.PersonalNumber.Contains(metadata.EmployeePersonalNumber.Trim(), StringComparison.OrdinalIgnoreCase))
         {
             return new DetectionAttempt(
                 metadata,
