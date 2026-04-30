@@ -188,15 +188,7 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
         </ValidationField>
       </div>
       <div className={cellClass}>
-        <Interruption
-          value={day.attendance.interruptions}
-          onChange={(v) =>
-            handleUpdateDay((d) => {
-              d.attendance.interruptions = v;
-              applyInterruptionAutofill(d);
-            })
-          }
-        />
+        <Interruption value={day.attendance.interruptions} />
       </div>
       <div className={cn(cellClass, numericCellClass)}>
         <WorkedHours value={workedHours} />
