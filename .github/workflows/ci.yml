@@ -40,7 +40,7 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        dotnet list Timesheets.slnx package --vulnerable --include-transitive | tee vulnerable-packages.txt
+        dotnet list Timesheets.slnx package --no-restore --vulnerable --include-transitive | tee vulnerable-packages.txt
         if grep -Eiq '\b(Critical|High)\b' vulnerable-packages.txt; then
           echo "High/Critical vulnerabilities found."
           exit 1
@@ -60,6 +60,7 @@ jobs:
       with:
         name: backend-publish
         path: ./backend/.ci/publish
+        retention-days: 1
 
     - name: Test Report
       uses: dorny/test-reporter@v3
@@ -104,6 +105,7 @@ jobs:
       with:
         name: frontend-dist
         path: ./frontend/dist
+        retention-days: 1
 
   runtime:
     name: Runtime
@@ -115,23 +117,23 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6
 
-    - name: Download artifacts
+    - name: Download backend artifacts
       uses: actions/download-artifact@v7
       with:
         name: backend-publish
         path: ./backend/.ci/publish
 
-    - name: Download artifacts
+    - name: Download frontend artifacts
       uses: actions/download-artifact@v7
       with:
         name: frontend-dist
         path: ./frontend/.ci/dist
 
     - name: Build containers
-      run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build
+      run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build timesheets.database timesheets.backend timesheets.frontend
 
     - name: Start containers
-      run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+      run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d timesheets.database timesheets.backend timesheets.frontend
 
     - name: Wait for backend
       shell: bash
@@ -155,7 +157,7 @@ jobs:
         set -euo pipefail
         compose="docker compose -f docker-compose.yml -f docker-compose.ci.yml"
         for i in {1..30}; do
-          if curl -fsS "http://localhost:3000/" >/dev/null; then
+          if curl -fsS "http://localhost:8080/" >/dev/null; then
             exit 0
           fi
           sleep 2
@@ -169,15 +171,30 @@ jobs:
       shell: bash
       run: |
         set -euo pipefail
-        touch zap.yaml report_json.json report_md.md report_html.html
-        chmod a+rw zap.yaml report_json.json report_md.md report_html.html
+        touch zap.yaml web_report_json.json web_report_md.md web_report_html.html api_report_json.json api_report_md.md api_report_html.html
+        chmod a+rw zap.yaml web_report_json.json web_report_md.md web_report_html.html api_report_json.json api_report_md.md api_report_html.html
 
     - name: Run ZAP scan
       uses: zaproxy/action-baseline@v0.15.0
       with:
-        target: "http://localhost:3000"
+        target: "http://localhost:8080"
+        cmd_options: >-
+          -J web_report_json.json
+          -w web_report_md.md
+          -r web_report_html.html
         fail_action: false
-        artifact_name: zap-scan
+        artifact_name: zap-web
+
+    - name: Run ZAP scan (API)
+      uses: zaproxy/action-baseline@v0.15.0
+      with:
+        target: "http://localhost:5000/swagger/index.html"
+        cmd_options: >-
+          -J api_report_json.json
+          -w api_report_md.md
+          -r api_report_html.html
+        fail_action: false
+        artifact_name: zap-api
 
     - name: Upload ZAP report
       uses: actions/upload-artifact@v6
@@ -185,9 +202,13 @@ jobs:
       with:
         name: zap-security-report
         path: |
-          report_html.html
-          report_md.md
-          report_json.json
+          web_report_html.html
+          web_report_md.md
+          web_report_json.json
+          api_report_html.html
+          api_report_md.md
+          api_report_json.json
+        retention-days: 1
 
     - name: Stop containers
       if: always()
