@@ -34,6 +34,12 @@ const requireAuth = async ({ request }: { request: Request }) => {
     if (response.ok) {
       return null;
     }
+
+    // Only redirect to OIDC login when we're actually unauthenticated/forbidden.
+    // Other statuses (e.g. 404 "Employee not found") should not cause a login loop.
+    if (response.status !== 401 && response.status !== 403) {
+      return null;
+    }
   } catch {
     // ignore and fall back to login redirect
   }
