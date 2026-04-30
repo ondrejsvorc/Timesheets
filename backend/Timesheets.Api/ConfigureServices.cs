@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -29,7 +30,7 @@ public static class ConfigureServices
         });
         builder.Services.AddHealthChecks();
         builder.AddResponseCompression();
-        //builder.AddAuthentication();
+        builder.AddAuthentication();
         builder.AddDatabase();
         builder.AddAppServices();
     }
@@ -122,6 +123,34 @@ public static class ConfigureServices
 
                 options.Events = new OpenIdConnectEvents
                 {
+                    OnRedirectToIdentityProviderForSignOut = context =>
+                    {
+                        // We want the IdP to redirect straight to the SPA route (e.g. /login),
+                        // not to the middleware callback path.
+                        string? signedOutRedirectUri = auth["SignedOutRedirectUri"];
+                        if (!string.IsNullOrWhiteSpace(signedOutRedirectUri))
+                        {
+                            if (Uri.TryCreate(signedOutRedirectUri, UriKind.Absolute, out Uri? absolute))
+                            {
+                                context.ProtocolMessage.PostLogoutRedirectUri = absolute.ToString();
+                                return Task.CompletedTask;
+                            }
+
+                            if (!signedOutRedirectUri.StartsWith('/'))
+                            {
+                                signedOutRedirectUri = "/" + signedOutRedirectUri;
+                            }
+
+                            context.ProtocolMessage.PostLogoutRedirectUri = UriHelper.BuildAbsolute(
+                                context.Request.Scheme,
+                                context.Request.Host,
+                                context.Request.PathBase,
+                                signedOutRedirectUri
+                            );
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnTokenValidated = async context =>
                     {
                         if (context.Principal is null)

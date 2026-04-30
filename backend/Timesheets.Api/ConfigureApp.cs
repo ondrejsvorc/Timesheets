@@ -16,8 +16,8 @@ public static class ConfigureApp
 
         app.UseForwardedHeaders();
 
-        //app.UseAuthentication();
-        //app.UseAuthorization();
+        app.UseAuthentication();
+        app.UseAuthorization();
         app.ApplyMigrations();
 
         if (app.Environment.IsDevelopment())

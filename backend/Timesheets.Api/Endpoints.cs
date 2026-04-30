@@ -17,7 +17,7 @@ public static class Endpoints
 {
     public static void MapEndpoints(this WebApplication app)
     {
-        //app.MapAuthEndpoints();
+        app.MapAuthEndpoints();
         app.MapProtectedApiEndpoints();
     }
 
@@ -30,7 +30,7 @@ public static class Endpoints
 
     private static void MapProtectedApiEndpoints(this WebApplication app)
     {
-        var endpoints = app.MapGroup("/api");//.RequireAuthorization();
+        var endpoints = app.MapGroup("/api").RequireAuthorization();
         endpoints.MapProjectEndpoints();
         endpoints.MapContractEndpoints();
         endpoints.MapEmployeeEndpoints();
