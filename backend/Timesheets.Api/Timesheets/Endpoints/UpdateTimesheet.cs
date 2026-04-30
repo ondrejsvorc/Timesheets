@@ -1,8 +1,8 @@
+using System.Text.Json;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 

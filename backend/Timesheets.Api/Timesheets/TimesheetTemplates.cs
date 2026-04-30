@@ -1,8 +1,8 @@
-﻿using FluentValidation;
-using FluentValidation.Results;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using FluentValidation;
+using FluentValidation.Results;
 
 namespace Timesheets.Api.Timesheets;
 

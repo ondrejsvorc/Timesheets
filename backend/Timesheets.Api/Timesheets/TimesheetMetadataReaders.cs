@@ -1,6 +1,6 @@
-using ClosedXML.Excel;
 using System.Globalization;
 using System.Text.RegularExpressions;
+using ClosedXML.Excel;
 
 namespace Timesheets.Api.Timesheets;
 

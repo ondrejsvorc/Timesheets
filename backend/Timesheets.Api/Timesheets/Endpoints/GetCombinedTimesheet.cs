@@ -1,7 +1,7 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Timesheets.Endpoints;

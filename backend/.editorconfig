@@ -36,7 +36,7 @@ csharp_indent_case_contents = true
 csharp_indent_switch_labels = true
 csharp_indent_labels = one_less_than_current
 
-dotnet_sort_system_directives_first = false
+dotnet_sort_system_directives_first = true
 
 # Generated / auto-maintained code: keep readable, but don't let it block CI formatting checks.
 [**/*.Designer.cs]
