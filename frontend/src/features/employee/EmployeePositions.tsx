@@ -82,7 +82,7 @@ export const PositionsTable = ({ positions }: PositionsTableProps) => {
         </TableHeader>
         <TableBody>
           {positions.map((position) => (
-            <TableRow key={`${position.projectId}:${position.contractId}:${position.startDate}`} className="cursor-pointer">
+            <TableRow key={`${position.projectId}:${position.contractId}:${position.startDate}`}>
               <TableCell>
                 {position.positionCode} · {position.position}
               </TableCell>

@@ -32,14 +32,14 @@ const EmployeePageHeader = () => {
   const response = useAsyncValue() as GetEmployeeResponse;
   const employee = response.employee;
   const handleBack = useBackFromLocationState(Routes.employees());
+  const employeeType = resolveEmployeeTypeName(employee.employeeTypeId);
+  const subtitleParts = [employee.personalNumber, employee.email, employeeType].filter((v) => Boolean(v && v.trim().length > 0));
 
   return (
     <>
       <PageHeader leading={<BackButton onClick={handleBack} />}>
         <PageTitle>{employee.fullName}</PageTitle>
-        <PageSubtitle>
-          {employee.personalNumber} · {employee.email} · {resolveEmployeeTypeName(employee.employeeTypeId)}
-        </PageSubtitle>
+        <PageSubtitle>{subtitleParts.join(" · ")}</PageSubtitle>
       </PageHeader>
       <EmployeeTabs />
     </>
