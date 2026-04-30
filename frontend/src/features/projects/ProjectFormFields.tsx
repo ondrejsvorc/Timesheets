@@ -38,11 +38,11 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
       <form className="space-y-4">
         <FormField
           control={form.control}
-          name="name"
+          name="registrationNumber"
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                {Texts.projectName} <span className="text-destructive">*</span>
+                {Texts.projectIdLabel} <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
                 <Input {...field} />
@@ -53,11 +53,11 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
 
         <FormField
           control={form.control}
-          name="registrationNumber"
+          name="name"
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                {Texts.projectIdLabel} <span className="text-destructive">*</span>
+                {Texts.projectName} <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
                 <Input {...field} />

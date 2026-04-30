@@ -24,6 +24,9 @@ import { ProjectContractsManagers } from "./features/project/ProjectContractsMan
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api/getProjects";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
+import { getCombinedTimesheet } from "./features/timesheet/timesheet/api/getCombinedTimesheet";
+import { getCombinedTimesheetOverview } from "./features/timesheet/timesheet/api/getCombinedTimesheetOverview";
+import { TimesheetPage } from "./features/timesheet/timesheet/TimesheetPage";
 
 export type CurrentUser = {
   id: string;
@@ -165,16 +168,6 @@ export const router = createBrowserRouter([
           },
         ],
       },
-      /*
-      // POC Timesheet route (disabled).
-      // Keeping this commented avoids pulling `src/components/poc/**` into production builds.
-      //
-      // To re-enable:
-      // - add imports:
-      //   import { TimesheetPage } from "./components/poc/timesheet/TimesheetPage";
-      //   import { getCombinedTimesheet } from "./components/poc/timesheet/api/getCombinedTimesheet";
-      //   import { getCombinedTimesheetOverview } from "./components/poc/timesheet/api/getCombinedTimesheetOverview";
-      // - then uncomment this route.
       {
         path: "timesheet",
         element: <TimesheetPage />,
@@ -195,7 +188,6 @@ export const router = createBrowserRouter([
           };
         },
       },
-      */
     ],
   },
 ]);

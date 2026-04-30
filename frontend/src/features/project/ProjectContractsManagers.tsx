@@ -1,5 +1,5 @@
 import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { AddButton, DeleteButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
@@ -10,6 +10,7 @@ import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageH
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
+import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { AddContractManagerDialog } from "./AddContractManagerDialog";
 import type { GetProjectContractsManagersResponse, ProjectContractManagerItem } from "./api/getProjectContractsManagers";
@@ -118,7 +119,7 @@ interface ContractManagerRowProps {
 
 export const ContractManagerRow = ({ manager }: ContractManagerRowProps) => {
   const dispatch = useContractsManagersDispatch();
-  const navigate = useNavigate();
+  const navigate = useNavigateFrom();
 
   return (
     <TableRow className="cursor-pointer" onClick={() => navigate(Routes.employee(manager.employeeId))}>

@@ -1,6 +1,5 @@
 import { MoreHorizontal } from "lucide-react";
 import { startTransition } from "react";
-import { useNavigate } from "react-router";
 import { useImmer } from "use-immer";
 import { DeleteIcon, EditIcon } from "@/components/shared/buttons/ActionButtons";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
@@ -9,6 +8,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
+import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { cn } from "@/utils/cn";
 import { formatDate } from "@/utils/formatDate";
 import { deleteProject } from "./api/deleteProject";
@@ -29,7 +29,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
   const endDate = formatDate(project.endDate);
   const dateRange = project.startDate && project.endDate ? `${startDate} – ${endDate}` : formatDate(project.startDate);
   const isActive = isProjectActive(project);
-  const navigate = useNavigate();
+  const navigate = useNavigateFrom();
 
   return (
     <>

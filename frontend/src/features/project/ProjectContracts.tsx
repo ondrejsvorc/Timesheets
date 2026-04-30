@@ -1,5 +1,5 @@
 import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate, useParams } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { ActionButtons, AddButton, DeleteButton, EditButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
@@ -10,6 +10,7 @@ import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageH
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
+import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { AddContractDialog } from "./AddContractDialog";
 import { deleteProjectContract } from "./api/deleteProjectContract";
@@ -133,11 +134,17 @@ interface ContractRowProps {
 }
 
 export const ContractRow = ({ contract, onEdit, onDelete }: ContractRowProps) => {
-  const navigate = useNavigate();
+  const navigate = useNavigateFrom();
   const projectId = useParams().id;
 
   return (
-    <TableRow className="cursor-pointer" onClick={() => projectId && navigate(Routes.contract(projectId, contract.id))}>
+    <TableRow
+      className="cursor-pointer"
+      onClick={() =>
+        projectId &&
+        navigate(Routes.contract(projectId, contract.id))
+      }
+    >
       <TableCell>{contract.registrationNumber}</TableCell>
       <TableCell>{contract.name}</TableCell>
       <TableCell>
