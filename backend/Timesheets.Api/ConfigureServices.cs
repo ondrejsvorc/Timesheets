@@ -3,11 +3,13 @@ using CzechHolidays;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using System.Security.Claims;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 using Timesheets.Api.Notifications;
@@ -122,6 +124,17 @@ public static class ConfigureServices
                 options.NonceCookie.SameSite = SameSiteMode.None;
                 options.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
 
+                // Be explicit about claim mapping (IdP can return these either in id_token or from UserInfo).
+                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "email"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "mail"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "upn"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "preferred_username"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("displayName", ClaimValueTypes.String, "displayName"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("displayName", ClaimValueTypes.String, "name"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("personalNumber", ClaimValueTypes.String, "personalNumber"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("personalNumber", ClaimValueTypes.String, "personal_number"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("title", ClaimValueTypes.String, "title"));
+
                 options.Scope.Clear();
                 foreach (string scope in auth.GetSection("Scope").Get<string[]>() ?? [])
                 {
@@ -159,6 +172,16 @@ public static class ConfigureServices
                         return Task.CompletedTask;
                     },
                     OnTokenValidated = async context =>
+                    {
+                        if (context.Principal is null)
+                        {
+                            throw new InvalidOperationException("OIDC Principal is missing.");
+                        }
+
+                        // Sync after UserInfo claims are available (see OnTicketReceived).
+                        await Task.CompletedTask;
+                    },
+                    OnTicketReceived = async context =>
                     {
                         if (context.Principal is null)
                         {
