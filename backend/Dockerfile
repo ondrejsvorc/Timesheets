@@ -24,3 +24,8 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Timesheets.Api.dll"]
+
+FROM base AS prebuilt
+WORKDIR /app
+COPY .ci/publish/ .
+ENTRYPOINT ["dotnet", "Timesheets.Api.dll"]

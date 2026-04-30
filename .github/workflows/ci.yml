@@ -23,7 +23,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6
 
-    - name: Setup .NET
+    - name: Setup
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '10.0.x'
@@ -34,9 +34,9 @@ jobs:
       run: dotnet restore Timesheets.slnx
 
     - name: Check formatting
-      run: dotnet format Timesheets.slnx --verify-no-changes
+      run: dotnet format Timesheets.slnx --verify-no-changes --no-restore
 
-    - name: Check for vulnerabilities
+    - name: Audit dependencies
       shell: bash
       run: |
         set -euo pipefail
@@ -51,6 +51,15 @@ jobs:
 
     - name: Run tests
       run: dotnet test Timesheets.slnx --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
+
+    - name: Publish
+      run: dotnet publish Timesheets.Api/Timesheets.Api.csproj --no-restore --no-build --configuration Release --output .ci/publish /p:UseAppHost=false
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v6
+      with:
+        name: backend-publish
+        path: ./backend/.ci/publish
 
     - name: Test Report
       uses: dorny/test-reporter@v3
@@ -71,12 +80,15 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6
 
-    - name: Setup Node
+    - name: Setup
       uses: actions/setup-node@v6
       with:
         node-version: 24
         cache: npm
         cache-dependency-path: frontend/package-lock.json
+
+    - name: Audit dependencies
+      run: npm audit --audit-level=high --package-lock-only
 
     - name: Install dependencies
       run: npm ci
@@ -84,8 +96,14 @@ jobs:
     - name: Check formatting
       run: npx biome check .
 
-    - name: Audit dependencies
-      run: npm audit --audit-level=high
+    - name: Build
+      run: npm run build
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v6
+      with:
+        name: frontend-dist
+        path: ./frontend/dist
 
   runtime:
     name: Runtime
@@ -97,16 +115,29 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v6
 
+    - name: Download artifacts
+      uses: actions/download-artifact@v7
+      with:
+        name: backend-publish
+        path: ./backend/.ci/publish
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v7
+      with:
+        name: frontend-dist
+        path: ./frontend/.ci/dist
+
     - name: Build containers
-      run: docker compose build
+      run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build
 
     - name: Start containers
-      run: docker compose up -d
+      run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
 
     - name: Wait for backend
       shell: bash
       run: |
         set -euo pipefail
+        compose="docker compose -f docker-compose.yml -f docker-compose.ci.yml"
         for i in {1..30}; do
           if curl -fsS "http://localhost:5000/health" >/dev/null; then
             exit 0
@@ -114,14 +145,15 @@ jobs:
           sleep 2
         done
         echo "Backend health check failed."
-        docker compose ps
-        docker compose logs timesheets.backend --no-color | tail -n 200
+        $compose ps
+        $compose logs timesheets.backend --no-color | tail -n 200
         exit 1
 
     - name: Wait for frontend
       shell: bash
       run: |
         set -euo pipefail
+        compose="docker compose -f docker-compose.yml -f docker-compose.ci.yml"
         for i in {1..30}; do
           if curl -fsS "http://localhost:3000/" >/dev/null; then
             exit 0
@@ -129,8 +161,8 @@ jobs:
           sleep 2
         done
         echo "Frontend did not become ready."
-        docker compose ps
-        docker compose logs timesheets.frontend --no-color | tail -n 200
+        $compose ps
+        $compose logs timesheets.frontend --no-color | tail -n 200
         exit 1
 
     - name: Prepare ZAP report
@@ -159,4 +191,4 @@ jobs:
 
     - name: Stop containers
       if: always()
-      run: docker compose down -v
+      run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v

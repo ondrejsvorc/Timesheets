@@ -1,0 +1,11 @@
+services:
+  timesheets.backend:
+    build:
+      target: prebuilt
+
+  timesheets.frontend:
+    build:
+      target: prebuilt
+    ports:
+      - "3000:80"
+    volumes: []
