@@ -1,11 +1,19 @@
 import { Bell, User } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useRouteLoaderData } from "react-router";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { BaseUrl } from "@/constants/api";
 import { Texts } from "../../../constants/texts";
+import type { CurrentUser } from "../../../router";
 
 export const AppHeader = () => {
   const handleNotificationsClick = () => {};
-  const handleUserClick = () => {};
+  const rootData = useRouteLoaderData("root") as { currentUser: CurrentUser | null } | undefined;
+  const currentUser = rootData?.currentUser ?? null;
+
+  const handleLogout = () => {
+    window.location.assign(`${BaseUrl}/auth/logout`);
+  };
 
   return (
     <header className="w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
@@ -42,9 +50,25 @@ export const AppHeader = () => {
             <Bell className="h-5 w-5" />
           </Button>
 
-          <Button variant="ghost" size="icon" onClick={handleUserClick} className="text-muted-foreground hover:text-foreground hover:bg-accent">
-            <User className="h-5 w-5" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-accent">
+                <User className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>{currentUser?.fullName ?? "Uživatel"}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onSelect={(event) => {
+                  event.preventDefault();
+                }}
+                onClick={handleLogout}
+              >
+                Odhlásit
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

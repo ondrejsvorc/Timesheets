@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Employees.Endpoints;
@@ -21,7 +22,7 @@ public sealed class GetEmployees : IEndpoint
                 e.Id,
                 e.EmployeeTypeId,
                 e.PersonalNumber,
-                e.FullName,
+                EmployeeNameFormatter.Format(e.TitleBefore, e.FullName, e.TitleAfter),
                 e.Email,
                 e.IsGlobalManager
             ))

@@ -3,15 +3,13 @@ import { Outlet } from "react-router";
 import { Toaster } from "sonner";
 import { AppFooter } from "./components/shared/layout/AppFooter";
 import { AppHeader } from "./components/shared/layout/AppHeader";
-import { ApiUrl } from "./constants/api";
+import { BaseUrl } from "./constants/api";
 
 export const App = () => {
   useEffect(() => {
-    const baseUrl = ApiUrl.replace(/\/api\/?$/, "");
-
     const run = async () => {
       try {
-        const response = await fetch(`${baseUrl}/auth/currentUser`, { credentials: "include" });
+        const response = await fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" });
         const text = await response.text();
 
         if (!response.ok) {

@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 
@@ -11,7 +12,15 @@ public sealed class GetCurrentUser : IEndpoint
         app.MapGet("/currentUser", Handle)
            .WithSummary("Get Currently Authenticated User");
 
-    public sealed record Response(Guid Id, string FullName, string Email, string EmployeeType);
+    public sealed record Response(
+        Guid Id,
+        string FullName,
+        string Email,
+        string EmployeeType,
+        string PersonalNumber,
+        string? TitleBefore,
+        string? TitleAfter
+    );
 
     private static async Task<IResult> Handle(HttpContext httpContext, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -29,7 +38,10 @@ public sealed class GetCurrentUser : IEndpoint
                 Id: e.Id,
                 FullName: e.FullName,
                 Email: e.Email,
-                EmployeeType: e.EmployeeType.Name
+                EmployeeType: e.EmployeeType.Name,
+                PersonalNumber: e.PersonalNumber,
+                TitleBefore: e.TitleBefore,
+                TitleAfter: e.TitleAfter
             ))
             .FirstOrDefaultAsync(cancellationToken);
 

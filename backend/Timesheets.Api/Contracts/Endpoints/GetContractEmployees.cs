@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Contracts.Endpoints;
@@ -35,7 +36,7 @@ public sealed class GetContractEmployees : IEndpoint
             .Select(g => new EmployeeItem(
                 g.Key.Id,
                 g.Key.PersonalNumber,
-                g.Key.FullName,
+                EmployeeNameFormatter.Format(g.Key.TitleBefore, g.Key.FullName, g.Key.TitleAfter),
                 g.Key.EmployeeTypeId != null ? g.Key.EmployeeType.Name : string.Empty,
                 g.Select(ce => new PositionItem(ce.Id, ce.PositionCode, ce.Position, ce.Workload, ce.StartDate, ce.EndDate)).ToList()
             ))

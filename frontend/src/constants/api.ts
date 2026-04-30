@@ -8,6 +8,7 @@ const apiLoggingEnabled = true;
 
 const delays = { fast: 600, slow: 1200, slowest: 1800 } as const;
 export const ApiUrl = envApiUrl;
+export const BaseUrl = ApiUrl.replace(/\/api\/?$/, "");
 
 export const withOptionalDelay = async <T>(delay: keyof typeof delays, fn: () => Promise<T>): Promise<T> => {
   if (delayEnabled) {

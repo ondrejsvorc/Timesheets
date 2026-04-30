@@ -1,7 +1,7 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
-import { ApiUrl } from "./constants/api";
+import { BaseUrl } from "./constants/api";
 import { Routes } from "./constants/routes";
 import { getContractEmployees } from "./features/contract/api/getContractEmployees";
 import { getProjectContract } from "./features/contract/api/getProjectContract";
@@ -25,28 +25,38 @@ import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api/getProjects";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
 
+export type CurrentUser = {
+  id: string;
+  fullName: string;
+  email: string;
+  employeeType: string;
+  personalNumber: string;
+  titleBefore: string | null;
+  titleAfter: string | null;
+};
+
 const requireAuth = async ({ request }: { request: Request }) => {
-  const baseUrl = ApiUrl.replace(/\/api\/?$/, "");
   const returnTo = new URL(request.url).pathname + new URL(request.url).search;
 
   try {
-    const response = await fetch(`${baseUrl}/auth/currentUser`, { credentials: "include" });
+    const response = await fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" });
     if (response.ok) {
-      return null;
+      const currentUser = (await response.json()) as CurrentUser;
+      return { currentUser };
     }
 
     // Only redirect to OIDC login when we're actually unauthenticated/forbidden.
     // Other statuses (e.g. 404 "Employee not found") should not cause a login loop.
     if (response.status !== 401 && response.status !== 403) {
-      return null;
+      return { currentUser: null };
     }
   } catch {
     // ignore and fall back to login redirect
   }
 
   // Must be a full page navigation so `/auth/login` is handled by the backend (OIDC challenge).
-  window.location.assign(`${baseUrl}/auth/login?returnUrl=${encodeURIComponent(returnTo)}`);
-  return null;
+  window.location.assign(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(returnTo)}`);
+  return { currentUser: null };
 };
 
 const requireProjectId = (params: Params) => {
@@ -76,6 +86,7 @@ export const router = createBrowserRouter([
     element: <ErrorPage />,
   },
   {
+    id: "root",
     path: "/",
     element: <App />,
     loader: requireAuth,

@@ -3,6 +3,7 @@ import { EmptyState } from "@/components/shared/data/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
+import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
 import type { EmployeeItem } from "./api/getEmployees";
 
 interface EmployeesTableProps {
@@ -47,7 +48,7 @@ export const EmployeeRow = ({ employee }: EmployeeRowProps) => {
       <TableCell>{employee.personalNumber ?? Texts.dash}</TableCell>
       <TableCell>{employee.fullName}</TableCell>
       <TableCell>{employee.email ?? Texts.dash}</TableCell>
-      <TableCell>{employee.employeeTypeId ? Texts.academic : Texts.nonAcademic}</TableCell>
+      <TableCell>{resolveEmployeeTypeName(employee.employeeTypeId)}</TableCell>
     </TableRow>
   );
 };

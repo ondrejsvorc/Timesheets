@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -89,7 +90,7 @@ public sealed class GetContractTimesheets : IEndpoint
                 timesheet.TimesheetStatusId,
                 Status = timesheet.TimesheetStatus.Name,
                 timesheet.Employee.PersonalNumber,
-                timesheet.Employee.FullName,
+                FullName = EmployeeNameFormatter.Format(timesheet.Employee.TitleBefore, timesheet.Employee.FullName, timesheet.Employee.TitleAfter),
                 EmployeeType = timesheet.Employee.EmployeeType.Name,
                 ContractEmployee = dbContext.ContractEmployees
                     .Where(employee => employee.ContractId == id)

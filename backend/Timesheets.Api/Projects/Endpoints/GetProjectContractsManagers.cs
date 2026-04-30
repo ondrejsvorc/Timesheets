@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Projects.Endpoints;
@@ -31,7 +32,7 @@ public sealed class GetProjectContractsManagers : IEndpoint
                 cm.EmployeeId,
                 cm.Contract.RegistrationNumber,
                 cm.Employee.PersonalNumber,
-                cm.Employee.FullName,
+                EmployeeNameFormatter.Format(cm.Employee.TitleBefore, cm.Employee.FullName, cm.Employee.TitleAfter),
                 cm.Employee.Email
             ))
             .ToListAsync(cancellationToken);
