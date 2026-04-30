@@ -1,3 +1,5 @@
+export type {
+  CombinedTimesheetOverviewItem,
+  GetCombinedTimesheetOverviewResponse,
+} from "@/components/poc/timesheet/api/getCombinedTimesheetOverview";
 export { getCombinedTimesheetOverview } from "@/components/poc/timesheet/api/getCombinedTimesheetOverview";
-export type { GetCombinedTimesheetOverviewResponse, CombinedTimesheetOverviewItem } from "@/components/poc/timesheet/api/getCombinedTimesheetOverview";
-

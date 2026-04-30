@@ -51,25 +51,17 @@ export const MultiSelectComboBox = ({ value = [], items, placeholder, loading, m
                   {value.slice(0, maxVisibleItems).map((val) => (
                     <Badge key={val} variant="secondary" className="flex items-center gap-1 pr-1 font-normal shrink-0">
                       <span className="text-xs font-bold">{val}</span>
-                      <span
-                        role="button"
-                        tabIndex={0}
+                      <button
+                        type="button"
                         aria-label={`Odstranit ${val}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           onChange(value.filter((v) => v !== val));
                         }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            onChange(value.filter((v) => v !== val));
-                          }
-                        }}
                         className="rounded-full outline-none hover:bg-muted-foreground/20 focus-visible:ring-1 focus-visible:ring-ring transition-colors cursor-pointer inline-flex"
                       >
                         <X className="size-3" />
-                      </span>
+                      </button>
                     </Badge>
                   ))}
                   {value.length > maxVisibleItems && (

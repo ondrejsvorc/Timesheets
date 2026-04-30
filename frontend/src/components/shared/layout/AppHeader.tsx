@@ -1,7 +1,14 @@
 import { Bell, User } from "lucide-react";
 import { Link, useRouteLoaderData } from "react-router";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { BaseUrl } from "@/constants/api";
 import { Texts } from "../../../constants/texts";
 import type { CurrentUser } from "../../../router";

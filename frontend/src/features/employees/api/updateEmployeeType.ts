@@ -14,4 +14,3 @@ export const updateEmployeeType = async (employeeId: string, request: UpdateEmpl
     }),
   );
 };
-

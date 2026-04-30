@@ -66,10 +66,7 @@ export const EmployeeRow = ({ employee, onEdit }: EmployeeRowProps) => {
   const navigate = useNavigateFrom();
 
   return (
-    <TableRow
-      className="cursor-pointer"
-      onClick={() => navigate(Routes.employee(employee.id))}
-    >
+    <TableRow className="cursor-pointer" onClick={() => navigate(Routes.employee(employee.id))}>
       <TableCell>{employee.personalNumber ?? Texts.dash}</TableCell>
       <TableCell>{employee.fullName}</TableCell>
       <TableCell>{employee.email ?? Texts.dash}</TableCell>

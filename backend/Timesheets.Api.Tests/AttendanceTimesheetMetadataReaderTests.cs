@@ -17,7 +17,7 @@ public class AttendanceTimesheetMetadataReaderTests
 
         Assert.Multiple(() =>
         {
-            Assert.True(result.EmployeePersonalNumber > 0);
+            Assert.False(string.IsNullOrWhiteSpace(result.EmployeePersonalNumber));
             Assert.False(string.IsNullOrWhiteSpace(result.EmployeeName));
             Assert.Equal(2024, result.Year);
             Assert.Equal(10, result.Month);
@@ -35,7 +35,7 @@ public class AttendanceTimesheetMetadataReaderTests
 
         Assert.Multiple(() =>
         {
-            Assert.Equal(0, result.EmployeePersonalNumber);
+            Assert.Equal(string.Empty, result.EmployeePersonalNumber);
             Assert.Equal(2024, result.Year);
             Assert.Equal(10, result.Month);
             Assert.Equal(31, result.DaysInMonth);

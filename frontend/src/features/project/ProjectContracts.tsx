@@ -138,13 +138,7 @@ export const ContractRow = ({ contract, onEdit, onDelete }: ContractRowProps) =>
   const projectId = useParams().id;
 
   return (
-    <TableRow
-      className="cursor-pointer"
-      onClick={() =>
-        projectId &&
-        navigate(Routes.contract(projectId, contract.id))
-      }
-    >
+    <TableRow className="cursor-pointer" onClick={() => projectId && navigate(Routes.contract(projectId, contract.id))}>
       <TableCell>{contract.registrationNumber}</TableCell>
       <TableCell>{contract.name}</TableCell>
       <TableCell>

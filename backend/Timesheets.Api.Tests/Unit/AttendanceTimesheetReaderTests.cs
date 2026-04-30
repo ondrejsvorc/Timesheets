@@ -28,7 +28,7 @@ public class AttendanceTimesheetReaderTests
         Assert.NotNull(result);
         Assert.Multiple(() =>
         {
-            Assert.True(result.EmployeePersonalNumber > 0);
+            Assert.False(string.IsNullOrWhiteSpace(result.EmployeePersonalNumber));
             Assert.False(string.IsNullOrWhiteSpace(result.EmployeeName));
             Assert.Equal(2024, result.Year);
             Assert.Equal(10, result.Month);
@@ -56,7 +56,7 @@ public class AttendanceTimesheetReaderTests
         Assert.Multiple(() =>
         {
             // In this file, A1 is missing the number, so personal number should be 0
-            Assert.Equal(0, result.EmployeePersonalNumber);
+            Assert.Equal(string.Empty, result.EmployeePersonalNumber);
 
             // But A2 still contains "01.10.2024", so Year/Month are actually parsed!
             Assert.Equal(2024, result.Year);

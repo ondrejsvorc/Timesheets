@@ -50,9 +50,8 @@ export const DatePicker = ({ value, disabled, clearable = true, disabledDate, on
         >
           <span className="flex-1 truncate">{label}</span>
           {clearable && value && !disabled ? (
-            <span
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
               className="inline-flex items-center justify-center rounded-sm p-1 hover:bg-muted"
               onClick={(e) => {
                 e.preventDefault();
@@ -60,18 +59,10 @@ export const DatePicker = ({ value, disabled, clearable = true, disabledDate, on
                 onChange(undefined);
                 setOpen(false);
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onChange(undefined);
-                  setOpen(false);
-                }
-              }}
               aria-label="Vymazat datum"
             >
               <X className="h-4 w-4 opacity-60" />
-            </span>
+            </button>
           ) : (
             <CalendarIcon className="h-4 w-4 opacity-50" />
           )}

@@ -1,15 +1,15 @@
 using System.IO.Compression;
+using System.Security.Claims;
 using CzechHolidays;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using System.Security.Claims;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 using Timesheets.Api.Notifications;

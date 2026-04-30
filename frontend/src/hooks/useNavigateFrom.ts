@@ -20,4 +20,3 @@ export const useNavigateFrom = () => {
     navigate(to, { ...options, state });
   };
 };
-

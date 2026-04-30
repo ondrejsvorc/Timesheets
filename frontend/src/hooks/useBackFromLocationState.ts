@@ -22,4 +22,3 @@ export const useBackFromLocationState = (fallback: Fallback) => {
     navigate(typeof fallback === "function" ? fallback() : fallback);
   };
 };
-

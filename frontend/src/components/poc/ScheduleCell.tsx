@@ -13,6 +13,15 @@ export const ScheduleCell = ({ schedules, onClick }: { schedules: TimeRange[]; o
   );
 };
 
+type DraftRange = TimeRange & { id: string };
+
+const createDraftId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 export const ScheduleEditorModal = ({
   isOpen,
   onOpenChange,
@@ -26,7 +35,7 @@ export const ScheduleEditorModal = ({
   dateLabel?: string;
   onSave: (newSchedules: TimeRange[]) => void;
 }) => {
-  const [draft, setDraft] = useState<TimeRange[]>(initialSchedules);
+  const [draft, setDraft] = useState<DraftRange[]>(() => initialSchedules.map((r) => ({ ...r, id: createDraftId() })));
 
   const normalized = useMemo(
     () =>
@@ -41,7 +50,7 @@ export const ScheduleEditorModal = ({
     <Dialog
       open={isOpen}
       onOpenChange={(open) => {
-        if (open) setDraft(initialSchedules);
+        if (open) setDraft(initialSchedules.map((r) => ({ ...r, id: createDraftId() })));
         onOpenChange(open);
       }}
     >
@@ -52,7 +61,7 @@ export const ScheduleEditorModal = ({
 
         <div className="space-y-2">
           {draft.map((range, idx) => (
-            <div key={idx} className="flex items-center gap-2">
+            <div key={range.id} className="flex items-center gap-2">
               <Input
                 className="h-8"
                 placeholder="HH:MM"
@@ -74,7 +83,12 @@ export const ScheduleEditorModal = ({
         </div>
 
         <div className="pt-2">
-          <Button type="button" variant="outline" className="h-8" onClick={() => setDraft((cur) => [...cur, { start: "", end: "" }])}>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-8"
+            onClick={() => setDraft((cur) => [...cur, { id: createDraftId(), start: "", end: "" }])}
+          >
             Přidat
           </Button>
         </div>

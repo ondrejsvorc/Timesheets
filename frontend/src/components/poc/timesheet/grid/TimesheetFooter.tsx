@@ -25,9 +25,12 @@ export const TimesheetFooter = ({ timesheet }: TimesheetFooterProps) => {
   return (
     <div className="grid grid-cols-subgrid col-[1/-1] sticky bottom-0 z-20 self-end bg-slate-100 font-bold border-t-2 border-slate-300">
       {/* Den → Přerušení: empty */}
-      {[...Array(6)].map((_, i) => (
-        <div key={i} />
-      ))}
+      <div />
+      <div />
+      <div />
+      <div />
+      <div />
+      <div />
 
       {/* Odpracováno */}
       <div className={footerCell}>
@@ -41,9 +44,8 @@ export const TimesheetFooter = ({ timesheet }: TimesheetFooterProps) => {
       </div>
 
       {/* Noční, STAG */}
-      {[...Array(2)].map((_, i) => (
-        <div key={`e-${i}`} />
-      ))}
+      <div />
+      <div />
 
       {/* Kmen */}
       <div className={cn(footerCenteredCell, coreCurrent > coreFund + 0.001 ? "text-red-600" : "text-blue-800")}>

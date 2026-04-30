@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "format": "biome format --write .",
-    "lint": "biome check ."
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

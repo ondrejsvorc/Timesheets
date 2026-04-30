@@ -89,4 +89,3 @@ export const EditEmployeeTypeDialog = ({ open, employee, onClose, onSaved }: Edi
     </Dialog>
   );
 };
-

@@ -23,9 +23,7 @@ export const Interruption = ({ value }: InterruptionProps) => {
   return (
     <Tooltip delayDuration={120}>
       <TooltipTrigger asChild>
-        <span className="max-w-[11rem] truncate cursor-help text-sm text-foreground/80 border-b border-dotted border-slate-400">
-          {label}
-        </span>
+        <span className="max-w-[11rem] truncate cursor-help text-sm text-foreground/80 border-b border-dotted border-slate-400">{label}</span>
       </TooltipTrigger>
       <TooltipContent side="top">{codes.join(", ")}</TooltipContent>
     </Tooltip>
