@@ -11,5 +11,5 @@ export const useEmployeesFilter = (items: EmployeeItem[]) =>
   useFilter<EmployeeItem, EmployeesFilterCriteria>({
     items,
     initialFilter,
-    keys: [(item) => item.fullName, (item) => item.personalNumber?.toString() ?? "", (item) => item.email?.toString() ?? ""],
+    keys: [(item) => item.fullName, (item) => item.personalNumber ?? "", (item) => item.email?.toString() ?? ""],
   });

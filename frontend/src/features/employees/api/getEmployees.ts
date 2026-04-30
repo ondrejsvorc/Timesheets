@@ -3,7 +3,7 @@ import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
 export interface EmployeeItem {
   id: string;
   employeeTypeId: string | null;
-  personalNumber: number;
+  personalNumber: string;
   fullName: string;
   email: string | null;
   isGlobalManager: boolean;

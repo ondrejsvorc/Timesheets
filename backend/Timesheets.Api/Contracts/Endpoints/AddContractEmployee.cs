@@ -18,7 +18,7 @@ public sealed class AddContractEmployee : IEndpoint
            .WithRequestValidation<Request>();
 
     public sealed record Request(Guid EmployeeId, string PositionCode, string Position, decimal Workload, DateTime StartDate, DateTime? EndDate);
-    public sealed record Response(Guid ContractId, Guid EmployeeId, string PositionCode, string Position, decimal Workload, DateTime StartDate, DateTime? EndDate, int PersonalNumber, string FullName, Guid? EmployeeTypeId);
+    public sealed record Response(Guid ContractId, Guid EmployeeId, string PositionCode, string Position, decimal Workload, DateTime StartDate, DateTime? EndDate, string PersonalNumber, string FullName, Guid? EmployeeTypeId);
     public sealed class Validator : AbstractValidator<Request>
     {
         public Validator()

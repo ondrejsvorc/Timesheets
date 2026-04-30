@@ -41,13 +41,17 @@ public static class ClaimsPrincipalExtensions
         return string.IsNullOrWhiteSpace(name) ? "Unknown" : name;
     }
 
-    public static int GetPersonalNumber(this ClaimsPrincipal principal)
+    public static string GetPersonalNumber(this ClaimsPrincipal principal)
     {
         string? raw = principal.FindFirstValue("personalNumber") ?? principal.FindFirstValue("personal_number");
-        if (string.IsNullOrWhiteSpace(raw) || !int.TryParse(raw, out int personalNumber))
+        if (string.IsNullOrWhiteSpace(raw))
         {
-            throw new InvalidOperationException("User personalNumber claim is missing or invalid.");
+            throw new InvalidOperationException("User personalNumber claim is missing.");
         }
-        return personalNumber;
+
+        return raw.Trim();
     }
+
+    public static string? GetTitleBefore(this ClaimsPrincipal principal) => principal.FindFirstValue("titleBefore");
+    public static string? GetTitleAfter(this ClaimsPrincipal principal) => principal.FindFirstValue("titleAfter");
 }

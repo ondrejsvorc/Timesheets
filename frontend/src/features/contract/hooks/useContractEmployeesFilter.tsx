@@ -11,5 +11,5 @@ export const useContractEmployeesFilter = (items: EmployeeItem[]) =>
   useFilter<EmployeeItem, ContractEmployeesFilterCriteria>({
     items,
     initialFilter,
-    keys: [(item) => item.fullName, (item) => item.personalNumber.toString(), (item) => item.positions.map((p) => p.position ?? "").join(" ")],
+    keys: [(item) => item.fullName, (item) => item.personalNumber, (item) => item.positions.map((p) => p.position ?? "").join(" ")],
   });

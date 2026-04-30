@@ -11,7 +11,7 @@ export interface PositionItem {
 
 export interface EmployeeItem {
   id: string;
-  personalNumber: number;
+  personalNumber: string;
   fullName: string;
   employeeType: string;
   positions: PositionItem[];

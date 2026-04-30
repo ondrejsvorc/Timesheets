@@ -29,7 +29,7 @@ public sealed class GetContractTimesheets : IEndpoint
 
     public sealed record EmployeeItem(
         Guid Id,
-        int PersonalNumber,
+        string PersonalNumber,
         string FullName,
         string EmployeeType
     );

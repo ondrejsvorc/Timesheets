@@ -62,7 +62,7 @@ public sealed record CombinedDay(
 /// <param name="Month">Měsíc vykazovaného období.</param>
 /// <param name="Days">Dny měsíčního výkazu pracovní doby.</param>
 public sealed record AttendanceTimesheet(
-    int EmployeePersonalNumber,
+    string EmployeePersonalNumber,
     string? EmployeeName,
     decimal Workload,
     int Year,

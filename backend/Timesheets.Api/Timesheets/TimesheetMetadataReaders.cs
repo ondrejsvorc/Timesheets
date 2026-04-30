@@ -5,7 +5,7 @@ using ClosedXML.Excel;
 namespace Timesheets.Api.Timesheets;
 
 public sealed record AttendanceTimesheetMetadata(
-    int EmployeePersonalNumber,
+    string EmployeePersonalNumber,
     string? EmployeeName,
     decimal Workload,
     int Year,
@@ -44,12 +44,12 @@ internal static partial class AttendanceTimesheetWorksheetParser
         string cellA1 = sheet.Cell("A1").GetString();
         Match employeeMatch = EmployeeRegex().Match(cellA1);
 
-        int employeePersonalNumber = 0;
+        string employeePersonalNumber = string.Empty;
         string? employeeName = null;
 
         if (employeeMatch.Success)
         {
-            employeePersonalNumber = int.Parse(employeeMatch.Groups[1].Value);
+            employeePersonalNumber = employeeMatch.Groups[1].Value.Trim();
             employeeName = employeeMatch.Groups[2].Value.Trim();
         }
 

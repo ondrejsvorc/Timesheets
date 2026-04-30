@@ -19,7 +19,7 @@ public sealed record AttendanceTimesheetDetectionResult(
     string FileName,
     bool CanImport,
     string? ErrorMessage,
-    int? EmployeePersonalNumber,
+    string? EmployeePersonalNumber,
     string? EmployeeName,
     int? Year,
     int? Month
@@ -37,7 +37,7 @@ public interface IAttendanceTimesheetPersistenceService
 }
 
 internal sealed record PendingAttendanceTimesheetImport(int Index, IFormFile File, AttendanceTimesheetMetadata Metadata);
-internal sealed record AttendanceTimesheetImportTarget(Guid Id, int PersonalNumber);
+internal sealed record AttendanceTimesheetImportTarget(Guid Id, string PersonalNumber);
 internal sealed record DetectionAttempt(AttendanceTimesheetMetadata? Metadata, AttendanceTimesheetDetectionResult Result);
 
 public sealed class AttendanceTimesheetImportService(
@@ -186,7 +186,7 @@ public sealed class AttendanceTimesheetImportService(
             );
         }
 
-        if (metadata.EmployeePersonalNumber <= 0)
+        if (string.IsNullOrWhiteSpace(metadata.EmployeePersonalNumber))
         {
             return new DetectionAttempt(
                 metadata,

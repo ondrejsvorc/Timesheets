@@ -13,7 +13,7 @@ export interface TimesheetDetectionResult {
   fileName: string;
   canImport: boolean;
   errorMessage: string | null;
-  employeePersonalNumber: number | null;
+  employeePersonalNumber: string | null;
   employeeName: string | null;
   year: number | null;
   month: number | null;

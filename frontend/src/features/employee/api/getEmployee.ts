@@ -4,7 +4,7 @@ export interface EmployeeItem {
   id: string;
   employeeTypeId: string | null;
   fullName: string;
-  personalNumber: number;
+  personalNumber: string;
   email: string;
 }
 

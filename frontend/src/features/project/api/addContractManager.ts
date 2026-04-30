@@ -5,7 +5,7 @@ export type AddContractManagerResponse = {
   contractId: string;
   employeeId: string;
   contractRegistrationNumber: string;
-  employeePersonalNumber: number;
+  employeePersonalNumber: string;
   employeeFullName: string;
   employeeEmail: string;
 };

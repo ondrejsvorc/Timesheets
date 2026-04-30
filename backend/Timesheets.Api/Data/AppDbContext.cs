@@ -73,7 +73,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.HasIndex(e => e.Email)
             .IsUnique();
 
-        builder.Property(e => e.PersonalNumber);
+        builder.Property(e => e.PersonalNumber)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        builder.Property(e => e.TitleBefore)
+            .HasMaxLength(50);
+
+        builder.Property(e => e.TitleAfter)
+            .HasMaxLength(50);
 
         builder.Property(e => e.IsGlobalManager)
             .IsRequired()

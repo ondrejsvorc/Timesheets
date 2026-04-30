@@ -134,6 +134,8 @@ public static class ConfigureServices
                 options.ClaimActions.Add(new JsonKeyClaimAction("personalNumber", ClaimValueTypes.String, "personalNumber"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("personalNumber", ClaimValueTypes.String, "personal_number"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("title", ClaimValueTypes.String, "title"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("titleBefore", ClaimValueTypes.String, "titleBefore"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("titleAfter", ClaimValueTypes.String, "titleAfter"));
 
                 options.Scope.Clear();
                 foreach (string scope in auth.GetSection("Scope").Get<string[]>() ?? [])

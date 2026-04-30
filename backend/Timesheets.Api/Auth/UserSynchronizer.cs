@@ -8,14 +8,16 @@ namespace Timesheets.Api.Auth;
 
 public sealed class UserSynchronizer(AppDbContext dbContext)
 {
-    private readonly record struct SynchronizedUser(string Email, string FullName, int PersonalNumber);
+    private readonly record struct SynchronizedUser(string Email, string FullName, string PersonalNumber, string? TitleBefore, string? TitleAfter);
 
     public async Task SyncFromPrincipalAsync(ClaimsPrincipal principal, CancellationToken cancellationToken)
     {
         string email = principal.GetEmail();
         string fullName = principal.GetFullName();
-        int personalNumber = principal.GetPersonalNumber();
-        SynchronizedUser user = new(email, fullName, personalNumber);
+        string personalNumber = principal.GetPersonalNumber();
+        string? titleBefore = principal.GetTitleBefore();
+        string? titleAfter = principal.GetTitleAfter();
+        SynchronizedUser user = new(email, fullName, personalNumber, titleBefore, titleAfter);
         await SyncAsync(user, cancellationToken);
     }
 
@@ -40,6 +42,8 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
             FullName = user.FullName,
             Email = user.Email,
             PersonalNumber = user.PersonalNumber,
+            TitleBefore = user.TitleBefore,
+            TitleAfter = user.TitleAfter,
             IsGlobalManager = false,
             EmployeeTypeId = null,
             CreatedAt = DateTime.UtcNow
@@ -59,6 +63,16 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
         if (existing.PersonalNumber != user.PersonalNumber)
         {
             existing.PersonalNumber = user.PersonalNumber;
+            changed = true;
+        }
+        if (existing.TitleBefore != user.TitleBefore)
+        {
+            existing.TitleBefore = user.TitleBefore;
+            changed = true;
+        }
+        if (existing.TitleAfter != user.TitleAfter)
+        {
+            existing.TitleAfter = user.TitleAfter;
             changed = true;
         }
         if (existing.Email != user.Email)

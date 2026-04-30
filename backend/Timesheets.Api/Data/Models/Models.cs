@@ -68,7 +68,9 @@ public sealed class Employee
 {
     public Guid Id { get; set; }
     public Guid? EmployeeTypeId { get; set; }
-    public int PersonalNumber { get; set; }
+    public string PersonalNumber { get; set; } = string.Empty;
+    public string? TitleBefore { get; set; }
+    public string? TitleAfter { get; set; }
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public bool IsGlobalManager { get; set; }

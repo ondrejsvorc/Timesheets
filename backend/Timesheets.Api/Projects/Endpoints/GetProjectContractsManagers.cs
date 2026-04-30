@@ -14,7 +14,7 @@ public sealed class GetProjectContractsManagers : IEndpoint
         Guid ContractId,
         Guid EmployeeId,
         string ContractRegistrationNumber,
-        int EmployeePersonalNumber,
+        string EmployeePersonalNumber,
         string EmployeeFullName,
         string EmployeeEmail);
     public sealed record Response(IEnumerable<ContractManagerItem> Managers);

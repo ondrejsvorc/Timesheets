@@ -17,7 +17,7 @@ export interface AddContractEmployeeResponse {
   workload: number;
   startDate: string;
   endDate: string | null;
-  personalNumber: number;
+  personalNumber: string;
   fullName: string;
   employeeTypeId: string | null;
 }

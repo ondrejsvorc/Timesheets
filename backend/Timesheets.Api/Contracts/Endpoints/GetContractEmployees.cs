@@ -12,7 +12,7 @@ public sealed class GetContractEmployees : IEndpoint
            .WithSummary("Get Contract Employees");
 
     public sealed record PositionItem(Guid Id, string PositionCode, string Position, decimal Workload, DateTime StartDate, DateTime? EndDate);
-    public sealed record EmployeeItem(Guid Id, int PersonalNumber, string FullName, string EmployeeType, IReadOnlyList<PositionItem> Positions);
+    public sealed record EmployeeItem(Guid Id, string PersonalNumber, string FullName, string EmployeeType, IReadOnlyList<PositionItem> Positions);
     public sealed record Response(IEnumerable<EmployeeItem> Employees);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)

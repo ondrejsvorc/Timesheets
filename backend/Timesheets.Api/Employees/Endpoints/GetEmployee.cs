@@ -10,7 +10,7 @@ public sealed class GetEmployee : IEndpoint
         app.MapGet("/{id}", Handle)
            .WithSummary("Get Employee");
 
-    public sealed record Response(Guid Id, Guid? EmployeeTypeId, string FullName, int PersonalNumber, string Email);
+    public sealed record Response(Guid Id, Guid? EmployeeTypeId, string FullName, string PersonalNumber, string Email);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
