@@ -1,9 +1,7 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
-import { getCombinedTimesheet } from "./components/poc/timesheet/api/getCombinedTimesheet";
-import { getCombinedTimesheetOverview } from "./components/poc/timesheet/api/getCombinedTimesheetOverview";
-import { TimesheetPage } from "./components/poc/timesheet/TimesheetPage";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
+import { ApiUrl } from "./constants/api";
 import { Routes } from "./constants/routes";
 import { getContractEmployees } from "./features/contract/api/getContractEmployees";
 import { getProjectContract } from "./features/contract/api/getProjectContract";
@@ -26,7 +24,6 @@ import { ProjectContractsManagers } from "./features/project/ProjectContractsMan
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api/getProjects";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
-import { ApiUrl } from "./constants/api";
 
 const requireAuth = async ({ request }: { request: Request }) => {
   const baseUrl = ApiUrl.replace(/\/api\/?$/, "");
@@ -146,6 +143,16 @@ export const router = createBrowserRouter([
           },
         ],
       },
+      /*
+      // POC Timesheet route (disabled).
+      // Keeping this commented avoids pulling `src/components/poc/**` into production builds.
+      //
+      // To re-enable:
+      // - add imports:
+      //   import { TimesheetPage } from "./components/poc/timesheet/TimesheetPage";
+      //   import { getCombinedTimesheet } from "./components/poc/timesheet/api/getCombinedTimesheet";
+      //   import { getCombinedTimesheetOverview } from "./components/poc/timesheet/api/getCombinedTimesheetOverview";
+      // - then uncomment this route.
       {
         path: "timesheet",
         element: <TimesheetPage />,
@@ -166,6 +173,7 @@ export const router = createBrowserRouter([
           };
         },
       },
+      */
     ],
   },
 ]);
