@@ -1,4 +1,4 @@
-name: CI (quality, security, runtime)
+name: CI
 
 on:
   push:
@@ -13,18 +13,18 @@ permissions:
 
 jobs:
   backend:
-    name: "Backend (.NET): format, analyzers, tests, vulnerability scan"
+    name: Backend
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./backend
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v6
 
-    - name: Setup .NET 10
-      uses: actions/setup-dotnet@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '10.0.x'
         cache: true
@@ -33,10 +33,10 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore Timesheets.slnx
 
-    - name: Verify formatting (no changes)
+    - name: Check formatting
       run: dotnet format Timesheets.slnx --verify-no-changes
 
-    - name: Check vulnerable packages (.NET)
+    - name: Check for vulnerabilities
       shell: bash
       run: |
         set -euo pipefail
@@ -53,7 +53,7 @@ jobs:
       run: dotnet test Timesheets.slnx --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
     - name: Test Report
-      uses: dorny/test-reporter@v2
+      uses: dorny/test-reporter@v3
       if: ${{ !cancelled() }}
       with:
         name: .NET Unit Tests
@@ -61,41 +61,41 @@ jobs:
         reporter: dotnet-trx
 
   frontend:
-    name: "Frontend: biome check + npm audit"
+    name: Frontend
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./frontend
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v6
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Node
+      uses: actions/setup-node@v6
       with:
-        node-version: 20
+        node-version: 24
         cache: npm
         cache-dependency-path: frontend/package-lock.json
 
     - name: Install dependencies
       run: npm ci
 
-    - name: Biome check (no writes)
+    - name: Check formatting
       run: npx biome check .
 
     - name: Audit dependencies
       run: npm audit --audit-level=high
 
   runtime:
-    name: "Runtime (Docker Compose): health checks + ZAP DAST"
+    name: Runtime
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [backend, frontend]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - name: Checkout
+      uses: actions/checkout@v6
 
     - name: Build containers
       run: docker compose build
@@ -103,7 +103,7 @@ jobs:
     - name: Start containers
       run: docker compose up -d
 
-    - name: Wait for backend health
+    - name: Wait for backend
       shell: bash
       run: |
         set -euo pipefail
@@ -133,14 +133,14 @@ jobs:
         docker compose logs timesheets.frontend --no-color | tail -n 200
         exit 1
 
-    - name: Prepare ZAP reports (permissions)
+    - name: Prepare ZAP report
       shell: bash
       run: |
         set -euo pipefail
         touch zap.yaml report_json.json report_md.md report_html.html
         chmod a+rw zap.yaml report_json.json report_md.md report_html.html
 
-    - name: ZAP baseline scan (DAST)
+    - name: Run ZAP scan
       uses: zaproxy/action-baseline@v0.15.0
       with:
         target: "http://localhost:3000"
@@ -148,7 +148,7 @@ jobs:
         artifact_name: zap-scan
 
     - name: Upload ZAP report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()
       with:
         name: zap-security-report
