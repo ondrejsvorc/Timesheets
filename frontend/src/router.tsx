@@ -1,6 +1,7 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
+import { FullscreenLoader } from "./components/shared/layout/FullscreenLoader";
 import { BaseUrl } from "./constants/api";
 import { Routes } from "./constants/routes";
 import { getContractEmployees } from "./features/contract/api/getContractEmployees";
@@ -92,6 +93,7 @@ export const router = createBrowserRouter([
     id: "root",
     path: "/",
     element: <App />,
+    hydrateFallbackElement: <FullscreenLoader ariaLabel="Přesměrování na přihlášení…" />,
     loader: requireAuth,
     children: [
       {
