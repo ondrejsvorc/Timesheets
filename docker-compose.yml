@@ -16,6 +16,12 @@ services:
       - Authentication__SignedOutCallbackPath=${AUTHENTICATION__SIGNEDOUTCALLBACKPATH:-/logout-oidc}
       - Authentication__RemoteSignOutPath=${AUTHENTICATION__REMOTESIGNOUTPATH:-/auth/logout-callback}
       - Authentication__SignedOutRedirectUri=${AUTHENTICATION__SIGNEDOUTREDIRECTURI:-/login}
+      - Authentication__Scope__0=openid
+      - Authentication__Scope__1=profile
+      - Authentication__Scope__2=email
+      - Authentication__Scope__3=offline_access
+      - Authentication__Scope__4=personalNumber
+      - Authentication__Scope__5=title
     ports:
       - "5000:5000"
     depends_on:

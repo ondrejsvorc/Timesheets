@@ -38,8 +38,9 @@ const requireAuth = async ({ request }: { request: Request }) => {
     // ignore and fall back to login redirect
   }
 
-  // Go through the backend endpoint so OIDC challenge happens server-side.
-  throw redirect(`/auth/login?returnUrl=${encodeURIComponent(returnTo)}`);
+  // Must be a full page navigation so `/auth/login` is handled by the backend (OIDC challenge).
+  window.location.assign(`${baseUrl}/auth/login?returnUrl=${encodeURIComponent(returnTo)}`);
+  return null;
 };
 
 const requireProjectId = (params: Params) => {
