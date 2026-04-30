@@ -94,7 +94,8 @@ public static class ConfigureServices
             })
             .AddCookie(options =>
             {
-                options.Cookie.SameSite = SameSiteMode.Strict;
+                // Strict breaks common OIDC flows (cross-site POST back to callback).
+                options.Cookie.SameSite = SameSiteMode.Lax;
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
             })
@@ -114,6 +115,12 @@ public static class ConfigureServices
                 options.SaveTokens = true;
                 options.GetClaimsFromUserInfoEndpoint = true;
                 options.PushedAuthorizationBehavior = PushedAuthorizationBehavior.Disable;
+
+                // Ensure OIDC correlation/nonce cookies survive the IdP redirect/POST.
+                options.CorrelationCookie.SameSite = SameSiteMode.None;
+                options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.NonceCookie.SameSite = SameSiteMode.None;
+                options.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
 
                 options.Scope.Clear();
                 foreach (string scope in auth.GetSection("Scope").Get<string[]>() ?? [])
