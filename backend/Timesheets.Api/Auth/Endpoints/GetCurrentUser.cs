@@ -16,7 +16,7 @@ public sealed class GetCurrentUser : IEndpoint
         Guid Id,
         string FullName,
         string Email,
-        string EmployeeType,
+        string? EmployeeType,
         string PersonalNumber,
         string? TitleBefore,
         string? TitleAfter
@@ -36,9 +36,9 @@ public sealed class GetCurrentUser : IEndpoint
             .Where(e => e.Email == email)
             .Select(e => new Response(
                 Id: e.Id,
-                FullName: e.FullName,
+                FullName: EmployeeNameFormatter.Format(e.TitleBefore, e.FullName, e.TitleAfter),
                 Email: e.Email,
-                EmployeeType: e.EmployeeType.Name,
+                EmployeeType: e.EmployeeTypeId == null ? null : e.EmployeeType.Name,
                 PersonalNumber: e.PersonalNumber,
                 TitleBefore: e.TitleBefore,
                 TitleAfter: e.TitleAfter

@@ -29,7 +29,7 @@ export type CurrentUser = {
   id: string;
   fullName: string;
   email: string;
-  employeeType: string;
+  employeeType: string | null;
   personalNumber: string;
   titleBefore: string | null;
   titleAfter: string | null;
@@ -91,6 +91,10 @@ export const router = createBrowserRouter([
     element: <App />,
     loader: requireAuth,
     children: [
+      {
+        index: true,
+        loader: () => redirect("/projects"),
+      },
       {
         path: "projects",
         element: <ProjectsPage />,

@@ -41,7 +41,7 @@ public static class ConfigureServices
     {
         builder.Services.Configure<ForwardedHeadersOptions>(options =>
         {
-            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
             options.KnownIPNetworks.Clear();
             options.KnownProxies.Clear();
         });
@@ -164,7 +164,7 @@ public static class ConfigureServices
                             }
 
                             context.ProtocolMessage.PostLogoutRedirectUri = UriHelper.BuildAbsolute(
-                                context.Request.Scheme,
+                                context.Request.Scheme is "http" or "https" ? context.Request.Scheme : "https",
                                 context.Request.Host,
                                 context.Request.PathBase,
                                 signedOutRedirectUri

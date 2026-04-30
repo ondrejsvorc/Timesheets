@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
+import { useImmer } from "use-immer";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
@@ -36,14 +37,27 @@ const { FilterSearchInput } = createFilterControls<EmployeesFilterCriteria>();
 
 const EmployeesPageContent = () => {
   const response = useAsyncValue() as GetEmployeesResponse;
-  const { filter, setFilter, filtered } = useEmployeesFilter(response.employees);
+  const revalidator = useRevalidator();
+  const [employees, setEmployees] = useImmer(response.employees);
+  const { filter, setFilter, filtered } = useEmployeesFilter(employees);
 
   return (
     <>
       <FilterBar filter={filter} setFilter={setFilter}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-      <EmployeesTable employees={filtered} />
+      <EmployeesTable
+        employees={filtered}
+        onEmployeeTypeSaved={(employeeId, employeeTypeId) => {
+          setEmployees((draft) => {
+            const employee = draft.find((e) => e.id === employeeId);
+            if (employee) {
+              employee.employeeTypeId = employeeTypeId;
+            }
+          });
+          revalidator.revalidate();
+        }}
+      />
     </>
   );
 };
