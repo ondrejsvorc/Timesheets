@@ -20,12 +20,12 @@ FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "./Timesheets.Api.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Timesheets.Api.dll"]
-
 FROM base AS prebuilt
 WORKDIR /app
 COPY .ci/publish/ .
+ENTRYPOINT ["dotnet", "Timesheets.Api.dll"]
+
+FROM base AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Timesheets.Api.dll"]
