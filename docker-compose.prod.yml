@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: timesheets
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     volumes:
       - timesheets_db:/var/lib/postgresql/data
     healthcheck:
@@ -23,7 +23,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_HTTP_PORTS: "5000"
-      ConnectionStrings__Database: Host=timesheets.database;Port=5432;Database=timesheets;Username=postgres;Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__Database: Host=timesheets.database;Port=5432;Database=timesheets;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres}
       Authentication__ClientId: ${AUTHENTICATION__CLIENTID:-vykazy.ondrejsvorc.cz}
       Authentication__ClientSecret: ${AUTHENTICATION__CLIENTSECRET}
       Authentication__MetadataAddress: ${AUTHENTICATION__METADATAADDRESS:-https://idp.ujep.cz/.well-known/openid-configuration}
