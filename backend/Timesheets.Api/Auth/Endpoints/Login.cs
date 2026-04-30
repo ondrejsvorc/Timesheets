@@ -11,6 +11,12 @@ public sealed class Login : IEndpoint
 
     private static async Task Handle(HttpContext context)
     {
-        await context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme, new AuthenticationProperties { RedirectUri = "/" });
+        string returnUrl = context.Request.Query["returnUrl"].ToString();
+        if (string.IsNullOrWhiteSpace(returnUrl) || !Uri.IsWellFormedUriString(returnUrl, UriKind.Relative))
+        {
+            returnUrl = "/";
+        }
+
+        await context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme, new AuthenticationProperties { RedirectUri = returnUrl });
     }
 }

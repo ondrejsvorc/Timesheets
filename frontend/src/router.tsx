@@ -26,6 +26,24 @@ import { ProjectContractsManagers } from "./features/project/ProjectContractsMan
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api/getProjects";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
+import { ApiUrl } from "./constants/api";
+
+const requireAuth = async ({ request }: { request: Request }) => {
+  const baseUrl = ApiUrl.replace(/\/api\/?$/, "");
+  const returnTo = new URL(request.url).pathname + new URL(request.url).search;
+
+  try {
+    const response = await fetch(`${baseUrl}/auth/currentUser`, { credentials: "include" });
+    if (response.ok) {
+      return null;
+    }
+  } catch {
+    // ignore and fall back to login redirect
+  }
+
+  // Go through the backend endpoint so OIDC challenge happens server-side.
+  throw redirect(`/auth/login?returnUrl=${encodeURIComponent(returnTo)}`);
+};
 
 const requireProjectId = (params: Params) => {
   if (!params.id) {
@@ -56,6 +74,7 @@ export const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
+    loader: requireAuth,
     children: [
       {
         path: "projects",
