@@ -66,9 +66,8 @@ const requireAuth = async ({ request }: { request: Request }) => {
 
 const redirectToLogin = ({ request }: { request: Request }) => {
   const url = new URL(request.url);
-  const returnTo = url.searchParams.get("returnTo") ?? "/";
-
-  // Must be a full page navigation so `/auth/login` is handled by the backend (OIDC challenge).
+  const returnToRaw = url.searchParams.get("returnTo") ?? "/";
+  const returnTo = returnToRaw.startsWith("/redirecting") ? "/" : returnToRaw;
   window.location.assign(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(returnTo)}`);
   return null;
 };
@@ -100,6 +99,11 @@ export const router = createBrowserRouter([
     element: <ErrorPage />,
   },
   {
+    path: "/redirecting",
+    element: <FullscreenLoader ariaLabel={Texts.redirectingToLogin} />,
+    loader: redirectToLogin,
+  },
+  {
     id: "root",
     path: "/",
     element: <App />,
@@ -109,11 +113,6 @@ export const router = createBrowserRouter([
       {
         index: true,
         loader: () => redirect("/projects"),
-      },
-      {
-        path: "redirecting",
-        element: <FullscreenLoader ariaLabel={Texts.redirectingToLogin} />,
-        loader: redirectToLogin,
       },
       {
         path: "projects",

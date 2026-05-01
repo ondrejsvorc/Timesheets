@@ -10,6 +10,7 @@ export const FullscreenLoader = ({ ariaLabel = Texts.loading }: FullscreenLoader
     <div className="min-h-screen w-full bg-muted text-foreground grid place-items-center animate-in fade-in duration-200">
       <div className="flex flex-col items-center gap-4">
         <Spinner className="size-12 text-primary [animation-duration:0.6s]" aria-label={ariaLabel} />
+        <div className="text-sm text-muted-foreground">{ariaLabel}</div>
       </div>
     </div>
   );
