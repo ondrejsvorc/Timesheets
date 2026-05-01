@@ -86,7 +86,11 @@ public static class ConfigureServices
 
     private static void AddAuthentication(this WebApplicationBuilder builder)
     {
-        IConfigurationSection authSection = builder.Configuration.GetSection("Authentication");
+        if (!AuthenticationConfig.IsEnabled(builder.Configuration))
+        {
+            builder.Services.AddAuthorization();
+            return;
+        }
 
         builder.Services
             .AddAuthentication(options =>

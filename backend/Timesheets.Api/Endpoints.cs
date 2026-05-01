@@ -5,6 +5,7 @@ using Timesheets.Api.Notifications;
 using Timesheets.Api.Notifications.Endpoints;
 using Timesheets.Api.Projects.Endpoints;
 using Timesheets.Api.Timesheets.Endpoints;
+using Timesheets.Api.Auth;
 
 namespace Timesheets.Api;
 
@@ -21,16 +22,27 @@ public static class Endpoints
         app.MapProtectedApiEndpoints();
     }
 
-    private static void MapAuthEndpoints(this WebApplication app) =>
-        app.MapGroup("/auth").AllowAnonymous().WithTags("Authentication")
-        .MapEndpoint<Login>()
-        .MapEndpoint<Logout>()
-        .MapEndpoint<GetCurrentUser>()
-        .MapEndpoint<GetCurrentUserPermissions>();
+    private static void MapAuthEndpoints(this WebApplication app)
+    {
+        var endpoints = app.MapGroup("/auth").AllowAnonymous().WithTags("Authentication");
+
+        if (AuthenticationConfig.IsEnabled(app.Configuration))
+        {
+            endpoints.MapEndpoint<Login>();
+            endpoints.MapEndpoint<Logout>();
+        }
+
+        endpoints.MapEndpoint<GetCurrentUser>();
+        endpoints.MapEndpoint<GetCurrentUserPermissions>();
+    }
 
     private static void MapProtectedApiEndpoints(this WebApplication app)
     {
-        var endpoints = app.MapGroup("/api").RequireAuthorization();
+        var endpoints = app.MapGroup("/api");
+        if (AuthenticationConfig.IsEnabled(app.Configuration))
+        {
+            endpoints.RequireAuthorization();
+        }
         endpoints.MapProjectEndpoints();
         endpoints.MapContractEndpoints();
         endpoints.MapEmployeeEndpoints();

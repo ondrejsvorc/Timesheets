@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.HttpOverrides;
+using System.Security.Claims;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 
@@ -16,8 +18,22 @@ public static class ConfigureApp
 
         app.UseForwardedHeaders();
 
-        app.UseAuthentication();
-        app.UseAuthorization();
+        bool authEnabled = AuthenticationConfig.IsEnabled(app.Configuration);
+        if (authEnabled)
+        {
+            app.UseAuthentication();
+            app.UseAuthorization();
+        }
+        else if (app.Environment.IsDevelopment())
+        {
+            // Dev-only "no-auth" mode: make HttpContext.User look authenticated so endpoints relying on claims work.
+            // Values can be overridden via config under Authentication:DevUser:*.
+            app.Use(async (context, next) =>
+            {
+                context.User = AuthenticationConfig.CreateDevPrincipal(context.RequestServices.GetRequiredService<IConfiguration>());
+                await next();
+            });
+        }
         app.ApplyMigrations();
 
         if (app.Environment.IsDevelopment())
@@ -25,6 +41,16 @@ public static class ConfigureApp
             using var scope = app.Services.CreateScope();
             using var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             DatabaseSeeder.SeedTestDataAsync(context).GetAwaiter().GetResult();
+        }
+
+        if (!authEnabled && app.Environment.IsDevelopment())
+        {
+            using var scope = app.Services.CreateScope();
+            var synchronizer = scope.ServiceProvider.GetRequiredService<UserSynchronizer>();
+            var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+            synchronizer.SyncFromPrincipalAsync(AuthenticationConfig.CreateDevPrincipal(configuration), CancellationToken.None)
+                .GetAwaiter()
+                .GetResult();
         }
 
         app.UseCors();

@@ -7,21 +7,6 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=5000
-      - ConnectionStrings__Database=Host=timesheets.database;Port=5432;Database=timesheets;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres};Include Error Detail=true
-      - Authentication__ClientId=${AUTHENTICATION__CLIENTID:-vykazy.ondrejsvorc.cz}
-      - Authentication__ClientSecret=${AUTHENTICATION__CLIENTSECRET:-}
-      - Authentication__MetadataAddress=${AUTHENTICATION__METADATAADDRESS:-https://idp.ujep.cz/.well-known/openid-configuration}
-      - Authentication__Issuer=${AUTHENTICATION__ISSUER:-https://idp.ujep.cz}
-      - Authentication__CallbackPath=${AUTHENTICATION__CALLBACKPATH:-/login-oidc}
-      - Authentication__SignedOutCallbackPath=${AUTHENTICATION__SIGNEDOUTCALLBACKPATH:-/logout-oidc}
-      - Authentication__RemoteSignOutPath=${AUTHENTICATION__REMOTESIGNOUTPATH:-/auth/logout-callback}
-      - Authentication__SignedOutRedirectUri=${AUTHENTICATION__SIGNEDOUTREDIRECTURI:-/login}
-      - Authentication__Scope__0=openid
-      - Authentication__Scope__1=profile
-      - Authentication__Scope__2=email
-      - Authentication__Scope__3=offline_access
-      - Authentication__Scope__4=personalNumber
-      - Authentication__Scope__5=title
     ports:
       - "5000:5000"
     depends_on:
@@ -33,7 +18,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: dev
     ports:
       - "3000:5173"
     volumes:
@@ -51,9 +35,9 @@ services:
     environment:
       - POSTGRES_DB=timesheets
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_PASSWORD=postgres
     volumes:
-      - ./.containers/timesheets-db:/var/lib/postgresql/data
+      - ./.containers/timesheets-db:/va5050r/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
