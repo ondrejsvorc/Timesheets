@@ -106,7 +106,7 @@ export const Texts = {
   loading: "Načítání",
   redirectingToLogin: "Přesměrování na přihlášení…",
   user: "Uživatel",
-  logout: "Odhlásit",
+  logout: "Odhlásit se",
   notFoundTitle: "Stránka nebyla nalezena",
   notFoundDescription: "Požadovaná stránka buď neexistuje, nebo k ní nemáte přístup.",
   goToOverview: "Přejít na přehled",
