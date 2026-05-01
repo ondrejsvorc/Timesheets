@@ -10,6 +10,7 @@ import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercent
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Texts } from "@/constants/texts";
 import { isWholeWorkloadPercentInRange } from "@/utils/workloadPercentForm";
 import { getContractCatalog } from "../employees/api/getContractCatalog";
 import { getProjectCatalog } from "../employees/api/getProjectCatalog";
@@ -23,7 +24,7 @@ const addEmployeePositionSchema = z.object({
   workload: z
     .string()
     .nonempty()
-    .refine((v) => isWholeWorkloadPercentInRange(v, 0, 100), "Zadejte celé číslo 0–100 (procenta úvazku)."),
+    .refine((v) => isWholeWorkloadPercentInRange(v, 0, 100), Texts.enterWholeNumberRange0to100),
   startDate: z.string().nonempty(),
   endDate: z.string().optional(),
 });
@@ -117,7 +118,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Přidat zaměstnanci pozici</DialogTitle>
+          <DialogTitle>{Texts.addEmployeePositionToEmployeeTitle}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -133,7 +134,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                     <ComboBox
                       value={field.value}
                       items={projects}
-                      placeholder="Vyberte projekt"
+                      placeholder={Texts.selectProject}
                       loading={projectsLoading}
                       onChange={field.onChange}
                     />
@@ -153,7 +154,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                     <ComboBox
                       value={field.value}
                       items={contracts}
-                      placeholder="Vyberte zakázku"
+                      placeholder={Texts.selectContract}
                       loading={contractsLoading}
                       onChange={field.onChange}
                     />
@@ -214,7 +215,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                   name={name}
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>{name === "startDate" ? "Datum začátku *" : "Datum ukončení"}</FormLabel>
+                      <FormLabel>{name === "startDate" ? Texts.startDateRequiredLabel : Texts.endDateLabel}</FormLabel>
                       <FormControl>
                         <DatePicker
                           value={field.value}

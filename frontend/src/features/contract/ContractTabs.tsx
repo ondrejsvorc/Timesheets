@@ -1,5 +1,6 @@
 import { NavLink, useParams } from "react-router";
 import { Routes } from "@/constants/routes";
+import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
 
 export const ContractTabs = () => {
@@ -22,7 +23,7 @@ export const ContractTabs = () => {
             )
           }
         >
-          Výkazy
+          {Texts.timesheets}
         </NavLink>
         <NavLink
           to={Routes.contractEmployees(projectId, contractId)}
@@ -33,7 +34,7 @@ export const ContractTabs = () => {
             )
           }
         >
-          Zaměstnanci
+          {Texts.employees}
         </NavLink>
       </nav>
     </div>

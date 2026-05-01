@@ -38,7 +38,7 @@ const EmployeePositionsContent = () => {
   return (
     <>
       <SubPageHeader>
-        <SubPageTitle>Pozice</SubPageTitle>
+        <SubPageTitle>{Texts.positions}</SubPageTitle>
       </SubPageHeader>
       <FilterBar
         filter={filter}

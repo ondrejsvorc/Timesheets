@@ -4,6 +4,7 @@ import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { FullscreenLoader } from "./components/shared/layout/FullscreenLoader";
 import { BaseUrl } from "./constants/api";
 import { Routes } from "./constants/routes";
+import { Texts } from "./constants/texts";
 import { getContractEmployees } from "./features/contract/api/getContractEmployees";
 import { getProjectContract } from "./features/contract/api/getProjectContract";
 import { ContractEmployees } from "./features/contract/ContractEmployees";
@@ -93,7 +94,7 @@ export const router = createBrowserRouter([
     id: "root",
     path: "/",
     element: <App />,
-    hydrateFallbackElement: <FullscreenLoader ariaLabel="Přesměrování na přihlášení…" />,
+    hydrateFallbackElement: <FullscreenLoader ariaLabel={Texts.redirectingToLogin} />,
     loader: requireAuth,
     children: [
       {

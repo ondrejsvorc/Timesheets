@@ -107,9 +107,9 @@ export const ContractTimesheets = () => {
       ) : (
         <>
           <SubPageHeader>
-            <SubPageTitle>Výkazy</SubPageTitle>
+            <SubPageTitle>{Texts.timesheets}</SubPageTitle>
           </SubPageHeader>
-          <FilterBar filter={filter} setFilter={setFilter} actions={<Button onClick={handleFilter}>Filtrovat</Button>}>
+          <FilterBar filter={filter} setFilter={setFilter} actions={<Button onClick={handleFilter}>{Texts.filter}</Button>}>
             <ContractTimesheetsFilterControls options={filterOptions} />
           </FilterBar>
           {filter.groupBy === "Month" ? (

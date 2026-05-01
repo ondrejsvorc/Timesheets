@@ -2,6 +2,7 @@ import { Sparkles } from "lucide-react";
 import { ProjectLockToggleButton } from "@/components/shared/buttons/ActionButtons";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Texts } from "@/constants/texts";
 import type { CoreDefinition, ProjectDefinition } from "../../Timesheet";
 
 interface TimesheetHeaderProps {
@@ -21,15 +22,15 @@ export const TimesheetHeader = ({ projects, core, onGenerateMonthly, onTogglePro
   return (
     <div className="grid grid-cols-subgrid col-[1/-1] sticky top-0 z-20 self-start bg-slate-100 border-b border-slate-300">
       <div className="sticky left-0 z-40 bg-slate-100 border-r border-slate-300 h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
-        Den
+        {Texts.day}
       </div>
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Příchod</div>
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Odchod</div>
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Pauza od</div>
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Pauza do</div>
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Přerušení</div>
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Docházka</div>
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Noční práce</div>
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.clockIn}</div>
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.clockOut}</div>
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.breakStart}</div>
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.breakEnd}</div>
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.interruption}</div>
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.attendance}</div>
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.nightWork}</div>
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">STAG</div>
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
         Kmen ({formatWorkloadPercent(core.workload)}%)
@@ -40,21 +41,21 @@ export const TimesheetHeader = ({ projects, core, onGenerateMonthly, onTogglePro
             <TooltipTrigger asChild>
               <span className="cursor-help border-b border-dotted border-slate-400">{formatWorkloadPercent(project.workload)}%</span>
             </TooltipTrigger>
-            <TooltipContent side="top">{project.registrationNumber || "Bez čísla zakázky"}</TooltipContent>
+            <TooltipContent side="top">{project.registrationNumber || Texts.noContractNumber}</TooltipContent>
           </Tooltip>
           <ProjectLockToggleButton locked={project.lockedAt != null} onClick={() => onToggleProjectLock(project.id)} />
         </div>
       ))}
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Kontrola</div>
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.control}</div>
       <div className="sticky right-0 z-40 bg-slate-100 border-r border-slate-300 h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
         <div className="flex items-center justify-center gap-1">
-          <span>Rozdíl</span>
+          <span>{Texts.difference}</span>
           <Button
             variant="ghost"
             size="icon"
             className="h-6 w-6 text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-90"
             onClick={onGenerateMonthly}
-            title="Doplnit chybějící hodiny v celém výkazu"
+            title={Texts.fillMissingHoursInTimesheet}
           >
             <Sparkles className="h-3.5 w-3.5 fill-blue-100" />
           </Button>

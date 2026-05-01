@@ -3,6 +3,7 @@ import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Texts } from "@/constants/texts";
 import type { TimesheetComment } from "./Comment";
 import { addTimesheetComment, listTimesheetComments } from "./commentsApi";
 
@@ -19,11 +20,11 @@ export const TimesheetComments = () => {
   const roleLabel = (role: string) => {
     switch (role) {
       case "Employee":
-        return "Zaměstnanec";
+        return Texts.roleEmployee;
       case "Manager":
-        return "Manažer";
+        return Texts.roleManager;
       case "Controller":
-        return "Kontrolor";
+        return Texts.roleController;
       default:
         return role;
     }
@@ -38,7 +39,7 @@ export const TimesheetComments = () => {
         setItems(res);
       } catch (e) {
         if (e instanceof DOMException && e.name === "AbortError") return;
-        setLoadError(e instanceof Error ? e.message : "Nepodařilo se načíst komentáře.");
+        setLoadError(e instanceof Error ? e.message : Texts.loadCommentsFailed);
         setItems([]);
       }
     })();
@@ -56,7 +57,7 @@ export const TimesheetComments = () => {
       setDraft("");
       requestAnimationFrame(() => textareaRef.current?.focus());
     } catch (e) {
-      setSendError(e instanceof Error ? e.message : "Nepodařilo se odeslat komentář.");
+      setSendError(e instanceof Error ? e.message : Texts.sendCommentFailed);
     } finally {
       setIsSending(false);
     }
@@ -65,7 +66,7 @@ export const TimesheetComments = () => {
   return (
     <>
       <SubPageHeader>
-        <SubPageTitle>Komentáře</SubPageTitle>
+        <SubPageTitle>{Texts.comments}</SubPageTitle>
       </SubPageHeader>
       <div className="pb-8 space-y-4">
         {!items ? (
@@ -76,12 +77,12 @@ export const TimesheetComments = () => {
 
             <div className="rounded-md border bg-card p-4 md:p-5 space-y-5">
               {items.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Zatím žádné komentáře.</div>
+                <div className="text-sm text-muted-foreground">{Texts.noCommentsYet}</div>
               ) : (
                 items.map((c) =>
                   c.type === "system" ? (
                     <div key={c.id} className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground/80">Systém</span> <span className="mx-1">·</span>
+                      <span className="font-medium text-foreground/80">{Texts.system}</span> <span className="mx-1">·</span>
                       <span>{new Date(c.createdAt).toLocaleString("cs-CZ")}</span>
                       <span className="mx-1">·</span>
                       <span>{c.text}</span>
@@ -107,7 +108,7 @@ export const TimesheetComments = () => {
                 ref={textareaRef}
                 value={draft}
                 onChange={(e) => setDraft(e.currentTarget.value)}
-                placeholder="Napište komentář…"
+                placeholder={Texts.writeCommentPlaceholder}
                 disabled={isSending}
                 maxLength={MAX_COMMENT_LENGTH}
                 className="w-full max-h-40 resize-none"
@@ -125,7 +126,7 @@ export const TimesheetComments = () => {
               {sendError && <div className="text-sm text-destructive">{sendError}</div>}
               <div className="flex justify-end">
                 <Button type="button" onClick={onSend} disabled={isSending || draft.trim().length === 0}>
-                  {isSending ? "Odesílám…" : "Odeslat"}
+                  {isSending ? Texts.sending : Texts.send}
                 </Button>
               </div>
             </div>

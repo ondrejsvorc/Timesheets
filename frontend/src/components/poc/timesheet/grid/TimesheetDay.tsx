@@ -2,6 +2,7 @@ import { Sparkles } from "lucide-react";
 import React from "react";
 import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
 import { Button } from "@/components/ui/button";
+import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
 import type { ProjectDefinition as Project, TimesheetDay as TimesheetDayModel } from "../../Timesheet";
 import { TimesheetLogic } from "../../TimesheetLogic";
@@ -261,7 +262,7 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
                 }
               }
             }}
-            title="Doplnit zbývající hodiny jen do prázdných polí"
+            title={Texts.fillRemainingHoursEmptyOnly}
           >
             <Sparkles className="h-4 w-4" />
           </Button>

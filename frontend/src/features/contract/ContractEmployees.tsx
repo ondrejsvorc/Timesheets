@@ -46,7 +46,11 @@ const ContractEmployeesContent = () => {
       <SubPageHeader>
         <SubPageTitle>{Texts.employees}</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>Přidat zaměstnanci pozici</AddButton>}>
+      <FilterBar
+        filter={filter}
+        setFilter={setFilter}
+        actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePositionToEmployeeTitle}</AddButton>}
+      >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <ContractEmployeesList contractId={contractId} employees={filtered} onDeleteRequested={(payload) => setPositionToDelete(payload)} />

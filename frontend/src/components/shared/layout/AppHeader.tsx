@@ -64,7 +64,7 @@ export const AppHeader = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{currentUser?.fullName ?? "Uživatel"}</DropdownMenuLabel>
+              <DropdownMenuLabel>{currentUser?.fullName ?? Texts.user}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={(event) => {
@@ -72,7 +72,7 @@ export const AppHeader = () => {
                 }}
                 onClick={handleLogout}
               >
-                Odhlásit
+                {Texts.logout}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

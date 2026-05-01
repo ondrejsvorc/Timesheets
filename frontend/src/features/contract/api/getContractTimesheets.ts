@@ -1,4 +1,5 @@
 import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { Texts } from "@/constants/texts";
 
 export type GroupByOption = "Employee" | "Month";
 
@@ -128,7 +129,7 @@ export interface MonthGroupView {
   items: EmployeeGroupView[];
 }
 
-const APPROVED_STATUS = "Schválený";
+const APPROVED_STATUS = Texts.statusApproved;
 
 export function buildMonthsView(data: GetContractTimesheetsResponse): MonthGroupView[] {
   const byEmployee = new Map<string, EmployeeItem>();

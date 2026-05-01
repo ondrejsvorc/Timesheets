@@ -81,7 +81,7 @@ const EmployeeTimesheetsContent = () => {
     return (
       <>
         <SubPageHeader>
-          <SubPageTitle>Výkazy</SubPageTitle>
+          <SubPageTitle>{Texts.timesheets}</SubPageTitle>
         </SubPageHeader>
         <FilterBar
           filter={filter}
@@ -106,7 +106,7 @@ const EmployeeTimesheetsContent = () => {
   return (
     <>
       <SubPageHeader>
-        <SubPageTitle>Výkazy</SubPageTitle>
+        <SubPageTitle>{Texts.timesheets}</SubPageTitle>
       </SubPageHeader>
       <FilterBar
         filter={filter}
@@ -124,8 +124,8 @@ const EmployeeTimesheetsContent = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">Stav</TableHead>
-              <TableHead>Měsíc</TableHead>
+              <TableHead className="w-[80px]">{Texts.status}</TableHead>
+              <TableHead>{Texts.month}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -153,7 +153,7 @@ const EmployeeTimesheetsContent = () => {
                         </TableCell>
                       </TableRow>
                     </TooltipTrigger>
-                    {disabled && <TooltipContent side="top">Nejdřív naimportujte docházku pro tento měsíc.</TooltipContent>}
+                    {disabled && <TooltipContent side="top">{Texts.importAttendanceFirstForMonth}</TooltipContent>}
                   </Tooltip>
                 </TooltipProvider>
               );
@@ -211,7 +211,7 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        <Label className="text-muted-foreground text-sm">Rok</Label>
+        <Label className="text-muted-foreground text-sm">{Texts.year}</Label>
         <Select
           value={selectedYear}
           disabled={availableYears.length === 0}
@@ -234,7 +234,7 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label className="text-muted-foreground text-sm">Měsíc</Label>
+        <Label className="text-muted-foreground text-sm">{Texts.month}</Label>
         <Popover open={monthPopoverOpen} onOpenChange={setMonthPopoverOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-[180px] justify-between" disabled={availableMonths.length === 0}>
@@ -242,12 +242,12 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
                 {availableMonths.length === 0
                   ? Texts.noItems
                   : isAllMonthsSelected
-                    ? "Všechny měsíce"
+                    ? Texts.allMonths
                     : selectedMonthsCount === 0
-                      ? "Vyberte měsíce"
+                      ? Texts.selectMonths
                       : selectedMonthsCount === 1 && singleSelectedMonth !== undefined
                         ? CZECH_MONTH_NAMES[singleSelectedMonth]
-                        : `${selectedMonthsCount} měsíců`}
+                        : Texts.monthsCount.replace("{count}", String(selectedMonthsCount))}
               </span>
               <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
@@ -260,7 +260,7 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
                 onClick={() => handleMonthToggle(null)}
               >
                 <Checkbox checked={isAllMonthsSelected} className="pointer-events-none" />
-                <span className="text-sm font-normal">Všechny měsíce</span>
+                <span className="text-sm font-normal">{Texts.allMonths}</span>
               </button>
               <div className="border-t my-1" />
               {availableMonths.map((month) => {
@@ -284,7 +284,7 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
       <div className="flex items-center gap-3 pt-6">
         <Checkbox id="only-unapproved" checked={false} disabled />
         <Label htmlFor="only-unapproved" className="text-sm cursor-pointer opacity-50">
-          Pouze měsíce s neschválenými výkazy
+          {Texts.onlyMonthsWithUnapprovedTimesheets}
         </Label>
       </div>
     </>

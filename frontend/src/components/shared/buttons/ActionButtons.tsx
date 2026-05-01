@@ -116,8 +116,8 @@ export const ProjectLockToggleButton = ({ locked, onClick, disabled, title }: Pr
     size="icon"
     className="h-6 w-6 shrink-0"
     disabled={disabled}
-    title={title ?? (locked ? "Odemknout sloupec zakázky" : "Uzamknout sloupec zakázky")}
-    aria-label={locked ? "Odemknout sloupec zakázky" : "Uzamknout sloupec zakázky"}
+    title={title ?? (locked ? Texts.unlockContractColumn : Texts.lockContractColumn)}
+    aria-label={locked ? Texts.unlockContractColumn : Texts.lockContractColumn}
     onClick={onClick}
   >
     {locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
@@ -125,7 +125,7 @@ export const ProjectLockToggleButton = ({ locked, onClick, disabled, title }: Pr
 );
 
 export const BackButton = ({ onClick }: BackButtonProps) => (
-  <Button type="button" variant="outline" size="icon" aria-label="Back" onClick={onClick}>
+  <Button type="button" variant="outline" size="icon" aria-label={Texts.back} onClick={onClick}>
     <BackIcon />
   </Button>
 );

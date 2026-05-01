@@ -11,6 +11,7 @@ import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercent
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Texts } from "@/constants/texts";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 import { getEmployees } from "../employees/api/getEmployees";
 import { addContractEmployee } from "./api/addContractEmployee";
@@ -39,7 +40,7 @@ const createSchema = (existing: ContractEmployeeItem[]) =>
       workload: z
         .string()
         .nonempty()
-        .refine((v) => isWholeWorkloadPercentInRange(v, 1, 100), "Zadejte celé číslo 1–100 (procenta úvazku)."),
+        .refine((v) => isWholeWorkloadPercentInRange(v, 1, 100), Texts.enterWholeNumberRange1to100),
       startDate: z.string().nonempty(),
       endDate: z.string().optional(),
     })
@@ -61,7 +62,7 @@ const createSchema = (existing: ContractEmployeeItem[]) =>
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["positionName"],
-          message: "Zaměstnanec už má tuto pozici na zakázce v překrývajícím se období.",
+          message: Texts.employeeAlreadyHasPositionOverlap,
         });
       }
     });
@@ -137,7 +138,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Přidat zaměstnanci pozici</DialogTitle>
+          <DialogTitle>{Texts.addEmployeePositionToEmployeeTitle}</DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
@@ -152,7 +153,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                     <ComboBox
                       value={field.value}
                       items={employees}
-                      placeholder="Vyberte zaměstnance"
+                      placeholder={Texts.selectEmployee}
                       loading={employeesLoading}
                       onChange={field.onChange}
                     />
@@ -213,7 +214,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                   name={name}
                   render={({ field }) => (
                     <FormItem className="flex flex-col">
-                      <FormLabel>{name === "startDate" ? "Datum začátku *" : "Datum ukončení"}</FormLabel>
+                      <FormLabel>{name === "startDate" ? Texts.startDateRequiredLabel : Texts.endDateLabel}</FormLabel>
                       <FormControl>
                         <DatePicker
                           value={field.value}
