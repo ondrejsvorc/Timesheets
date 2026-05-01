@@ -1,8 +1,10 @@
-name: CI
+name: Pipeline
 
 on:
   push:
   pull_request:
+    branches:
+      - 29625253-vps-deployment
   workflow_dispatch:
 
 permissions:
@@ -167,49 +169,72 @@ jobs:
         $compose logs timesheets.frontend --no-color | tail -n 200
         exit 1
 
-    - name: Prepare ZAP report
-      shell: bash
-      run: |
-        set -euo pipefail
-        touch zap.yaml web_report_json.json web_report_md.md web_report_html.html api_report_json.json api_report_md.md api_report_html.html
-        chmod a+rw zap.yaml web_report_json.json web_report_md.md web_report_html.html api_report_json.json api_report_md.md api_report_html.html
-
-    - name: Run ZAP scan
-      uses: zaproxy/action-baseline@v0.15.0
-      with:
-        target: "http://localhost:8080"
-        cmd_options: >-
-          -J web_report_json.json
-          -w web_report_md.md
-          -r web_report_html.html
-        fail_action: false
-        artifact_name: zap-web
-
-    - name: Run ZAP scan (API)
-      uses: zaproxy/action-baseline@v0.15.0
-      with:
-        target: "http://localhost:5000/swagger/index.html"
-        cmd_options: >-
-          -J api_report_json.json
-          -w api_report_md.md
-          -r api_report_html.html
-        fail_action: false
-        artifact_name: zap-api
-
-    - name: Upload ZAP report
-      uses: actions/upload-artifact@v6
-      if: always()
-      with:
-        name: zap-security-report
-        path: |
-          web_report_html.html
-          web_report_md.md
-          web_report_json.json
-          api_report_html.html
-          api_report_md.md
-          api_report_json.json
-        retention-days: 1
+    # - name: Prepare ZAP report
+    #   shell: bash
+    #   run: |
+    #     set -euo pipefail
+    #     touch zap.yaml web_report_json.json web_report_md.md web_report_html.html api_report_json.json api_report_md.md api_report_html.html
+    #     chmod a+rw zap.yaml web_report_json.json web_report_md.md web_report_html.html api_report_json.json api_report_md.md api_report_html.html
+    #
+    # - name: Run ZAP scan
+    #   uses: zaproxy/action-baseline@v0.15.0
+    #   with:
+    #     target: "http://localhost:8080"
+    #     cmd_options: >-
+    #       -J web_report_json.json
+    #       -w web_report_md.md
+    #       -r web_report_html.html
+    #     fail_action: false
+    #     artifact_name: zap-web
+    #
+    # - name: Run ZAP scan (API)
+    #   uses: zaproxy/action-baseline@v0.15.0
+    #   with:
+    #     target: "http://localhost:5000/swagger/index.html"
+    #     cmd_options: >-
+    #       -J api_report_json.json
+    #       -w api_report_md.md
+    #       -r api_report_html.html
+    #     fail_action: false
+    #     artifact_name: zap-api
+    #
+    # - name: Upload ZAP report
+    #   uses: actions/upload-artifact@v6
+    #   if: always()
+    #   with:
+    #     name: zap-security-report
+    #     path: |
+    #       web_report_html.html
+    #       web_report_md.md
+    #       web_report_json.json
+    #       api_report_html.html
+    #       api_report_md.md
+    #       api_report_json.json
+    #     retention-days: 1
 
     - name: Stop containers
       if: always()
       run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [runtime]
+    concurrency:
+      group: hostinger-deploy-${{ github.ref_name }}
+      cancel-in-progress: true
+    if: >
+      github.event_name == 'push' &&
+      github.ref_name == '29625253-vps-deployment'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Deploy
+        uses: hostinger/deploy-on-vps@v2
+        with:
+          api-key: ${{ secrets.HOSTINGER_API_KEY }}
+          virtual-machine: ${{ vars.HOSTINGER_VM_ID }}
+          project-name: ${{ github.repository }}
+          docker-compose-path: docker-compose.prod.yml
