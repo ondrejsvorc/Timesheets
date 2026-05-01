@@ -41,9 +41,9 @@ issue_cert_if_missing() {
   return 0
 }
 
-# Try once at startup; if it fails, back off and retry occasionally.
+# Try once at startup; if it fails, back off and retry daily.
 while ! issue_cert_if_missing; do
-  sleep 6h
+  sleep 24h
 done
 
 echo "Starting renew loop..."
