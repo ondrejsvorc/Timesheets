@@ -98,7 +98,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
       setEmployees(
         response.employees.map((e) => ({
           value: e.id,
-          label: `${e.fullName} · ${e.personalNumber}`,
+          label: e.fullName,
         })),
       );
       setEmployeesLoading(false);
