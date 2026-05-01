@@ -59,9 +59,18 @@ const requireAuth = async ({ request }: { request: Request }) => {
     // ignore and fall back to login redirect
   }
 
+  // Important: throw a redirect so React Router cancels other loaders for the current navigation.
+  // The /redirecting route will then do the full-page navigation to backend OIDC login.
+  throw redirect(`/redirecting?returnTo=${encodeURIComponent(returnTo)}`);
+};
+
+const redirectToLogin = ({ request }: { request: Request }) => {
+  const url = new URL(request.url);
+  const returnTo = url.searchParams.get("returnTo") ?? "/";
+
   // Must be a full page navigation so `/auth/login` is handled by the backend (OIDC challenge).
   window.location.assign(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(returnTo)}`);
-  return { currentUser: null };
+  return null;
 };
 
 const requireProjectId = (params: Params) => {
@@ -100,6 +109,11 @@ export const router = createBrowserRouter([
       {
         index: true,
         loader: () => redirect("/projects"),
+      },
+      {
+        path: "redirecting",
+        element: <FullscreenLoader ariaLabel={Texts.redirectingToLogin} />,
+        loader: redirectToLogin,
       },
       {
         path: "projects",
