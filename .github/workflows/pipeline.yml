@@ -236,5 +236,5 @@ jobs:
         with:
           api-key: ${{ secrets.HOSTINGER_API_KEY }}
           virtual-machine: ${{ vars.HOSTINGER_VM_ID }}
-          project-name: ${{ github.event.repository.name }}
+          project-name: 'timesheets'
           docker-compose-path: docker-compose.prod.yml
