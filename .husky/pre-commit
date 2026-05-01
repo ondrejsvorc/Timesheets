@@ -4,5 +4,7 @@
 set -e
 
 npm --prefix frontend run format
-dotnet format backend/Timesheets.slnx
+git add frontend
 
+dotnet format backend/Timesheets.slnx
+git add backend

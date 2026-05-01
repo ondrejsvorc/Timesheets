@@ -40,7 +40,11 @@ export const createFilterControls = <TFilter extends { query: string }>() => {
             })
           }
         />
-        {label && <Label htmlFor={id} className="cursor-pointer">{label}</Label>}
+        {label && (
+          <Label htmlFor={id} className="cursor-pointer">
+            {label}
+          </Label>
+        )}
       </div>
     );
   };
