@@ -52,7 +52,6 @@ export const Texts = {
   contractDescription: "Popis zákazky",
   contractId: "ID zakázky",
   position: "Pozice",
-  status: "Status",
   edit: "Upravit",
   editProject: "Upravit projekt",
   addContract: "Přidat zakázku",
