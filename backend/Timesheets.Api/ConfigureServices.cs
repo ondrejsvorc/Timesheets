@@ -27,7 +27,11 @@ public static class ConfigureServices
         {
             options.AddDefaultPolicy(policy =>
             {
-                policy.WithOrigins("http://localhost:3000").AllowAnyHeader().AllowAnyMethod();
+                policy
+                    .WithOrigins("http://localhost:3000")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
             });
         });
         builder.Services.AddHealthChecks();
