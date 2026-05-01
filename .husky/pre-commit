@@ -3,8 +3,6 @@
 
 set -e
 
-npm --prefix frontend run lint:fix
-npm --prefix frontend run lint
-
+npm --prefix frontend run format
 dotnet format backend/Timesheets.slnx
 
