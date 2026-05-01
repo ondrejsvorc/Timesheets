@@ -10,7 +10,7 @@ Web application for **managing** and **auditing employee timesheets**.
 ### Prerequisites
 - **.NET SDK 10** (or later)
 - **Node.js** (v18 or later) and **npm**
-- **Docker Desktop**
+- **Docker Compose**, **Docker Desktop**
 - **EF Core Tools** (for database migrations)
 
 ### Setup
