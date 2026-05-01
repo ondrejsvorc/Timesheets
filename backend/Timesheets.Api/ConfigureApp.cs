@@ -54,7 +54,9 @@ public static class ConfigureApp
         }
 
         app.UseCors();
-        if (app.Environment.IsDevelopment())
+        // In local docker dev we often run HTTP only; forcing HTTPS causes redirect loops / fetch failures.
+        // Enable explicitly via config if needed.
+        if (app.Configuration.GetValue("HttpsRedirection:Enabled", false))
         {
             app.UseHttpsRedirection();
         }
