@@ -158,26 +158,47 @@ public static class ConfigureServices
                         // We want the IdP to redirect straight to the SPA route (e.g. /login),
                         // not to the middleware callback path.
                         string? signedOutRedirectUri = auth["SignedOutRedirectUri"];
-                        if (!string.IsNullOrWhiteSpace(signedOutRedirectUri))
+                        if (string.IsNullOrWhiteSpace(signedOutRedirectUri))
                         {
-                            if (Uri.TryCreate(signedOutRedirectUri, UriKind.Absolute, out Uri? absolute))
+                            return Task.CompletedTask;
+                        }
+
+                        // "//host/path" parses as a file: URI in .NET; treat as HTTPS instead.
+                        if (signedOutRedirectUri.StartsWith("//", StringComparison.Ordinal))
+                        {
+                            signedOutRedirectUri = $"{Uri.UriSchemeHttps}:{signedOutRedirectUri}";
+                        }
+
+                        if (Uri.TryCreate(signedOutRedirectUri, UriKind.Absolute, out Uri? absolute))
+                        {
+                            if (absolute.Scheme == Uri.UriSchemeHttp || absolute.Scheme == Uri.UriSchemeHttps)
                             {
                                 context.ProtocolMessage.PostLogoutRedirectUri = absolute.ToString();
                                 return Task.CompletedTask;
                             }
 
-                            if (!signedOutRedirectUri.StartsWith('/'))
+                            // Misconfigured file: or other scheme — recover path if possible (e.g. file:///login -> /login).
+                            if (absolute.Scheme == Uri.UriSchemeFile && absolute.LocalPath.StartsWith('/'))
                             {
-                                signedOutRedirectUri = "/" + signedOutRedirectUri;
+                                signedOutRedirectUri = absolute.LocalPath;
                             }
-
-                            context.ProtocolMessage.PostLogoutRedirectUri = UriHelper.BuildAbsolute(
-                                context.Request.Scheme is "http" or "https" ? context.Request.Scheme : "https",
-                                context.Request.Host,
-                                context.Request.PathBase,
-                                signedOutRedirectUri
-                            );
+                            else if (signedOutRedirectUri.Contains("://", StringComparison.Ordinal))
+                            {
+                                signedOutRedirectUri = "/login";
+                            }
                         }
+
+                        if (!signedOutRedirectUri.StartsWith('/'))
+                        {
+                            signedOutRedirectUri = "/" + signedOutRedirectUri;
+                        }
+
+                        context.ProtocolMessage.PostLogoutRedirectUri = UriHelper.BuildAbsolute(
+                            context.Request.Scheme is "http" or "https" ? context.Request.Scheme : "https",
+                            context.Request.Host,
+                            context.Request.PathBase,
+                            signedOutRedirectUri
+                        );
 
                         return Task.CompletedTask;
                     },
