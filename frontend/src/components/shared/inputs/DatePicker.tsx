@@ -1,3 +1,4 @@
+import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { CalendarIcon, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -17,7 +18,7 @@ interface DatePickerProps {
 
 export const DatePicker = ({ value, disabled, clearable = true, disabledDate, onChange }: DatePickerProps) => {
   const [open, setOpen] = useState(false);
-  const selected = useMemo(() => (value ? new Date(value) : undefined), [value]);
+  const selected = useMemo(() => (value ? parseISO(value) : undefined), [value]);
   const label = formatDate(value);
 
   const handleSelect = useCallback(
@@ -28,12 +29,12 @@ export const DatePicker = ({ value, disabled, clearable = true, disabledDate, on
         return;
       }
       if (value) {
-        const current = new Date(value);
+        const current = parseISO(value);
         if (current.toDateString() === date.toDateString()) {
           return;
         }
       }
-      onChange(date.toISOString());
+      onChange(format(date, "yyyy-MM-dd"));
       setOpen(false);
     },
     [onChange, value],

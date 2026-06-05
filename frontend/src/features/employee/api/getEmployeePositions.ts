@@ -17,21 +17,8 @@ export interface GetEmployeePositionsResponse {
   positions: EmployeePositionItem[];
 }
 
-const toDateOnly = (value: string | null) => value?.slice(0, 10) ?? null;
-
 export const getEmployeePositions = (employeeId: string) => {
   return {
-    promise: withOptionalDelay("slow", async (): Promise<GetEmployeePositionsResponse> => {
-      const response = await customFetch<GetEmployeePositionsResponse>(`${ApiUrl}/employees/${employeeId}/positions`);
-
-      return {
-        employeeId: response.employeeId,
-        positions: response.positions.map((position) => ({
-          ...position,
-          startDate: toDateOnly(position.startDate) ?? position.startDate,
-          endDate: toDateOnly(position.endDate),
-        })),
-      };
-    }),
+    promise: withOptionalDelay("slow", () => customFetch<GetEmployeePositionsResponse>(`${ApiUrl}/employees/${employeeId}/positions`)),
   };
 };
