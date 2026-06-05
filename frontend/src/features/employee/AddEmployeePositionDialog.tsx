@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
+import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange } from "@/utils/workloadPercentForm";
 import { getContractCatalog } from "../employees/api/getContractCatalog";
 import { getProjectCatalog } from "../employees/api/getProjectCatalog";
@@ -221,7 +222,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                           value={field.value}
                           clearable={name !== "startDate"}
                           disabledDate={(date) =>
-                            name === "startDate" ? (endDate ? date >= new Date(endDate) : false) : startDate ? date <= new Date(startDate) : false
+                            name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false
                           }
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />

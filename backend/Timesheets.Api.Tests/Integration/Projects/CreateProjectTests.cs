@@ -112,4 +112,16 @@ public class CreateProjectTests : BaseIntegrationTest
         var response = await Client.PostAsJsonAsync("/api/projects", request);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
+
+    [Fact]
+    public async Task CreateProject_WithUtcMidnightJsonString_ReturnsCreated()
+    {
+        using var content = new StringContent(
+            """{"name":"Utc Midnight Project","registrationNumber":"REG-CREATE-007","startDate":"2026-01-01T00:00:00.000Z","endDate":null}""",
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var response = await Client.PostAsync("/api/projects", content);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+    }
 }

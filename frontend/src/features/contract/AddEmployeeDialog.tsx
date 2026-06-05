@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { parseISO } from "date-fns";
 import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useImmer } from "use-immer";
@@ -12,6 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
+import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 import { getEmployees } from "../employees/api/getEmployees";
 import { addContractEmployee } from "./api/addContractEmployee";
@@ -24,10 +24,10 @@ const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCa
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
 
 const intervalsOverlapInclusive = (aStart: string, aEnd: string | null | undefined, bStart: string, bEnd: string | null | undefined) => {
-  const aS = parseISO(aStart).getTime();
-  const aE = aEnd ? parseISO(aEnd).getTime() : Number.POSITIVE_INFINITY;
-  const bS = parseISO(bStart).getTime();
-  const bE = bEnd ? parseISO(bEnd).getTime() : Number.POSITIVE_INFINITY;
+  const aS = parseCalendarDate(aStart).getTime();
+  const aE = aEnd ? parseCalendarDate(aEnd).getTime() : Number.POSITIVE_INFINITY;
+  const bS = parseCalendarDate(bStart).getTime();
+  const bE = bEnd ? parseCalendarDate(bEnd).getTime() : Number.POSITIVE_INFINITY;
   return aS <= bE && bS <= aE;
 };
 
@@ -220,7 +220,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                           value={field.value}
                           clearable={name !== "startDate"}
                           disabledDate={(date) =>
-                            name === "startDate" ? (endDate ? date >= new Date(endDate) : false) : startDate ? date <= new Date(startDate) : false
+                            name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false
                           }
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />
