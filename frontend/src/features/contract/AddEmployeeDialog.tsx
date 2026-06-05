@@ -220,7 +220,13 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                           value={field.value}
                           clearable={name !== "startDate"}
                           disabledDate={(date) =>
-                            name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false
+                            name === "startDate"
+                              ? endDate
+                                ? date >= parseCalendarDate(endDate)
+                                : false
+                              : startDate
+                                ? date <= parseCalendarDate(startDate)
+                                : false
                           }
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />
