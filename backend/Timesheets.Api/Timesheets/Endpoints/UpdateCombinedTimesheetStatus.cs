@@ -241,7 +241,9 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return TypedResults.NotFound();
         }
 
+        bool isProjectReturn = request.StatusId == TimesheetWorkflowConstants.DraftStatusId;
         bool anyProjectStatusChanged = false;
+        bool anyProjectReturnRecorded = false;
         Guid attendanceStatusBefore = attendanceTimesheet.TimesheetStatusId;
         string attendanceStatusNameBefore = attendanceTimesheet.TimesheetStatus.Name;
 
@@ -257,7 +259,11 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             }
 
             bool statusChanged = currentStatusId != request.StatusId;
-            if (!statusChanged && string.IsNullOrWhiteSpace(request.Comment))
+            bool isReturnWhilePendingReview = isProjectReturn
+                && !statusChanged
+                && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflowConstants.SubmittedStatusId;
+
+            if (!statusChanged && !isReturnWhilePendingReview && string.IsNullOrWhiteSpace(request.Comment))
             {
                 continue;
             }
@@ -265,42 +271,51 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             if (statusChanged)
             {
                 projectTimesheet.TimesheetStatusId = request.StatusId;
-                projectTimesheet.UpdatedAt = DateTime.UtcNow;
                 anyProjectStatusChanged = true;
-
-                if (request.StatusId == TimesheetWorkflowConstants.ApprovedStatusId)
-                {
-                    projectTimesheet.LockedAt = DateTime.UtcNow;
-                    projectTimesheet.LockedBy = changedBy.Id;
-                }
-                else if (request.StatusId == TimesheetWorkflowConstants.DraftStatusId)
-                {
-                    projectTimesheet.LockedAt = null;
-                    projectTimesheet.LockedBy = null;
-                }
             }
 
-            TimesheetStatusHistory history = new()
+            if (isProjectReturn)
             {
-                Id = Guid.NewGuid(),
-                ProjectTimesheetId = projectTimesheet.Id,
-                FromStatusId = statusChanged ? currentStatusId : request.StatusId,
-                ToStatusId = request.StatusId,
-                ChangedByEmployeeId = changedBy.Id,
-                Comment = request.Comment,
-            };
+                projectTimesheet.LockedAt = null;
+                projectTimesheet.LockedBy = null;
+                anyProjectReturnRecorded = true;
+            }
+            else if (request.StatusId == TimesheetWorkflowConstants.ApprovedStatusId)
+            {
+                projectTimesheet.LockedAt = DateTime.UtcNow;
+                projectTimesheet.LockedBy = changedBy.Id;
+            }
 
-            dbContext.TimesheetStatusHistories.Add(history);
+            if (statusChanged || isReturnWhilePendingReview || !string.IsNullOrWhiteSpace(request.Comment))
+            {
+                projectTimesheet.UpdatedAt = DateTime.UtcNow;
+
+                TimesheetStatusHistory history = new()
+                {
+                    Id = Guid.NewGuid(),
+                    ProjectTimesheetId = projectTimesheet.Id,
+                    FromStatusId = statusChanged || isReturnWhilePendingReview
+                        ? TimesheetWorkflowConstants.SubmittedStatusId
+                        : currentStatusId,
+                    ToStatusId = request.StatusId,
+                    ChangedByEmployeeId = changedBy.Id,
+                    Comment = request.Comment,
+                };
+
+                dbContext.TimesheetStatusHistories.Add(history);
+            }
         }
 
         bool attendanceReopened = false;
-        if (anyProjectStatusChanged
-            && request.StatusId == TimesheetWorkflowConstants.DraftStatusId
+        if (isProjectReturn
+            && anyProjectReturnRecorded
             && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflowConstants.SubmittedStatusId)
         {
             attendanceTimesheet.TimesheetStatusId = TimesheetWorkflowConstants.DraftStatusId;
             attendanceTimesheet.UpdatedAt = DateTime.UtcNow;
             attendanceReopened = true;
+
+            await ResetAllProjectsToDraftAsync(scope, dbContext, cancellationToken);
 
             TimesheetStatusHistory attendanceHistory = new()
             {
