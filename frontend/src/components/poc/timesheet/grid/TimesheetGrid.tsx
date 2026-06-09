@@ -27,17 +27,24 @@ const createGridTemplate = (projectCount: number) => {
 
 interface TimesheetGridProps {
   timesheet: Timesheet;
+  readOnly?: boolean;
   onUpdateDay: (index: number, updater: (day: TimesheetDay) => void) => void;
   onToggleProjectLock: (projectId: string) => void;
   className?: string;
 }
 
-export const TimesheetGrid = ({ timesheet, onUpdateDay, onToggleProjectLock, className }: TimesheetGridProps) => {
+export const TimesheetGrid = ({ timesheet, readOnly = false, onUpdateDay, onToggleProjectLock, className }: TimesheetGridProps) => {
   const projectCount = timesheet.projects.length;
   const template = useMemo(() => createGridTemplate(projectCount), [projectCount]);
 
   return (
-    <div className={cn("rounded-md border border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full shadow-sm", className)}>
+    <div
+      className={cn(
+        "rounded-md border border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full shadow-sm",
+        readOnly && "pointer-events-none select-none opacity-95",
+        className,
+      )}
+    >
       <div className="grid w-full min-w-max" style={{ gridTemplateColumns: template }}>
         <TimesheetHeader
           projects={timesheet.projects}

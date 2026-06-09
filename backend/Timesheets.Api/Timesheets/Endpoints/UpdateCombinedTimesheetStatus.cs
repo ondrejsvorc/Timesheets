@@ -174,6 +174,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         (Guid f, Guid t) when f == DraftStatusId && t == SubmittedStatusId => true,
         (Guid f, Guid t) when f == SubmittedStatusId && t == ApprovedStatusId => true,
         (Guid f, Guid t) when f == SubmittedStatusId && t == DraftStatusId => true,
+        (Guid f, Guid t) when f == ApprovedStatusId && t == DraftStatusId => true,
         (Guid f, Guid t) when f == t => true,
         _ => false
     };

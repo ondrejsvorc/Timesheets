@@ -1,6 +1,5 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
-import { getChangeTimesheetStatusOptions } from "./components/poc/timesheet/api/getChangeTimesheetStatusOptions";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { FullscreenLoader } from "./components/shared/layout/FullscreenLoader";
 import { BaseUrl } from "./constants/api";
@@ -206,7 +205,6 @@ export const router = createBrowserRouter([
             employeePromise: getEmployee(employeeId).promise,
             overviewPromise: getCombinedTimesheetOverview(employeeId, year, month).promise,
             timesheetPromise: getCombinedTimesheet(employeeId, year, month).promise,
-            changeTimesheetStatusOptionsPromise: getChangeTimesheetStatusOptions(employeeId, year, month).promise,
           };
         },
       },
