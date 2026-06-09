@@ -2,11 +2,13 @@ import { Check, RotateCcw, Send } from "lucide-react";
 import { useState } from "react";
 import { useRevalidator, useSearchParams } from "react-router";
 import { FullscreenButton, SaveButton, UnlockIcon } from "@/components/shared/buttons/ActionButtons";
+import { MessageAlertDialog } from "@/components/shared/dialogs/MessageAlertDialog";
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { TimesheetStatusIds } from "@/constants/timesheetStatuses";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { Timesheet } from "../Timesheet";
+import { TimesheetValidations } from "../TimesheetValidations";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
 import { updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
@@ -34,6 +36,7 @@ export const TimesheetWorkflowToolbar = ({
   const revalidator = useRevalidator();
   const onWorkflowSuccess = useTimesheetWorkflowRefresh();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
+  const [submitBlockedOpen, setSubmitBlockedOpen] = useState(false);
 
   const employeeId = searchParams.get("employeeId") ?? "";
   const periodLabel = formatMonthYear(overview.month, overview.year);
@@ -56,6 +59,15 @@ export const TimesheetWorkflowToolbar = ({
     );
     revalidator.revalidate();
     onWorkflowSuccess();
+  };
+
+  const handleSubmitClick = () => {
+    const validations = TimesheetValidations.validateTimesheet(timesheet);
+    if (TimesheetValidations.hasErrors(validations)) {
+      setSubmitBlockedOpen(true);
+      return;
+    }
+    setActiveWorkflow("submit");
   };
 
   const handleWorkflowConfirm = async (comment: string, signal: AbortSignal) => {
@@ -84,7 +96,7 @@ export const TimesheetWorkflowToolbar = ({
         <div className="flex flex-wrap items-center gap-3">
           {isDraft && (
             <>
-              <Button type="button" onClick={() => setActiveWorkflow("submit")}>
+              <Button type="button" onClick={handleSubmitClick}>
                 <span className="inline-flex items-center gap-2">
                   <Send className="size-4" />
                   {Texts.submitForApproval}
@@ -133,6 +145,12 @@ export const TimesheetWorkflowToolbar = ({
         periodLabel={periodLabel}
         onClose={() => setActiveWorkflow(null)}
         onConfirm={handleWorkflowConfirm}
+      />
+      <MessageAlertDialog
+        open={submitBlockedOpen}
+        title={Texts.workflowSubmitBlockedTitle}
+        description={Texts.workflowSubmitBlockedDescription}
+        onClose={() => setSubmitBlockedOpen(false)}
       />
     </>
   );

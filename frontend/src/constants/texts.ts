@@ -104,6 +104,9 @@ export const Texts = {
   unlockTimesheet: "Odemknout",
   workflowSubmitTitle: "Odeslat výkaz ke schválení",
   workflowSubmitDescription: "Opravdu chcete odeslat kombinovaný výkaz za {period} ke schválení? Nejdříve se uloží aktuální změny.",
+  workflowSubmitBlockedTitle: "Nelze odeslat ke schválení",
+  workflowSubmitBlockedDescription:
+    "Výkaz obsahuje chyby. Opravte je v tabulce (červeně označená pole) a zkuste to znovu. Upozornění odeslání neblokují.",
   workflowApproveTitle: "Schválit výkaz",
   workflowApproveDescription: "Opravdu chcete schválit kombinovaný výkaz za {period}?",
   workflowReturnTitle: "Vrátit k přepracování",

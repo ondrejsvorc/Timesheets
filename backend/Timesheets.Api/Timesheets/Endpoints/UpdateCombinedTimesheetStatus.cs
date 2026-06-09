@@ -144,6 +144,18 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
                 $"Invalid status transition from '{currentStatusName}' (ID: {currentStatusId}) to '{newStatus.Name}' (ID: {request.StatusId}).");
         }
 
+        if (request.StatusId == TimesheetWorkflowConstants.SubmittedStatusId && currentStatusId != request.StatusId)
+        {
+            await dbContext.Entry(attendanceTimesheet).Reference(t => t.Employee).LoadAsync(cancellationToken);
+            await dbContext.Entry(attendanceTimesheet).Collection(t => t.Days).LoadAsync(cancellationToken);
+
+            TimesheetReview review = AttendanceTimesheetReviewMapper.Review(attendanceTimesheet);
+            if (review.HasErrors)
+            {
+                return TypedResults.BadRequest("Výkaz obsahuje chyby a nelze ho odeslat ke schválení.");
+            }
+        }
+
         if (request.StatusId == TimesheetWorkflowConstants.ApprovedStatusId)
         {
             bool allProjectsApproved = await AreAllProjectsApprovedAsync(scope, dbContext, cancellationToken);

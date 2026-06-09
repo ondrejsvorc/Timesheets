@@ -11,7 +11,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 const initialFilter: EmployeeTimesheetsFilterCriteria = {
   year: CURRENT_YEAR,
   months: null, // "all months" by default
-  onlyUnapproved: true,
+  onlyUnapproved: false,
 };
 
 export const useEmployeeTimesheetsFilter = () => {

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
@@ -27,36 +26,8 @@ public sealed class ReviewTimesheet : IEndpoint
             return TypedResults.NotFound();
         }
 
-        List<AttendanceDay> attendanceDays = timesheet.Days.Select(d =>
-        {
-            List<TimeRange> schedules = string.IsNullOrWhiteSpace(d.Schedules) ? [] : JsonSerializer.Deserialize<List<TimeRange>>(d.Schedules) ?? [];
-
-            return new AttendanceDay(
-                Date: d.Date,
-                ClockIn: d.ClockIn,
-                ClockOut: d.ClockOut,
-                BreakStart: d.BreakStart,
-                BreakEnd: d.BreakEnd,
-                OtherInterruption: null, // TODO
-                Schedules: schedules,
-                IsHoliday: d.IsHoliday,
-                Workload: d.Workload
-            );
-        }).ToList();
-
-        AttendanceTimesheet attendanceTimesheet = new(
-            EmployeePersonalNumber: timesheet.Employee.PersonalNumber, // TODO
-            EmployeeName: timesheet.Employee.FullName,
-            Workload: attendanceDays.FirstOrDefault()?.Workload ?? 0m,
-            Year: timesheet.Year,
-            Month: timesheet.Month,
-            Days: attendanceDays
-        );
-
-        AttendanceTimesheetReviewer reviewer = new();
-        TimesheetReview review = reviewer.Review(attendanceTimesheet);
+        TimesheetReview review = AttendanceTimesheetReviewMapper.Review(timesheet);
 
         return TypedResults.Ok(new Response(review));
     }
 }
-

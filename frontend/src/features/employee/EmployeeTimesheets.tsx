@@ -281,19 +281,24 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
           </PopoverContent>
         </Popover>
       </div>
-      <div className="flex items-center gap-3 pt-6">
-        <Checkbox
-          id="only-unapproved"
-          checked={filter.onlyUnapproved}
-          onCheckedChange={(checked) =>
-            setFilter((draft) => {
-              draft.onlyUnapproved = checked === true;
-            })
-          }
-        />
-        <Label htmlFor="only-unapproved" className="text-sm cursor-pointer">
-          {Texts.onlyMonthsWithUnapprovedTimesheets}
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-sm text-transparent select-none" aria-hidden="true">
+          .
         </Label>
+        <div className="flex h-9 items-center gap-3">
+          <Checkbox
+            id="only-unapproved"
+            checked={filter.onlyUnapproved}
+            onCheckedChange={(checked) =>
+              setFilter((draft) => {
+                draft.onlyUnapproved = checked === true;
+              })
+            }
+          />
+          <Label htmlFor="only-unapproved" className="cursor-pointer text-sm leading-none">
+            {Texts.onlyMonthsWithUnapprovedTimesheets}
+          </Label>
+        </div>
       </div>
     </>
   );
