@@ -1,3 +1,4 @@
+using CzechHolidays;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -31,7 +32,11 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         decimal Workload,
         Guid TimesheetStatusId);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle([AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound>> Handle(
+        [AsParameters] Request request,
+        AppDbContext dbContext,
+        ICzechHolidaysFactory holidaysFactory,
+        CancellationToken cancellationToken)
     {
         var attendanceInfo = await dbContext.AttendanceTimesheets
             .AsNoTracking()
@@ -48,6 +53,14 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         {
             return TypedResults.NotFound();
         }
+
+        await ProjectTimesheetProvisioner.EnsureForEmployeeMonthAsync(
+            request.EmployeeId,
+            request.Year,
+            request.Month,
+            dbContext,
+            holidaysFactory,
+            cancellationToken);
 
         List<ProjectRowSource> projectRows = await dbContext.ProjectTimesheets
             .AsNoTracking()

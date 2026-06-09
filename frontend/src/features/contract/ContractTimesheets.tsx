@@ -1,8 +1,8 @@
-import { CheckCircle, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
+import { cn } from "@/utils/cn";
 import type { EmployeeGroupView, MonthGroupView, TimesheetRowView } from "./api/getContractTimesheets";
 import { buildEmployeesView, buildMonthsView } from "./api/getContractTimesheets";
 import type { GetContractTimesheetsFilterOptionsResponse } from "./api/getContractTimesheetsFilterOptions";
@@ -262,9 +264,33 @@ function workloadPercent(workload: number): string {
   return `${Math.round(workload * 100)}%`;
 }
 
-function ApprovalIcon({ approved }: { approved: boolean }) {
-  return approved ? <CheckCircle className="size-5 text-green-600" aria-hidden /> : <XCircle className="size-5 text-destructive" aria-hidden />;
+const overviewLinkClassName = "text-foreground hover:underline underline-offset-4";
+
+interface EmployeeNameLinkProps {
+  employeeId: string;
+  children: string;
+  className?: string;
 }
+
+const EmployeeNameLink = ({ employeeId, children, className }: EmployeeNameLinkProps) => (
+  <Link to={Routes.employee(employeeId)} className={cn(overviewLinkClassName, className)}>
+    {children}
+  </Link>
+);
+
+interface TimesheetMonthLinkProps {
+  employeeId: string;
+  year: number;
+  month: number;
+  children: string;
+  className?: string;
+}
+
+const TimesheetMonthLink = ({ employeeId, year, month, children, className }: TimesheetMonthLinkProps) => (
+  <Link to={Routes.timesheet(employeeId, year, month)} className={cn(overviewLinkClassName, className)}>
+    {children}
+  </Link>
+);
 
 interface TimesheetsByMonthProps {
   months: MonthGroupView[];
@@ -279,14 +305,17 @@ const TimesheetsByMonth = ({ months, isLoading }: TimesheetsByMonthProps) => {
     <div className="space-y-8">
       {months.map((monthGroup) => (
         <div key={`${monthGroup.year}-${monthGroup.month}`} className="space-y-6">
-          <div className="font-medium text-foreground">{formatMonthYear(monthGroup.month, monthGroup.year)}</div>
+          <div className="font-medium text-muted-foreground">{formatMonthYear(monthGroup.month, monthGroup.year)}</div>
           {monthGroup.items.map((employee) => (
             <div key={employee.id} className="rounded-md border p-4">
-              <div className="mb-3 flex items-center gap-2 font-medium text-foreground">
-                <ApprovalIcon approved={employee.allTimesheetsApproved} />
-                <span>
-                  {employee.fullName} · {employee.personalNumber} · {employee.employeeType}
+              <div className="mb-3 flex flex-wrap items-center gap-2 font-medium">
+                <EmployeeNameLink employeeId={employee.id}>{employee.fullName}</EmployeeNameLink>
+                <span className="text-muted-foreground" aria-hidden>
+                  ·
                 </span>
+                <TimesheetMonthLink employeeId={employee.id} year={monthGroup.year} month={monthGroup.month}>
+                  {formatMonthYear(monthGroup.month, monthGroup.year)}
+                </TimesheetMonthLink>
               </div>
               {employee.timesheets.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{Texts.noItems}</p>
@@ -295,8 +324,8 @@ const TimesheetsByMonth = ({ months, isLoading }: TimesheetsByMonthProps) => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>{Texts.position}</TableHead>
-                      <TableHead>{Texts.workload}</TableHead>
                       <TableHead>{Texts.timesheetStatus}</TableHead>
+                      <TableHead>{Texts.workload}</TableHead>
                       <TableHead>{Texts.actions}</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -321,10 +350,12 @@ interface TimesheetItemRowProps {
 
 function TimesheetItemRow({ item }: TimesheetItemRowProps) {
   return (
-    <TableRow className="cursor-pointer">
+    <TableRow>
       <TableCell>{item.position}</TableCell>
+      <TableCell>
+        <TimesheetStatusBadge status={item.status} />
+      </TableCell>
       <TableCell>{workloadPercent(item.workload)}</TableCell>
-      <TableCell>{item.status}</TableCell>
       <TableCell>
         <ActionDropdownMenu>
           <EditAction onClick={() => {}} />
@@ -367,26 +398,26 @@ const TimesheetsByEmployee = ({ employees, isLoading }: TimesheetsByEmployeeProp
         const months = groupTimesheetsByMonth(emp.timesheets);
         return (
           <div key={emp.id} className="space-y-6">
-            <div className="font-medium text-foreground">
-              {emp.fullName} · {emp.personalNumber} · {emp.employeeType}
-            </div>
+            <EmployeeNameLink employeeId={emp.id} className="font-medium">
+              {emp.fullName}
+            </EmployeeNameLink>
             {months.length === 0 ? (
               <p className="text-sm text-muted-foreground">{Texts.noItems}</p>
             ) : (
               months.map((monthGroup) => {
-                const monthApproved = monthGroup.items.every((item) => item.status === Texts.statusApproved);
                 return (
                   <div key={`${monthGroup.year}-${monthGroup.month}`} className="rounded-md border p-4">
-                    <div className="mb-3 flex items-center gap-2 font-medium text-foreground">
-                      <ApprovalIcon approved={monthApproved} />
-                      {formatMonthYear(monthGroup.month, monthGroup.year)}
+                    <div className="mb-3 font-medium">
+                      <TimesheetMonthLink employeeId={emp.id} year={monthGroup.year} month={monthGroup.month}>
+                        {formatMonthYear(monthGroup.month, monthGroup.year)}
+                      </TimesheetMonthLink>
                     </div>
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>{Texts.position}</TableHead>
-                          <TableHead>{Texts.workload}</TableHead>
                           <TableHead>{Texts.timesheetStatus}</TableHead>
+                          <TableHead>{Texts.workload}</TableHead>
                           <TableHead>{Texts.actions}</TableHead>
                         </TableRow>
                       </TableHeader>

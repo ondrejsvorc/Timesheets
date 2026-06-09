@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
+using Timesheets.Api.Timesheets;
 
 namespace Timesheets.Api.Contracts.Endpoints;
 
@@ -110,7 +111,7 @@ public sealed class AddContractEmployee : IEndpoint
 
         dbContext.ContractEmployees.Add(newContractEmployee);
 
-        await EnsureTimesheetsForAssignmentAsync(id, newContractEmployee.Id, request, dbContext, holidaysFactory, cancellationToken);
+        await EnsureTimesheetsForAssignmentAsync(newContractEmployee, request, dbContext, holidaysFactory, cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -135,12 +136,13 @@ public sealed class AddContractEmployee : IEndpoint
         return TypedResults.Created($"/contracts/{id}/employees/{request.EmployeeId}", response);
     }
 
-    private static async Task EnsureTimesheetsForAssignmentAsync(Guid contractId, Guid contractEmployeeId, Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)
+    private static async Task EnsureTimesheetsForAssignmentAsync(
+        ContractEmployee contractEmployee,
+        Request request,
+        AppDbContext dbContext,
+        ICzechHolidaysFactory holidaysFactory,
+        CancellationToken cancellationToken)
     {
-        TimesheetStatus draftStatus = await dbContext.TimesheetStatuses
-            .AsNoTracking()
-            .SingleAsync(s => s.Name == "Rozpracovaný", cancellationToken);
-
         DateTime start = request.StartDate.Kind == DateTimeKind.Utc ? request.StartDate : DateTime.SpecifyKind(request.StartDate, DateTimeKind.Utc);
         DateTime end = request.EndDate.HasValue
             ? (request.EndDate.Value.Kind == DateTimeKind.Utc ? request.EndDate.Value : DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc))
@@ -151,52 +153,25 @@ public sealed class AddContractEmployee : IEndpoint
 
         while (cursor <= last)
         {
-            int year = cursor.Year;
-            int month = cursor.Month;
+            Data.Models.ProjectTimesheet? existing = await dbContext.ProjectTimesheets
+                .FirstOrDefaultAsync(
+                    t => t.ContractEmployeeId == contractEmployee.Id && t.Year == cursor.Year && t.Month == cursor.Month,
+                    cancellationToken);
 
-            // Ensure ProjectTimesheet (per contract employee + month)
-            ProjectTimesheet? projectTimesheet = await dbContext.ProjectTimesheets
-                .FirstOrDefaultAsync(t => t.ContractEmployeeId == contractEmployeeId && t.Year == year && t.Month == month, cancellationToken);
-
-            if (projectTimesheet is null)
+            if (existing is null)
             {
-                HashSet<DateOnly> holidays = holidaysFactory.Create(year).Select(h => h.Date).ToHashSet();
-                ProjectTimesheet pt = new()
-                {
-                    Id = Guid.NewGuid(),
-                    EmployeeId = request.EmployeeId,
-                    ContractId = contractId,
-                    ContractEmployeeId = contractEmployeeId,
-                    TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000020"),
-                    Year = year,
-                    Month = month,
-                    Workload = request.Workload,
-                    CreatedAt = DateTime.UtcNow,
-                };
-
-                for (int day = 1; day <= DateTime.DaysInMonth(year, month); day++)
-                {
-                    DateTime date = new(year, month, day, 0, 0, 0, DateTimeKind.Utc);
-                    bool isHoliday = holidays.Contains(DateOnly.FromDateTime(date));
-                    pt.Days.Add(new ProjectDay
-                    {
-                        Id = Guid.NewGuid(),
-                        ProjectTimesheetId = pt.Id,
-                        Date = date,
-                        Hours = 0m,
-                        IsHoliday = isHoliday,
-                        Workload = request.Workload,
-                        HoursObligation = 0m,
-                    });
-                }
-
-                dbContext.ProjectTimesheets.Add(pt);
+                await ProjectTimesheetProvisioner.EnsureForAssignmentMonthAsync(
+                    contractEmployee,
+                    cursor.Year,
+                    cursor.Month,
+                    dbContext,
+                    holidaysFactory,
+                    cancellationToken);
             }
             else
             {
-                // keep workload aligned with assignment
-                projectTimesheet.Workload = request.Workload;
-                projectTimesheet.UpdatedAt = DateTime.UtcNow;
+                existing.Workload = request.Workload;
+                existing.UpdatedAt = DateTime.UtcNow;
             }
 
             cursor = cursor.AddMonths(1);

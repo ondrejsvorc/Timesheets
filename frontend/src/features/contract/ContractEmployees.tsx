@@ -112,9 +112,7 @@ interface EmployeeSectionProps {
 const EmployeeSection = ({ contractId, employee, onDeleteRequested }: EmployeeSectionProps) => {
   return (
     <div className="rounded-md border p-4">
-      <div className="mb-3 font-medium text-foreground">
-        {employee.fullName} · {employee.personalNumber} · {employee.employeeType}
-      </div>
+      <div className="mb-3 font-medium text-foreground">{employee.fullName}</div>
       {employee.positions.length === 0 ? (
         <p className="text-sm text-muted-foreground">{Texts.noItems}</p>
       ) : (

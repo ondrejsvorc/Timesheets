@@ -1,8 +1,10 @@
 using System.Text.Json;
+using CzechHolidays;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
+using Timesheets.Api.Timesheets;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
 
@@ -20,7 +22,11 @@ public sealed class GetCombinedTimesheet : IEndpoint
     private sealed record ProjectDaySource(DateTime Date, decimal Hours, bool IsHoliday);
     private sealed record ProjectTimesheetSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, Guid? LockedBy, List<ProjectDaySource> Days);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle([AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound>> Handle(
+        [AsParameters] Request request,
+        AppDbContext dbContext,
+        ICzechHolidaysFactory holidaysFactory,
+        CancellationToken cancellationToken)
     {
         var attendanceTimesheet = await dbContext.AttendanceTimesheets
             .AsNoTracking()
@@ -36,6 +42,14 @@ public sealed class GetCombinedTimesheet : IEndpoint
         {
             return TypedResults.NotFound();
         }
+
+        await ProjectTimesheetProvisioner.EnsureForEmployeeMonthAsync(
+            request.EmployeeId,
+            request.Year,
+            request.Month,
+            dbContext,
+            holidaysFactory,
+            cancellationToken);
 
         List<ProjectTimesheetSource> projectTimesheets = await (
             from timesheet in dbContext.ProjectTimesheets.AsNoTracking()

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using CzechHolidays;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
@@ -231,7 +232,7 @@ public sealed class AttendanceTimesheetImportService(
     private static bool HasSupportedExtension(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() is ".xls" or ".xlsx";
 }
 
-public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext) : IAttendanceTimesheetPersistenceService
+public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory) : IAttendanceTimesheetPersistenceService
 {
     // Matches seeded contract "Kontrakt Alpha-1", where Jan Novak is also assigned as manager.
     private static readonly Guid DefaultImportContractId = Guid.Parse("30000000-0000-0000-0000-000000000001");
@@ -242,6 +243,14 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
             .AsNoTracking()
             .Select(i => i.Name)
             .ToHashSetAsync(StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        await ProjectTimesheetProvisioner.EnsureForEmployeeMonthAsync(
+            employeeId,
+            importedTimesheet.Year,
+            importedTimesheet.Month,
+            dbContext,
+            holidaysFactory,
+            cancellationToken);
 
         decimal projectWorkload = await dbContext.ProjectTimesheets
             .AsNoTracking()
