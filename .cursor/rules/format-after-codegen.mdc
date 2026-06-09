@@ -1,0 +1,34 @@
+---
+description: Run formatters after generating or editing code
+alwaysApply: true
+---
+
+# Format After Code Generation
+
+After creating or modifying code, run formatters before finishing so CI passes.
+
+## Frontend (`frontend/`)
+
+```bash
+cd frontend && npx biome check --write .
+```
+
+Verify with:
+
+```bash
+cd frontend && npx biome check .
+```
+
+## Backend (`backend/`)
+
+```bash
+cd backend && dotnet format Timesheets.slnx
+```
+
+Verify with:
+
+```bash
+cd backend && dotnet format Timesheets.slnx --verify-no-changes
+```
+
+Apply this in the same turn as the code changes — do not leave formatting for the user.

@@ -18,8 +18,6 @@ export const getTimesheetCatalog = (employeeId: string, year: number, month: num
   });
 
   return {
-    promise: withOptionalDelay("fast", () =>
-      customFetch<GetTimesheetCatalogResponse>(`${ApiUrl}/timesheets/catalog?${params.toString()}`),
-    ),
+    promise: withOptionalDelay("fast", () => customFetch<GetTimesheetCatalogResponse>(`${ApiUrl}/timesheets/catalog?${params.toString()}`)),
   };
 };

@@ -1,6 +1,6 @@
 import { Suspense, useMemo } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
 import { useForm } from "react-hook-form";
+import { Await, useAsyncValue, useLoaderData } from "react-router";
 import { DialogCancelButton } from "@/components/shared/buttons/DialogButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
@@ -41,10 +41,7 @@ const ChangeTimesheetStatusForm = ({ onClose }: { onClose: () => void }) => {
     [options.projectTimesheets],
   );
 
-  const statusItems = useMemo<ComboBoxItem[]>(
-    () => options.statuses.map((status) => ({ value: status.id, label: status.name })),
-    [options.statuses],
-  );
+  const statusItems = useMemo<ComboBoxItem[]>(() => options.statuses.map((status) => ({ value: status.id, label: status.name })), [options.statuses]);
 
   const form = useForm<FormValues>({
     defaultValues: {
