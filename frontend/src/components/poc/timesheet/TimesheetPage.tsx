@@ -1,4 +1,4 @@
-import { Suspense, startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { BackButton } from "@/components/shared/buttons/ActionButtons";
@@ -17,6 +17,7 @@ import { updateTimesheet } from "./api/updateTimesheet";
 import { TimesheetComments } from "./comments/TimesheetComments";
 import { TimesheetGrid } from "./grid/TimesheetGrid";
 import { TimesheetsOverview } from "./TimesheetsOverview";
+import { TimesheetWorkflowRefreshProvider } from "./TimesheetWorkflowRefreshContext";
 import { TimesheetWorkflowToolbar } from "./TimesheetWorkflowToolbar";
 
 interface TimesheetPageLoaderData {
@@ -27,9 +28,11 @@ interface TimesheetPageLoaderData {
 
 export const TimesheetPage = () => {
   const loaderData = useLoaderData() as TimesheetPageLoaderData;
+  const [workflowRefreshKey, setWorkflowRefreshKey] = useState(0);
+  const onWorkflowSuccess = useMemo(() => () => setWorkflowRefreshKey((current) => current + 1), []);
 
   return (
-    <>
+    <TimesheetWorkflowRefreshProvider value={onWorkflowSuccess}>
       <div>
         <Suspense fallback={<GenericSkeleton />}>
           <Await resolve={loaderData.employeePromise}>
@@ -46,10 +49,10 @@ export const TimesheetPage = () => {
       </div>
       <Suspense fallback={<GenericSkeleton />}>
         <Await resolve={loaderData.timesheetPromise}>
-          <TimesheetPageContent />
+          <TimesheetPageContent workflowRefreshKey={workflowRefreshKey} />
         </Await>
       </Suspense>
-    </>
+    </TimesheetWorkflowRefreshProvider>
   );
 };
 
@@ -81,22 +84,27 @@ const CombinedTimesheetSubHeader = () => {
   );
 };
 
-const TimesheetPageContent = () => {
+interface TimesheetPageContentProps {
+  workflowRefreshKey: number;
+}
+
+const TimesheetPageContent = ({ workflowRefreshKey }: TimesheetPageContentProps) => {
   const initialTimesheet = useAsyncValue() as Timesheet;
   const { overviewPromise } = useLoaderData() as TimesheetPageLoaderData;
 
   return (
     <Await resolve={overviewPromise}>
-      <TimesheetEditor initialTimesheet={initialTimesheet} />
+      <TimesheetEditor initialTimesheet={initialTimesheet} workflowRefreshKey={workflowRefreshKey} />
     </Await>
   );
 };
 
 interface TimesheetEditorProps {
   initialTimesheet: Timesheet;
+  workflowRefreshKey: number;
 }
 
-const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
+const TimesheetEditor = ({ initialTimesheet, workflowRefreshKey }: TimesheetEditorProps) => {
   const overview = useAsyncValue() as GetCombinedTimesheetOverviewResponse;
   const [timesheet, setTimesheet] = useImmer<Timesheet>(initialTimesheet);
   const [searchParams] = useSearchParams();
@@ -104,7 +112,6 @@ const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [commentsRefreshKey, setCommentsRefreshKey] = useState(0);
   const didMeasureStablePaintRef = useRef(false);
 
   const isEditable = overview.status === Texts.statusInProgress;
@@ -225,7 +232,6 @@ const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
           isFullscreen={isFullscreen}
           onToggleFullscreen={() => setIsFullscreen((current) => !current)}
           onSave={handleSave}
-          onWorkflowSuccess={() => setCommentsRefreshKey((current) => current + 1)}
           onClearAttendanceFields={handleClearAttendanceFields}
         />
         {showGrid ? (
@@ -242,7 +248,7 @@ const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
           </div>
         )}
       </div>
-      {showComments && <TimesheetComments refreshKey={commentsRefreshKey} />}
+      {showComments && <TimesheetComments refreshKey={workflowRefreshKey} />}
     </>
   );
 };

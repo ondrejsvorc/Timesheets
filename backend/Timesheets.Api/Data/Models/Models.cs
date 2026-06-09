@@ -191,6 +191,7 @@ public sealed class ProjectTimesheet
     public Guid EmployeeId { get; set; }
     public Guid ContractId { get; set; }
     public Guid ContractEmployeeId { get; set; }
+    public Guid TimesheetStatusId { get; set; }
     public int Year { get; set; }
     public int Month { get; set; }
     public decimal Workload { get; set; }
@@ -199,6 +200,7 @@ public sealed class ProjectTimesheet
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 
+    public TimesheetStatus TimesheetStatus { get; set; } = null!;
     public ICollection<ProjectDay> Days { get; set; } = [];
     public ICollection<TimesheetStatusHistory> StatusHistory { get; set; } = [];
     public ICollection<TimesheetComment> Comments { get; set; } = [];

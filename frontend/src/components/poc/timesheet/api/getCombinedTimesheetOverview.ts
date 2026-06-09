@@ -1,6 +1,8 @@
 import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
 
 export interface CombinedTimesheetOverviewItem {
+  timesheetId: string | null;
+  kind: "core" | "project";
   label: string;
   contractName: string | null;
   position: string | null;

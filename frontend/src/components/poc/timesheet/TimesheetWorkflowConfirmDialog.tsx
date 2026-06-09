@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Texts } from "@/constants/texts";
 
-export type TimesheetWorkflowAction = "submit" | "approve" | "return" | "unlock";
+export type TimesheetWorkflowAction = "submit" | "finalApprove" | "returnWhole" | "unlock" | "approveProject" | "returnProject";
 
 interface WorkflowActionConfig {
   title: string;
@@ -16,33 +16,46 @@ interface WorkflowActionConfig {
   confirmLabel: string;
 }
 
-const getWorkflowActionConfig = (action: TimesheetWorkflowAction, periodLabel: string): WorkflowActionConfig => {
-  const replacePeriod = (template: string) => template.replace("{period}", periodLabel);
+const replaceTokens = (template: string, periodLabel: string, targetLabel?: string) =>
+  template.replace("{period}", periodLabel).replace("{target}", targetLabel ?? "");
 
+const getWorkflowActionConfig = (action: TimesheetWorkflowAction, periodLabel: string, targetLabel?: string): WorkflowActionConfig => {
   switch (action) {
     case "submit":
       return {
         title: Texts.workflowSubmitTitle,
-        description: replacePeriod(Texts.workflowSubmitDescription),
+        description: replaceTokens(Texts.workflowSubmitDescription, periodLabel),
         confirmLabel: Texts.submitForApproval,
       };
-    case "approve":
+    case "finalApprove":
       return {
-        title: Texts.workflowApproveTitle,
-        description: replacePeriod(Texts.workflowApproveDescription),
+        title: Texts.workflowFinalApproveTitle,
+        description: replaceTokens(Texts.workflowFinalApproveDescription, periodLabel),
         confirmLabel: Texts.approveTimesheet,
       };
-    case "return":
+    case "returnWhole":
       return {
-        title: Texts.workflowReturnTitle,
-        description: replacePeriod(Texts.workflowReturnDescription),
+        title: Texts.workflowReturnWholeTitle,
+        description: replaceTokens(Texts.workflowReturnWholeDescription, periodLabel),
         confirmLabel: Texts.returnToDraft,
       };
     case "unlock":
       return {
         title: Texts.workflowUnlockTitle,
-        description: replacePeriod(Texts.workflowUnlockDescription),
+        description: replaceTokens(Texts.workflowUnlockDescription, periodLabel),
         confirmLabel: Texts.unlockTimesheet,
+      };
+    case "approveProject":
+      return {
+        title: Texts.workflowApproveProjectTitle,
+        description: replaceTokens(Texts.workflowApproveProjectDescription, periodLabel, targetLabel),
+        confirmLabel: Texts.approveProjectPart,
+      };
+    case "returnProject":
+      return {
+        title: Texts.workflowReturnProjectTitle,
+        description: replaceTokens(Texts.workflowReturnProjectDescription, periodLabel, targetLabel),
+        confirmLabel: Texts.returnProjectPart,
       };
   }
 };
@@ -50,14 +63,15 @@ const getWorkflowActionConfig = (action: TimesheetWorkflowAction, periodLabel: s
 interface TimesheetWorkflowConfirmDialogProps {
   action: TimesheetWorkflowAction | null;
   periodLabel: string;
+  targetLabel?: string;
   onClose: () => void;
   onConfirm: (comment: string, signal: AbortSignal) => Promise<void>;
 }
 
-export const TimesheetWorkflowConfirmDialog = ({ action, periodLabel, onClose, onConfirm }: TimesheetWorkflowConfirmDialogProps) => {
+export const TimesheetWorkflowConfirmDialog = ({ action, periodLabel, targetLabel, onClose, onConfirm }: TimesheetWorkflowConfirmDialogProps) => {
   const [comment, setComment] = useState("");
   const open = action !== null;
-  const config = action ? getWorkflowActionConfig(action, periodLabel) : null;
+  const config = action ? getWorkflowActionConfig(action, periodLabel, targetLabel) : null;
 
   useEffect(() => {
     if (!open) {

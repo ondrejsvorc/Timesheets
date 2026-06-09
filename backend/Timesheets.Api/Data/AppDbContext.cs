@@ -467,6 +467,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .IsRequired()
             .HasPrecision(5, 2);
 
+        builder.Property(pt => pt.TimesheetStatusId)
+            .IsRequired();
+
+        builder.HasOne(pt => pt.TimesheetStatus)
+            .WithMany()
+            .HasForeignKey(pt => pt.TimesheetStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.Property(pt => pt.LockedAt);
         builder.Property(pt => pt.LockedBy);
 

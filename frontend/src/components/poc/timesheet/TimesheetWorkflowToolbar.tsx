@@ -10,6 +10,8 @@ import type { Timesheet } from "../Timesheet";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
 import { updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
+import { useTimesheetWorkflowRefresh } from "./TimesheetWorkflowRefreshContext";
+import { areAllProjectsApproved } from "./timesheetWorkflowUtils";
 
 interface TimesheetWorkflowToolbarProps {
   timesheet: Timesheet;
@@ -17,7 +19,6 @@ interface TimesheetWorkflowToolbarProps {
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   onSave: (signal: AbortSignal) => Promise<void>;
-  onWorkflowSuccess: () => void;
   onClearAttendanceFields: () => void;
 }
 
@@ -27,11 +28,11 @@ export const TimesheetWorkflowToolbar = ({
   isFullscreen,
   onToggleFullscreen,
   onSave,
-  onWorkflowSuccess,
   onClearAttendanceFields,
 }: TimesheetWorkflowToolbarProps) => {
   const [searchParams] = useSearchParams();
   const revalidator = useRevalidator();
+  const onWorkflowSuccess = useTimesheetWorkflowRefresh();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
 
   const employeeId = searchParams.get("employeeId") ?? "";
@@ -39,8 +40,9 @@ export const TimesheetWorkflowToolbar = ({
   const isDraft = overview.status === Texts.statusInProgress;
   const isSubmitted = overview.status === Texts.statusPendingApproval;
   const isApproved = overview.status === Texts.statusApproved;
+  const allProjectsApproved = areAllProjectsApproved(overview);
 
-  const changeStatus = async (statusId: string, comment: string, signal: AbortSignal) => {
+  const changeAttendanceStatus = async (statusId: string, comment: string, signal: AbortSignal) => {
     await updateCombinedTimesheetStatus(
       {
         employeeId,
@@ -60,16 +62,16 @@ export const TimesheetWorkflowToolbar = ({
     switch (activeWorkflow) {
       case "submit":
         await onSave(signal);
-        await changeStatus(TimesheetStatusIds.submitted, comment, signal);
+        await changeAttendanceStatus(TimesheetStatusIds.submitted, comment, signal);
         break;
-      case "approve":
-        await changeStatus(TimesheetStatusIds.approved, comment, signal);
+      case "finalApprove":
+        await changeAttendanceStatus(TimesheetStatusIds.approved, comment, signal);
         break;
-      case "return":
-        await changeStatus(TimesheetStatusIds.draft, comment, signal);
+      case "returnWhole":
+        await changeAttendanceStatus(TimesheetStatusIds.draft, comment, signal);
         break;
       case "unlock":
-        await changeStatus(TimesheetStatusIds.draft, comment, signal);
+        await changeAttendanceStatus(TimesheetStatusIds.draft, comment, signal);
         break;
       default:
         break;
@@ -95,13 +97,15 @@ export const TimesheetWorkflowToolbar = ({
           )}
           {isSubmitted && (
             <>
-              <Button type="button" onClick={() => setActiveWorkflow("approve")}>
-                <span className="inline-flex items-center gap-2">
-                  <Check className="size-4" />
-                  {Texts.approveTimesheet}
-                </span>
-              </Button>
-              <Button type="button" variant="outline" onClick={() => setActiveWorkflow("return")}>
+              {allProjectsApproved && (
+                <Button type="button" onClick={() => setActiveWorkflow("finalApprove")}>
+                  <span className="inline-flex items-center gap-2">
+                    <Check className="size-4" />
+                    {Texts.approveTimesheet}
+                  </span>
+                </Button>
+              )}
+              <Button type="button" variant="outline" onClick={() => setActiveWorkflow("returnWhole")}>
                 <span className="inline-flex items-center gap-2">
                   <RotateCcw className="size-4" />
                   {Texts.returnToDraft}

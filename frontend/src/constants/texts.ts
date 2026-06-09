@@ -111,6 +111,17 @@ export const Texts = {
   workflowUnlockTitle: "Odemknout výkaz",
   workflowUnlockDescription:
     "Opravdu chcete odemknout schválený výkaz za {period}? Výkaz bude znovu upravitelný bez opakování celého schvalovacího procesu.",
+  workflowFinalApproveTitle: "Schválit celý výkaz",
+  workflowFinalApproveDescription: "Opravdu chcete finálně schválit kombinovaný výkaz za {period}? Všechny projektové části jsou již schválené.",
+  workflowReturnWholeTitle: "Vrátit celý výkaz k přepracování",
+  workflowReturnWholeDescription: "Opravdu chcete vrátit celý kombinovaný výkaz za {period} k přepracování? Projektové části se také odemknou.",
+  workflowApproveProjectTitle: "Schválit projektovou část",
+  workflowApproveProjectDescription: "Opravdu chcete schválit část „{target}“ výkazu za {period}? Sloupec zakázky se uzamkne.",
+  workflowReturnProjectTitle: "Vrátit projektovou část",
+  workflowReturnProjectDescription:
+    "Opravdu chcete vrátit část „{target}“ výkazu za {period} k přepracování? Celý výkaz se vrátí do stavu rozpracovaný.",
+  approveProjectPart: "Schválit",
+  returnProjectPart: "Vrátit",
   timesheetPicker: "Výkaz(y)",
   comment: "Komentář",
   enterFullscreen: "Fullscreen",

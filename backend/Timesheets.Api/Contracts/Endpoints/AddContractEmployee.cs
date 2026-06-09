@@ -167,6 +167,7 @@ public sealed class AddContractEmployee : IEndpoint
                     EmployeeId = request.EmployeeId,
                     ContractId = contractId,
                     ContractEmployeeId = contractEmployeeId,
+                    TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000020"),
                     Year = year,
                     Month = month,
                     Workload = request.Workload,
