@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -12,9 +14,17 @@ public sealed class GetCurrentUserPermissions : IEndpoint
         app.MapGet("/currentUserPermissions", Handle)
            .WithSummary("Get Currently Authenticated User Permissions");
 
-    public sealed record Response(bool IsGlobalManager, IReadOnlyList<Guid> ProjectManagerOf, IReadOnlyList<Guid> ContractManagerOf);
+    public sealed record Response(
+        bool IsRoleManager,
+        bool IsGlobalManager,
+        IReadOnlyList<Guid> ProjectManagerOf,
+        IReadOnlyList<Guid> ContractManagerOf);
 
-    private static async Task<IResult> Handle(HttpContext httpContext, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<IResult> Handle(
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
         ClaimsPrincipal currentUser = httpContext.User;
         if (!currentUser.IsAuthenticated())
@@ -47,6 +57,7 @@ public sealed class GetCurrentUserPermissions : IEndpoint
             .ToListAsync(cancellationToken);
 
         Response response = new Response(
+            IsRoleManager: RoleManagerAuthorization.IsRoleManager(employee.Email, administrationOptions.Value),
             IsGlobalManager: employee.IsGlobalManager,
             ProjectManagerOf: projectManagerOf,
             ContractManagerOf: contractManagerOf

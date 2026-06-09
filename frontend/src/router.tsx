@@ -1,10 +1,12 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
+import { type CurrentUserPermissions, getCurrentUserPermissions } from "./auth/api/getCurrentUserPermissions";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { FullscreenLoader } from "./components/shared/layout/FullscreenLoader";
 import { BaseUrl } from "./constants/api";
 import { Routes } from "./constants/routes";
 import { Texts } from "./constants/texts";
+import { EmployeeRolesPage } from "./features/admin/EmployeeRolesPage";
 import { getContractEmployees } from "./features/contract/api/getContractEmployees";
 import { getProjectContract } from "./features/contract/api/getProjectContract";
 import { ContractEmployees } from "./features/contract/ContractEmployees";
@@ -40,20 +42,29 @@ export type CurrentUser = {
   titleAfter: string | null;
 };
 
-const requireAuth = async ({ request }: { request: Request }) => {
+export type RootLoaderData = {
+  currentUser: CurrentUser | null;
+  permissions: CurrentUserPermissions | null;
+};
+
+const requireAuth = async ({ request }: { request: Request }): Promise<RootLoaderData> => {
   const returnTo = new URL(request.url).pathname + new URL(request.url).search;
 
   try {
-    const response = await fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" });
-    if (response.ok) {
-      const currentUser = (await response.json()) as CurrentUser;
-      return { currentUser };
+    const [userResponse, permissionsResult] = await Promise.all([
+      fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" }),
+      getCurrentUserPermissions().catch(() => null),
+    ]);
+
+    if (userResponse.ok) {
+      const currentUser = (await userResponse.json()) as CurrentUser;
+      return { currentUser, permissions: permissionsResult };
     }
 
     // Only redirect to OIDC login when we're actually unauthenticated/forbidden.
     // Other statuses (e.g. 404 "Employee not found") should not cause a login loop.
-    if (response.status !== 401 && response.status !== 403) {
-      return { currentUser: null };
+    if (userResponse.status !== 401 && userResponse.status !== 403) {
+      return { currentUser: null, permissions: permissionsResult };
     }
   } catch {
     // ignore and fall back to login redirect
@@ -165,6 +176,11 @@ export const router = createBrowserRouter([
       {
         path: "employees",
         element: <EmployeesPage />,
+        loader: getEmployees,
+      },
+      {
+        path: "employees/roles",
+        element: <EmployeeRolesPage />,
         loader: getEmployees,
       },
       {

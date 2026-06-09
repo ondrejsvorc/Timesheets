@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 using Timesheets.Api.Notifications;
@@ -235,6 +236,7 @@ public static class ConfigureServices
 
     private static void AddAppServices(this WebApplicationBuilder builder)
     {
+        builder.Services.Configure<AdministrationOptions>(builder.Configuration.GetSection(AdministrationOptions.SectionName));
         builder.Services.AddScoped<UserSynchronizer>();
         builder.Services.AddSingleton<ICellParser, CellParser>();
         builder.Services.AddSingleton<IAttendanceTimesheetMetadataReader, AttendanceTimesheetMetadataReader>();

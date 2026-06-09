@@ -47,8 +47,7 @@ public class ContractManagerLifecycleTests : BaseIntegrationTest
             Guid.Parse("00000000-0000-0000-0000-000000000001"),
             "8888",
             "Jane Manager",
-            "jane.manager@contracts.com",
-            false
+            "jane.manager@contracts.com"
         );
         var employeeResponse = await Client.PostAsJsonAsync("/api/employees", createEmployeeRequest);
         Assert.Equal(HttpStatusCode.Created, employeeResponse.StatusCode);

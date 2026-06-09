@@ -15,7 +15,7 @@ public sealed class CreateEmployee : IEndpoint
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(Guid EmployeeTypeId, string PersonalNumber, string FullName, string Email, bool IsGlobalManager);
+    public sealed record Request(Guid EmployeeTypeId, string PersonalNumber, string FullName, string Email);
     public sealed record Response(Guid Id);
     public sealed class Validator : AbstractValidator<Request> { }
 
@@ -28,7 +28,7 @@ public sealed class CreateEmployee : IEndpoint
             PersonalNumber = request.PersonalNumber,
             FullName = request.FullName,
             Email = request.Email,
-            IsGlobalManager = request.IsGlobalManager,
+            IsGlobalManager = false,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null
         };

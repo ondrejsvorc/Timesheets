@@ -1,5 +1,7 @@
 import { Bell, User } from "lucide-react";
 import { Link, useRouteLoaderData } from "react-router";
+import { useEffectivePermissions } from "@/auth/RoleViewContext";
+import { RoleViewSwitcher } from "@/components/shared/dev/RoleViewSwitcher";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,12 +14,14 @@ import {
 import { BaseUrl } from "@/constants/api";
 import { Routes } from "@/constants/routes";
 import { Texts } from "../../../constants/texts";
-import type { CurrentUser } from "../../../router";
+import type { RootLoaderData } from "../../../router";
 
 export const AppHeader = () => {
   const handleNotificationsClick = () => {};
-  const rootData = useRouteLoaderData("root") as { currentUser: CurrentUser | null } | undefined;
+  const rootData = useRouteLoaderData("root") as RootLoaderData | undefined;
   const currentUser = rootData?.currentUser ?? null;
+  const { permissions } = useEffectivePermissions();
+  const isRoleManager = permissions?.isRoleManager ?? false;
 
   const handleLogout = () => {
     window.location.assign(`${BaseUrl}/auth/logout`);
@@ -45,10 +49,19 @@ export const AppHeader = () => {
           >
             {Texts.employees}
           </Link>
+          {isRoleManager && (
+            <Link
+              to={Routes.employeeRoles()}
+              className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
+            >
+              {Texts.employeeRoles}
+            </Link>
+          )}
         </nav>
 
         {/* Actions */}
         <div className="flex items-center gap-1">
+          <RoleViewSwitcher />
           <Button
             variant="ghost"
             size="icon"

@@ -15,7 +15,7 @@ public sealed class UpdateEmployee : IEndpoint
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(Guid EmployeeTypeId, string PersonalNumber, string FullName, string Email, bool IsGlobalManager);
+    public sealed record Request(Guid EmployeeTypeId, string PersonalNumber, string FullName, string Email);
     public sealed class Validator : AbstractValidator<Request> { }
 
     private static async Task<Results<NoContent, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -27,7 +27,6 @@ public sealed class UpdateEmployee : IEndpoint
                 .SetProperty(e => e.PersonalNumber, request.PersonalNumber)
                 .SetProperty(e => e.FullName, request.FullName)
                 .SetProperty(e => e.Email, request.Email)
-                .SetProperty(e => e.IsGlobalManager, request.IsGlobalManager)
                 .SetProperty(e => e.UpdatedAt, DateTime.UtcNow),
                 cancellationToken);
 

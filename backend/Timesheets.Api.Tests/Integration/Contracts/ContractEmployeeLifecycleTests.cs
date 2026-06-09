@@ -46,8 +46,7 @@ public class ContractEmployeeLifecycleTests : BaseIntegrationTest
             Guid.Parse("00000000-0000-0000-0000-000000000001"), // using a seeded Akademik type
             "9999",
             "John Doe Contract",
-            "john.doe@contracts.com",
-            false
+            "john.doe@contracts.com"
         );
         var employeeResponse = await Client.PostAsJsonAsync("/api/employees", createEmployeeRequest);
         // If Employee creation requires a real EmployeeType from the DB seed, this might fail with 500 or 400. 
