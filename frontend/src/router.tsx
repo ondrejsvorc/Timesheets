@@ -1,7 +1,8 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
 import { type CurrentUserPermissions, getCurrentUserPermissions } from "./auth/api/getCurrentUserPermissions";
-import { hasAnyManagerRole } from "./auth/timesheetPermissions";
+import { denyUnless } from "./auth/routeGuards";
+import { can, UiAction } from "./auth/uiPermissions";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { FullscreenLoader } from "./components/shared/layout/FullscreenLoader";
 import { BaseUrl } from "./constants/api";
@@ -126,7 +127,7 @@ export const router = createBrowserRouter([
         index: true,
         loader: async () => {
           const permissions = await getCurrentUserPermissions().catch(() => null);
-          if (!hasAnyManagerRole(permissions)) {
+          if (!can(permissions, undefined, UiAction.nav.projects)) {
             const userResponse = await fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" });
             if (userResponse.ok) {
               const currentUser = (await userResponse.json()) as CurrentUser;
@@ -139,30 +140,46 @@ export const router = createBrowserRouter([
       {
         path: "projects",
         element: <ProjectsPage />,
-        loader: getProjects,
+        loader: async () => {
+          await denyUnless(UiAction.nav.projects);
+          return getProjects();
+        },
       },
       {
         path: "projects/:id",
         element: <ProjectPage />,
-        loader: ({ params }) => getProject(requireProjectId(params)),
+        loader: async ({ params }) => {
+          const projectId = requireProjectId(params);
+          await denyUnless(UiAction.projects.view, { projectId });
+          return getProject(projectId);
+        },
         children: [
           {
             index: true,
             element: <ProjectContracts />,
-            loader: ({ params }) => getProjectContracts(requireProjectId(params)),
+            loader: async ({ params }) => {
+              const projectId = requireProjectId(params);
+              await denyUnless(UiAction.projects.view, { projectId });
+              return getProjectContracts(projectId);
+            },
           },
           {
             path: "contracts-managers",
             element: <ProjectContractsManagers />,
-            loader: ({ params }) => getProjectContractsManagers(requireProjectId(params)),
+            loader: async ({ params }) => {
+              const projectId = requireProjectId(params);
+              await denyUnless(UiAction.contractManagers.view, { projectId });
+              return getProjectContractsManagers(projectId);
+            },
           },
         ],
       },
       {
         path: "projects/:id/contracts/:contractId",
         element: <ContractPage />,
-        loader: ({ params }) => {
+        loader: async ({ params }) => {
           const { projectId, contractId } = requireContractParams(params);
+          await denyUnless(UiAction.contracts.view, { projectId, contractId });
           const promise = getProjectContract(projectId, contractId).promise.then((contract) => {
             if (!contract) throw redirect(Routes.project(projectId));
             return contract;
@@ -177,8 +194,9 @@ export const router = createBrowserRouter([
           {
             path: "employees",
             element: <ContractEmployees />,
-            loader: ({ params }) => {
+            loader: async ({ params }) => {
               const { projectId, contractId } = requireContractParams(params);
+              await denyUnless(UiAction.contractEmployees.view, { contractId, projectId });
               return getContractEmployees(projectId, contractId);
             },
           },
@@ -187,27 +205,45 @@ export const router = createBrowserRouter([
       {
         path: "employees",
         element: <EmployeesPage />,
-        loader: getEmployees,
+        loader: async () => {
+          await denyUnless(UiAction.employees.list);
+          return getEmployees();
+        },
       },
       {
         path: "employees/roles",
         element: <EmployeeRolesPage />,
-        loader: getEmployees,
+        loader: async () => {
+          await denyUnless(UiAction.nav.employeeRoles);
+          return getEmployees();
+        },
       },
       {
         path: "employees/:id",
         element: <EmployeePage />,
-        loader: ({ params }) => getEmployee(requireEmployeeId(params)),
+        loader: async ({ params }) => {
+          const employeeId = requireEmployeeId(params);
+          await denyUnless(UiAction.employees.view, { employeeId });
+          return getEmployee(employeeId);
+        },
         children: [
           {
             index: true,
             element: <EmployeeTimesheets />,
-            loader: ({ params }) => getEmployeeTimesheets(requireEmployeeId(params)),
+            loader: async ({ params }) => {
+              const employeeId = requireEmployeeId(params);
+              await denyUnless(UiAction.employees.view, { employeeId });
+              return getEmployeeTimesheets(employeeId);
+            },
           },
           {
             path: "positions",
             element: <EmployeePositions />,
-            loader: ({ params }) => getEmployeePositions(requireEmployeeId(params)),
+            loader: async ({ params }) => {
+              const employeeId = requireEmployeeId(params);
+              await denyUnless(UiAction.employees.view, { employeeId });
+              return getEmployeePositions(employeeId);
+            },
           },
         ],
       },
@@ -218,7 +254,7 @@ export const router = createBrowserRouter([
       {
         path: "timesheet",
         element: <TimesheetPage />,
-        loader: ({ request }) => {
+        loader: async ({ request }) => {
           const url = new URL(request.url);
           const employeeId = url.searchParams.get("employeeId");
           const year = Number(url.searchParams.get("year"));
@@ -227,6 +263,8 @@ export const router = createBrowserRouter([
           if (!employeeId || !Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
             throw redirect(Routes.employees());
           }
+
+          await denyUnless(UiAction.timesheet.view, { employeeId });
 
           return {
             employeePromise: getEmployee(employeeId).promise,

@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
 
@@ -6,12 +9,12 @@ namespace Timesheets.Api.Timesheets;
 
 internal sealed record EmployeeWorkflowPermissions(
     Guid EmployeeId,
-    bool IsGlobalManager,
+    bool HasGlobalScope,
     HashSet<Guid> ProjectManagerOf,
     HashSet<Guid> ContractManagerOf)
 {
     public bool CanManageProjectPart(Guid contractId, Guid projectId) =>
-        IsGlobalManager
+        HasGlobalScope
         || ContractManagerOf.Contains(contractId)
         || ProjectManagerOf.Contains(projectId);
 }
@@ -23,25 +26,17 @@ internal static class TimesheetWorkflowAuthorization
     public static async Task<EmployeeWorkflowPermissions> LoadAsync(
         Employee employee,
         AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
         CancellationToken cancellationToken)
     {
-        List<Guid> projectManagerOf = await dbContext.ProjectManagers
-            .AsNoTracking()
-            .Where(pm => pm.EmployeeId == employee.Id)
-            .Select(pm => pm.ProjectId)
-            .ToListAsync(cancellationToken);
-
-        List<Guid> contractManagerOf = await dbContext.ContractManagers
-            .AsNoTracking()
-            .Where(cm => cm.EmployeeId == employee.Id)
-            .Select(cm => cm.ContractId)
-            .ToListAsync(cancellationToken);
+        UserPermissionsScope scope = await UserPermissionsScopeLoader.LoadAsync(employee, dbContext, administrationOptions, cancellationToken)
+            ?? throw new InvalidOperationException("Employee permissions scope was not found.");
 
         return new EmployeeWorkflowPermissions(
-            employee.Id,
-            employee.IsGlobalManager,
-            projectManagerOf.ToHashSet(),
-            contractManagerOf.ToHashSet());
+            scope.EmployeeId,
+            scope.HasGlobalScope,
+            scope.ProjectManagerOf.ToHashSet(),
+            scope.ContractManagerOf.ToHashSet());
     }
 
     public static async Task<List<ProjectTimesheetScope>> LoadProjectScopesAsync(
@@ -69,13 +64,13 @@ internal static class TimesheetWorkflowAuthorization
         permissions.EmployeeId == timesheetOwnerId;
 
     public static bool CanManageWholeTimesheet(EmployeeWorkflowPermissions permissions) =>
-        permissions.IsGlobalManager;
+        permissions.HasGlobalScope;
 
     public static bool CanManageProjectTimesheets(
         EmployeeWorkflowPermissions permissions,
         IEnumerable<ProjectTimesheetScope> projectScopes)
     {
-        if (permissions.IsGlobalManager)
+        if (permissions.HasGlobalScope)
         {
             return true;
         }

@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Employees.Endpoints;
@@ -15,8 +18,22 @@ public sealed class GetEmployeeTimesheets : IEndpoint
     public sealed record MonthItem(int Year, int Month, bool HasAttendanceImport, string? Status);
     public sealed record Response(Guid EmployeeId, IEnumerable<MonthItem> Months, IEnumerable<int> AvailableYears, IEnumerable<int> AvailableMonths);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, [AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
+        Guid id,
+        [AsParameters] Request request,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!await ApiPermissions.CanAccessEmployeeAsync(scope, id, dbContext, cancellationToken))
+        {
+            return TypedResults.Forbid();
+        }
+
         bool employeeExists = await dbContext.Employees
             .AsNoTracking()
             .AnyAsync(e => e.Id == id, cancellationToken);

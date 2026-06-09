@@ -1,5 +1,7 @@
 import { Suspense, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
+import { Can } from "@/auth/Can";
+import { UiAction } from "@/auth/uiPermissions";
 import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
@@ -44,7 +46,11 @@ const EmployeePositionsContent = () => {
       <FilterBar
         filter={filter}
         setFilter={setFilter}
-        actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePosition}</AddButton>}
+        actions={
+          <Can action={UiAction.employeePositions.add}>
+            <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePosition}</AddButton>
+          </Can>
+        }
       >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>

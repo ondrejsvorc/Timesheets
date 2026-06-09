@@ -1,6 +1,8 @@
 import { ChevronDown, Upload } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useNavigate, useRevalidator } from "react-router";
+import { Can } from "@/auth/Can";
+import { UiAction } from "@/auth/uiPermissions";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
@@ -91,10 +93,12 @@ const EmployeeTimesheetsContent = () => {
           filter={filter}
           setFilter={setFilter}
           actions={
-            <Button variant="outline" onClick={handleUploadClick}>
-              <Upload className="mr-2 h-4 w-4" />
-              {Texts.importFiles}
-            </Button>
+            <Can action={UiAction.timesheet.import}>
+              <Button variant="outline" onClick={handleUploadClick}>
+                <Upload className="mr-2 h-4 w-4" />
+                {Texts.importFiles}
+              </Button>
+            </Can>
           }
         >
           <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} />
@@ -116,10 +120,12 @@ const EmployeeTimesheetsContent = () => {
         filter={filter}
         setFilter={setFilter}
         actions={
-          <Button variant="outline" onClick={handleUploadClick}>
-            <Upload className="mr-2 h-4 w-4" />
-            {Texts.importFiles}
-          </Button>
+          <Can action={UiAction.timesheet.import}>
+            <Button variant="outline" onClick={handleUploadClick}>
+              <Upload className="mr-2 h-4 w-4" />
+              {Texts.importFiles}
+            </Button>
+          </Can>
         }
       >
         <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} />

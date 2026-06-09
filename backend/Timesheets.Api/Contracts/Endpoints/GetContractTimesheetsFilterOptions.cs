@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Contracts.Endpoints;
@@ -17,8 +20,21 @@ public sealed class GetContractTimesheetsFilterOptions : IEndpoint
         IReadOnlyList<string> Statuses
     );
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
+        Guid id,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanAccessContract(scope, id))
+        {
+            return TypedResults.Forbid();
+        }
+
         bool contractExists = await dbContext.Contracts
             .AsNoTracking()
             .AnyAsync(contract => contract.Id == id, cancellationToken);

@@ -5,6 +5,9 @@ export interface CurrentUserPermissions {
   isGlobalManager: boolean;
   projectManagerOf: string[];
   contractManagerOf: string[];
+  employeeOnContractIds: string[];
+  visibleProjectIds: string[];
+  visibleContractIds: string[];
 }
 
 interface GetCurrentUserPermissionsResponse {
@@ -12,6 +15,9 @@ interface GetCurrentUserPermissionsResponse {
   isGlobalManager: boolean;
   projectManagerOf: string[];
   contractManagerOf: string[];
+  employeeOnContractIds: string[];
+  visibleProjectIds: string[];
+  visibleContractIds: string[];
 }
 
 export const getCurrentUserPermissions = () =>

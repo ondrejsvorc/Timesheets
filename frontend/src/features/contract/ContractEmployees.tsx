@@ -1,6 +1,8 @@
 import { isBefore, parseISO, startOfDay } from "date-fns";
 import { Suspense, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useParams, useRevalidator } from "react-router";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { AddButton, DeleteButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
@@ -40,6 +42,7 @@ const ContractEmployeesContent = () => {
   const [positionToDelete, setPositionToDelete] = useState<{ contractId: string; contractEmployeeId: string } | null>(null);
   const { contractId } = useParams();
   const revalidator = useRevalidator();
+  const canAddEmployee = useCan(UiAction.contractEmployees.add, { contractId: contractId ?? undefined });
 
   return (
     <>
@@ -49,7 +52,11 @@ const ContractEmployeesContent = () => {
       <FilterBar
         filter={filter}
         setFilter={setFilter}
-        actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePositionToEmployeeTitle}</AddButton>}
+        actions={
+          canAddEmployee ? (
+            <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePositionToEmployeeTitle}</AddButton>
+          ) : undefined
+        }
       >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
@@ -146,6 +153,7 @@ interface PositionRowProps {
 
 const PositionRow = ({ contractId, position, onDeleteRequested }: PositionRowProps) => {
   const active = isPositionActive(position);
+  const canRemove = useCan(UiAction.contractEmployees.remove, { contractId: contractId ?? undefined });
 
   return (
     <TableRow className="cursor-pointer">
@@ -155,13 +163,15 @@ const PositionRow = ({ contractId, position, onDeleteRequested }: PositionRowPro
       <TableCell>{formatDate(position.endDate) ?? Texts.dash}</TableCell>
       <TableCell>{active ? Texts.active : Texts.inactive}</TableCell>
       <TableCell>
-        <DeleteButton
-          onClick={async () => {
-            if (!contractId) return;
-            if (!position.id) return;
-            onDeleteRequested({ contractId, contractEmployeeId: position.id });
-          }}
-        />
+        {canRemove && (
+          <DeleteButton
+            onClick={async () => {
+              if (!contractId) return;
+              if (!position.id) return;
+              onDeleteRequested({ contractId, contractEmployeeId: position.id });
+            }}
+          />
+        )}
       </TableCell>
     </TableRow>
   );

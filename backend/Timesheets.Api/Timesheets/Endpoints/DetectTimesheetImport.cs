@@ -1,7 +1,11 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
+using Timesheets.Api.Data;
 using Timesheets.Api.Timesheets;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
@@ -31,8 +35,22 @@ public sealed class DetectTimesheetImport : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, BadRequest<string>>> Handle([FromForm] Request request, [FromServices] IAttendanceTimesheetImportService importService, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, BadRequest<string>, ForbidHttpResult>> Handle(
+        [FromForm] Request request,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        [FromServices] IAttendanceTimesheetImportService importService,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanImportTimesheets(scope))
+        {
+            return TypedResults.Forbid();
+        }
+
         AttendanceTimesheetDetectionResult result = await importService.DetectAsync(request.EmployeeId, request.File, cancellationToken);
         return TypedResults.Ok(new Response(result));
     }

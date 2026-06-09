@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { ActionButtons, EditButton } from "@/components/shared/buttons/ActionButtons";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
@@ -64,6 +66,7 @@ interface EmployeeRowProps {
 
 export const EmployeeRow = ({ employee, onEdit }: EmployeeRowProps) => {
   const navigate = useNavigateFrom();
+  const canEditType = useCan(UiAction.employees.editType);
 
   return (
     <TableRow className="cursor-pointer" onClick={() => navigate(Routes.employee(employee.id))}>
@@ -72,14 +75,16 @@ export const EmployeeRow = ({ employee, onEdit }: EmployeeRowProps) => {
       <TableCell>{employee.email ?? Texts.dash}</TableCell>
       <TableCell>{resolveEmployeeTypeName(employee.employeeTypeId)}</TableCell>
       <TableCell>
-        <ActionButtons>
-          <EditButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(employee);
-            }}
-          />
-        </ActionButtons>
+        {canEditType && (
+          <ActionButtons>
+            <EditButton
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(employee);
+              }}
+            />
+          </ActionButtons>
+        )}
       </TableCell>
     </TableRow>
   );

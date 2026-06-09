@@ -1,8 +1,8 @@
 import { Check, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useRevalidator, useSearchParams } from "react-router";
-import { useEffectivePermissions } from "@/auth/RoleViewContext";
-import { canManageProjectTimesheetPart } from "@/auth/timesheetPermissions";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { TimesheetStatusIds } from "@/constants/timesheetStatuses";
@@ -19,7 +19,6 @@ interface TimesheetOverviewRowActionsProps {
 
 export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOverviewRowActionsProps) => {
   const [searchParams] = useSearchParams();
-  const { permissions } = useEffectivePermissions();
   const revalidator = useRevalidator();
   const onWorkflowSuccess = useTimesheetWorkflowRefresh();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
@@ -34,7 +33,10 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
     return null;
   }
 
-  const canManagePart = canManageProjectTimesheetPart(permissions, item.contractId, item.projectId);
+  const canManagePart = useCan(UiAction.timesheet.approveProject, {
+    timesheetContractId: item.contractId ?? undefined,
+    timesheetProjectId: item.projectId ?? undefined,
+  });
   const canApprove = canManagePart && item.status === Texts.statusPendingApproval;
   const canReturn = canManagePart && item.status === Texts.statusPendingApproval;
 

@@ -2,7 +2,8 @@ import { lazy, Suspense, useState } from "react";
 import { Await, Navigate, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
 import { toast } from "sonner";
 import { useImmer } from "use-immer";
-import { useEffectivePermissions } from "@/auth/RoleViewContext";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
@@ -22,10 +23,10 @@ const EmployeeRolesPageContentLazy = lazy(async () => ({
 }));
 
 export const EmployeeRolesPage = () => {
-  const { permissions } = useEffectivePermissions();
+  const canManageRoles = useCan(UiAction.nav.employeeRoles);
   const { promise } = useLoaderData() as { promise: Promise<GetEmployeesResponse> };
 
-  if (!permissions?.isRoleManager) {
+  if (!canManageRoles) {
     return <Navigate to={Routes.projects()} replace />;
   }
 

@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Projects.Endpoints;
@@ -12,8 +15,21 @@ public sealed class GetProjectContracts : IEndpoint
 
     public sealed record Response(IEnumerable<ProjectContractItem> ProjectContracts);
 
-    private static async Task<Ok<Response>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(
+        Guid id,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanAccessProject(scope, id))
+        {
+            return TypedResults.Forbid();
+        }
+
         List<ProjectContractItem> contracts = await dbContext.Contracts
             .AsNoTracking()
             .Where(c => c.ProjectId == id)

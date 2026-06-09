@@ -3,6 +3,9 @@ using CzechHolidays;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 using Timesheets.Api.Timesheets;
 
@@ -22,12 +25,22 @@ public sealed class GetCombinedTimesheet : IEndpoint
     private sealed record ProjectDaySource(DateTime Date, decimal Hours, bool IsHoliday);
     private sealed record ProjectTimesheetSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, Guid? LockedBy, List<ProjectDaySource> Days);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
         [AsParameters] Request request,
+        HttpContext httpContext,
         AppDbContext dbContext,
         ICzechHolidaysFactory holidaysFactory,
+        IOptions<AdministrationOptions> administrationOptions,
         CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!await ApiPermissions.CanAccessEmployeeAsync(scope, request.EmployeeId, dbContext, cancellationToken))
+        {
+            return TypedResults.Forbid();
+        }
+
         var attendanceTimesheet = await dbContext.AttendanceTimesheets
             .AsNoTracking()
             .Where(t => t.EmployeeId == request.EmployeeId && t.Year == request.Year && t.Month == request.Month)

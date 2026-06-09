@@ -1,7 +1,8 @@
 import { Suspense, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useNavigate, useRouteLoaderData, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
-import { isOwnEmployee } from "@/auth/timesheetPermissions";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { BackButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
@@ -113,12 +114,13 @@ const TimesheetEditor = ({ initialTimesheet, workflowRefreshKey }: TimesheetEdit
   const rootData = useRouteLoaderData("root") as RootLoaderData | undefined;
   const timesheetEmployeeId = searchParams.get("employeeId") ?? "";
   const lockActorEmployeeId = rootData?.currentUser?.id ?? timesheetEmployeeId;
+  const canEditTimesheet = useCan(UiAction.timesheet.edit, { employeeId: timesheetEmployeeId });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const didMeasureStablePaintRef = useRef(false);
 
-  const isEditable = overview.status === Texts.statusInProgress && isOwnEmployee(rootData?.currentUser?.id, timesheetEmployeeId);
+  const isEditable = overview.status === Texts.statusInProgress && canEditTimesheet;
 
   useEffect(() => {
     setTimesheet(initialTimesheet);

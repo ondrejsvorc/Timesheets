@@ -2,6 +2,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 
@@ -18,8 +21,22 @@ public sealed class UpdateEmployee : IEndpoint
     public sealed record Request(Guid EmployeeTypeId, string PersonalNumber, string FullName, string Email);
     public sealed class Validator : AbstractValidator<Request> { }
 
-    private static async Task<Results<NoContent, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(
+        Guid id,
+        [FromBody] Request request,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanModifyProjects(scope))
+        {
+            return TypedResults.Forbid();
+        }
+
         int affected = await dbContext.Employees
             .Where(e => e.Id == id)
             .ExecuteUpdateAsync(setters => setters

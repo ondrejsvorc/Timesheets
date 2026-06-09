@@ -2,6 +2,9 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
@@ -32,22 +35,29 @@ public sealed class AddTimesheetComment : IEndpoint
         }
     }
 
-    private static async Task<Results<Created<Response>, UnauthorizedHttpResult, NotFound>> Handle(
+    private static async Task<Results<Created<Response>, NotFound, ForbidHttpResult>> Handle(
         [FromBody] Request request,
         HttpContext httpContext,
         AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
         CancellationToken cancellationToken)
     {
-        Employee author = await CurrentEmployeeResolver.GetRequiredAsync(httpContext.User, dbContext, cancellationToken);
+        (Employee author, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
 
-        CombinedTimesheetScope? scope = await CombinedTimesheetScopeLoader.LoadAsync(
+        if (!await ApiPermissions.CanAccessEmployeeAsync(scope, request.EmployeeId, dbContext, cancellationToken))
+        {
+            return TypedResults.Forbid();
+        }
+
+        CombinedTimesheetScope? timesheetScope = await CombinedTimesheetScopeLoader.LoadAsync(
             request.EmployeeId,
             request.Year,
             request.Month,
             dbContext,
             cancellationToken);
 
-        if (scope is null)
+        if (timesheetScope is null)
         {
             return TypedResults.NotFound();
         }
@@ -55,7 +65,7 @@ public sealed class AddTimesheetComment : IEndpoint
         Data.Models.TimesheetComment comment = new()
         {
             Id = Guid.NewGuid(),
-            AttendanceTimesheetId = scope.AttendanceTimesheetId,
+            AttendanceTimesheetId = timesheetScope.AttendanceTimesheetId,
             Text = request.Text.Trim(),
             AuthorEmployeeId = author.Id,
         };

@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Projects.Endpoints;
@@ -13,8 +15,22 @@ public sealed class GetProjectContract : IEndpoint
 
     public sealed record Response(Guid Id, string Name, string RegistrationNumber);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid projectId, Guid contractId, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
+        Guid projectId,
+        Guid contractId,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanAccessContract(scope, contractId))
+        {
+            return TypedResults.Forbid();
+        }
+
         Response? contract = await dbContext.Contracts
             .AsNoTracking()
             .Where(c => c.ProjectId == projectId && c.Id == contractId)

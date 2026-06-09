@@ -1,6 +1,8 @@
 import { Suspense, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { AddButton, DeleteButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
@@ -46,13 +48,18 @@ const ProjectContractsManagersContent = () => {
   });
   const [isAddOpen, setIsAddOpen] = useState(false);
   const { filter, setFilter, filtered } = useContractsManagersFilter(state.managers);
+  const canAddManager = useCan(UiAction.contractManagers.add, { projectId: projectId ?? undefined });
 
   return (
     <ContractsManagersContext.Provider value={dispatch}>
       <SubPageHeader>
         <SubPageTitle>{Texts.contractsManagers}</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addManager}</AddButton>}>
+      <FilterBar
+        filter={filter}
+        setFilter={setFilter}
+        actions={canAddManager ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addManager}</AddButton> : undefined}
+      >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <ContractsManagersTable managers={filtered} />
@@ -120,6 +127,8 @@ interface ContractManagerRowProps {
 export const ContractManagerRow = ({ manager }: ContractManagerRowProps) => {
   const dispatch = useContractsManagersDispatch();
   const navigate = useNavigateFrom();
+  const { id: projectId } = useParams<{ id: string }>();
+  const canRemove = useCan(UiAction.contractManagers.remove, { projectId: projectId ?? undefined });
 
   return (
     <TableRow className="cursor-pointer" onClick={() => navigate(Routes.employee(manager.employeeId))}>
@@ -128,16 +137,18 @@ export const ContractManagerRow = ({ manager }: ContractManagerRowProps) => {
       <TableCell>{manager.employeeFullName}</TableCell>
       <TableCell>{manager.employeeEmail}</TableCell>
       <TableCell>
-        <DeleteButton
-          onClick={(e) => {
-            e.stopPropagation();
-            dispatch({
-              type: "requestDelete",
-              contractId: manager.contractId,
-              employeeId: manager.employeeId,
-            });
-          }}
-        />
+        {canRemove && (
+          <DeleteButton
+            onClick={(e) => {
+              e.stopPropagation();
+              dispatch({
+                type: "requestDelete",
+                contractId: manager.contractId,
+                employeeId: manager.employeeId,
+              });
+            }}
+          />
+        )}
       </TableCell>
     </TableRow>
   );

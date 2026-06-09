@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 
@@ -13,8 +16,21 @@ public sealed class GetEmployee : IEndpoint
 
     public sealed record Response(Guid Id, Guid? EmployeeTypeId, string FullName, string PersonalNumber, string Email);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
+        Guid id,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!await ApiPermissions.CanAccessEmployeeAsync(scope, id, dbContext, cancellationToken))
+        {
+            return TypedResults.Forbid();
+        }
+
         Response? employee = await dbContext.Employees
             .AsNoTracking()
             .Where(e => e.Id == id)

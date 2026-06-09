@@ -1,6 +1,8 @@
 import { Suspense, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { ActionButtons, AddButton, DeleteButton, EditButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
@@ -44,13 +46,20 @@ const ProjectContractsContent = () => {
   const [state, dispatch] = useImmerReducer(projectContractsReducer, response.projectContracts);
   const { filter, setFilter, filtered } = useContractsFilter(state);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const canAddContract = useCan(UiAction.contracts.add);
 
   return (
     <ProjectContractsContext.Provider value={dispatch}>
       <SubPageHeader>
         <SubPageTitle>{Texts.contracts}</SubPageTitle>
       </SubPageHeader>
-      <FilterBar filter={filter} setFilter={setFilter} actions={<AddButton onClick={() => setIsAddOpen(true)}>{Texts.addContract}</AddButton>}>
+      <FilterBar
+        filter={filter}
+        setFilter={setFilter}
+        actions={
+          canAddContract ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addContract}</AddButton> : undefined
+        }
+      >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <ContractsTable contracts={filtered} />
@@ -136,26 +145,34 @@ interface ContractRowProps {
 export const ContractRow = ({ contract, onEdit, onDelete }: ContractRowProps) => {
   const navigate = useNavigateFrom();
   const projectId = useParams().id;
+  const canEdit = useCan(UiAction.contracts.edit);
+  const canDelete = useCan(UiAction.contracts.delete);
 
   return (
     <TableRow className="cursor-pointer" onClick={() => projectId && navigate(Routes.contract(projectId, contract.id))}>
       <TableCell>{contract.registrationNumber}</TableCell>
       <TableCell>{contract.name}</TableCell>
       <TableCell>
-        <ActionButtons>
-          <EditButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(contract);
-            }}
-          ></EditButton>
-          <DeleteButton
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(contract);
-            }}
-          ></DeleteButton>
-        </ActionButtons>
+        {(canEdit || canDelete) && (
+          <ActionButtons>
+            {canEdit && (
+              <EditButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(contract);
+                }}
+              />
+            )}
+            {canDelete && (
+              <DeleteButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(contract);
+                }}
+              />
+            )}
+          </ActionButtons>
+        )}
       </TableCell>
     </TableRow>
   );

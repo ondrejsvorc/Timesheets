@@ -18,7 +18,10 @@ public sealed class GetCurrentUserPermissions : IEndpoint
         bool IsRoleManager,
         bool IsGlobalManager,
         IReadOnlyList<Guid> ProjectManagerOf,
-        IReadOnlyList<Guid> ContractManagerOf);
+        IReadOnlyList<Guid> ContractManagerOf,
+        IReadOnlyList<Guid> EmployeeOnContractIds,
+        IReadOnlyList<Guid> VisibleProjectIds,
+        IReadOnlyList<Guid> VisibleContractIds);
 
     private static async Task<IResult> Handle(
         HttpContext httpContext,
@@ -44,24 +47,25 @@ public sealed class GetCurrentUserPermissions : IEndpoint
             return Results.NotFound("Employee not found.");
         }
 
-        List<Guid> projectManagerOf = await dbContext.ProjectManagers
-            .AsNoTracking()
-            .Where(pm => pm.EmployeeId == employee.Id)
-            .Select(pm => pm.ProjectId)
-            .ToListAsync(cancellationToken);
+        UserPermissionsScope? scope = await UserPermissionsScopeLoader.LoadAsync(
+            employee,
+            dbContext,
+            administrationOptions,
+            cancellationToken);
 
-        List<Guid> contractManagerOf = await dbContext.ContractManagers
-            .AsNoTracking()
-            .Where(cm => cm.EmployeeId == employee.Id)
-            .Select(cm => cm.ContractId)
-            .ToListAsync(cancellationToken);
+        if (scope is null)
+        {
+            return Results.NotFound("Employee not found.");
+        }
 
-        Response response = new Response(
-            IsRoleManager: RoleManagerAuthorization.IsRoleManager(employee.Email, administrationOptions.Value),
-            IsGlobalManager: employee.IsGlobalManager,
-            ProjectManagerOf: projectManagerOf,
-            ContractManagerOf: contractManagerOf
-        );
+        Response response = new(
+            IsRoleManager: scope.IsRoleManager,
+            IsGlobalManager: scope.IsGlobalManager,
+            ProjectManagerOf: scope.ProjectManagerOf,
+            ContractManagerOf: scope.ContractManagerOf,
+            EmployeeOnContractIds: scope.EmployeeOnContractIds,
+            VisibleProjectIds: scope.VisibleProjectIds,
+            VisibleContractIds: scope.VisibleContractIds);
 
         return Results.Ok(response);
     }

@@ -3,6 +3,9 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -31,8 +34,23 @@ public sealed class AddContractEmployee : IEndpoint
         }
     }
 
-    private static async Task<Results<Created<Response>, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)
+    private static async Task<Results<Created<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(
+        Guid id,
+        [FromBody] Request request,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        ICzechHolidaysFactory holidaysFactory,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanManageContractEmployees(scope, id))
+        {
+            return TypedResults.Forbid();
+        }
+
         bool contractExists = await dbContext.Contracts
             .AsNoTracking()
             .AnyAsync(c => c.Id == id, cancellationToken);

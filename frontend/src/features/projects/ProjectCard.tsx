@@ -1,6 +1,8 @@
 import { MoreHorizontal } from "lucide-react";
 import { startTransition } from "react";
 import { useImmer } from "use-immer";
+import { Can } from "@/auth/Can";
+import { UiAction } from "@/auth/uiPermissions";
 import { DeleteIcon, EditIcon } from "@/components/shared/buttons/ActionButtons";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
@@ -43,33 +45,37 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
           <CardTitle className="group-hover:text-primary transition-colors">{project.name}</CardTitle>
           {project.registrationNumber && <div className="text-sm text-muted-foreground font-mono">{project.registrationNumber}</div>}
           <CardAction>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startTransition(() => setIsEditOpen(true));
-                  }}
-                >
-                  <EditIcon />
-                  {Texts.edit}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startTransition(() => setIsConfirmOpen(true));
-                  }}
-                >
-                  <DeleteIcon />
-                  {Texts.delete}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Can action={UiAction.projects.edit}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startTransition(() => setIsEditOpen(true));
+                    }}
+                  >
+                    <EditIcon />
+                    {Texts.edit}
+                  </DropdownMenuItem>
+                  <Can action={UiAction.projects.delete}>
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startTransition(() => setIsConfirmOpen(true));
+                      }}
+                    >
+                      <DeleteIcon />
+                      {Texts.delete}
+                    </DropdownMenuItem>
+                  </Can>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </Can>
           </CardAction>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">

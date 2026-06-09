@@ -1,15 +1,14 @@
 import { Check, RotateCcw, Send } from "lucide-react";
 import { useState } from "react";
-import { useRevalidator, useRouteLoaderData, useSearchParams } from "react-router";
-import { useEffectivePermissions } from "@/auth/RoleViewContext";
-import { canManageWholeTimesheet, canSubmitTimesheet } from "@/auth/timesheetPermissions";
+import { useRevalidator, useSearchParams } from "react-router";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { FullscreenButton, SaveButton, UnlockIcon } from "@/components/shared/buttons/ActionButtons";
 import { MessageAlertDialog } from "@/components/shared/dialogs/MessageAlertDialog";
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { TimesheetStatusIds } from "@/constants/timesheetStatuses";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
-import type { RootLoaderData } from "@/router";
 import type { Timesheet } from "../Timesheet";
 import { TimesheetValidations } from "../TimesheetValidations";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
@@ -36,9 +35,6 @@ export const TimesheetWorkflowToolbar = ({
   onClearAttendanceFields,
 }: TimesheetWorkflowToolbarProps) => {
   const [searchParams] = useSearchParams();
-  const rootData = useRouteLoaderData("root") as RootLoaderData | undefined;
-  const currentUserId = rootData?.currentUser?.id;
-  const { permissions } = useEffectivePermissions();
   const revalidator = useRevalidator();
   const onWorkflowSuccess = useTimesheetWorkflowRefresh();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
@@ -50,8 +46,8 @@ export const TimesheetWorkflowToolbar = ({
   const isSubmitted = overview.status === Texts.statusPendingApproval;
   const isApproved = overview.status === Texts.statusApproved;
   const allProjectsApproved = areAllProjectsApproved(overview);
-  const canSubmit = canSubmitTimesheet(currentUserId, employeeId);
-  const canManageWhole = canManageWholeTimesheet(permissions);
+  const canSubmit = useCan(UiAction.timesheet.submit, { employeeId });
+  const canManageWhole = useCan(UiAction.timesheet.finalApprove);
 
   const changeAttendanceStatus = async (statusId: string, comment: string, signal: AbortSignal) => {
     await updateCombinedTimesheetStatus(

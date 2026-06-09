@@ -3,6 +3,9 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 
@@ -47,8 +50,17 @@ public sealed class UpdateTimesheet : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, BadRequest<string>, NotFound>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, BadRequest<string>, NotFound, ForbidHttpResult>> Handle(
+        Guid id,
+        [FromBody] Request request,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
         Data.Models.AttendanceTimesheet? timesheet = await dbContext.AttendanceTimesheets
             .Include(t => t.TimesheetStatus)
             .Include(t => t.Days)
@@ -59,9 +71,10 @@ public sealed class UpdateTimesheet : IEndpoint
             return TypedResults.NotFound();
         }
 
-        if (timesheet.TimesheetStatus.Name != "Rozpracovaný") // TODO: Use ID instead
+        if (!ApiPermissions.CanUpdateOwnTimesheet(scope, timesheet.EmployeeId)
+            || timesheet.TimesheetStatusId != TimesheetWorkflowConstants.DraftStatusId)
         {
-            return TypedResults.BadRequest("Timesheet can only be updated when in Draft status.");
+            return TypedResults.Forbid();
         }
 
         foreach (DayUpdate dayUpdate in request.Days)

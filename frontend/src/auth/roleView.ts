@@ -52,6 +52,9 @@ export const applyRoleViewOverride = (actual: CurrentUserPermissions | null, rol
     isGlobalManager: false,
     projectManagerOf: [],
     contractManagerOf: [],
+    employeeOnContractIds: [],
+    visibleProjectIds: [],
+    visibleContractIds: [],
   };
 
   switch (roleView.mode) {
@@ -63,11 +66,13 @@ export const applyRoleViewOverride = (actual: CurrentUserPermissions | null, rol
       return {
         ...base,
         projectManagerOf: roleView.projectId ? [roleView.projectId] : [],
+        visibleProjectIds: roleView.projectId ? [roleView.projectId] : [],
       };
     case "contractManager":
       return {
         ...base,
         contractManagerOf: roleView.contractId ? [roleView.contractId] : [],
+        visibleContractIds: roleView.contractId ? [roleView.contractId] : [],
       };
     case "roleManager":
       return { ...base, isRoleManager: true };

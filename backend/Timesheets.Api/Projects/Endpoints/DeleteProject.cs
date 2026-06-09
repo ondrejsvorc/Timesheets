@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Projects.Endpoints;
@@ -10,8 +13,21 @@ public sealed class DeleteProject : IEndpoint
         app.MapDelete("/{id}", Handle)
            .WithSummary("Delete Project");
 
-    private static async Task<Results<NoContent, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound, ForbidHttpResult>> Handle(
+        Guid id,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanModifyProjects(scope))
+        {
+            return TypedResults.Forbid();
+        }
+
         int affected = await dbContext.Projects
             .Where(p => p.Id == id)
             .ExecuteDeleteAsync(cancellationToken);
@@ -24,4 +40,3 @@ public sealed class DeleteProject : IEndpoint
         return TypedResults.NoContent();
     }
 }
-

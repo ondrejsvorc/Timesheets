@@ -2,6 +2,9 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 
@@ -17,13 +20,23 @@ public sealed class UpdateProjectContract : IEndpoint
     public sealed record Request(string Name, string RegistrationNumber);
     public sealed class Validator : AbstractValidator<Request> { }
 
-    private static async Task<Results<NoContent, NotFound, BadRequest<string>>> Handle(
+    private static async Task<Results<NoContent, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(
         Guid projectId,
         Guid contractId,
         [FromBody] Request request,
+        HttpContext httpContext,
         AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
         CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanModifyProjects(scope))
+        {
+            return TypedResults.Forbid();
+        }
+
         int affected = await dbContext.Contracts
             .Where(c => c.ProjectId == projectId && c.Id == contractId)
             .ExecuteUpdateAsync(setters => setters

@@ -1,7 +1,8 @@
 import { Bell, User } from "lucide-react";
 import { Link, useRouteLoaderData } from "react-router";
-import { useEffectivePermissions } from "@/auth/RoleViewContext";
-import { hasAnyManagerRole } from "@/auth/timesheetPermissions";
+import { Can } from "@/auth/Can";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { RoleViewSwitcher } from "@/components/shared/dev/RoleViewSwitcher";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,10 +22,9 @@ export const AppHeader = () => {
   const handleNotificationsClick = () => {};
   const rootData = useRouteLoaderData("root") as RootLoaderData | undefined;
   const currentUser = rootData?.currentUser ?? null;
-  const { permissions } = useEffectivePermissions();
-  const isRoleManager = permissions?.isRoleManager ?? false;
-  const showManagerNavigation = hasAnyManagerRole(permissions);
-  const homeRoute = showManagerNavigation ? Routes.projects() : currentUser ? Routes.employee(currentUser.id) : Routes.projects();
+  const canNavProjects = useCan(UiAction.nav.projects);
+  const canNavEmployees = useCan(UiAction.nav.employees);
+  const homeRoute = canNavProjects ? Routes.projects() : currentUser ? Routes.employee(currentUser.id) : Routes.projects();
 
   const handleLogout = () => {
     window.location.assign(`${BaseUrl}/auth/logout`);
@@ -40,39 +40,38 @@ export const AppHeader = () => {
 
         {/* Navigation */}
         <nav className="flex items-center gap-1">
-          {showManagerNavigation ? (
-            <>
-              <Link
-                to="/projects"
-                className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
-              >
-                {Texts.projects}
-              </Link>
-              <Link
-                to="/employees"
-                className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
-              >
-                {Texts.employees}
-              </Link>
-            </>
-          ) : (
-            currentUser && (
-              <Link
-                to={Routes.employee(currentUser.id)}
-                className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
-              >
-                {Texts.myTimesheets}
-              </Link>
-            )
+          {canNavProjects && (
+            <Link
+              to="/projects"
+              className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
+            >
+              {Texts.projects}
+            </Link>
           )}
-          {isRoleManager && (
+          {canNavEmployees && (
+            <Link
+              to="/employees"
+              className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
+            >
+              {Texts.employees}
+            </Link>
+          )}
+          {!canNavProjects && !canNavEmployees && currentUser && (
+            <Link
+              to={Routes.employee(currentUser.id)}
+              className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
+            >
+              {Texts.myTimesheets}
+            </Link>
+          )}
+          <Can action={UiAction.nav.employeeRoles}>
             <Link
               to={Routes.employeeRoles()}
               className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
             >
               {Texts.employeeRoles}
             </Link>
-          )}
+          </Can>
         </nav>
 
         {/* Actions */}

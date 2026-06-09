@@ -3,6 +3,8 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
@@ -45,6 +47,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         HttpContext httpContext,
         AppDbContext dbContext,
         NotificationSender notificationSender,
+        IOptions<AdministrationOptions> administrationOptions,
         CancellationToken cancellationToken)
     {
         Employee changedBy = await CurrentEmployeeResolver.GetRequiredAsync(httpContext.User, dbContext, cancellationToken);
@@ -103,6 +106,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         EmployeeWorkflowPermissions workflowPermissions = await TimesheetWorkflowAuthorization.LoadAsync(
             changedBy,
             dbContext,
+            administrationOptions,
             cancellationToken);
 
         if (includesAttendance)

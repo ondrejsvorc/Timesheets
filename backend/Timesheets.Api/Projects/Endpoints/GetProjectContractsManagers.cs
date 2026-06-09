@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 
@@ -20,8 +23,21 @@ public sealed class GetProjectContractsManagers : IEndpoint
         string EmployeeEmail);
     public sealed record Response(IEnumerable<ContractManagerItem> Managers);
 
-    private static async Task<Ok<Response>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(
+        Guid id,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanManageContractManagers(scope, id))
+        {
+            return TypedResults.Forbid();
+        }
+
         List<ContractManagerItem> managers = await dbContext.ContractManagers
             .AsNoTracking()
             .Where(cm => cm.Contract.ProjectId == id)
@@ -40,4 +56,3 @@ public sealed class GetProjectContractsManagers : IEndpoint
         return TypedResults.Ok(new Response(managers));
     }
 }
-

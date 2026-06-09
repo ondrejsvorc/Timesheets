@@ -1,6 +1,8 @@
 import { Suspense, startTransition } from "react";
 import { Await, useAsyncValue, useLoaderData } from "react-router";
 import { useImmer, useImmerReducer } from "use-immer";
+import { Can } from "@/auth/Can";
+import { UiAction } from "@/auth/uiPermissions";
 import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
@@ -46,7 +48,11 @@ const ProjectsPageContent = () => {
       <FilterBar
         filter={filter}
         setFilter={setFilter}
-        actions={<AddButton onClick={() => startTransition(() => setIsAddOpen(true))}>{Texts.addProject}</AddButton>}
+        actions={
+          <Can action={UiAction.projects.add}>
+            <AddButton onClick={() => startTransition(() => setIsAddOpen(true))}>{Texts.addProject}</AddButton>
+          </Can>
+        }
       >
         <FilterSearchInput placeholder={Texts.search} />
         <FilterCheckbox field="onlyActive" label={Texts.activeOnly} />

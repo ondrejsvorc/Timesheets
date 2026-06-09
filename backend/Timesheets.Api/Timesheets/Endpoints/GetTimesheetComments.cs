@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -29,11 +32,21 @@ public sealed class GetTimesheetComments : IEndpoint
         CommentAuthor? Author,
         StatusChangeDetails? StatusChange);
 
-    private static async Task<Results<Ok<IReadOnlyList<CommentItem>>, NotFound>> Handle(
+    private static async Task<Results<Ok<IReadOnlyList<CommentItem>>, NotFound, ForbidHttpResult>> Handle(
         [AsParameters] Request request,
+        HttpContext httpContext,
         AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
         CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope permissionsScope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!await ApiPermissions.CanAccessEmployeeAsync(permissionsScope, request.EmployeeId, dbContext, cancellationToken))
+        {
+            return TypedResults.Forbid();
+        }
+
         CombinedTimesheetScope? scope = await CombinedTimesheetScopeLoader.LoadAsync(
             request.EmployeeId,
             request.Year,

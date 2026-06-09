@@ -2,6 +2,9 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 
@@ -19,8 +22,22 @@ public sealed class UpdateEmployeeType : IEndpoint
 
     public sealed class Validator : AbstractValidator<Request> { }
 
-    private static async Task<Results<NoContent, NotFound, BadRequest<string>>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(
+        Guid id,
+        [FromBody] Request request,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanEditEmployeeType(scope))
+        {
+            return TypedResults.Forbid();
+        }
+
         if (request.EmployeeTypeId is Guid employeeTypeId)
         {
             bool exists = await dbContext.EmployeeTypes.AnyAsync(t => t.Id == employeeTypeId, cancellationToken);
@@ -45,4 +62,3 @@ public sealed class UpdateEmployeeType : IEndpoint
         return TypedResults.NoContent();
     }
 }
-

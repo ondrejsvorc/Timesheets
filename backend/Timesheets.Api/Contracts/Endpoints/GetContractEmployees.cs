@@ -1,6 +1,9 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 
@@ -16,8 +19,21 @@ public sealed class GetContractEmployees : IEndpoint
     public sealed record EmployeeItem(Guid Id, string PersonalNumber, string FullName, string EmployeeType, IReadOnlyList<PositionItem> Positions);
     public sealed record Response(IEnumerable<EmployeeItem> Employees);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
+        Guid id,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanManageContractEmployees(scope, id))
+        {
+            return TypedResults.Forbid();
+        }
+
         bool contractExists = await dbContext.Contracts
             .AsNoTracking()
             .AnyAsync(contract => contract.Id == id, cancellationToken);
@@ -45,4 +61,3 @@ public sealed class GetContractEmployees : IEndpoint
         return TypedResults.Ok(new Response(employees));
     }
 }
-

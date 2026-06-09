@@ -1,9 +1,12 @@
 import { lazy, Suspense } from "react";
-import { Await, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
+import { Await, Navigate, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
 import { useImmer } from "use-immer";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
 import type { GetEmployeesResponse } from "./api/getEmployees";
@@ -18,6 +21,11 @@ export const EmployeesPage = () => {
   const { promise } = useLoaderData() as {
     promise: Promise<GetEmployeesResponse>;
   };
+  const canListEmployees = useCan(UiAction.employees.list);
+
+  if (!canListEmployees) {
+    return <Navigate to={Routes.projects()} replace />;
+  }
 
   return (
     <>

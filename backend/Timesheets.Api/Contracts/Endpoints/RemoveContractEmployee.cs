@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 
@@ -12,8 +15,22 @@ public sealed class RemoveContractEmployee : IEndpoint
         app.MapDelete("/{id}/employees/{contractEmployeeId}", Handle)
            .WithSummary("Remove Employee Position from Contract");
 
-    private static async Task<Results<NoContent, NotFound>> Handle(Guid id, Guid contractEmployeeId, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound, ForbidHttpResult>> Handle(
+        Guid id,
+        Guid contractEmployeeId,
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
+        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
+            httpContext, dbContext, administrationOptions, cancellationToken);
+
+        if (!ApiPermissions.CanManageContractEmployees(scope, id))
+        {
+            return TypedResults.Forbid();
+        }
+
         var ce = await dbContext.ContractEmployees
             .AsNoTracking()
             .Where(x => x.ContractId == id && x.Id == contractEmployeeId)
