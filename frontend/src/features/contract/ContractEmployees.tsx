@@ -52,11 +52,7 @@ const ContractEmployeesContent = () => {
       <FilterBar
         filter={filter}
         setFilter={setFilter}
-        actions={
-          canAddEmployee ? (
-            <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePositionToEmployeeTitle}</AddButton>
-          ) : undefined
-        }
+        actions={canAddEmployee ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePositionToEmployeeTitle}</AddButton> : undefined}
       >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>

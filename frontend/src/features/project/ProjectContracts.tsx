@@ -56,9 +56,7 @@ const ProjectContractsContent = () => {
       <FilterBar
         filter={filter}
         setFilter={setFilter}
-        actions={
-          canAddContract ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addContract}</AddButton> : undefined
-        }
+        actions={canAddContract ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addContract}</AddButton> : undefined}
       >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>

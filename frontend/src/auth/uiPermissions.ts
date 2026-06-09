@@ -92,11 +92,7 @@ export const canAccessContract = (permissions: CurrentUserPermissions | null, co
   return permissions.visibleContractIds.includes(contractId);
 };
 
-const canManageProjectPart = (
-  permissions: CurrentUserPermissions | null,
-  contractId: string | undefined,
-  projectId: string | undefined,
-): boolean => {
+const canManageProjectPart = (permissions: CurrentUserPermissions | null, contractId: string | undefined, projectId: string | undefined): boolean => {
   if (!permissions) {
     return false;
   }
@@ -117,12 +113,7 @@ const canManageProjectPart = (
 };
 
 const hasManagerRole = (permissions: CurrentUserPermissions | null): boolean =>
-  Boolean(
-    permissions &&
-      (hasGlobalScope(permissions) ||
-        permissions.projectManagerOf.length > 0 ||
-        permissions.contractManagerOf.length > 0),
-  );
+  Boolean(permissions && (hasGlobalScope(permissions) || permissions.projectManagerOf.length > 0 || permissions.contractManagerOf.length > 0));
 
 export const can = (
   permissions: CurrentUserPermissions | null,
@@ -166,18 +157,12 @@ export const can = (
     case UiAction.contractManagers.view:
     case UiAction.contractManagers.add:
     case UiAction.contractManagers.remove:
-      return (
-        hasGlobalScope(permissions) ||
-        (ctx.projectId !== undefined && permissions.projectManagerOf.includes(ctx.projectId))
-      );
+      return hasGlobalScope(permissions) || (ctx.projectId !== undefined && permissions.projectManagerOf.includes(ctx.projectId));
 
     case UiAction.contractEmployees.view:
     case UiAction.contractEmployees.add:
     case UiAction.contractEmployees.remove:
-      return (
-        hasGlobalScope(permissions) ||
-        (ctx.contractId !== undefined && permissions.contractManagerOf.includes(ctx.contractId))
-      );
+      return hasGlobalScope(permissions) || (ctx.contractId !== undefined && permissions.contractManagerOf.includes(ctx.contractId));
 
     case UiAction.employeePositions.add:
       return hasManagerRole(permissions);
