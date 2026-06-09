@@ -71,7 +71,7 @@ export const RoleViewSwitcher = () => {
           {isOverridden && selectedMode && <span className="hidden md:inline text-xs opacity-80">({selectedMode.label})</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 space-y-4">
+      <PopoverContent align="end" side="bottom" className="z-[100] w-80 space-y-4">
         <div className="space-y-1">
           <p className="text-sm font-medium">{Texts.roleView}</p>
           <p className="text-xs text-muted-foreground">{Texts.roleViewDescription}</p>
@@ -92,7 +92,7 @@ export const RoleViewSwitcher = () => {
             <SelectTrigger id="role-view-mode" className="w-full">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="z-[110]">
               {roleViewModeOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -109,7 +109,7 @@ export const RoleViewSwitcher = () => {
               <SelectTrigger id="role-view-project" className="w-full">
                 <SelectValue placeholder={Texts.selectProject} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-[110]">
                 {projects.map((project) => (
                   <SelectItem key={project.id} value={project.id}>
                     {project.name}
@@ -128,7 +128,7 @@ export const RoleViewSwitcher = () => {
                 <SelectTrigger id="role-view-contract-project" className="w-full">
                   <SelectValue placeholder={Texts.selectProject} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[110]">
                   {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id}>
                       {project.name}
@@ -147,7 +147,7 @@ export const RoleViewSwitcher = () => {
                 <SelectTrigger id="role-view-contract" className="w-full">
                   <SelectValue placeholder={Texts.selectContract} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[110]">
                   {contracts.map((contract) => (
                     <SelectItem key={contract.id} value={contract.id}>
                       {contract.name}

@@ -21,12 +21,24 @@ interface TimesheetStatusBadgeProps {
 
 export const TimesheetStatusBadge = ({ status }: TimesheetStatusBadgeProps) => {
   if (!status) {
-    return <span className="text-muted-foreground">{Texts.dash}</span>;
+    return (
+      <span className="inline-grid">
+        <Badge variant="outline" className="invisible col-start-1 row-start-1" aria-hidden="true">
+          {Texts.statusInProgress}
+        </Badge>
+        <span className="col-start-1 row-start-1 flex items-center justify-center text-muted-foreground">{Texts.dash}</span>
+      </span>
+    );
   }
 
   return (
-    <Badge variant="outline" className={cn("w-[8.5rem] justify-center", statusClassName(status))}>
-      {status}
-    </Badge>
+    <span className="inline-grid">
+      <Badge variant="outline" className="invisible col-start-1 row-start-1" aria-hidden="true">
+        {Texts.statusInProgress}
+      </Badge>
+      <Badge variant="outline" className={cn("col-start-1 row-start-1 justify-center", statusClassName(status))}>
+        {status}
+      </Badge>
+    </span>
   );
 };
