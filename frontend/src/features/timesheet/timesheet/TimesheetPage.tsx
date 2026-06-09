@@ -1,5 +1,5 @@
-import { Suspense, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate, useRouteLoaderData, useSearchParams } from "react-router";
+import { Suspense, startTransition, useCallback, useMemo, useRef, useState } from "react";
+import { Await, useAsyncValue, useLoaderData, useNavigate, useRevalidator, useRouteLoaderData, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
@@ -17,6 +17,7 @@ import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
 import type { Timesheet, TimesheetDay } from "../Timesheet";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
 import { updateTimesheet } from "./api/updateTimesheet";
+import type { TimesheetComment } from "./comments/Comment";
 import { TimesheetComments } from "./comments/TimesheetComments";
 import { TimesheetGrid } from "./grid/TimesheetGrid";
 import { TimesheetsOverview } from "./TimesheetsOverview";
@@ -27,12 +28,18 @@ interface TimesheetPageLoaderData {
   employeePromise: Promise<GetEmployeeResponse>;
   overviewPromise: Promise<GetCombinedTimesheetOverviewResponse>;
   timesheetPromise: Promise<Timesheet>;
+  commentsPromise: Promise<TimesheetComment[]>;
 }
 
 export const TimesheetPage = () => {
   const loaderData = useLoaderData() as TimesheetPageLoaderData;
-  const [workflowRefreshKey, setWorkflowRefreshKey] = useState(0);
-  const onWorkflowSuccess = useMemo(() => () => setWorkflowRefreshKey((current) => current + 1), []);
+  const revalidator = useRevalidator();
+  const onWorkflowSuccess = useMemo(() => () => revalidator.revalidate(), [revalidator]);
+  const [searchParams] = useSearchParams();
+  const employeeId = searchParams.get("employeeId") ?? "";
+  const year = Number(searchParams.get("year"));
+  const month = Number(searchParams.get("month"));
+  const commentsScope = employeeId && Number.isInteger(year) && Number.isInteger(month) ? { employeeId, year, month } : null;
 
   return (
     <TimesheetWorkflowRefreshProvider value={onWorkflowSuccess}>
@@ -52,9 +59,16 @@ export const TimesheetPage = () => {
       </div>
       <Suspense fallback={<GenericSkeleton />}>
         <Await resolve={loaderData.timesheetPromise}>
-          <TimesheetPageContent workflowRefreshKey={workflowRefreshKey} />
+          <TimesheetPageContent />
         </Await>
       </Suspense>
+      {commentsScope && (
+        <Suspense fallback={<GenericSkeleton />}>
+          <Await resolve={loaderData.commentsPromise}>
+            <TimesheetComments scope={commentsScope} />
+          </Await>
+        </Suspense>
+      )}
     </TimesheetWorkflowRefreshProvider>
   );
 };
@@ -87,27 +101,22 @@ const CombinedTimesheetSubHeader = () => {
   );
 };
 
-interface TimesheetPageContentProps {
-  workflowRefreshKey: number;
-}
-
-const TimesheetPageContent = ({ workflowRefreshKey }: TimesheetPageContentProps) => {
+const TimesheetPageContent = () => {
   const initialTimesheet = useAsyncValue() as Timesheet;
   const { overviewPromise } = useLoaderData() as TimesheetPageLoaderData;
 
   return (
     <Await resolve={overviewPromise}>
-      <TimesheetEditor initialTimesheet={initialTimesheet} workflowRefreshKey={workflowRefreshKey} />
+      <TimesheetEditor key={initialTimesheet.id} initialTimesheet={initialTimesheet} />
     </Await>
   );
 };
 
 interface TimesheetEditorProps {
   initialTimesheet: Timesheet;
-  workflowRefreshKey: number;
 }
 
-const TimesheetEditor = ({ initialTimesheet, workflowRefreshKey }: TimesheetEditorProps) => {
+const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
   const overview = useAsyncValue() as GetCombinedTimesheetOverviewResponse;
   const [timesheet, setTimesheet] = useImmer<Timesheet>(initialTimesheet);
   const [searchParams] = useSearchParams();
@@ -116,15 +125,10 @@ const TimesheetEditor = ({ initialTimesheet, workflowRefreshKey }: TimesheetEdit
   const lockActorEmployeeId = rootData?.currentUser?.id ?? timesheetEmployeeId;
   const canEditTimesheet = useCan(UiAction.timesheet.edit, { employeeId: timesheetEmployeeId });
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showGrid, setShowGrid] = useState(false);
-  const [showComments, setShowComments] = useState(false);
   const didMeasureStablePaintRef = useRef(false);
+  const { overviewPromise } = useLoaderData() as TimesheetPageLoaderData;
 
   const isEditable = overview.status === Texts.statusInProgress && canEditTimesheet;
-
-  useEffect(() => {
-    setTimesheet(initialTimesheet);
-  }, [initialTimesheet, setTimesheet]);
 
   const handleUpdateDay = useCallback(
     (dayIndex: number, updater: (day: TimesheetDay) => void) => {
@@ -182,10 +186,8 @@ const TimesheetEditor = ({ initialTimesheet, workflowRefreshKey }: TimesheetEdit
     [timesheet],
   );
 
-  useEffect(() => {
-    if (!import.meta.env.DEV || didMeasureStablePaintRef.current) return;
+  if (import.meta.env.DEV && !didMeasureStablePaintRef.current) {
     didMeasureStablePaintRef.current = true;
-
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         performance.mark("timesheet:first-stable-paint");
@@ -197,64 +199,32 @@ const TimesheetEditor = ({ initialTimesheet, workflowRefreshKey }: TimesheetEdit
         console.log(`[Timesheet] first stable paint after data ready: ${durationMs.toFixed(1)}ms`);
       });
     });
-  }, []);
-
-  useEffect(() => {
-    let firstRafId: number | undefined;
-    let secondRafId: number | undefined;
-    let commentsTimerId: number | undefined;
-
-    firstRafId = window.requestAnimationFrame(() => {
-      secondRafId = window.requestAnimationFrame(() => {
-        setShowGrid(true);
-        commentsTimerId = window.setTimeout(() => {
-          setShowComments(true);
-        }, 120);
-      });
-    });
-
-    return () => {
-      if (firstRafId !== undefined) window.cancelAnimationFrame(firstRafId);
-      if (secondRafId !== undefined) window.cancelAnimationFrame(secondRafId);
-      if (commentsTimerId !== undefined) window.clearTimeout(commentsTimerId);
-    };
-  }, []);
-
-  const { overviewPromise } = useLoaderData() as TimesheetPageLoaderData;
+  }
 
   return (
-    <>
-      <div className={cn(isFullscreen && "fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background p-4 md:p-6")}>
-        {!isFullscreen && (
-          <Suspense fallback={<GenericSkeleton />}>
-            <Await resolve={overviewPromise}>
-              <CombinedTimesheetSubHeader />
-            </Await>
-          </Suspense>
-        )}
-        <TimesheetWorkflowToolbar
-          timesheet={timesheet}
-          overview={overview}
-          isFullscreen={isFullscreen}
-          onToggleFullscreen={() => setIsFullscreen((current) => !current)}
-          onSave={handleSave}
-          onClearAttendanceFields={handleClearAttendanceFields}
-        />
-        {showGrid ? (
-          <TimesheetGrid
-            timesheet={timesheet}
-            readOnly={!isEditable}
-            onUpdateDay={handleUpdateDay}
-            onToggleProjectLock={handleToggleProjectLock}
-            className={isFullscreen ? "min-h-0 flex-1 max-h-none" : undefined}
-          />
-        ) : (
-          <div className={cn(isFullscreen ? "min-h-0 flex-1" : "h-[420px]")}>
-            <GenericSkeleton />
-          </div>
-        )}
-      </div>
-      {showComments && <TimesheetComments refreshKey={workflowRefreshKey} />}
-    </>
+    <div className={cn(isFullscreen && "fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background p-4 md:p-6")}>
+      {!isFullscreen && (
+        <Suspense fallback={<GenericSkeleton />}>
+          <Await resolve={overviewPromise}>
+            <CombinedTimesheetSubHeader />
+          </Await>
+        </Suspense>
+      )}
+      <TimesheetWorkflowToolbar
+        timesheet={timesheet}
+        overview={overview}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={() => setIsFullscreen((current) => !current)}
+        onSave={handleSave}
+        onClearAttendanceFields={handleClearAttendanceFields}
+      />
+      <TimesheetGrid
+        timesheet={timesheet}
+        readOnly={!isEditable}
+        onUpdateDay={handleUpdateDay}
+        onToggleProjectLock={handleToggleProjectLock}
+        className={isFullscreen ? "min-h-0 flex-1 max-h-none" : undefined}
+      />
+    </div>
   );
 };

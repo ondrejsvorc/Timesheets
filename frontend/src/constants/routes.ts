@@ -11,4 +11,8 @@ export const Routes = {
   employee: (id: string) => `/employees/${id}`,
   employeePositions: (id: string) => `/employees/${id}/positions`,
   timesheet: (employeeId: string, year: number, month: number) => `/timesheet?employeeId=${employeeId}&year=${year}&month=${month}`,
+  resourceProjects: () => "/_resources/projects",
+  resourceContracts: (projectId: string) => `/_resources/contracts?projectId=${encodeURIComponent(projectId)}`,
+  resourceEmployees: () => "/_resources/employees",
+  resourceProjectContracts: (projectId: string) => `/_resources/project-contracts/${projectId}`,
 };

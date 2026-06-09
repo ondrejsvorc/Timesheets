@@ -10,13 +10,14 @@ import { Routes } from "./constants/routes";
 import { Texts } from "./constants/texts";
 import { EmployeeRolesPage } from "./features/admin/EmployeeRolesPage";
 import { getContractEmployees } from "./features/contract/api/getContractEmployees";
+import { loadContractTimesheetsPage } from "./features/contract/api/getContractTimesheets";
 import { getProjectContract } from "./features/contract/api/getProjectContract";
 import { ContractEmployees } from "./features/contract/ContractEmployees";
 import { ContractPage } from "./features/contract/ContractPage";
 import { ContractTimesheets } from "./features/contract/ContractTimesheets";
 import { getEmployee } from "./features/employee/api/getEmployee";
 import { getEmployeePositions } from "./features/employee/api/getEmployeePositions";
-import { getEmployeeTimesheets } from "./features/employee/api/getEmployeeTimesheets";
+import { loadEmployeeTimesheetsPage } from "./features/employee/api/getEmployeeTimesheets";
 import { EmployeePage } from "./features/employee/EmployeePage";
 import { EmployeePositions } from "./features/employee/EmployeePositions";
 import { EmployeeTimesheets } from "./features/employee/EmployeeTimesheets";
@@ -32,7 +33,9 @@ import { getProjects } from "./features/projects/api/getProjects";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { getCombinedTimesheet } from "./features/timesheet/timesheet/api/getCombinedTimesheet";
 import { getCombinedTimesheetOverview } from "./features/timesheet/timesheet/api/getCombinedTimesheetOverview";
+import { getTimesheetComments } from "./features/timesheet/timesheet/api/getTimesheetComments";
 import { TimesheetPage } from "./features/timesheet/timesheet/TimesheetPage";
+import { resourceRoutes } from "./router/resourceRoutes";
 
 export type CurrentUser = {
   id: string;
@@ -123,6 +126,7 @@ export const router = createBrowserRouter([
     hydrateFallbackElement: <FullscreenLoader ariaLabel={Texts.redirectingToLogin} />,
     loader: requireAuth,
     children: [
+      ...resourceRoutes,
       {
         index: true,
         loader: async () => {
@@ -190,6 +194,11 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: <ContractTimesheets />,
+            loader: async ({ params, request }) => {
+              const { projectId, contractId } = requireContractParams(params);
+              await denyUnless(UiAction.contracts.view, { projectId, contractId });
+              return loadContractTimesheetsPage(projectId, contractId, request);
+            },
           },
           {
             path: "employees",
@@ -230,10 +239,10 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: <EmployeeTimesheets />,
-            loader: async ({ params }) => {
+            loader: async ({ params, request }) => {
               const employeeId = requireEmployeeId(params);
               await denyUnless(UiAction.employees.view, { employeeId });
-              return getEmployeeTimesheets(employeeId);
+              return loadEmployeeTimesheetsPage(employeeId, request);
             },
           },
           {
@@ -270,6 +279,7 @@ export const router = createBrowserRouter([
             employeePromise: getEmployee(employeeId).promise,
             overviewPromise: getCombinedTimesheetOverview(employeeId, year, month).promise,
             timesheetPromise: getCombinedTimesheet(employeeId, year, month).promise,
+            commentsPromise: getTimesheetComments(employeeId, year, month).promise,
           };
         },
       },

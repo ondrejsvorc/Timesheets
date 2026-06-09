@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
@@ -40,11 +40,6 @@ export const EditEmployeeTypeDialog = ({ open, employee, onClose, onSaved }: Edi
     mode: "onChange",
   });
 
-  useEffect(() => {
-    if (!open) return;
-    form.reset({ employeeTypeId: employee.employeeTypeId ?? "" });
-  }, [open, employee.employeeTypeId, form]);
-
   const handleClose = () => {
     form.reset({ employeeTypeId: employee.employeeTypeId ?? "" });
     onClose();
@@ -58,7 +53,16 @@ export const EditEmployeeTypeDialog = ({ open, employee, onClose, onSaved }: Edi
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+    <Dialog
+      open={open}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          handleClose();
+          return;
+        }
+        form.reset({ employeeTypeId: employee.employeeTypeId ?? "" });
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{Texts.employeeType}</DialogTitle>

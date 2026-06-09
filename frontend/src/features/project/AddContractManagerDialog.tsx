@@ -1,23 +1,29 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { useFetcher } from "react-router";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import type { EmployeeItem } from "@/features/employees/api/getEmployees";
-import { getEmployees } from "@/features/employees/api/getEmployees";
 import { addContractManager, toProjectContractManagerItem } from "./api/addContractManager";
-import { getProjectContracts } from "./api/getProjectContracts";
 import type { ProjectContractManagerItem } from "./api/getProjectContractsManagers";
+import type { ProjectContractItem } from "./api/shared/projectContractItem";
 
 const schema = z.object({
   contractId: z.string().min(1, Texts.contract),
   employeeId: z.string().min(1, Texts.employees),
 });
 type FormValues = z.infer<typeof schema>;
+
+interface ContractManagerFormData {
+  contracts: ProjectContractItem[];
+  employees: EmployeeItem[];
+}
 
 interface AddContractManagerDialogProps {
   projectId: string;
@@ -28,9 +34,7 @@ interface AddContractManagerDialogProps {
 }
 
 export const AddContractManagerDialog = ({ projectId, existingManagers, open, onClose, onSaved }: AddContractManagerDialogProps) => {
-  const [contractItems, setContractItems] = useState<ComboBoxItem[]>([]);
-  const [allEmployees, setAllEmployees] = useState<EmployeeItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const formFetcher = useFetcher<ContractManagerFormData>();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -39,6 +43,13 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
   });
 
   const selectedContractId = form.watch("contractId");
+  const allEmployees = formFetcher.data?.employees ?? [];
+
+  const contractItems: ComboBoxItem[] =
+    formFetcher.data?.contracts.map((c) => ({
+      value: c.id,
+      label: c.name,
+    })) ?? [];
 
   const employeeItems = useMemo(() => {
     if (!selectedContractId) return [];
@@ -46,28 +57,21 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
     return allEmployees.filter((e) => !managerEmployeeIds.has(e.id)).map((e) => ({ value: e.id, label: e.fullName }));
   }, [selectedContractId, existingManagers, allEmployees]);
 
-  useEffect(() => {
-    if (!open || !projectId) return;
-    setLoading(true);
-    Promise.all([getProjectContracts(projectId).promise, getEmployees().promise])
-      .then(([contractsRes, employeesRes]) => {
-        setContractItems(contractsRes.projectContracts.map((c) => ({ value: c.id, label: c.name })));
-        setAllEmployees(employeesRes.employees);
-      })
-      .finally(() => setLoading(false));
-  }, [open, projectId]);
-
-  useEffect(() => {
-    if (!selectedContractId) {
-      form.setValue("employeeId", "");
-    }
-  }, [selectedContractId, form]);
-
-  useEffect(() => {
-    if (!open) {
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
       form.reset({ contractId: "", employeeId: "" });
+      onClose();
+      return;
     }
-  }, [open, form]);
+    if (formFetcher.state === "idle") {
+      formFetcher.load(Routes.resourceProjectContracts(projectId));
+    }
+  };
+
+  const handleContractChange = (contractId: string) => {
+    form.setValue("contractId", contractId);
+    form.setValue("employeeId", "");
+  };
 
   const handleSubmit = async (values: FormValues, signal: AbortSignal) => {
     const response = await addContractManager(values.contractId, values.employeeId, signal);
@@ -76,7 +80,7 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{Texts.addManager}</DialogTitle>
@@ -90,7 +94,13 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
                 <FormItem>
                   <FormLabel>{Texts.contract}</FormLabel>
                   <FormControl>
-                    <ComboBox value={field.value} items={contractItems} placeholder={Texts.contract} loading={loading} onChange={field.onChange} />
+                    <ComboBox
+                      value={field.value}
+                      items={contractItems}
+                      placeholder={Texts.contract}
+                      loading={formFetcher.state !== "idle"}
+                      onChange={handleContractChange}
+                    />
                   </FormControl>
                 </FormItem>
               )}
@@ -106,7 +116,7 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
                       value={field.value}
                       items={employeeItems}
                       placeholder={Texts.employees}
-                      loading={loading}
+                      loading={formFetcher.state !== "idle"}
                       disabled={!selectedContractId}
                       onChange={field.onChange}
                     />

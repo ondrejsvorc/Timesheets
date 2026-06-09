@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { ActionButtons, EditButton } from "@/components/shared/buttons/ActionButtons";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
+import { ActionButtons, EditButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";

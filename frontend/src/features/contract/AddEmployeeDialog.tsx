@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { useImmer } from "use-immer";
+import { useFetcher } from "react-router";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
@@ -10,10 +10,11 @@ import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercent
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
-import { getEmployees } from "../employees/api/getEmployees";
+import type { GetEmployeesResponse } from "../employees/api/getEmployees";
 import { addContractEmployee } from "./api/addContractEmployee";
 import type { EmployeeItem as ContractEmployeeItem } from "./api/getContractEmployees";
 
@@ -76,8 +77,7 @@ interface AddEmployeeDialogProps {
 }
 
 export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees, onClose, onSaved }: AddEmployeeDialogProps) => {
-  const [employees, setEmployees] = useImmer<ComboBoxItem[]>([]);
-  const [employeesLoading, setEmployeesLoading] = useImmer(false);
+  const employeesFetcher = useFetcher<GetEmployeesResponse>();
 
   const resolver = useMemo(() => zodResolver(createSchema(existingContractEmployees)), [existingContractEmployees]);
 
@@ -89,23 +89,21 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
   const startDate = form.watch("startDate");
   const endDate = form.watch("endDate");
 
-  useEffect(() => {
-    if (!open) return;
+  const employees: ComboBoxItem[] =
+    employeesFetcher.data?.employees.map((e) => ({
+      value: e.id,
+      label: e.fullName,
+    })) ?? [];
 
-    const loadEmployees = async () => {
-      setEmployeesLoading(true);
-      const response = await getEmployees().promise;
-      setEmployees(
-        response.employees.map((e) => ({
-          value: e.id,
-          label: e.fullName,
-        })),
-      );
-      setEmployeesLoading(false);
-    };
-
-    loadEmployees();
-  }, [open, setEmployees, setEmployeesLoading]);
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      handleClose();
+      return;
+    }
+    if (employeesFetcher.state === "idle") {
+      employeesFetcher.load(Routes.resourceEmployees());
+    }
+  };
 
   const handleClose = () => {
     form.reset();
@@ -135,7 +133,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{Texts.addEmployeePositionToEmployeeTitle}</DialogTitle>
@@ -148,13 +146,13 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
               name="employeeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Zaměstnanec *</FormLabel>
+                  <FormLabel>{Texts.employees}</FormLabel>
                   <FormControl>
                     <ComboBox
                       value={field.value}
                       items={employees}
-                      placeholder={Texts.selectEmployee}
-                      loading={employeesLoading}
+                      placeholder={Texts.employees}
+                      loading={employeesFetcher.state !== "idle"}
                       onChange={field.onChange}
                     />
                   </FormControl>
@@ -162,14 +160,13 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
               )}
             />
 
-            {/* Kód + název pozice */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="positionCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Kód pozice *</FormLabel>
+                    <FormLabel>{Texts.positionCode}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -182,7 +179,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                 name="positionName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Název pozice *</FormLabel>
+                    <FormLabel>{Texts.position}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -191,13 +188,12 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
               />
             </div>
 
-            {/* Úvazek */}
             <FormField
               control={form.control}
               name="workload"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Úvazek *</FormLabel>
+                  <FormLabel>{Texts.workload}</FormLabel>
                   <FormControl>
                     <WorkloadPercentInput {...field} />
                   </FormControl>
@@ -205,7 +201,6 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
               )}
             />
 
-            {/* Datum začátku / ukončení */}
             <div className="grid grid-cols-2 gap-4">
               {(["startDate", "endDate"] as const).map((name) => (
                 <FormField
@@ -240,7 +235,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
             <DialogFooter>
               <DialogCancelButton onClick={handleClose} />
               <DialogConfirmButton
-                disabled={!form.formState.isValid || employeesLoading}
+                disabled={!form.formState.isValid}
                 onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()}
               />
             </DialogFooter>

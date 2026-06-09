@@ -1,6 +1,7 @@
+import { type Draft, produce } from "immer";
 import { ChevronDown, Upload } from "lucide-react";
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate, useRevalidator } from "react-router";
+import { Suspense, useMemo, useState } from "react";
+import { Await, useAsyncValue, useLoaderData, useLocation, useNavigate, useRevalidator } from "react-router";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { EmptyState } from "@/components/shared/data/EmptyState";
@@ -18,63 +19,51 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { CZECH_MONTH_NAMES } from "@/features/contract/utils/czechMonths";
-import type { GetEmployeeTimesheetsResponse } from "./api/getEmployeeTimesheets";
-import { type EmployeeTimesheetsFilterCriteria, useEmployeeTimesheetsFilter } from "./hooks/useEmployeeTimesheetsFilter";
+import { type EmployeeTimesheetsFilterCriteria, filterToSearchParams, type GetEmployeeTimesheetsResponse } from "./api/getEmployeeTimesheets";
 import { UploadTimesheetsDialog } from "./UploadTimesheetsDialog";
 
+export type EmployeeTimesheetsLoaderData = {
+  filter: EmployeeTimesheetsFilterCriteria;
+  promise: Promise<GetEmployeeTimesheetsResponse>;
+};
+
 export const EmployeeTimesheets = () => {
-  const loaderData = useLoaderData() as { promise: Promise<GetEmployeeTimesheetsResponse> };
+  const { filter, promise } = useLoaderData() as EmployeeTimesheetsLoaderData;
+  const location = useLocation();
 
   return (
     <Suspense fallback={<GenericSkeleton />}>
-      <Await resolve={loaderData.promise}>
-        <EmployeeTimesheetsContent />
+      <Await resolve={promise}>
+        <EmployeeTimesheetsContent key={location.search} filter={filter} />
       </Await>
     </Suspense>
   );
 };
 
-const EmployeeTimesheetsContent = () => {
+interface EmployeeTimesheetsContentProps {
+  filter: EmployeeTimesheetsFilterCriteria;
+}
+
+const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) => {
   const response = useAsyncValue() as GetEmployeeTimesheetsResponse;
-  const { filter, setFilter } = useEmployeeTimesheetsFilter();
   const navigate = useNavigate();
+  const location = useLocation();
   const revalidator = useRevalidator();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const availableYears = response.availableYears;
   const availableMonths = useMemo(() => getAvailableMonthsForYear(response.availableMonths, filter.year), [response.availableMonths, filter.year]);
 
+  const setFilter = (updater: (draft: Draft<EmployeeTimesheetsFilterCriteria>) => void) => {
+    const next = produce(filter, updater);
+    navigate({
+      pathname: location.pathname,
+      search: filterToSearchParams(next).toString(),
+    });
+  };
+
   const handleUploadClick = () => {
     setIsUploadDialogOpen(true);
   };
-
-  useEffect(() => {
-    const fallbackYear = getFallbackYear(availableYears, filter.year);
-    const yearToUse = fallbackYear ?? filter.year;
-    const nextAvailableMonthSet = new Set(getAvailableMonthsForYear(response.availableMonths, yearToUse));
-
-    if (filter.months === null) {
-      if (fallbackYear !== null) {
-        setFilter((draft) => {
-          draft.year = fallbackYear;
-        });
-      }
-      return;
-    }
-
-    const nextMonths = filter.months.filter((month) => nextAvailableMonthSet.has(month));
-    const monthsChanged = nextMonths.length !== filter.months.length;
-
-    if (fallbackYear !== null || monthsChanged) {
-      setFilter((draft) => {
-        if (fallbackYear !== null) {
-          draft.year = fallbackYear;
-        }
-        if (monthsChanged) {
-          draft.months = nextMonths.length > 0 ? nextMonths : null;
-        }
-      });
-    }
-  }, [availableYears, filter.months, filter.year, response.availableMonths, setFilter]);
 
   let filteredMonths = response.months.filter((m) => m.year === filter.year);
   const selectedMonths = filter.months;
@@ -187,25 +176,16 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
   const handleMonthToggle = (month: number | null) => {
     setFilter((draft) => {
       if (month === null) {
-        // "All months" selected - clear individual selections
         draft.months = null;
-      } else {
-        // Individual month selected
-        if (draft.months === null) {
-          // Currently "all months" - switch to array with this month
-          draft.months = [month];
-        } else {
-          // Toggle this month in the array
-          if (draft.months.includes(month)) {
-            draft.months = draft.months.filter((m) => m !== month);
-            // If no months selected, set to null (all months)
-            if (draft.months.length === 0) {
-              draft.months = null;
-            }
-          } else {
-            draft.months = [...draft.months, month];
-          }
+      } else if (draft.months === null) {
+        draft.months = [month];
+      } else if (draft.months.includes(month)) {
+        draft.months = draft.months.filter((m) => m !== month);
+        if (draft.months.length === 0) {
+          draft.months = null;
         }
+      } else {
+        draft.months = [...draft.months, month];
       }
     });
   };
@@ -223,7 +203,7 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
           disabled={availableYears.length === 0}
           onValueChange={(v) =>
             setFilter((draft) => {
-              draft.year = parseInt(v, 10);
+              draft.year = Number.parseInt(v, 10);
             })
           }
         >
@@ -313,19 +293,3 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
 function getAvailableMonthsForYear(availableMonths: number[], _year: number) {
   return availableMonths;
 }
-
-function getFallbackYear(availableYears: number[], selectedYear: number) {
-  if (availableYears.length === 0 || availableYears.includes(selectedYear)) {
-    return null;
-  }
-
-  const currentYear = new Date().getFullYear();
-  if (availableYears.includes(currentYear)) {
-    return currentYear;
-  }
-
-  const lastAvailableYear = availableYears[availableYears.length - 1];
-  return lastAvailableYear ?? null;
-}
-
-// grouping by month is no longer needed (single row per month)

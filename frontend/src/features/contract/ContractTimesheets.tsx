@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Suspense } from "react";
+import { Await, Link, useAsyncValue, useLoaderData, useLocation, useNavigate, useNavigation } from "react-router";
+import { useImmer } from "use-immer";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
@@ -14,122 +15,81 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
-import type { EmployeeGroupView, MonthGroupView, TimesheetRowView } from "./api/getContractTimesheets";
-import { buildEmployeesView, buildMonthsView } from "./api/getContractTimesheets";
+import type {
+  ContractTimesheetsFilterCriteria,
+  EmployeeGroupView,
+  GetContractTimesheetsResponse,
+  MonthGroupView,
+  TimesheetRowView,
+} from "./api/getContractTimesheets";
+import { buildEmployeesView, buildMonthsView, filterToSearchParams } from "./api/getContractTimesheets";
 import type { GetContractTimesheetsFilterOptionsResponse } from "./api/getContractTimesheetsFilterOptions";
-import { getContractTimesheetsFilterOptions } from "./api/getContractTimesheetsFilterOptions";
-import { useContractTimesheets } from "./hooks/useContractTimesheets";
-import { type ContractTimesheetsFilterCriteria, useContractTimesheetsFilter } from "./hooks/useContractTimesheetsFilter";
 import { CZECH_MONTH_NAMES, formatMonthYear } from "./utils/czechMonths";
 
+export type ContractTimesheetsLoaderData = {
+  filter: ContractTimesheetsFilterCriteria;
+  filterOptions: GetContractTimesheetsFilterOptionsResponse;
+  promise: Promise<GetContractTimesheetsResponse>;
+};
+
 export const ContractTimesheets = () => {
-  const { id: projectId, contractId } = useParams<{ id: string; contractId: string }>();
-  const { filter, setFilter } = useContractTimesheetsFilter();
-  const { data, isLoading, fetchTimesheets } = useContractTimesheets(projectId ?? "", contractId ?? "");
-  const [filterOptions, setFilterOptions] = useState<GetContractTimesheetsFilterOptionsResponse | null>(null);
+  const { filter, filterOptions, promise } = useLoaderData() as ContractTimesheetsLoaderData;
+  const location = useLocation();
 
-  useEffect(() => {
-    if (projectId && contractId) {
-      fetchTimesheets(filter);
-    }
-  }, [projectId, contractId]); // eslint-disable-line react-hooks/exhaustive-deps -- initial fetch only
+  return (
+    <Suspense fallback={<GenericSkeleton />}>
+      <Await resolve={promise}>
+        <ContractTimesheetsContent key={location.search} filter={filter} filterOptions={filterOptions} />
+      </Await>
+    </Suspense>
+  );
+};
 
-  useEffect(() => {
-    let cancelled = false;
-    if (!contractId) return;
+interface ContractTimesheetsContentProps {
+  filter: ContractTimesheetsFilterCriteria;
+  filterOptions: GetContractTimesheetsFilterOptionsResponse;
+}
 
-    getContractTimesheetsFilterOptions(contractId).then((res) => {
-      if (!cancelled) setFilterOptions(res);
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [contractId]);
-
-  useEffect(() => {
-    if (!filterOptions?.years.length || !filterOptions.months.length) return;
-
-    const years = filterOptions.years;
-    const months = filterOptions.months;
-    const minYear = years[0];
-    const maxYear = years[years.length - 1];
-    const minMonth = months[0];
-    const maxMonth = months[months.length - 1];
-
-    if (minYear === undefined || maxYear === undefined || minMonth === undefined || maxMonth === undefined) {
-      return;
-    }
-
-    const clampYear = (y: number) => (years.includes(y) ? y : y < minYear ? minYear : maxYear);
-    const clampMonth = (m: number) => (months.includes(m) ? m : m < minMonth ? minMonth : maxMonth);
-
-    const nextFromYear = clampYear(filter.fromYear);
-    const nextToYear = clampYear(filter.toYear);
-    const nextFromMonth = clampMonth(filter.fromMonth);
-    const nextToMonth = clampMonth(filter.toMonth);
-
-    const invalidRange = nextFromYear > nextToYear || (nextFromYear === nextToYear && nextFromMonth > nextToMonth);
-
-    if (
-      nextFromYear !== filter.fromYear ||
-      nextToYear !== filter.toYear ||
-      nextFromMonth !== filter.fromMonth ||
-      nextToMonth !== filter.toMonth ||
-      invalidRange
-    ) {
-      setFilter((draft) => {
-        draft.fromYear = nextFromYear;
-        draft.fromMonth = nextFromMonth;
-        draft.toYear = nextToYear;
-        draft.toMonth = nextToMonth;
-
-        if (invalidRange) {
-          draft.fromYear = minYear;
-          draft.fromMonth = minMonth;
-          draft.toYear = maxYear;
-          draft.toMonth = maxMonth;
-        }
-      });
-    }
-  }, [filter.fromMonth, filter.fromYear, filter.toMonth, filter.toYear, filterOptions, setFilter]);
+const ContractTimesheetsContent = ({ filter, filterOptions }: ContractTimesheetsContentProps) => {
+  const data = useAsyncValue() as GetContractTimesheetsResponse;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const navigation = useNavigation();
+  const [draftFilter, setDraftFilter] = useImmer(filter);
+  const isLoading = navigation.state !== "idle";
 
   const handleFilter = () => {
-    fetchTimesheets(filter);
+    navigate({
+      pathname: location.pathname,
+      search: filterToSearchParams(draftFilter).toString(),
+    });
   };
 
-  const monthsView = data ? buildMonthsView(data) : [];
-  const employeesView = data ? buildEmployeesView(data) : [];
-  const contentReady = !isLoading || data != null;
+  const monthsView = buildMonthsView(data);
+  const employeesView = buildEmployeesView(data);
 
   return (
     <>
-      {!contentReady ? (
-        <GenericSkeleton />
+      <SubPageHeader>
+        <SubPageTitle>{Texts.timesheets}</SubPageTitle>
+      </SubPageHeader>
+      <FilterBar filter={draftFilter} setFilter={setDraftFilter} actions={<Button onClick={handleFilter}>{Texts.filter}</Button>}>
+        <ContractTimesheetsFilterControls options={filterOptions} />
+      </FilterBar>
+      {draftFilter.groupBy === "Month" ? (
+        <TimesheetsByMonth months={monthsView} isLoading={isLoading} />
       ) : (
-        <>
-          <SubPageHeader>
-            <SubPageTitle>{Texts.timesheets}</SubPageTitle>
-          </SubPageHeader>
-          <FilterBar filter={filter} setFilter={setFilter} actions={<Button onClick={handleFilter}>{Texts.filter}</Button>}>
-            <ContractTimesheetsFilterControls options={filterOptions} />
-          </FilterBar>
-          {filter.groupBy === "Month" ? (
-            <TimesheetsByMonth months={monthsView} isLoading={isLoading} />
-          ) : (
-            <TimesheetsByEmployee employees={employeesView} isLoading={isLoading} />
-          )}
-        </>
+        <TimesheetsByEmployee employees={employeesView} isLoading={isLoading} />
       )}
     </>
   );
 };
 
-function ContractTimesheetsFilterControls({ options }: { options: GetContractTimesheetsFilterOptionsResponse | null }) {
+function ContractTimesheetsFilterControls({ options }: { options: GetContractTimesheetsFilterOptionsResponse }) {
   const { filter, setFilter } = useFilterContext<ContractTimesheetsFilterCriteria>();
-  const yearOptions = options?.years ?? [];
-  const monthOptions = options?.months ?? [];
-  const statusOptions: MultiSelectComboBoxItem[] = (options?.statuses ?? []).map((s) => ({ value: s, label: s }));
+  const yearOptions = options.years;
+  const monthOptions = options.months;
+  const statusOptions: MultiSelectComboBoxItem[] = options.statuses.map((s) => ({ value: s, label: s }));
 
   return (
     <>

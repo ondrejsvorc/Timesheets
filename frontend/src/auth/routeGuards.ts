@@ -2,7 +2,7 @@ import { redirect } from "react-router";
 import { BaseUrl } from "@/constants/api";
 import { Routes } from "@/constants/routes";
 import type { CurrentUser } from "@/router";
-import { getCurrentUserPermissions, type CurrentUserPermissions } from "./api/getCurrentUserPermissions";
+import { type CurrentUserPermissions, getCurrentUserPermissions } from "./api/getCurrentUserPermissions";
 import { can, type UiActionId, type UiContext } from "./uiPermissions";
 
 interface AuthContext {

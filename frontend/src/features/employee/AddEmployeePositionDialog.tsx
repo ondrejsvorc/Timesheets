@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { useImmer } from "use-immer";
+import { useFetcher } from "react-router";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
@@ -10,12 +9,13 @@ import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercent
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 import { addContractEmployee } from "../contract/api/addContractEmployee";
-import { getContractCatalog } from "../employees/api/getContractCatalog";
-import { getProjectCatalog } from "../employees/api/getProjectCatalog";
+import type { GetContractCatalogResponse } from "../employees/api/getContractCatalog";
+import type { GetProjectCatalogResponse } from "../employees/api/getProjectCatalog";
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
 
@@ -41,10 +41,8 @@ interface AddEmployeePositionDialogProps {
 }
 
 export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }: AddEmployeePositionDialogProps) => {
-  const [projects, setProjects] = useImmer<ComboBoxItem[]>([]);
-  const [contracts, setContracts] = useImmer<ComboBoxItem[]>([]);
-  const [projectsLoading, setProjectsLoading] = useImmer(false);
-  const [contractsLoading, setContractsLoading] = useImmer(false);
+  const projectsFetcher = useFetcher<GetProjectCatalogResponse>();
+  const contractsFetcher = useFetcher<GetContractCatalogResponse>();
 
   const form = useForm<AddEmployeePositionFormValues>({
     resolver: zodResolver(addEmployeePositionSchema),
@@ -55,59 +53,38 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
   const startDate = form.watch("startDate");
   const endDate = form.watch("endDate");
 
-  // Load projects on open
-  useEffect(() => {
-    if (!open) {
+  const projects: ComboBoxItem[] =
+    projectsFetcher.data?.projects.map((p) => ({
+      value: p.id,
+      label: p.name,
+    })) ?? [];
+
+  const contracts: ComboBoxItem[] =
+    contractsFetcher.data?.contracts.map((c) => ({
+      value: c.id,
+      label: c.name,
+    })) ?? [];
+
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      handleClose();
       return;
     }
-
-    const loadProjects = async () => {
-      setProjectsLoading(true);
-
-      const response = await getProjectCatalog();
-      setProjects(
-        response.projects.map((p) => ({
-          value: p.id,
-          label: p.name,
-        })),
-      );
-
-      setProjectsLoading(false);
-    };
-
-    loadProjects();
-  }, [open, setProjects, setProjectsLoading]);
-
-  // Load contracts on project change
-  useEffect(() => {
-    if (!projectId) {
-      setContracts([]);
-      return;
+    if (projectsFetcher.state === "idle") {
+      projectsFetcher.load(Routes.resourceProjects());
     }
+  };
 
-    const loadContracts = async () => {
-      setContractsLoading(true);
-      setContracts([]);
-
-      form.setValue("contractId", "");
-
-      const response = await getContractCatalog(projectId);
-      setContracts(
-        response.contracts.map((c) => ({
-          value: c.id,
-          label: c.name,
-        })),
-      );
-
-      setContractsLoading(false);
-    };
-
-    loadContracts();
-  }, [projectId, form, setContracts, setContractsLoading]);
+  const handleProjectChange = (nextProjectId: string) => {
+    form.setValue("projectId", nextProjectId);
+    form.setValue("contractId", "");
+    if (nextProjectId) {
+      contractsFetcher.load(Routes.resourceContracts(nextProjectId));
+    }
+  };
 
   const handleClose = () => {
     form.reset();
-    setContracts([]);
     onClose();
   };
 
@@ -127,11 +104,10 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
 
     onSaved();
     form.reset();
-    setContracts([]);
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{Texts.addEmployeePositionToEmployeeTitle}</DialogTitle>
@@ -139,7 +115,6 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
 
         <Form {...form}>
           <form className="space-y-4">
-            {/* Projekt */}
             <FormField
               control={form.control}
               name="projectId"
@@ -151,15 +126,14 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                       value={field.value}
                       items={projects}
                       placeholder={Texts.selectProject}
-                      loading={projectsLoading}
-                      onChange={field.onChange}
+                      loading={projectsFetcher.state !== "idle"}
+                      onChange={handleProjectChange}
                     />
                   </FormControl>
                 </FormItem>
               )}
             />
 
-            {/* Zakázka */}
             <FormField
               control={form.control}
               name="contractId"
@@ -171,7 +145,8 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                       value={field.value}
                       items={contracts}
                       placeholder={Texts.selectContract}
-                      loading={contractsLoading}
+                      loading={contractsFetcher.state !== "idle"}
+                      disabled={!projectId}
                       onChange={field.onChange}
                     />
                   </FormControl>
@@ -179,7 +154,6 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
               )}
             />
 
-            {/* Kód + název pozice */}
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -208,7 +182,6 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
               />
             </div>
 
-            {/* Úvazek */}
             <FormField
               control={form.control}
               name="workload"
@@ -222,7 +195,6 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
               )}
             />
 
-            {/* Datum začátku / ukončení */}
             <div className="grid grid-cols-2 gap-4">
               {(["startDate", "endDate"] as const).map((name) => (
                 <FormField

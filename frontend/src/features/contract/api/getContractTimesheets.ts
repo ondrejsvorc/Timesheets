@@ -1,5 +1,7 @@
+import { redirect } from "react-router";
 import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
 import { Texts } from "@/constants/texts";
+import { getContractTimesheetsFilterOptions } from "./getContractTimesheetsFilterOptions";
 
 export type GroupByOption = "Employee" | "Month";
 
@@ -73,6 +75,87 @@ export function buildTimesheetsRequestFromUrl(url: URL): ContractTimesheetsFilte
   const statusParam = url.searchParams.get("status");
   const statuses = statusParam ? statusParam.split(",").filter(Boolean) : undefined;
   return { fromYear, fromMonth, toYear, toMonth, groupBy, statuses: statuses ?? undefined };
+}
+
+export function filterToSearchParams(filter: ContractTimesheetsFilterCriteria): URLSearchParams {
+  const next = new URLSearchParams();
+  next.set("fromYear", String(filter.fromYear));
+  next.set("fromMonth", String(filter.fromMonth));
+  next.set("toYear", String(filter.toYear));
+  next.set("toMonth", String(filter.toMonth));
+  next.set("groupBy", filter.groupBy);
+  if (filter.statuses?.length) {
+    next.set("status", filter.statuses.join(","));
+  }
+  return next;
+}
+
+export function normalizeContractTimesheetsFilter(
+  filter: ContractTimesheetsFilterCriteria,
+  options: { years: number[]; months: number[] },
+): ContractTimesheetsFilterCriteria {
+  if (options.years.length === 0 || options.months.length === 0) {
+    return filter;
+  }
+
+  const years = options.years;
+  const months = options.months;
+  const minYear = years[0];
+  const maxYear = years[years.length - 1];
+  const minMonth = months[0];
+  const maxMonth = months[months.length - 1];
+
+  if (minYear === undefined || maxYear === undefined || minMonth === undefined || maxMonth === undefined) {
+    return filter;
+  }
+
+  const clampYear = (y: number) => (years.includes(y) ? y : y < minYear ? minYear : maxYear);
+  const clampMonth = (m: number) => (months.includes(m) ? m : m < minMonth ? minMonth : maxMonth);
+
+  const nextFromYear = clampYear(filter.fromYear);
+  const nextToYear = clampYear(filter.toYear);
+  const nextFromMonth = clampMonth(filter.fromMonth);
+  const nextToMonth = clampMonth(filter.toMonth);
+  const invalidRange = nextFromYear > nextToYear || (nextFromYear === nextToYear && nextFromMonth > nextToMonth);
+
+  if (invalidRange) {
+    return {
+      ...filter,
+      fromYear: minYear,
+      fromMonth: minMonth,
+      toYear: maxYear,
+      toMonth: maxMonth,
+    };
+  }
+
+  if (nextFromYear === filter.fromYear && nextToYear === filter.toYear && nextFromMonth === filter.fromMonth && nextToMonth === filter.toMonth) {
+    return filter;
+  }
+
+  return {
+    ...filter,
+    fromYear: nextFromYear,
+    fromMonth: nextFromMonth,
+    toYear: nextToYear,
+    toMonth: nextToMonth,
+  };
+}
+
+export async function loadContractTimesheetsPage(projectId: string, contractId: string, request: Request) {
+  const url = new URL(request.url);
+  const filterOptions = await getContractTimesheetsFilterOptions(contractId);
+  const requestedFilter = buildTimesheetsRequestFromUrl(url);
+  const filter = normalizeContractTimesheetsFilter(requestedFilter, filterOptions);
+
+  if (filterToSearchParams(requestedFilter).toString() !== filterToSearchParams(filter).toString()) {
+    throw redirect(`${url.pathname}?${filterToSearchParams(filter)}`);
+  }
+
+  return {
+    filter,
+    filterOptions,
+    promise: getContractTimesheets(projectId, contractId, filter),
+  };
 }
 
 export function statusesEqual(a: string[] | undefined, b: string[] | undefined): boolean {

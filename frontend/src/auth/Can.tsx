@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { useCan } from "./useCan";
 import type { UiActionId, UiContext } from "./uiPermissions";
+import { useCan } from "./useCan";
 
 interface CanProps {
   action: UiActionId;

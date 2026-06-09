@@ -28,19 +28,18 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
   const isSubmitted = overview.status === Texts.statusPendingApproval;
 
   const timesheetId = item.timesheetId;
-
-  if (item.kind !== "project" || !timesheetId || !isSubmitted) {
-    return null;
-  }
+  const showActions = item.kind === "project" && Boolean(timesheetId) && isSubmitted;
 
   const canManagePart = useCan(UiAction.timesheet.approveProject, {
     timesheetContractId: item.contractId ?? undefined,
     timesheetProjectId: item.projectId ?? undefined,
   });
-  const canApprove = canManagePart && item.status === Texts.statusPendingApproval;
-  const canReturn = canManagePart && item.status === Texts.statusPendingApproval;
+  const canApprove = showActions && canManagePart && item.status === Texts.statusPendingApproval;
+  const canReturn = showActions && canManagePart && item.status === Texts.statusPendingApproval;
 
   const changeProjectStatus = async (statusId: string, comment: string, signal: AbortSignal) => {
+    if (!timesheetId) return;
+
     await updateCombinedTimesheetStatus(
       {
         employeeId,
@@ -64,7 +63,7 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
     }
   };
 
-  if (!canApprove && !canReturn) {
+  if (!showActions || (!canApprove && !canReturn)) {
     return null;
   }
 

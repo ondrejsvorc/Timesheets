@@ -1,15 +1,16 @@
 import { Eye } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useFetcher } from "react-router";
 import { useEffectivePermissions } from "@/auth/RoleViewContext";
 import type { RoleViewMode } from "@/auth/roleView";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { type ContractCatalogItem, getContractCatalog } from "@/features/employees/api/getContractCatalog";
-import { getProjects } from "@/features/projects/api/getProjects";
-import type { ProjectItem } from "@/features/projects/api/shared/projectItem";
+import type { GetContractCatalogResponse } from "@/features/employees/api/getContractCatalog";
+import type { GetProjectCatalogResponse } from "@/features/employees/api/getProjectCatalog";
 import { cn } from "@/utils/cn";
 
 const roleViewModeOptions: { value: RoleViewMode; label: string }[] = [
@@ -24,41 +25,34 @@ const roleViewModeOptions: { value: RoleViewMode; label: string }[] = [
 export const RoleViewSwitcher = () => {
   const { roleView, setRoleView, isOverridden } = useEffectivePermissions();
   const [open, setOpen] = useState(false);
-  const [projects, setProjects] = useState<ProjectItem[]>([]);
-  const [contracts, setContracts] = useState<ContractCatalogItem[]>([]);
+  const projectsFetcher = useFetcher<GetProjectCatalogResponse>();
+  const contractsFetcher = useFetcher<GetContractCatalogResponse>();
 
-  useEffect(() => {
-    if (!open) return;
+  const projects = projectsFetcher.data?.projects ?? [];
+  const contracts = contractsFetcher.data?.contracts ?? [];
 
-    getProjects()
-      .promise.then((response) => setProjects(response.projects))
-      .catch(() => setProjects([]));
-  }, [open]);
-
-  useEffect(() => {
-    if (!open || roleView.mode !== "contractManager" || !roleView.projectId) {
-      setContracts([]);
-      return;
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen && projectsFetcher.state === "idle") {
+      projectsFetcher.load(Routes.resourceProjects());
     }
+  };
 
-    let cancelled = false;
-    getContractCatalog(roleView.projectId)
-      .then((response) => {
-        if (!cancelled) setContracts(response.contracts);
-      })
-      .catch(() => {
-        if (!cancelled) setContracts([]);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, roleView.mode, roleView.projectId]);
+  const handleProjectChange = (projectId: string, resetContract: boolean) => {
+    setRoleView({
+      ...roleView,
+      projectId,
+      contractId: resetContract ? null : roleView.contractId,
+    });
+    if (roleView.mode === "contractManager" && projectId) {
+      contractsFetcher.load(Routes.resourceContracts(projectId));
+    }
+  };
 
   const selectedMode = roleViewModeOptions.find((option) => option.value === roleView.mode);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -105,7 +99,7 @@ export const RoleViewSwitcher = () => {
         {roleView.mode === "projectManager" && (
           <div className="space-y-2">
             <Label htmlFor="role-view-project">{Texts.project}</Label>
-            <Select value={roleView.projectId ?? ""} onValueChange={(projectId) => setRoleView({ ...roleView, projectId, contractId: null })}>
+            <Select value={roleView.projectId ?? ""} onValueChange={(projectId) => handleProjectChange(projectId, true)}>
               <SelectTrigger id="role-view-project" className="w-full">
                 <SelectValue placeholder={Texts.selectProject} />
               </SelectTrigger>
@@ -124,7 +118,7 @@ export const RoleViewSwitcher = () => {
           <>
             <div className="space-y-2">
               <Label htmlFor="role-view-contract-project">{Texts.project}</Label>
-              <Select value={roleView.projectId ?? ""} onValueChange={(projectId) => setRoleView({ ...roleView, projectId, contractId: null })}>
+              <Select value={roleView.projectId ?? ""} onValueChange={(projectId) => handleProjectChange(projectId, true)}>
                 <SelectTrigger id="role-view-contract-project" className="w-full">
                   <SelectValue placeholder={Texts.selectProject} />
                 </SelectTrigger>
