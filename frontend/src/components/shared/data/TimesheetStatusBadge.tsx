@@ -25,7 +25,7 @@ export const TimesheetStatusBadge = ({ status }: TimesheetStatusBadgeProps) => {
   }
 
   return (
-    <Badge variant="outline" className={cn(statusClassName(status))}>
+    <Badge variant="outline" className={cn("w-[8.5rem] justify-center", statusClassName(status))}>
       {status}
     </Badge>
   );

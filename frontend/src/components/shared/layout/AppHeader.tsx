@@ -1,6 +1,7 @@
 import { Bell, User } from "lucide-react";
 import { Link, useRouteLoaderData } from "react-router";
 import { useEffectivePermissions } from "@/auth/RoleViewContext";
+import { hasAnyManagerRole } from "@/auth/timesheetPermissions";
 import { RoleViewSwitcher } from "@/components/shared/dev/RoleViewSwitcher";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,8 @@ export const AppHeader = () => {
   const currentUser = rootData?.currentUser ?? null;
   const { permissions } = useEffectivePermissions();
   const isRoleManager = permissions?.isRoleManager ?? false;
+  const showManagerNavigation = hasAnyManagerRole(permissions);
+  const homeRoute = showManagerNavigation ? Routes.projects() : currentUser ? Routes.employee(currentUser.id) : Routes.projects();
 
   const handleLogout = () => {
     window.location.assign(`${BaseUrl}/auth/logout`);
@@ -31,24 +34,37 @@ export const AppHeader = () => {
     <header className="w-full border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="mx-auto max-w-7xl flex h-16 items-center justify-between px-6">
         {/* Brand */}
-        <Link to="/projects" className="text-xl font-semibold tracking-tight text-primary select-none hover:text-primary/90 transition-colors">
+        <Link to={homeRoute} className="text-xl font-semibold tracking-tight text-primary select-none hover:text-primary/90 transition-colors">
           {Texts.applicationName}
         </Link>
 
         {/* Navigation */}
         <nav className="flex items-center gap-1">
-          <Link
-            to="/projects"
-            className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
-          >
-            {Texts.projects}
-          </Link>
-          <Link
-            to="/employees"
-            className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
-          >
-            {Texts.employees}
-          </Link>
+          {showManagerNavigation ? (
+            <>
+              <Link
+                to="/projects"
+                className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
+              >
+                {Texts.projects}
+              </Link>
+              <Link
+                to="/employees"
+                className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
+              >
+                {Texts.employees}
+              </Link>
+            </>
+          ) : (
+            currentUser && (
+              <Link
+                to={Routes.employee(currentUser.id)}
+                className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
+              >
+                {Texts.myTimesheets}
+              </Link>
+            )
+          )}
           {isRoleManager && (
             <Link
               to={Routes.employeeRoles()}

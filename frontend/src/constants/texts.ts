@@ -3,6 +3,7 @@ export const Texts = {
   projects: "Projekty",
   contracts: "Zakázky",
   employees: "Zaměstnanci",
+  myTimesheets: "Moje výkazy",
   employeeRoles: "Správa rolí",
   employeeRolesDescription: "Přiřazení role globálního manažera. Změny mohou provádět pouze správci systému.",
   globalManager: "Globální manažer",

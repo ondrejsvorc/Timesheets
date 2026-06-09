@@ -22,11 +22,14 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         string? Position,
         decimal Workload,
         IEnumerable<string> Managers,
-        string Status);
+        string Status,
+        Guid? ContractId,
+        Guid? ProjectId);
     public sealed record Response(Guid EmployeeId, int Year, int Month, string Status, IEnumerable<OverviewItem> Items);
     private sealed record ProjectRowSource(
         Guid TimesheetId,
         Guid ContractId,
+        Guid ProjectId,
         string ContractName,
         string Position,
         decimal Workload,
@@ -77,6 +80,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
                 (x, contract) => new ProjectRowSource(
                     x.timesheet.Id,
                     contract.Id,
+                    contract.ProjectId,
                     contract.Name,
                     x.contractEmployee.Position,
                     x.timesheet.Workload,
@@ -93,7 +97,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
 
         List<OverviewItem> items =
         [
-            new(attendanceInfo.Id, "core", "Kmenový úvazek", null, null, coreWorkload, [], attendanceInfo.Status),
+            new(attendanceInfo.Id, "core", "Kmenový úvazek", null, null, coreWorkload, [], attendanceInfo.Status, null, null),
         ];
 
         for (int index = 0; index < projectRows.Count; index++)
@@ -117,7 +121,9 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
                 row.Position,
                 row.Workload,
                 managers,
-                projectStatus
+                projectStatus,
+                row.ContractId,
+                row.ProjectId
             ));
         }
 

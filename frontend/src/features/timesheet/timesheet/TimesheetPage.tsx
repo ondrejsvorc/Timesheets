@@ -1,6 +1,7 @@
 import { Suspense, startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useNavigate, useRouteLoaderData, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
+import { isOwnEmployee } from "@/auth/timesheetPermissions";
 import { BackButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
@@ -9,6 +10,7 @@ import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageH
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import type { GetEmployeeResponse } from "@/features/employee/api/getEmployee";
+import type { RootLoaderData } from "@/router";
 import { cn } from "@/utils/cn";
 import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
 import type { Timesheet, TimesheetDay } from "../Timesheet";
@@ -108,13 +110,15 @@ const TimesheetEditor = ({ initialTimesheet, workflowRefreshKey }: TimesheetEdit
   const overview = useAsyncValue() as GetCombinedTimesheetOverviewResponse;
   const [timesheet, setTimesheet] = useImmer<Timesheet>(initialTimesheet);
   const [searchParams] = useSearchParams();
-  const lockActorEmployeeId = searchParams.get("employeeId") ?? "";
+  const rootData = useRouteLoaderData("root") as RootLoaderData | undefined;
+  const timesheetEmployeeId = searchParams.get("employeeId") ?? "";
+  const lockActorEmployeeId = rootData?.currentUser?.id ?? timesheetEmployeeId;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const didMeasureStablePaintRef = useRef(false);
 
-  const isEditable = overview.status === Texts.statusInProgress;
+  const isEditable = overview.status === Texts.statusInProgress && isOwnEmployee(rootData?.currentUser?.id, timesheetEmployeeId);
 
   useEffect(() => {
     setTimesheet(initialTimesheet);

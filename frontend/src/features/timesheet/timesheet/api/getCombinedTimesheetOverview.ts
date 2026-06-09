@@ -9,6 +9,8 @@ export interface CombinedTimesheetOverviewItem {
   workload: number;
   managers: string[];
   status: string;
+  contractId: string | null;
+  projectId: string | null;
 }
 
 export interface GetCombinedTimesheetOverviewResponse {

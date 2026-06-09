@@ -1,6 +1,7 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
 import { type CurrentUserPermissions, getCurrentUserPermissions } from "./auth/api/getCurrentUserPermissions";
+import { hasAnyManagerRole } from "./auth/timesheetPermissions";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { FullscreenLoader } from "./components/shared/layout/FullscreenLoader";
 import { BaseUrl } from "./constants/api";
@@ -123,7 +124,17 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        loader: () => redirect("/projects"),
+        loader: async () => {
+          const permissions = await getCurrentUserPermissions().catch(() => null);
+          if (!hasAnyManagerRole(permissions)) {
+            const userResponse = await fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" });
+            if (userResponse.ok) {
+              const currentUser = (await userResponse.json()) as CurrentUser;
+              throw redirect(Routes.employee(currentUser.id));
+            }
+          }
+          throw redirect(Routes.projects());
+        },
       },
       {
         path: "projects",
