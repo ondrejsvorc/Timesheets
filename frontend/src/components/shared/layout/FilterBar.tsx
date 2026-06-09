@@ -26,9 +26,9 @@ interface FilterBarProps<TFilter> {
 export const FilterBar = <TFilter,>({ filter, setFilter, children, actions }: FilterBarProps<TFilter>) => {
   return (
     <FilterContext.Provider value={{ filter, setFilter }}>
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4 flex-wrap">{children}</div>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
+      <div className="flex items-end justify-between gap-4 mb-6">
+        <div className="flex items-end gap-4 flex-wrap">{children}</div>
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </div>
     </FilterContext.Provider>
   );

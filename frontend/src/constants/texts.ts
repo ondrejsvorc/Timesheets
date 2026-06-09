@@ -163,6 +163,7 @@ export const Texts = {
   roleManager: "Manažer",
   roleController: "Kontrolor",
   system: "Systém",
+  statusChangeLabel: "Stav",
   statusChangeSet: "Nastaven stav výkazu „{timesheet}“ na „{toStatus}“.",
   statusChangeTransition: "Změněn stav výkazu „{timesheet}“ z „{fromStatus}“ na „{toStatus}“.",
   statusChangeNoteToTimesheet: "Poznámka k výkazu „{timesheet}“ (stav „{status}“).",

@@ -55,7 +55,7 @@ internal static class CombinedTimesheetScopeLoader
     {
         if (attendanceTimesheetId is not null)
         {
-            return "Docházka";
+            return "Kombinovaný výkaz";
         }
 
         if (projectTimesheetId is not null && scope.ProjectTimesheetLabels.TryGetValue(projectTimesheetId.Value, out string? label))

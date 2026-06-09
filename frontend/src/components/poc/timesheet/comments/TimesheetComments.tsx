@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Texts } from "@/constants/texts";
 import type { TimesheetComment } from "./Comment";
 import { addTimesheetComment, listTimesheetComments, type TimesheetCommentsScope } from "./commentsApi";
-import { formatStatusChangeComment } from "./formatStatusChangeComment";
+import { StatusChangeCommentEntry } from "./StatusChangeCommentEntry";
 
 interface TimesheetCommentsProps {
   refreshKey?: number;
@@ -104,12 +104,7 @@ export const TimesheetComments = ({ refreshKey = 0 }: TimesheetCommentsProps) =>
               ) : (
                 items.map((c) =>
                   c.type === "statusChange" ? (
-                    <div key={c.id} className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground/80">{Texts.system}</span> <span className="mx-1">·</span>
-                      <span>{new Date(c.createdAt).toLocaleString("cs-CZ")}</span>
-                      <span className="mx-1">·</span>
-                      <span>{formatStatusChangeComment(c.statusChange)}</span>
-                    </div>
+                    <StatusChangeCommentEntry key={c.id} createdAt={c.createdAt} statusChange={c.statusChange} />
                   ) : (
                     <div key={c.id} className="rounded-md border bg-background px-3 py-3 md:px-4 md:py-3.5">
                       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
