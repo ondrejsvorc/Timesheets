@@ -6,6 +6,7 @@ import { DialogCancelButton } from "@/components/shared/buttons/DialogButtons";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { parseApiErrorMessage } from "@/constants/api";
 import { Texts } from "@/constants/texts";
 
 export type TimesheetWorkflowAction = "submit" | "finalApprove" | "returnWhole" | "unlock" | "approveProject" | "returnProject";
@@ -111,7 +112,7 @@ export const TimesheetWorkflowConfirmDialog = ({ action, periodLabel, targetLabe
               onClose();
             }}
             onSuccess={() => toast.success(Texts.actionSuccessful)}
-            onError={() => toast.error(Texts.actionFailed)}
+            onError={(error) => toast.error(parseApiErrorMessage(error, Texts.actionFailed))}
           >
             {config.confirmLabel}
           </BusyButton>

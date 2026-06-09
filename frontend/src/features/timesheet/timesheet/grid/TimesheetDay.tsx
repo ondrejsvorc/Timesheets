@@ -39,7 +39,7 @@ interface TimesheetDayProps {
 
 const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWorkload, coreWorkload, onUpdateDay }: TimesheetDayProps) => {
   const { workedHours, nightHours, controlTotal, balance } = React.useMemo(() => TimesheetLogic.getDayTotals(day), [day]);
-  const validations = React.useMemo(() => TimesheetValidations.validateDay(day, previousDay), [day, previousDay]);
+  const validations = React.useMemo(() => TimesheetValidations.validateDay(day, previousDay, { coreWorkload }), [day, previousDay, coreWorkload]);
   const validationsByField = React.useMemo(() => {
     const grouped = new Map<string, DayValidation[]>();
     const rowLevel: DayValidation[] = [];

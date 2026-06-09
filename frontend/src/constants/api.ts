@@ -27,6 +27,19 @@ const withErrorHandling = async <T>(fn: () => Promise<T>, label: string): Promis
   }
 };
 
+export const parseApiErrorMessage = (error: unknown, fallback: string): string => {
+  if (!(error instanceof Error)) {
+    return fallback;
+  }
+
+  const quoted = error.message.match(/: "([^"]+)"/);
+  if (quoted?.[1]) {
+    return quoted[1];
+  }
+
+  return error.message || fallback;
+};
+
 export const customFetch = async <T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> => {
   const label = `${init?.method ?? "GET"} ${input}`;
   const start = apiLoggingEnabled ? performance.now() : 0;

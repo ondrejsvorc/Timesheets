@@ -226,6 +226,9 @@ public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimes
 
 public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceTimesheet>
 {
+    private static bool HasAttendanceActivity(AttendanceDay day) =>
+        day.ClockIn is not null || day.ClockOut is not null || day.BreakStart is not null || day.BreakEnd is not null;
+
     public TimesheetReview Review(AttendanceTimesheet timesheet)
     {
         return new TimesheetReview
@@ -352,7 +355,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewDayHoursObligation(AttendanceDay day)
     {
-        if (day.IsWorkday && day.TotalHoursObligation is 0)
+        if (day.IsWorkday && day.TotalHoursObligation is 0 && HasAttendanceActivity(day))
         {
             yield return new DayIssue
             (
@@ -367,7 +370,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewClockOutBeforeClockIn(AttendanceDay day)
     {
-        if (day.IsWorkday && day.ClockOut <= day.ClockIn)
+        if (day.IsWorkday && day.ClockIn is not null && day.ClockOut is not null && day.ClockOut <= day.ClockIn)
         {
             yield return new DayIssue
             (
@@ -382,7 +385,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewMissingClockIn(AttendanceDay day)
     {
-        if (day.IsWorkday && day.ClockIn is null)
+        if (day.IsWorkday && day.ClockIn is null && HasAttendanceActivity(day))
         {
             yield return new DayIssue
             (
@@ -397,7 +400,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
 
     private static IEnumerable<DayIssue> ReviewMissingClockOut(AttendanceDay day)
     {
-        if (day.IsWorkday && day.ClockOut is null)
+        if (day.IsWorkday && day.ClockOut is null && HasAttendanceActivity(day))
         {
             yield return new DayIssue
             (

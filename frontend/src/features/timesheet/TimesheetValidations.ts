@@ -29,12 +29,29 @@ const toHours = (minutes: number): number => {
   return Number((minutes / 60).toFixed(HOURS_PRECISION));
 };
 
+const hasAnyAttendance = (day: TimesheetDay): boolean =>
+  Boolean(day.attendance.clockIn || day.attendance.clockOut || day.attendance.breakStart || day.attendance.breakEnd);
+
+interface ValidateDayOptions {
+  coreWorkload?: number;
+}
+
 export const TimesheetValidations = {
   /**
    * Validuje jeden den a vrátí seznam chyb/varování
    */
-  validateDay: (day: TimesheetDay, previousDay?: TimesheetDay): DayValidation[] => {
+  validateDay: (day: TimesheetDay, previousDay?: TimesheetDay, options: ValidateDayOptions = {}): DayValidation[] => {
     const validations: DayValidation[] = [];
+    const isWorkday = !day.isWeekend && !day.isHoliday;
+
+    if (isWorkday && options.coreWorkload === 0 && hasAnyAttendance(day)) {
+      validations.push({
+        code: "ERR-ATT-01",
+        type: "error",
+        message: "Není uvedena denní pracovní povinnost (úvazek je 0 %).",
+        field: "clockIn",
+      });
+    }
 
     // ERR-ATT-02: ClockOutBeforeClockIn (ale ne pro noční směny)
     // Tato validace se spouští i pro víkendy a svátky, pokud je tam práce
@@ -63,9 +80,8 @@ export const TimesheetValidations = {
       }
     }
 
-    // ERR-ATT-03: MissingClockIn (pouze pokud je vyplněn odchod)
-    // Tato validace se spouští i pro víkendy a svátky, pokud je tam práce
-    if (!day.attendance.clockIn && day.attendance.clockOut) {
+    // ERR-ATT-03/04: chybějící příchod/odchod jen u částečně vyplněného dne (prázdný den = flexibilní doba)
+    if (!day.attendance.clockIn && (day.attendance.clockOut || day.attendance.breakStart || day.attendance.breakEnd)) {
       validations.push({
         code: "ERR-ATT-03",
         type: "error",
@@ -74,9 +90,7 @@ export const TimesheetValidations = {
       });
     }
 
-    // ERR-ATT-04: MissingClockOut (pouze pokud je vyplněn příchod)
-    // Tato validace se spouští i pro víkendy a svátky, pokud je tam práce
-    if (day.attendance.clockIn && !day.attendance.clockOut) {
+    if (!day.attendance.clockOut && (day.attendance.clockIn || day.attendance.breakStart || day.attendance.breakEnd)) {
       validations.push({
         code: "ERR-ATT-04",
         type: "error",
@@ -175,7 +189,7 @@ export const TimesheetValidations = {
       }
     }
 
-    // ERR-ATT-08: ShortBreak a BreakEndBeforeBreakStart
+    // ERR-ATT-08: ShortBreak a BreakEndBeforeBreakStart (na pracovní den platí vždy, nejen po 6 h)
     if (day.attendance.breakStart && day.attendance.breakEnd) {
       const breakStart = toMinutes(day.attendance.breakStart);
       const breakEnd = toMinutes(day.attendance.breakEnd);
@@ -209,9 +223,14 @@ export const TimesheetValidations = {
           });
         } else {
           const breakDuration = toHours(actualBreakEnd - breakStart);
-          // Minimální délku přestávky (30 minut) vynucujeme jen tehdy, když je přestávka povinná
-          // (tj. směna přesáhne 6 hodin).
-          if (day.attendance.clockIn && day.attendance.clockOut) {
+          if (isWorkday && breakDuration > 0 && breakDuration < MIN_BREAK_DURATION_HOURS) {
+            validations.push({
+              code: "ERR-ATT-08",
+              type: "error",
+              message: "Délka přestávky musí být alespoň 30 minut.",
+              field: "breakEnd",
+            });
+          } else if (day.attendance.clockIn && day.attendance.clockOut) {
             const clockIn = toMinutes(day.attendance.clockIn);
             const clockOut = toMinutes(day.attendance.clockOut);
             const actualClockOut = clockOut < clockIn ? clockOut + 24 * 60 : clockOut;
@@ -400,12 +419,15 @@ export const TimesheetValidations = {
 
   validateTimesheet: (timesheet: Timesheet): DayValidation[] => {
     const validations: DayValidation[] = [];
+    const options: ValidateDayOptions = { coreWorkload: timesheet.core.workload };
     timesheet.days.forEach((day, index) => {
       const previousDay = index > 0 ? timesheet.days[index - 1] : undefined;
-      validations.push(...TimesheetValidations.validateDay(day, previousDay));
+      validations.push(...TimesheetValidations.validateDay(day, previousDay, options));
     });
     return validations;
   },
+
+  validateForSubmit: (timesheet: Timesheet): DayValidation[] => TimesheetValidations.validateTimesheet(timesheet),
 
   hasErrors: (validations: DayValidation[]): boolean => validations.some((validation) => validation.type === "error"),
 };

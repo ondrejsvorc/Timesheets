@@ -66,7 +66,7 @@ export const TimesheetWorkflowToolbar = ({
   };
 
   const handleSubmitClick = () => {
-    const validations = TimesheetValidations.validateTimesheet(timesheet);
+    const validations = TimesheetValidations.validateForSubmit(timesheet);
     if (TimesheetValidations.hasErrors(validations)) {
       setSubmitBlockedOpen(true);
       return;
@@ -76,10 +76,16 @@ export const TimesheetWorkflowToolbar = ({
 
   const handleWorkflowConfirm = async (comment: string, signal: AbortSignal) => {
     switch (activeWorkflow) {
-      case "submit":
+      case "submit": {
         await onSave(signal);
+        const validations = TimesheetValidations.validateForSubmit(timesheet);
+        if (TimesheetValidations.hasErrors(validations)) {
+          setSubmitBlockedOpen(true);
+          throw new Error(Texts.workflowSubmitBlockedDescription);
+        }
         await changeAttendanceStatus(TimesheetStatusIds.submitted, comment, signal);
         break;
+      }
       case "finalApprove":
         await changeAttendanceStatus(TimesheetStatusIds.approved, comment, signal);
         break;
