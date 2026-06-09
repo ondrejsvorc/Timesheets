@@ -60,7 +60,7 @@ const TimesheetPageHeader = () => {
   const employee = response.employee;
 
   return (
-    <PageHeader leading={<BackButton onClick={() => navigate(Routes.employeeTimesheets(employee.id))} />}>
+    <PageHeader leading={<BackButton onClick={() => navigate(Routes.employee(employee.id))} />}>
       <PageTitle>{employee.fullName}</PageTitle>
       <PageSubtitle>
         {employee.personalNumber} · {employee.email} · {resolveEmployeeTypeName(employee.employeeTypeId)}
@@ -73,8 +73,11 @@ const CombinedTimesheetSubHeader = () => {
   const overview = useAsyncValue() as GetCombinedTimesheetOverviewResponse;
 
   return (
-    <SubPageHeader trailing={<TimesheetStatusBadge status={overview.status} />}>
-      <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
+    <SubPageHeader>
+      <div className="flex items-center gap-2">
+        <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
+        <TimesheetStatusBadge status={overview.status} />
+      </div>
     </SubPageHeader>
   );
 };
@@ -89,6 +92,7 @@ const TimesheetPageContent = () => {
   const [showGrid, setShowGrid] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [commentsRefreshKey, setCommentsRefreshKey] = useState(0);
   const didMeasureStablePaintRef = useRef(false);
 
   const handleUpdateDay = useCallback(
@@ -213,8 +217,12 @@ const TimesheetPageContent = () => {
           </div>
         )}
       </div>
-      {showComments && <TimesheetComments />}
-      <ChangeTimesheetStatusDialog open={isStatusDialogOpen} onClose={() => setIsStatusDialogOpen(false)} />
+      {showComments && <TimesheetComments refreshKey={commentsRefreshKey} />}
+      <ChangeTimesheetStatusDialog
+        open={isStatusDialogOpen}
+        onClose={() => setIsStatusDialogOpen(false)}
+        onSuccess={() => setCommentsRefreshKey((current) => current + 1)}
+      />
     </>
   );
 };

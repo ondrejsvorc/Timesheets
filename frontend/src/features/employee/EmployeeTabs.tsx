@@ -23,11 +23,11 @@ export const EmployeeTabs = () => {
             )
           }
         >
-          {Texts.positions}
+          {Texts.timesheets}
         </NavLink>
 
         <NavLink
-          to={Routes.employeeTimesheets(id)}
+          to={Routes.employeePositions(id)}
           className={({ isActive }) =>
             cn(
               "pb-2 text-sm font-medium transition-colors",
@@ -35,7 +35,7 @@ export const EmployeeTabs = () => {
             )
           }
         >
-          {Texts.timesheets}
+          {Texts.positions}
         </NavLink>
       </nav>
     </div>

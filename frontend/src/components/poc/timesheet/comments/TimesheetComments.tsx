@@ -1,15 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Texts } from "@/constants/texts";
 import type { TimesheetComment } from "./Comment";
-import { addTimesheetComment, listTimesheetComments } from "./commentsApi";
+import { addTimesheetComment, listTimesheetComments, type TimesheetCommentsScope } from "./commentsApi";
+import { formatStatusChangeComment } from "./formatStatusChangeComment";
 
-export const TimesheetComments = () => {
+interface TimesheetCommentsProps {
+  refreshKey?: number;
+}
+
+export const TimesheetComments = ({ refreshKey = 0 }: TimesheetCommentsProps) => {
   const MAX_COMMENT_LENGTH = 500;
-  const threadKey = useMemo(() => "timesheet:mock", []);
+  const [searchParams] = useSearchParams();
+  const scope = useMemo<TimesheetCommentsScope | null>(() => {
+    const employeeId = searchParams.get("employeeId");
+    const year = Number(searchParams.get("year"));
+    const month = Number(searchParams.get("month"));
+
+    if (!employeeId || !Number.isInteger(year) || !Number.isInteger(month)) {
+      return null;
+    }
+
+    return { employeeId, year, month };
+  }, [searchParams]);
+
   const [items, setItems] = useState<TimesheetComment[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -31,11 +49,16 @@ export const TimesheetComments = () => {
   };
 
   useEffect(() => {
+    if (!scope) {
+      setItems([]);
+      return;
+    }
+
     const controller = new AbortController();
     (async () => {
       try {
         setLoadError(null);
-        const res = await listTimesheetComments(threadKey, controller.signal);
+        const res = await listTimesheetComments(scope, controller.signal);
         setItems(res);
       } catch (e) {
         if (e instanceof DOMException && e.name === "AbortError") return;
@@ -44,15 +67,15 @@ export const TimesheetComments = () => {
       }
     })();
     return () => controller.abort();
-  }, [threadKey]);
+  }, [scope, refreshKey]);
 
   const onSend = async () => {
-    if (isSending) return;
+    if (isSending || !scope) return;
     setIsSending(true);
     setSendError(null);
     try {
       const controller = new AbortController();
-      const created = await addTimesheetComment(threadKey, { text: draft }, controller.signal);
+      const created = await addTimesheetComment(scope, { text: draft }, controller.signal);
       setItems((prev) => [...(prev ?? []), created]);
       setDraft("");
       requestAnimationFrame(() => textareaRef.current?.focus());
@@ -80,12 +103,12 @@ export const TimesheetComments = () => {
                 <div className="text-sm text-muted-foreground">{Texts.noCommentsYet}</div>
               ) : (
                 items.map((c) =>
-                  c.type === "system" ? (
+                  c.type === "statusChange" ? (
                     <div key={c.id} className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
                       <span className="font-medium text-foreground/80">{Texts.system}</span> <span className="mx-1">·</span>
                       <span>{new Date(c.createdAt).toLocaleString("cs-CZ")}</span>
                       <span className="mx-1">·</span>
-                      <span>{c.text}</span>
+                      <span>{formatStatusChangeComment(c.statusChange)}</span>
                     </div>
                   ) : (
                     <div key={c.id} className="rounded-md border bg-background px-3 py-3 md:px-4 md:py-3.5">
@@ -109,7 +132,7 @@ export const TimesheetComments = () => {
                 value={draft}
                 onChange={(e) => setDraft(e.currentTarget.value)}
                 placeholder={Texts.writeCommentPlaceholder}
-                disabled={isSending}
+                disabled={isSending || !scope}
                 maxLength={MAX_COMMENT_LENGTH}
                 className="w-full max-h-40 resize-none"
                 onKeyDown={(e) => {
@@ -125,7 +148,7 @@ export const TimesheetComments = () => {
               </div>
               {sendError && <div className="text-sm text-destructive">{sendError}</div>}
               <div className="flex justify-end">
-                <Button type="button" onClick={onSend} disabled={isSending || draft.trim().length === 0}>
+                <Button type="button" onClick={onSend} disabled={isSending || !scope || draft.trim().length === 0}>
                   {isSending ? Texts.sending : Texts.send}
                 </Button>
               </div>
@@ -136,5 +159,3 @@ export const TimesheetComments = () => {
     </>
   );
 };
-
-// Intentionally minimal for now; keep all comments UI in `TimesheetComments`.

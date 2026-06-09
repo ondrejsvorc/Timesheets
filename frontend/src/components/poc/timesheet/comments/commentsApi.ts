@@ -1,74 +1,34 @@
-import type { TimesheetComment, TimesheetCommentAuthor } from "./Comment";
+import { addTimesheetComment as addTimesheetCommentRequest } from "../api/addTimesheetComment";
+import { getTimesheetComments } from "../api/getTimesheetComments";
+import type { TimesheetComment } from "./Comment";
 
-type ThreadKey = string;
-
-const AUTHOR_JAN: TimesheetCommentAuthor = { name: "Jan Novák", role: "Employee" };
-
-const store = new Map<ThreadKey, TimesheetComment[]>();
-
-function delay(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new DOMException("Aborted", "AbortError"));
-      return;
-    }
-    const id = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(id);
-        reject(new DOMException("Aborted", "AbortError"));
-      },
-      { once: true },
-    );
-  });
+export interface TimesheetCommentsScope {
+  employeeId: string;
+  year: number;
+  month: number;
 }
 
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-function newId(): string {
-  // Good enough for mock; backend will replace.
-  return `c_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
-
-function seedIfMissing(threadKey: ThreadKey) {
-  if (store.has(threadKey)) return;
-  store.set(threadKey, [
-    {
-      id: newId(),
-      type: "message",
-      createdAt: nowIso(),
-      author: AUTHOR_JAN,
-      text: "Ahoj, posílám výkaz k rychlé kontrole.",
-    },
-  ]);
-}
-
-export async function listTimesheetComments(threadKey: ThreadKey, signal?: AbortSignal): Promise<TimesheetComment[]> {
-  seedIfMissing(threadKey);
-  await delay(350, signal);
-  return (store.get(threadKey) ?? []).slice();
-}
-
-export async function addTimesheetComment(threadKey: ThreadKey, input: { text: string }, signal?: AbortSignal): Promise<TimesheetComment> {
-  seedIfMissing(threadKey);
-  await delay(200, signal);
-
-  const text = input.text.trim();
-  if (!text) {
-    throw new Error("Komentář nesmí být prázdný.");
+export const listTimesheetComments = async (scope: TimesheetCommentsScope, signal?: AbortSignal): Promise<TimesheetComment[]> => {
+  const { promise } = getTimesheetComments(scope.employeeId, scope.year, scope.month);
+  const comments = await promise;
+  if (signal?.aborted) {
+    throw new DOMException("Aborted", "AbortError");
   }
+  return comments;
+};
 
-  const comment: TimesheetComment = {
-    id: newId(),
-    type: "message",
-    createdAt: nowIso(),
-    author: AUTHOR_JAN,
-    text,
-  };
-
-  store.set(threadKey, [...(store.get(threadKey) ?? []), comment]);
-  return comment;
-}
+export const addTimesheetComment = async (
+  scope: TimesheetCommentsScope,
+  input: { text: string },
+  signal?: AbortSignal,
+): Promise<TimesheetComment> => {
+  return addTimesheetCommentRequest(
+    {
+      employeeId: scope.employeeId,
+      year: scope.year,
+      month: scope.month,
+      text: input.text,
+    },
+    signal,
+  );
+};

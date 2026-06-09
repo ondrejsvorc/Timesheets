@@ -25,6 +25,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<EmployeeWorkload> EmployeeWorkloads { get; set; } = null!;
 
     public DbSet<TimesheetStatus> TimesheetStatuses { get; set; } = null!;
+    public DbSet<TimesheetStatusHistory> TimesheetStatusHistories { get; set; } = null!;
+    public DbSet<TimesheetComment> TimesheetComments { get; set; } = null!;
     public DbSet<Notification> Notifications { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -47,6 +49,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         ConfigureProjectTimesheetsTable(modelBuilder);
         ConfigureProjectDaysTable(modelBuilder);
         ConfigureTimesheetStatusesTable(modelBuilder);
+        ConfigureTimesheetStatusHistoriesTable(modelBuilder);
+        ConfigureTimesheetCommentsTable(modelBuilder);
         ConfigureCoreEmploymentsTable(modelBuilder);
         ConfigureEmployeeWorkloadsTable(modelBuilder);
 
@@ -584,6 +588,114 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000021"), Name = "Ke schválení" },
             new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000022"), Name = "Schválený" }
         );
+    }
+
+    private static void ConfigureTimesheetStatusHistoriesTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<TimesheetStatusHistory>();
+
+        builder.ToTable("TimesheetStatusHistory", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_TimesheetStatusHistory_ExactlyOneTimesheet",
+                """
+                ("AttendanceTimesheetId" IS NOT NULL AND "ProjectTimesheetId" IS NULL)
+                OR
+                ("AttendanceTimesheetId" IS NULL AND "ProjectTimesheetId" IS NOT NULL)
+                """);
+        });
+
+        builder.HasKey(history => history.Id);
+
+        builder.Property(history => history.ToStatusId)
+            .IsRequired();
+
+        builder.Property(history => history.ChangedByEmployeeId)
+            .IsRequired();
+
+        builder.Property(history => history.ChangedAt)
+            .IsRequired();
+
+        builder.Property(history => history.Comment)
+            .HasMaxLength(500);
+
+        builder.HasOne(history => history.AttendanceTimesheet)
+            .WithMany(timesheet => timesheet.StatusHistory)
+            .HasForeignKey(history => history.AttendanceTimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(history => history.ProjectTimesheet)
+            .WithMany(timesheet => timesheet.StatusHistory)
+            .HasForeignKey(history => history.ProjectTimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(history => history.FromStatus)
+            .WithMany()
+            .HasForeignKey(history => history.FromStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(history => history.ToStatus)
+            .WithMany()
+            .HasForeignKey(history => history.ToStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(history => history.ChangedByEmployee)
+            .WithMany()
+            .HasForeignKey(history => history.ChangedByEmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(history => history.AttendanceTimesheetId);
+        builder.HasIndex(history => history.ProjectTimesheetId);
+        builder.HasIndex(history => history.ChangedByEmployeeId);
+        builder.HasIndex(history => history.ChangedAt);
+    }
+
+    private static void ConfigureTimesheetCommentsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<TimesheetComment>();
+
+        builder.ToTable("TimesheetComment", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_TimesheetComment_ExactlyOneTimesheet",
+                """
+                ("AttendanceTimesheetId" IS NOT NULL AND "ProjectTimesheetId" IS NULL)
+                OR
+                ("AttendanceTimesheetId" IS NULL AND "ProjectTimesheetId" IS NOT NULL)
+                """);
+        });
+
+        builder.HasKey(comment => comment.Id);
+
+        builder.Property(comment => comment.AuthorEmployeeId)
+            .IsRequired();
+
+        builder.Property(comment => comment.Text)
+            .IsRequired()
+            .HasMaxLength(500);
+
+        builder.Property(comment => comment.CreatedAt)
+            .IsRequired();
+
+        builder.HasOne(comment => comment.AttendanceTimesheet)
+            .WithMany(timesheet => timesheet.Comments)
+            .HasForeignKey(comment => comment.AttendanceTimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(comment => comment.ProjectTimesheet)
+            .WithMany(timesheet => timesheet.Comments)
+            .HasForeignKey(comment => comment.ProjectTimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(comment => comment.AuthorEmployee)
+            .WithMany()
+            .HasForeignKey(comment => comment.AuthorEmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(comment => comment.AttendanceTimesheetId);
+        builder.HasIndex(comment => comment.ProjectTimesheetId);
+        builder.HasIndex(comment => comment.AuthorEmployeeId);
+        builder.HasIndex(comment => comment.CreatedAt);
     }
 
     private static void ConfigureNotificationsTable(ModelBuilder modelBuilder)

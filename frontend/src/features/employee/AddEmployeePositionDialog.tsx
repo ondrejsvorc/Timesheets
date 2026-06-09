@@ -12,9 +12,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
 import { parseCalendarDate } from "@/utils/calendarDate";
-import { isWholeWorkloadPercentInRange } from "@/utils/workloadPercentForm";
+import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
+import { addContractEmployee } from "../contract/api/addContractEmployee";
 import { getContractCatalog } from "../employees/api/getContractCatalog";
 import { getProjectCatalog } from "../employees/api/getProjectCatalog";
+
+const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
 
 type AddEmployeePositionFormValues = z.infer<typeof addEmployeePositionSchema>;
 const addEmployeePositionSchema = z.object({
@@ -108,8 +111,20 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
     onClose();
   };
 
-  const handleSubmit = async (_values: AddEmployeePositionFormValues, _signal: AbortSignal) => {
-    void employeeId;
+  const handleSubmit = async (values: AddEmployeePositionFormValues, signal: AbortSignal) => {
+    await addContractEmployee(
+      values.contractId,
+      {
+        employeeId,
+        positionCode: values.positionCode.trim(),
+        position: values.positionName.trim(),
+        workload: workloadPercentToFraction(values.workload),
+        startDate: values.startDate,
+        endDate: toIsoOrEmpty(values.endDate) ?? null,
+      },
+      signal,
+    );
+
     onSaved();
     form.reset();
     setContracts([]);

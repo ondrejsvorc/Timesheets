@@ -1,16 +1,16 @@
 import { Suspense, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
-import { DialogCancelButton } from "@/components/shared/buttons/DialogButtons";
+import { Await, useAsyncValue, useLoaderData, useRevalidator, useSearchParams } from "react-router";
+import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
 import { Texts } from "@/constants/texts";
 import type { ChangeTimesheetStatusOptions } from "./api/getChangeTimesheetStatusOptions";
+import { updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
 
 type FormValues = {
   projectTimesheetIds: string[];
@@ -21,6 +21,7 @@ type FormValues = {
 interface ChangeTimesheetStatusDialogProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 interface TimesheetPageLoaderData {
@@ -33,19 +34,33 @@ const RequiredFormLabel = ({ children }: { children: string }) => (
   </FormLabel>
 );
 
-const ChangeTimesheetStatusForm = ({ onClose }: { onClose: () => void }) => {
+const ChangeTimesheetStatusForm = ({ onClose, onSuccess }: { onClose: () => void; onSuccess?: () => void }) => {
   const options = useAsyncValue() as ChangeTimesheetStatusOptions;
+  const [searchParams] = useSearchParams();
+  const revalidator = useRevalidator();
 
-  const projectTimesheetItems = useMemo<MultiSelectComboBoxItem[]>(
-    () => options.projectTimesheets.map((projectTimesheet) => ({ value: projectTimesheet.id, label: projectTimesheet.label })),
-    [options.projectTimesheets],
+  const employeeId = searchParams.get("employeeId");
+  const year = Number(searchParams.get("year"));
+  const month = Number(searchParams.get("month"));
+
+  const timesheetItems = useMemo<MultiSelectComboBoxItem[]>(
+    () => [
+      { value: options.attendanceTimesheetId, label: Texts.attendance },
+      ...options.projectTimesheets.map((projectTimesheet) => ({ value: projectTimesheet.id, label: projectTimesheet.label })),
+    ],
+    [options.attendanceTimesheetId, options.projectTimesheets],
   );
 
   const statusItems = useMemo<ComboBoxItem[]>(() => options.statuses.map((status) => ({ value: status.id, label: status.name })), [options.statuses]);
 
+  const defaultTimesheetIds = useMemo(
+    () => [options.attendanceTimesheetId, ...options.projectTimesheets.map((projectTimesheet) => projectTimesheet.id)],
+    [options.attendanceTimesheetId, options.projectTimesheets],
+  );
+
   const form = useForm<FormValues>({
     defaultValues: {
-      projectTimesheetIds: options.projectTimesheets.length > 0 ? [options.projectTimesheets[0].id] : [],
+      projectTimesheetIds: defaultTimesheetIds,
       statusId: options.currentStatusId,
       comment: "",
     },
@@ -53,7 +68,29 @@ const ChangeTimesheetStatusForm = ({ onClose }: { onClose: () => void }) => {
 
   const projectTimesheetIds = form.watch("projectTimesheetIds");
   const statusId = form.watch("statusId");
-  const canConfirm = projectTimesheetIds.length > 0 && statusId.length > 0;
+  const canConfirm = projectTimesheetIds.length > 0 && statusId.length > 0 && employeeId && Number.isInteger(year) && Number.isInteger(month);
+
+  const handleSubmit = async (_values: FormValues, signal: AbortSignal) => {
+    if (!employeeId || !Number.isInteger(year) || !Number.isInteger(month)) {
+      throw new Error("Missing timesheet context.");
+    }
+
+    await updateCombinedTimesheetStatus(
+      {
+        employeeId,
+        year,
+        month,
+        statusId: _values.statusId,
+        comment: _values.comment,
+        timesheetIds: _values.projectTimesheetIds,
+      },
+      signal,
+    );
+
+    revalidator.revalidate();
+    onSuccess?.();
+    onClose();
+  };
 
   return (
     <Form {...form}>
@@ -67,8 +104,9 @@ const ChangeTimesheetStatusForm = ({ onClose }: { onClose: () => void }) => {
               <FormControl>
                 <MultiSelectComboBox
                   value={field.value}
-                  items={projectTimesheetItems}
+                  items={timesheetItems}
                   placeholder={Texts.timesheetPicker}
+                  className="w-full"
                   onChange={field.onChange}
                 />
               </FormControl>
@@ -104,16 +142,14 @@ const ChangeTimesheetStatusForm = ({ onClose }: { onClose: () => void }) => {
 
         <DialogFooter>
           <DialogCancelButton onClick={onClose} />
-          <Button type="button" disabled={!canConfirm} onClick={onClose}>
-            {Texts.confirm}
-          </Button>
+          <DialogConfirmButton disabled={!canConfirm} onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()} />
         </DialogFooter>
       </form>
     </Form>
   );
 };
 
-export const ChangeTimesheetStatusDialog = ({ open, onClose }: ChangeTimesheetStatusDialogProps) => {
+export const ChangeTimesheetStatusDialog = ({ open, onClose, onSuccess }: ChangeTimesheetStatusDialogProps) => {
   const { changeTimesheetStatusOptionsPromise } = useLoaderData() as TimesheetPageLoaderData;
 
   return (
@@ -126,7 +162,7 @@ export const ChangeTimesheetStatusDialog = ({ open, onClose }: ChangeTimesheetSt
         {open ? (
           <Suspense fallback={<GenericSkeleton />}>
             <Await resolve={changeTimesheetStatusOptionsPromise}>
-              <ChangeTimesheetStatusForm onClose={onClose} />
+              <ChangeTimesheetStatusForm onClose={onClose} onSuccess={onSuccess} />
             </Await>
           </Suspense>
         ) : null}

@@ -11,31 +11,40 @@ using Timesheets.Api.Notifications;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
 
-public sealed class UpdateTimesheetStatus : IEndpoint
+public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 {
     private static readonly Guid DraftStatusId = Guid.Parse("00000000-0000-0000-0000-000000000020");
     private static readonly Guid SubmittedStatusId = Guid.Parse("00000000-0000-0000-0000-000000000021");
     private static readonly Guid ApprovedStatusId = Guid.Parse("00000000-0000-0000-0000-000000000022");
 
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapPut("/{id}/status", Handle)
-           .WithSummary("Update Timesheet Status")
+        app.MapPut("/combined/status", Handle)
+           .WithSummary("Update Combined Timesheet Status")
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(Guid StatusId, Guid? ApprovedBy, string? Comment);
-    public sealed record Response(Guid Id);
+    public sealed record Request(
+        Guid EmployeeId,
+        int Year,
+        int Month,
+        Guid StatusId,
+        string? Comment,
+        IReadOnlyList<Guid> TimesheetIds);
+
     public sealed class Validator : AbstractValidator<Request>
     {
         public Validator()
         {
+            RuleFor(x => x.EmployeeId).NotEmpty();
+            RuleFor(x => x.Year).GreaterThan(0);
+            RuleFor(x => x.Month).InclusiveBetween(1, 12);
             RuleFor(x => x.StatusId).NotEmpty();
+            RuleFor(x => x.TimesheetIds).NotEmpty();
             RuleFor(x => x.Comment).MaximumLength(500).When(x => x.Comment is not null);
         }
     }
 
-    private static async Task<Results<Ok<Response>, BadRequest<string>, NotFound, UnauthorizedHttpResult>> Handle(
-        Guid id,
+    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> Handle(
         [FromBody] Request request,
         HttpContext httpContext,
         AppDbContext dbContext,
@@ -44,11 +53,23 @@ public sealed class UpdateTimesheetStatus : IEndpoint
     {
         Employee changedBy = await CurrentEmployeeResolver.GetRequiredAsync(httpContext.User, dbContext, cancellationToken);
 
-        Data.Models.AttendanceTimesheet? timesheet = await dbContext.AttendanceTimesheets
-            .Include(t => t.TimesheetStatus)
-            .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+        CombinedTimesheetScope? scope = await CombinedTimesheetScopeLoader.LoadAsync(
+            request.EmployeeId,
+            request.Year,
+            request.Month,
+            dbContext,
+            cancellationToken);
 
-        if (timesheet is null)
+        if (scope is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        Data.Models.AttendanceTimesheet? attendanceTimesheet = await dbContext.AttendanceTimesheets
+            .Include(t => t.TimesheetStatus)
+            .FirstOrDefaultAsync(t => t.Id == scope.AttendanceTimesheetId, cancellationToken);
+
+        if (attendanceTimesheet is null)
         {
             return TypedResults.NotFound();
         }
@@ -62,8 +83,8 @@ public sealed class UpdateTimesheetStatus : IEndpoint
             return TypedResults.BadRequest($"Status with ID '{request.StatusId}' not found in database.");
         }
 
-        Guid currentStatusId = timesheet.TimesheetStatusId;
-        string currentStatusName = timesheet.TimesheetStatus.Name;
+        Guid currentStatusId = attendanceTimesheet.TimesheetStatusId;
+        string currentStatusName = attendanceTimesheet.TimesheetStatus.Name;
 
         if (!IsValidStatusTransition(currentStatusId, request.StatusId))
         {
@@ -71,13 +92,57 @@ public sealed class UpdateTimesheetStatus : IEndpoint
                 $"Invalid status transition from '{currentStatusName}' (ID: {currentStatusId}) to '{newStatus.Name}' (ID: {request.StatusId}).");
         }
 
-        bool statusChanged = currentStatusId != request.StatusId;
-        if (statusChanged || !string.IsNullOrWhiteSpace(request.Comment))
+        HashSet<Guid> selectedIds = request.TimesheetIds.ToHashSet();
+        HashSet<Guid> validIds = scope.ProjectTimesheetLabels.Keys
+            .Append(scope.AttendanceTimesheetId)
+            .ToHashSet();
+
+        if (selectedIds.Any(id => !validIds.Contains(id)))
         {
+            return TypedResults.BadRequest("One or more selected timesheets are invalid for this employee and period.");
+        }
+
+        bool statusChanged = currentStatusId != request.StatusId;
+        if (statusChanged)
+        {
+            attendanceTimesheet.TimesheetStatusId = request.StatusId;
+            attendanceTimesheet.UpdatedAt = DateTime.UtcNow;
+
+            if (request.StatusId == SubmittedStatusId && attendanceTimesheet.SubmittedAt is null)
+            {
+                attendanceTimesheet.SubmittedAt = DateTime.UtcNow;
+            }
+            else if (request.StatusId == ApprovedStatusId)
+            {
+                attendanceTimesheet.ApprovedBy = changedBy.Id;
+                attendanceTimesheet.ApprovedAt = DateTime.UtcNow;
+            }
+        }
+
+        List<Guid> historyTargetIds = selectedIds.ToList();
+        if (statusChanged && !historyTargetIds.Contains(scope.AttendanceTimesheetId))
+        {
+            historyTargetIds.Add(scope.AttendanceTimesheetId);
+        }
+
+        foreach (Guid timesheetId in historyTargetIds.Distinct())
+        {
+            bool isAttendance = timesheetId == scope.AttendanceTimesheetId;
+            if (!isAttendance && !scope.ProjectTimesheetLabels.ContainsKey(timesheetId))
+            {
+                continue;
+            }
+
+            if (!statusChanged && string.IsNullOrWhiteSpace(request.Comment))
+            {
+                continue;
+            }
+
             TimesheetStatusHistory history = new()
             {
                 Id = Guid.NewGuid(),
-                AttendanceTimesheetId = timesheet.Id,
+                AttendanceTimesheetId = isAttendance ? timesheetId : null,
+                ProjectTimesheetId = isAttendance ? null : timesheetId,
                 FromStatusId = statusChanged ? currentStatusId : request.StatusId,
                 ToStatusId = request.StatusId,
                 ChangedByEmployeeId = changedBy.Id,
@@ -87,37 +152,21 @@ public sealed class UpdateTimesheetStatus : IEndpoint
             dbContext.TimesheetStatusHistories.Add(history);
         }
 
-        if (statusChanged)
-        {
-            timesheet.TimesheetStatusId = request.StatusId;
-            timesheet.UpdatedAt = DateTime.UtcNow;
-
-            if (request.StatusId == SubmittedStatusId && timesheet.SubmittedAt is null)
-            {
-                timesheet.SubmittedAt = DateTime.UtcNow;
-            }
-            else if (request.StatusId == ApprovedStatusId)
-            {
-                timesheet.ApprovedBy = request.ApprovedBy ?? changedBy.Id;
-                timesheet.ApprovedAt = DateTime.UtcNow;
-            }
-        }
-
         await dbContext.SaveChangesAsync(cancellationToken);
 
         if (statusChanged)
         {
             string notificationMessage = BuildNotificationMessage(
-                timesheet.Year,
-                timesheet.Month,
+                request.Year,
+                request.Month,
                 currentStatusName,
                 newStatus.Name,
                 request.Comment);
 
-            await notificationSender.SendAsync(timesheet.EmployeeId, notificationMessage, cancellationToken);
+            await notificationSender.SendAsync(attendanceTimesheet.EmployeeId, notificationMessage, cancellationToken);
         }
 
-        return TypedResults.Ok(new Response(timesheet.Id));
+        return TypedResults.Ok();
     }
 
     private static bool IsValidStatusTransition(Guid from, Guid to) => (from, to) switch

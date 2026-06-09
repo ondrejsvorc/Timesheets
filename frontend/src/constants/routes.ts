@@ -8,6 +8,6 @@ export const Routes = {
   contractEmployees: (projectId: string, contractId: string) => `/projects/${projectId}/contracts/${contractId}/employees`,
   employees: () => "/employees",
   employee: (id: string) => `/employees/${id}`,
-  employeeTimesheets: (id: string) => `/employees/${id}/timesheets`,
+  employeePositions: (id: string) => `/employees/${id}/positions`,
   timesheet: (employeeId: string, year: number, month: number) => `/timesheet?employeeId=${employeeId}&year=${year}&month=${month}`,
 };

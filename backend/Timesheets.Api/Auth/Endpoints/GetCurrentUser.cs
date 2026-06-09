@@ -1,8 +1,8 @@
-﻿using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
+using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Auth.Endpoints;
 
@@ -24,33 +24,26 @@ public sealed class GetCurrentUser : IEndpoint
 
     private static async Task<IResult> Handle(HttpContext httpContext, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        ClaimsPrincipal currentUser = httpContext.User;
-        if (!currentUser.IsAuthenticated())
+        if (!httpContext.User.IsAuthenticated())
         {
             return Results.Unauthorized();
         }
 
-        string email = currentUser.GetEmail();
-        Response? response = await dbContext.Employees
-            .AsNoTracking()
-            .Where(e => e.Email == email)
-            .Select(e => new Response(
-                Id: e.Id,
-                FullName: EmployeeNameFormatter.Format(e.TitleBefore, e.FullName, e.TitleAfter),
-                Email: e.Email,
-                EmployeeType: e.EmployeeTypeId == null ? null : e.EmployeeType.Name,
-                PersonalNumber: e.PersonalNumber,
-                TitleBefore: e.TitleBefore,
-                TitleAfter: e.TitleAfter
-            ))
-            .FirstOrDefaultAsync(cancellationToken);
-
-        if (response is null)
+        Employee? employee = await CurrentEmployeeResolver.TryGetAsync(httpContext.User, dbContext, cancellationToken);
+        if (employee is null)
         {
             return Results.NotFound("Employee not found.");
         }
 
+        Response response = new(
+            Id: employee.Id,
+            FullName: EmployeeNameFormatter.Format(employee.TitleBefore, employee.FullName, employee.TitleAfter),
+            Email: employee.Email,
+            EmployeeType: employee.EmployeeTypeId == null ? null : employee.EmployeeType?.Name,
+            PersonalNumber: employee.PersonalNumber,
+            TitleBefore: employee.TitleBefore,
+            TitleAfter: employee.TitleAfter);
+
         return Results.Ok(response);
     }
 }
-

@@ -28,25 +28,25 @@ export const TimesheetsOverview = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Výkaz</TableHead>
+              <TableHead>{Texts.timesheetStatus}</TableHead>
               <TableHead>Zakázka</TableHead>
               <TableHead>Pozice</TableHead>
               <TableHead>Úvazek</TableHead>
               <TableHead>Manažeři zakázky</TableHead>
-              <TableHead>{Texts.timesheetStatus}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {overview.items.map((item) => (
               <TableRow key={`${item.label}-${item.contractName ?? "core"}`}>
                 <TableCell className="font-medium">{item.label}</TableCell>
+                <TableCell>
+                  <TimesheetStatusBadge status={item.status} />
+                </TableCell>
                 <TableCell>{item.contractName ?? Texts.dash}</TableCell>
                 <TableCell>{item.position ?? Texts.dash}</TableCell>
                 <TableCell>{formatWorkload(item.workload)}</TableCell>
                 <TableCell className="max-w-[20rem] whitespace-normal break-words">
                   {item.managers.length > 0 ? item.managers.join(", ") : Texts.dash}
-                </TableCell>
-                <TableCell>
-                  <TimesheetStatusBadge status={item.status} />
                 </TableCell>
               </TableRow>
             ))}

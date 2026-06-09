@@ -18,10 +18,21 @@ interface MultiSelectComboBoxProps {
   placeholder: string;
   loading?: boolean;
   maxVisibleItems?: number;
+  className?: string;
   onChange: (value: string[]) => void;
 }
 
-export const MultiSelectComboBox = ({ value = [], items, placeholder, loading, maxVisibleItems = 1, onChange }: MultiSelectComboBoxProps) => {
+const getItemLabel = (items: MultiSelectComboBoxItem[], itemValue: string) => items.find((item) => item.value === itemValue)?.label ?? itemValue;
+
+export const MultiSelectComboBox = ({
+  value = [],
+  items,
+  placeholder,
+  loading,
+  maxVisibleItems = 1,
+  className = "w-[160px]",
+  onChange,
+}: MultiSelectComboBoxProps) => {
   const [open, setOpen] = useState(false);
 
   const toggleValue = (itemValue: string) => {
@@ -32,7 +43,7 @@ export const MultiSelectComboBox = ({ value = [], items, placeholder, loading, m
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="relative w-[160px] h-[40px]">
+        <div className={cn("relative h-[40px]", className)}>
           <Button
             variant="outline"
             role="combobox"
@@ -50,10 +61,10 @@ export const MultiSelectComboBox = ({ value = [], items, placeholder, loading, m
                 <>
                   {value.slice(0, maxVisibleItems).map((val) => (
                     <Badge key={val} variant="secondary" className="flex items-center gap-1 pr-1 font-normal shrink-0">
-                      <span className="text-xs font-bold">{val}</span>
+                      <span className="truncate text-xs">{getItemLabel(items, val)}</span>
                       <button
                         type="button"
-                        aria-label={`Odstranit ${val}`}
+                        aria-label={`Odstranit ${getItemLabel(items, val)}`}
                         onClick={(e) => {
                           e.stopPropagation();
                           onChange(value.filter((v) => v !== val));
@@ -93,13 +104,12 @@ export const MultiSelectComboBox = ({ value = [], items, placeholder, loading, m
                 return (
                   <CommandItem
                     key={item.value}
-                    value={`${item.value} ${item.label}`}
+                    value={`${item.value} ${item.label ?? ""}`}
                     onSelect={() => toggleValue(item.value)}
                     className="cursor-pointer"
                   >
                     <Check className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
-                    <span className="font-bold mr-2">{item.value}</span>
-                    {item.label && <span className="text-muted-foreground truncate text-xs">{item.label}</span>}
+                    {item.label ?? item.value}
                   </CommandItem>
                 );
               })}

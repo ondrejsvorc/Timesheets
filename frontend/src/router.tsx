@@ -175,15 +175,19 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <EmployeePositions />,
-            loader: ({ params }) => getEmployeePositions(requireEmployeeId(params)),
-          },
-          {
-            path: "timesheets",
             element: <EmployeeTimesheets />,
             loader: ({ params }) => getEmployeeTimesheets(requireEmployeeId(params)),
           },
+          {
+            path: "positions",
+            element: <EmployeePositions />,
+            loader: ({ params }) => getEmployeePositions(requireEmployeeId(params)),
+          },
         ],
+      },
+      {
+        path: "employees/:id/timesheets",
+        loader: ({ params }) => redirect(Routes.employee(requireEmployeeId(params))),
       },
       {
         path: "timesheet",

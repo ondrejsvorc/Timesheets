@@ -13,7 +13,7 @@ public sealed class GetTimesheetCatalog : IEndpoint
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
     public sealed record ProjectTimesheetItem(Guid Id, string Label);
-    public sealed record Response(Guid CurrentStatusId, IEnumerable<ProjectTimesheetItem> ProjectTimesheets);
+    public sealed record Response(Guid AttendanceTimesheetId, Guid CurrentStatusId, IEnumerable<ProjectTimesheetItem> ProjectTimesheets);
     private sealed record ProjectTimesheetRow(Guid Id, string ContractName);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle([AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -21,7 +21,7 @@ public sealed class GetTimesheetCatalog : IEndpoint
         var attendanceTimesheet = await dbContext.AttendanceTimesheets
             .AsNoTracking()
             .Where(t => t.EmployeeId == request.EmployeeId && t.Year == request.Year && t.Month == request.Month)
-            .Select(t => new { t.TimesheetStatusId })
+            .Select(t => new { t.Id, t.TimesheetStatusId })
             .SingleOrDefaultAsync(cancellationToken);
 
         if (attendanceTimesheet is null)
@@ -50,6 +50,6 @@ public sealed class GetTimesheetCatalog : IEndpoint
             .Select((row, index) => new ProjectTimesheetItem(row.Id, $"Projektová činnost {index + 1}"))
             .ToList();
 
-        return TypedResults.Ok(new Response(attendanceTimesheet.TimesheetStatusId, projectTimesheets));
+        return TypedResults.Ok(new Response(attendanceTimesheet.Id, attendanceTimesheet.TimesheetStatusId, projectTimesheets));
     }
 }

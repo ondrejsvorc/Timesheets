@@ -77,6 +77,9 @@ const EmployeeTimesheetsContent = () => {
   let filteredMonths = response.months.filter((m) => m.year === filter.year);
   const selectedMonths = filter.months;
   if (selectedMonths !== null && selectedMonths.length > 0) filteredMonths = filteredMonths.filter((m) => selectedMonths.includes(m.month));
+  if (filter.onlyUnapproved) {
+    filteredMonths = filteredMonths.filter((m) => m.status !== Texts.statusApproved);
+  }
 
   if (filteredMonths.length === 0) {
     return (
@@ -279,8 +282,16 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
         </Popover>
       </div>
       <div className="flex items-center gap-3 pt-6">
-        <Checkbox id="only-unapproved" checked={false} disabled />
-        <Label htmlFor="only-unapproved" className="text-sm cursor-pointer opacity-50">
+        <Checkbox
+          id="only-unapproved"
+          checked={filter.onlyUnapproved}
+          onCheckedChange={(checked) =>
+            setFilter((draft) => {
+              draft.onlyUnapproved = checked === true;
+            })
+          }
+        />
+        <Label htmlFor="only-unapproved" className="text-sm cursor-pointer">
           {Texts.onlyMonthsWithUnapprovedTimesheets}
         </Label>
       </div>

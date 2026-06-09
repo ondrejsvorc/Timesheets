@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { BaseUrl } from "@/constants/api";
+import { Routes } from "@/constants/routes";
 import { Texts } from "../../../constants/texts";
 import type { CurrentUser } from "../../../router";
 
@@ -66,6 +67,14 @@ export const AppHeader = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>{currentUser?.fullName ?? Texts.user}</DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {currentUser && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link to={Routes.employee(currentUser.id)}>{Texts.timesheets}</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem
                 onSelect={(event) => {
                   event.preventDefault();

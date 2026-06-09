@@ -6,6 +6,7 @@ export interface ProjectTimesheetCatalogItem {
 }
 
 export interface GetTimesheetCatalogResponse {
+  attendanceTimesheetId: string;
   currentStatusId: string;
   projectTimesheets: ProjectTimesheetCatalogItem[];
 }

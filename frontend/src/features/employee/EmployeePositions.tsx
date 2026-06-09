@@ -1,5 +1,5 @@
 import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { Await, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
 import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
@@ -33,6 +33,7 @@ const { FilterSearchInput } = createFilterControls<PositionsFilterCriteria>();
 const EmployeePositionsContent = () => {
   const response = useAsyncValue() as GetEmployeePositionsResponse;
   const { filter, setFilter, filtered } = usePositionsFilter(response.positions);
+  const revalidator = useRevalidator();
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   return (
@@ -52,7 +53,10 @@ const EmployeePositionsContent = () => {
         open={isAddOpen}
         employeeId={response.employeeId}
         onClose={() => setIsAddOpen(false)}
-        onSaved={() => setIsAddOpen(false)}
+        onSaved={() => {
+          setIsAddOpen(false);
+          revalidator.revalidate();
+        }}
       />
     </>
   );
