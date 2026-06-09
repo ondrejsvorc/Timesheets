@@ -4,7 +4,6 @@ import { Await, useAsyncValue, useLoaderData, useRevalidator, useSearchParams } 
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
-import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,7 +12,7 @@ import type { ChangeTimesheetStatusOptions } from "./api/getChangeTimesheetStatu
 import { updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
 
 type FormValues = {
-  projectTimesheetIds: string[];
+  timesheetId: string;
   statusId: string;
   comment: string;
 };
@@ -43,7 +42,7 @@ const ChangeTimesheetStatusForm = ({ onClose, onSuccess }: { onClose: () => void
   const year = Number(searchParams.get("year"));
   const month = Number(searchParams.get("month"));
 
-  const timesheetItems = useMemo<MultiSelectComboBoxItem[]>(
+  const timesheetItems = useMemo<ComboBoxItem[]>(
     () => [
       { value: options.attendanceTimesheetId, label: Texts.attendance },
       ...options.projectTimesheets.map((projectTimesheet) => ({ value: projectTimesheet.id, label: projectTimesheet.label })),
@@ -53,26 +52,27 @@ const ChangeTimesheetStatusForm = ({ onClose, onSuccess }: { onClose: () => void
 
   const statusItems = useMemo<ComboBoxItem[]>(() => options.statuses.map((status) => ({ value: status.id, label: status.name })), [options.statuses]);
 
-  const defaultTimesheetIds = useMemo(
-    () => [options.attendanceTimesheetId, ...options.projectTimesheets.map((projectTimesheet) => projectTimesheet.id)],
-    [options.attendanceTimesheetId, options.projectTimesheets],
-  );
-
   const form = useForm<FormValues>({
     defaultValues: {
-      projectTimesheetIds: defaultTimesheetIds,
+      timesheetId: options.attendanceTimesheetId,
       statusId: options.currentStatusId,
       comment: "",
     },
   });
 
-  const projectTimesheetIds = form.watch("projectTimesheetIds");
+  const timesheetId = form.watch("timesheetId");
   const statusId = form.watch("statusId");
-  const canConfirm = projectTimesheetIds.length > 0 && statusId.length > 0 && employeeId && Number.isInteger(year) && Number.isInteger(month);
+  const statusUnchanged = statusId === options.currentStatusId;
+  const canConfirm =
+    timesheetId.length > 0 && statusId.length > 0 && !statusUnchanged && employeeId && Number.isInteger(year) && Number.isInteger(month);
 
-  const handleSubmit = async (_values: FormValues, signal: AbortSignal) => {
+  const handleSubmit = async (values: FormValues, signal: AbortSignal) => {
     if (!employeeId || !Number.isInteger(year) || !Number.isInteger(month)) {
       throw new Error("Missing timesheet context.");
+    }
+
+    if (values.statusId === options.currentStatusId) {
+      throw new Error("Status is unchanged.");
     }
 
     await updateCombinedTimesheetStatus(
@@ -80,9 +80,9 @@ const ChangeTimesheetStatusForm = ({ onClose, onSuccess }: { onClose: () => void
         employeeId,
         year,
         month,
-        statusId: _values.statusId,
-        comment: _values.comment,
-        timesheetIds: _values.projectTimesheetIds,
+        statusId: values.statusId,
+        comment: values.comment,
+        timesheetIds: [values.timesheetId],
       },
       signal,
     );
@@ -94,21 +94,15 @@ const ChangeTimesheetStatusForm = ({ onClose, onSuccess }: { onClose: () => void
 
   return (
     <Form {...form}>
-      <form className="space-y-4">
+      <form className="space-y-4" onSubmit={(event) => event.preventDefault()}>
         <FormField
           control={form.control}
-          name="projectTimesheetIds"
+          name="timesheetId"
           render={({ field }) => (
             <FormItem>
               <RequiredFormLabel>{Texts.timesheetPicker}</RequiredFormLabel>
               <FormControl>
-                <MultiSelectComboBox
-                  value={field.value}
-                  items={timesheetItems}
-                  placeholder={Texts.timesheetPicker}
-                  className="w-full"
-                  onChange={field.onChange}
-                />
+                <ComboBox value={field.value} items={timesheetItems} placeholder={Texts.timesheetPicker} onChange={field.onChange} />
               </FormControl>
             </FormItem>
           )}

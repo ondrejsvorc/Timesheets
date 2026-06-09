@@ -45,6 +45,7 @@ export const MultiSelectComboBox = ({
       <PopoverTrigger asChild>
         <div className={cn("relative h-[40px]", className)}>
           <Button
+            type="button"
             variant="outline"
             role="combobox"
             aria-expanded={open}
