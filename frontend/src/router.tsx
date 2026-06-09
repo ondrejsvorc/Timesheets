@@ -1,8 +1,8 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
-import { type CurrentUserPermissions, getCurrentUserPermissions } from "./auth/api/getCurrentUserPermissions";
-import { denyUnless } from "./auth/routeGuards";
-import { can, UiAction } from "./auth/uiPermissions";
+import type { CurrentUserPermissions } from "./auth/api/getCurrentUserPermissions";
+import { denyUnless, loadAuthContext, resolveHomePath } from "./auth/routeGuards";
+import { UiAction } from "./auth/uiPermissions";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { FullscreenLoader } from "./components/shared/layout/FullscreenLoader";
 import { BaseUrl } from "./constants/api";
@@ -53,31 +53,25 @@ export type RootLoaderData = {
 };
 
 const requireAuth = async ({ request }: { request: Request }): Promise<RootLoaderData> => {
-  const returnTo = new URL(request.url).pathname + new URL(request.url).search;
+  const url = new URL(request.url);
+  const returnTo = url.pathname + url.search;
 
+  let auth: Awaited<ReturnType<typeof loadAuthContext>>;
   try {
-    const [userResponse, permissionsResult] = await Promise.all([
-      fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" }),
-      getCurrentUserPermissions().catch(() => null),
-    ]);
-
-    if (userResponse.ok) {
-      const currentUser = (await userResponse.json()) as CurrentUser;
-      return { currentUser, permissions: permissionsResult };
-    }
-
-    // Only redirect to OIDC login when we're actually unauthenticated/forbidden.
-    // Other statuses (e.g. 404 "Employee not found") should not cause a login loop.
-    if (userResponse.status !== 401 && userResponse.status !== 403) {
-      return { currentUser: null, permissions: permissionsResult };
-    }
+    auth = await loadAuthContext();
   } catch {
-    // ignore and fall back to login redirect
+    throw redirect(`/redirecting?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
-  // Important: throw a redirect so React Router cancels other loaders for the current navigation.
-  // The /redirecting route will then do the full-page navigation to backend OIDC login.
-  throw redirect(`/redirecting?returnTo=${encodeURIComponent(returnTo)}`);
+  if (!auth.currentUser) {
+    throw redirect(`/redirecting?returnTo=${encodeURIComponent(returnTo)}`);
+  }
+
+  if (url.pathname === "/" || url.pathname === "") {
+    throw redirect(resolveHomePath(auth));
+  }
+
+  return auth;
 };
 
 const redirectToLogin = ({ request }: { request: Request }) => {
@@ -128,51 +122,37 @@ export const router = createBrowserRouter([
     children: [
       ...resourceRoutes,
       {
-        index: true,
-        loader: async () => {
-          const permissions = await getCurrentUserPermissions().catch(() => null);
-          if (!can(permissions, undefined, UiAction.nav.projects)) {
-            const userResponse = await fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" });
-            if (userResponse.ok) {
-              const currentUser = (await userResponse.json()) as CurrentUser;
-              throw redirect(Routes.employee(currentUser.id));
-            }
-          }
-          throw redirect(Routes.projects());
-        },
-      },
-      {
         path: "projects",
         element: <ProjectsPage />,
-        loader: async () => {
-          await denyUnless(UiAction.nav.projects);
+        loader: async ({ request }) => {
+          await denyUnless(UiAction.nav.projects, {}, request);
           return getProjects();
         },
       },
       {
         path: "projects/:id",
         element: <ProjectPage />,
-        loader: async ({ params }) => {
+        loader: async ({ params, request }) => {
           const projectId = requireProjectId(params);
-          await denyUnless(UiAction.projects.view, { projectId });
+          await denyUnless(UiAction.projects.view, { projectId }, request);
           return getProject(projectId);
         },
         children: [
           {
             index: true,
             element: <ProjectContracts />,
-            loader: async ({ params }) => {
+            loader: async ({ params, request }) => {
               const projectId = requireProjectId(params);
-              await denyUnless(UiAction.projects.view, { projectId });
+              await denyUnless(UiAction.projects.view, { projectId }, request);
               return getProjectContracts(projectId);
             },
           },
           {
             path: "contracts-managers",
             element: <ProjectContractsManagers />,
-            loader: async ({ params }) => {
+            loader: async ({ params, request }) => {
               const projectId = requireProjectId(params);
-              await denyUnless(UiAction.contractManagers.view, { projectId });
+              await denyUnless(UiAction.contractManagers.view, { projectId }, request);
               return getProjectContractsManagers(projectId);
             },
           },
@@ -181,9 +161,9 @@ export const router = createBrowserRouter([
       {
         path: "projects/:id/contracts/:contractId",
         element: <ContractPage />,
-        loader: async ({ params }) => {
+        loader: async ({ params, request }) => {
           const { projectId, contractId } = requireContractParams(params);
-          await denyUnless(UiAction.contracts.view, { projectId, contractId });
+          await denyUnless(UiAction.contracts.view, { projectId, contractId }, request);
           const promise = getProjectContract(projectId, contractId).promise.then((contract) => {
             if (!contract) throw redirect(Routes.project(projectId));
             return contract;
@@ -196,16 +176,16 @@ export const router = createBrowserRouter([
             element: <ContractTimesheets />,
             loader: async ({ params, request }) => {
               const { projectId, contractId } = requireContractParams(params);
-              await denyUnless(UiAction.contracts.view, { projectId, contractId });
+              await denyUnless(UiAction.contracts.view, { projectId, contractId }, request);
               return loadContractTimesheetsPage(projectId, contractId, request);
             },
           },
           {
             path: "employees",
             element: <ContractEmployees />,
-            loader: async ({ params }) => {
+            loader: async ({ params, request }) => {
               const { projectId, contractId } = requireContractParams(params);
-              await denyUnless(UiAction.contractEmployees.view, { contractId, projectId });
+              await denyUnless(UiAction.contractEmployees.view, { contractId, projectId }, request);
               return getContractEmployees(projectId, contractId);
             },
           },
@@ -214,25 +194,25 @@ export const router = createBrowserRouter([
       {
         path: "employees",
         element: <EmployeesPage />,
-        loader: async () => {
-          await denyUnless(UiAction.employees.list);
+        loader: async ({ request }) => {
+          await denyUnless(UiAction.employees.list, {}, request);
           return getEmployees();
         },
       },
       {
         path: "employees/roles",
         element: <EmployeeRolesPage />,
-        loader: async () => {
-          await denyUnless(UiAction.nav.employeeRoles);
+        loader: async ({ request }) => {
+          await denyUnless(UiAction.nav.employeeRoles, {}, request);
           return getEmployees();
         },
       },
       {
         path: "employees/:id",
         element: <EmployeePage />,
-        loader: async ({ params }) => {
+        loader: async ({ params, request }) => {
           const employeeId = requireEmployeeId(params);
-          await denyUnless(UiAction.employees.view, { employeeId });
+          await denyUnless(UiAction.employees.view, { employeeId }, request);
           return getEmployee(employeeId);
         },
         children: [
@@ -241,16 +221,16 @@ export const router = createBrowserRouter([
             element: <EmployeeTimesheets />,
             loader: async ({ params, request }) => {
               const employeeId = requireEmployeeId(params);
-              await denyUnless(UiAction.employees.view, { employeeId });
+              await denyUnless(UiAction.employees.view, { employeeId }, request);
               return loadEmployeeTimesheetsPage(employeeId, request);
             },
           },
           {
             path: "positions",
             element: <EmployeePositions />,
-            loader: async ({ params }) => {
+            loader: async ({ params, request }) => {
               const employeeId = requireEmployeeId(params);
-              await denyUnless(UiAction.employees.view, { employeeId });
+              await denyUnless(UiAction.employees.view, { employeeId }, request);
               return getEmployeePositions(employeeId);
             },
           },
@@ -273,7 +253,7 @@ export const router = createBrowserRouter([
             throw redirect(Routes.employees());
           }
 
-          await denyUnless(UiAction.timesheet.view, { employeeId });
+          await denyUnless(UiAction.timesheet.view, { employeeId }, request);
 
           return {
             employeePromise: getEmployee(employeeId).promise,

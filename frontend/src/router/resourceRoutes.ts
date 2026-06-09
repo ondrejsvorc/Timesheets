@@ -22,8 +22,8 @@ export const resourceRoutes = [
   },
   {
     path: "_resources/employees",
-    loader: async () => {
-      await denyUnless(UiAction.employees.list);
+    loader: async ({ request }: { request: Request }) => {
+      await denyUnless(UiAction.employees.list, {}, request);
       return getEmployees().promise;
     },
   },
