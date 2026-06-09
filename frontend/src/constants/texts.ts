@@ -98,6 +98,8 @@ export const Texts = {
   close: "Zavřít",
   combinedTimesheet: "Kombinovaný výkaz",
   changeTimesheetStatus: "Změnit stav výkazu",
+  timesheetPicker: "Výkaz(y)",
+  comment: "Komentář",
   enterFullscreen: "Fullscreen",
   exitFullscreen: "Ukončit fullscreen",
   saveChanges: "Uložit změny",

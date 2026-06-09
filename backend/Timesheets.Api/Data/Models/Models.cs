@@ -192,6 +192,8 @@ public sealed class ProjectTimesheet
     public int Year { get; set; }
     public int Month { get; set; }
     public decimal Workload { get; set; }
+    public DateTime? LockedAt { get; set; }
+    public Guid? LockedBy { get; set; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 

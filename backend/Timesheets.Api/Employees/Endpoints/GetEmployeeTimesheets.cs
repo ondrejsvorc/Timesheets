@@ -12,7 +12,7 @@ public sealed class GetEmployeeTimesheets : IEndpoint
            .WithSummary("Get Employee Timesheets");
 
     public sealed record Request([FromQuery] int? Year, [FromQuery] string? Months);
-    public sealed record MonthItem(int Year, int Month, bool HasAttendanceImport);
+    public sealed record MonthItem(int Year, int Month, bool HasAttendanceImport, string? Status);
     public sealed record Response(Guid EmployeeId, IEnumerable<MonthItem> Months, IEnumerable<int> AvailableYears, IEnumerable<int> AvailableMonths);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, [AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -70,8 +70,18 @@ public sealed class GetEmployeeTimesheets : IEndpoint
             .Select(w => new ValueTuple<int, int>(w.Year, w.Month))
             .ToHashSetAsync(cancellationToken);
 
+        Dictionary<(int Year, int Month), string> statusByMonth = await dbContext.AttendanceTimesheets
+            .AsNoTracking()
+            .Where(t => t.EmployeeId == id)
+            .Select(t => new { t.Year, t.Month, Status = t.TimesheetStatus.Name })
+            .ToDictionaryAsync(t => (t.Year, t.Month), t => t.Status, cancellationToken);
+
         List<MonthItem> months = monthKeys
-            .Select(k => new MonthItem(k.Year, k.Month, importedAttendance.Contains(k)))
+            .Select(k => new MonthItem(
+                k.Year,
+                k.Month,
+                importedAttendance.Contains(k),
+                statusByMonth.GetValueOrDefault(k)))
             .ToList();
 
         List<int> availableYears = months

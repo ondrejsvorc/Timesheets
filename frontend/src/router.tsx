@@ -26,6 +26,7 @@ import { ProjectContractsManagers } from "./features/project/ProjectContractsMan
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api/getProjects";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
+import { getChangeTimesheetStatusOptions } from "./components/poc/timesheet/api/getChangeTimesheetStatusOptions";
 import { getCombinedTimesheet } from "./features/timesheet/timesheet/api/getCombinedTimesheet";
 import { getCombinedTimesheetOverview } from "./features/timesheet/timesheet/api/getCombinedTimesheetOverview";
 import { TimesheetPage } from "./features/timesheet/timesheet/TimesheetPage";
@@ -201,6 +202,7 @@ export const router = createBrowserRouter([
             employeePromise: getEmployee(employeeId).promise,
             overviewPromise: getCombinedTimesheetOverview(employeeId, year, month).promise,
             timesheetPromise: getCombinedTimesheet(employeeId, year, month).promise,
+            changeTimesheetStatusOptionsPromise: getChangeTimesheetStatusOptions(employeeId, year, month).promise,
           };
         },
       },

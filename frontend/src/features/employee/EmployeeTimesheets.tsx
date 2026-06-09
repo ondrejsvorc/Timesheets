@@ -1,7 +1,8 @@
-import { CheckCircle, ChevronDown, Upload, XCircle } from "lucide-react";
+import { ChevronDown, Upload } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Await, useAsyncValue, useLoaderData, useNavigate, useRevalidator } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
+import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
@@ -124,8 +125,8 @@ const EmployeeTimesheetsContent = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80px]">{Texts.status}</TableHead>
               <TableHead>{Texts.month}</TableHead>
+              <TableHead>{Texts.timesheetStatus}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -141,15 +142,11 @@ const EmployeeTimesheetsContent = () => {
                           if (!disabled) navigate(Routes.timesheet(response.employeeId, m.year, m.month));
                         }}
                       >
-                        <TableCell>
-                          {disabled ? (
-                            <XCircle className="size-5 text-destructive" aria-hidden />
-                          ) : (
-                            <CheckCircle className="size-5 text-green-600" aria-hidden />
-                          )}
-                        </TableCell>
                         <TableCell className="font-medium">
                           {CZECH_MONTH_NAMES[m.month]} {m.year}
+                        </TableCell>
+                        <TableCell>
+                          <TimesheetStatusBadge status={m.status} />
                         </TableCell>
                       </TableRow>
                     </TooltipTrigger>

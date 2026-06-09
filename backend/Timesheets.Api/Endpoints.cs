@@ -81,6 +81,8 @@ public static class Endpoints
         app.MapGroup("/timesheets").WithTags("Timesheets")
         .MapEndpoint<GetCombinedTimesheetOverview>()
         .MapEndpoint<GetCombinedTimesheet>()
+        .MapEndpoint<GetTimesheetCatalog>()
+        .MapEndpoint<GetTimesheetStatuses>()
         .MapEndpoint<GetAttendanceTimesheet>()
         .MapEndpoint<CreateTimesheet>()
         .MapEndpoint<UpdateTimesheet>()

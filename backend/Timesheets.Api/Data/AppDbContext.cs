@@ -463,6 +463,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .IsRequired()
             .HasPrecision(5, 2);
 
+        builder.Property(pt => pt.LockedAt);
+        builder.Property(pt => pt.LockedBy);
+
         builder.Property(pt => pt.CreatedAt)
             .IsRequired();
 

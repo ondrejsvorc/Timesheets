@@ -5,6 +5,8 @@ interface CompactProjectDefinition {
   id: string;
   name: string;
   workload: number;
+  lockedAt: string | null;
+  lockedBy: string | null;
 }
 
 interface CompactDayItem {
@@ -19,6 +21,7 @@ interface CompactDayItem {
 }
 
 interface GetCombinedTimesheetResponse {
+  id: string;
   year: number;
   month: number;
   totalWorkload: number;
@@ -52,8 +55,8 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
     name: project.name,
     position: "",
     workload: project.workload,
-    lockedAt: null,
-    lockedByEmployeeId: null,
+    lockedAt: project.lockedAt,
+    lockedBy: project.lockedBy,
   }));
 
   const days = response.days.map((day) => {
@@ -81,6 +84,7 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
   });
 
   return {
+    id: response.id,
     year: response.year,
     month: response.month,
     totalWorkload: response.totalWorkload,

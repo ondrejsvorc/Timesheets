@@ -25,7 +25,7 @@ export interface ProjectDefinition {
   workload: number;
   /** ISO čas uzamčení sloupce (manažer); null = odemčeno. Uloží se při jednotném save výkazu. */
   lockedAt: string | null;
-  lockedByEmployeeId: string | null;
+  lockedBy: string | null;
 }
 
 export interface TimesheetDay {
@@ -38,6 +38,7 @@ export interface TimesheetDay {
 }
 
 export interface Timesheet {
+  id: string;
   year: number;
   month: number;
   totalWorkload: number;

@@ -15,7 +15,6 @@ public sealed class UpdateTimesheet : IEndpoint
            .WithSummary("Update Timesheet")
            .WithRequestValidation<Request>();
 
-    // TODO: CombinedDayUpdate?
     public sealed record DayUpdate(
         DateTime Date,
         TimeSpan? ClockIn,
@@ -27,8 +26,19 @@ public sealed class UpdateTimesheet : IEndpoint
         string? Description,
         IEnumerable<TimeRange>? Schedules
     );
-    public sealed record Request(IEnumerable<DayUpdate> Days);
+
+    public sealed record ProjectDayUpdate(DateTime Date, decimal Hours);
+
+    public sealed record ProjectUpdate(
+        Guid ContractEmployeeId,
+        DateTime? LockedAt,
+        Guid? LockedBy,
+        IEnumerable<ProjectDayUpdate> Days
+    );
+
+    public sealed record Request(IEnumerable<DayUpdate> Days, IEnumerable<ProjectUpdate>? Projects);
     public sealed record Response(Guid Id);
+
     public sealed class Validator : AbstractValidator<Request>
     {
         public Validator()
@@ -37,8 +47,7 @@ public sealed class UpdateTimesheet : IEndpoint
         }
     }
 
-    // TODO
-    private static async Task<Results<Ok<Response>, BadRequest<string>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, BadRequest<string>, NotFound>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         Data.Models.AttendanceTimesheet? timesheet = await dbContext.AttendanceTimesheets
             .Include(t => t.TimesheetStatus)
@@ -94,9 +103,41 @@ public sealed class UpdateTimesheet : IEndpoint
 
         timesheet.UpdatedAt = DateTime.UtcNow;
 
+        if (request.Projects is not null)
+        {
+            List<Data.Models.ProjectTimesheet> projectTimesheets = await dbContext.ProjectTimesheets
+                .Include(pt => pt.Days)
+                .Where(pt => pt.EmployeeId == timesheet.EmployeeId && pt.Year == timesheet.Year && pt.Month == timesheet.Month)
+                .ToListAsync(cancellationToken);
+
+            foreach (ProjectUpdate projectUpdate in request.Projects)
+            {
+                Data.Models.ProjectTimesheet? projectTimesheet = projectTimesheets
+                    .FirstOrDefault(pt => pt.ContractEmployeeId == projectUpdate.ContractEmployeeId);
+                if (projectTimesheet is null)
+                {
+                    continue;
+                }
+
+                projectTimesheet.LockedAt = projectUpdate.LockedAt;
+                projectTimesheet.LockedBy = projectUpdate.LockedBy;
+                projectTimesheet.UpdatedAt = DateTime.UtcNow;
+
+                foreach (ProjectDayUpdate dayUpdate in projectUpdate.Days)
+                {
+                    Data.Models.ProjectDay? day = projectTimesheet.Days.FirstOrDefault(d => d.Date == dayUpdate.Date);
+                    if (day is null)
+                    {
+                        continue;
+                    }
+
+                    day.Hours = dayUpdate.Hours;
+                }
+            }
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(timesheet.Id));
     }
 }
-

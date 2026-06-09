@@ -6,12 +6,14 @@ export interface CombinedTimesheetOverviewItem {
   position: string | null;
   workload: number;
   managers: string[];
+  status: string;
 }
 
 export interface GetCombinedTimesheetOverviewResponse {
   employeeId: string;
   year: number;
   month: number;
+  status: string;
   items: CombinedTimesheetOverviewItem[];
 }
 

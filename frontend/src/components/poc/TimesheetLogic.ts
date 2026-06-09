@@ -198,6 +198,7 @@ export const TimesheetLogic = {
     }
 
     const synthetic: Timesheet = {
+      id: "",
       year: 2000,
       month: 1,
       totalWorkload,
@@ -210,7 +211,7 @@ export const TimesheetLogic = {
         position: "",
         workload: p.workload,
         lockedAt: p.lockedAt ?? null,
-        lockedByEmployeeId: null,
+        lockedBy: null,
       })),
       days: [{ ...day, attendance: { ...day.attendance, schedules: [...day.attendance.schedules] }, projectHours: { ...day.projectHours } }],
     };

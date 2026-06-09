@@ -1,14 +1,16 @@
 interface SubPageHeaderProps {
   children: React.ReactNode;
+  trailing?: React.ReactNode;
 }
 
-export const SubPageHeader = ({ children }: SubPageHeaderProps) => {
+export const SubPageHeader = ({ children, trailing }: SubPageHeaderProps) => {
   return (
     <div className="py-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
           <div className="min-w-0 space-y-1">{children}</div>
         </div>
+        {trailing}
       </div>
     </div>
   );

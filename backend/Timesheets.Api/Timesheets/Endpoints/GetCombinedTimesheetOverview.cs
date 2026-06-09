@@ -12,8 +12,8 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
            .WithSummary("Get Combined Timesheet Overview");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
-    public sealed record OverviewItem(string Label, string? ContractName, string? Position, decimal Workload, IEnumerable<string> Managers);
-    public sealed record Response(Guid EmployeeId, int Year, int Month, IEnumerable<OverviewItem> Items);
+    public sealed record OverviewItem(string Label, string? ContractName, string? Position, decimal Workload, IEnumerable<string> Managers, string Status);
+    public sealed record Response(Guid EmployeeId, int Year, int Month, string Status, IEnumerable<OverviewItem> Items);
     private sealed record ProjectRowSource(Guid ContractEmployeeId, Guid ContractId, string ContractName, string Position, decimal Workload);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle([AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -23,6 +23,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             .Where(t => t.EmployeeId == request.EmployeeId && t.Year == request.Year && t.Month == request.Month)
             .Select(t => new
             {
+                Status = t.TimesheetStatus.Name,
                 Days = t.Days.Select(d => d.Workload).ToList()
             })
             .SingleOrDefaultAsync(cancellationToken);
@@ -32,13 +33,20 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             return TypedResults.NotFound();
         }
 
-        List<ProjectRowSource> projectRows = await (
-            from timesheet in dbContext.ProjectTimesheets.AsNoTracking()
-            join contractEmployee in dbContext.ContractEmployees.AsNoTracking() on timesheet.ContractEmployeeId equals contractEmployee.Id
-            join contract in dbContext.Contracts.AsNoTracking() on contractEmployee.ContractId equals contract.Id
-            where timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month
-            select new ProjectRowSource(contractEmployee.Id, contract.Id, contract.Name, contractEmployee.Position, timesheet.Workload)
-        ).ToListAsync(cancellationToken);
+        List<ProjectRowSource> projectRows = await dbContext.ProjectTimesheets
+            .AsNoTracking()
+            .Where(timesheet => timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month)
+            .Join(
+                dbContext.ContractEmployees.AsNoTracking(),
+                timesheet => timesheet.ContractEmployeeId,
+                contractEmployee => contractEmployee.Id,
+                (timesheet, contractEmployee) => new { timesheet, contractEmployee })
+            .Join(
+                dbContext.Contracts.AsNoTracking(),
+                x => x.contractEmployee.ContractId,
+                contract => contract.Id,
+                (x, contract) => new ProjectRowSource(x.contractEmployee.Id, contract.Id, contract.Name, x.contractEmployee.Position, x.timesheet.Workload))
+            .ToListAsync(cancellationToken);
 
         decimal totalProjectWorkload = projectRows.Sum(item => item.Workload);
         decimal? baseWorkload = await GetBaseWorkloadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
@@ -50,7 +58,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
 
         List<OverviewItem> items =
         [
-            new("Kmenový úvazek", null, null, coreWorkload, []),
+            new("Kmenový úvazek", null, null, coreWorkload, [], attendanceInfo.Status),
         ];
 
         for (int index = 0; index < projectRows.Count; index++)
@@ -69,11 +77,12 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
                 row.ContractName,
                 row.Position,
                 row.Workload,
-                managers
+                managers,
+                attendanceInfo.Status
             ));
         }
 
-        return TypedResults.Ok(new Response(request.EmployeeId, request.Year, request.Month, items));
+        return TypedResults.Ok(new Response(request.EmployeeId, request.Year, request.Month, attendanceInfo.Status, items));
     }
 
     private static async Task<decimal?> GetBaseWorkloadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)

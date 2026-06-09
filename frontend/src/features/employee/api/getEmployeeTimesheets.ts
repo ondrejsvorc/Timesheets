@@ -4,6 +4,7 @@ export interface EmployeeTimesheetItem {
   year: number;
   month: number;
   hasAttendanceImport: boolean;
+  status: string | null;
 }
 
 export interface EmployeeTimesheetMonthOption {

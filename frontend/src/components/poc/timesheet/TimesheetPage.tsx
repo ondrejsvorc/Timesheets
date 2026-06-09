@@ -3,6 +3,7 @@ import { Await, useAsyncValue, useLoaderData, useNavigate, useSearchParams } fro
 import { useImmer } from "use-immer";
 import { BackButton, FullscreenButton, SaveButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,8 @@ import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
 import type { Timesheet, TimesheetDay } from "../Timesheet";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
 import { TimesheetComments } from "./comments/TimesheetComments";
+import { ChangeTimesheetStatusDialog } from "./ChangeTimesheetStatusDialog";
+import { updateTimesheet } from "./api/updateTimesheet";
 import { TimesheetGrid } from "./grid/TimesheetGrid";
 import { TimesheetsOverview } from "./TimesheetsOverview";
 
@@ -66,7 +69,18 @@ const TimesheetPageHeader = () => {
   );
 };
 
+const CombinedTimesheetSubHeader = () => {
+  const overview = useAsyncValue() as GetCombinedTimesheetOverviewResponse;
+
+  return (
+    <SubPageHeader trailing={<TimesheetStatusBadge status={overview.status} />}>
+      <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
+    </SubPageHeader>
+  );
+};
+
 const TimesheetPageContent = () => {
+  const { overviewPromise } = useLoaderData() as TimesheetPageLoaderData;
   const initialTimesheet = useAsyncValue() as Timesheet;
   const [timesheet, setTimesheet] = useImmer<Timesheet>(initialTimesheet);
   const [searchParams] = useSearchParams();
@@ -74,6 +88,7 @@ const TimesheetPageContent = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showGrid, setShowGrid] = useState(false);
   const [showComments, setShowComments] = useState(false);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const didMeasureStablePaintRef = useRef(false);
 
   const handleUpdateDay = useCallback(
@@ -97,10 +112,10 @@ const TimesheetPageContent = () => {
           if (!project) return;
           if (project.lockedAt) {
             project.lockedAt = null;
-            project.lockedByEmployeeId = null;
+            project.lockedBy = null;
           } else {
             project.lockedAt = new Date().toISOString();
-            project.lockedByEmployeeId = lockActorEmployeeId || null;
+            project.lockedBy = lockActorEmployeeId || null;
           }
         });
       });
@@ -119,9 +134,8 @@ const TimesheetPageContent = () => {
     });
   }, [setTimesheet]);
 
-  const handleSave = async (_event: React.MouseEvent<HTMLButtonElement>, _signal: AbortSignal) => {
-    // TODO: Implement save
-    return Promise.resolve();
+  const handleSave = async (_event: React.MouseEvent<HTMLButtonElement>, signal: AbortSignal) => {
+    await updateTimesheet(timesheet, signal);
   };
 
   useEffect(() => {
@@ -166,13 +180,15 @@ const TimesheetPageContent = () => {
     <>
       <div className={cn(isFullscreen && "fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background p-4 md:p-6")}>
         {!isFullscreen && (
-          <SubPageHeader>
-            <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
-          </SubPageHeader>
+          <Suspense fallback={<GenericSkeleton />}>
+            <Await resolve={overviewPromise}>
+              <CombinedTimesheetSubHeader />
+            </Await>
+          </Suspense>
         )}
         <div className={cn("mb-6 flex flex-wrap items-center justify-between gap-3", isFullscreen && "bg-background/95")}>
           <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" onClick={() => setIsStatusDialogOpen(true)}>
               {Texts.changeTimesheetStatus}
             </Button>
             <Button type="button" variant="outline" onClick={handleClearAttendanceFields}>
@@ -198,6 +214,7 @@ const TimesheetPageContent = () => {
         )}
       </div>
       {showComments && <TimesheetComments />}
+      <ChangeTimesheetStatusDialog open={isStatusDialogOpen} onClose={() => setIsStatusDialogOpen(false)} />
     </>
   );
 };

@@ -1,5 +1,6 @@
 import { useAsyncValue } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
+import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
@@ -31,6 +32,7 @@ export const TimesheetsOverview = () => {
               <TableHead>Pozice</TableHead>
               <TableHead>Úvazek</TableHead>
               <TableHead>Manažeři zakázky</TableHead>
+              <TableHead>{Texts.timesheetStatus}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -42,6 +44,9 @@ export const TimesheetsOverview = () => {
                 <TableCell>{formatWorkload(item.workload)}</TableCell>
                 <TableCell className="max-w-[20rem] whitespace-normal break-words">
                   {item.managers.length > 0 ? item.managers.join(", ") : Texts.dash}
+                </TableCell>
+                <TableCell>
+                  <TimesheetStatusBadge status={item.status} />
                 </TableCell>
               </TableRow>
             ))}
