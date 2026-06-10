@@ -14,16 +14,7 @@ interface BusyButtonProps {
   onError?: (error: unknown) => void;
 }
 
-export const BusyButton = ({
-  onClick,
-  disabled = false,
-  icon,
-  children,
-  type = "button",
-  variant,
-  onSuccess,
-  onError,
-}: BusyButtonProps) => {
+export const BusyButton = ({ onClick, disabled = false, icon, children, type = "button", variant, onSuccess, onError }: BusyButtonProps) => {
   const [isBusy, setIsBusy] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 

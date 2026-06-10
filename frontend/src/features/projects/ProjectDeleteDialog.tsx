@@ -28,7 +28,7 @@ export const ProjectDeleteDialog = ({ projectId, projectName, onClose, onDeleted
 
   const title = Texts.deleteProjectTitle.replace("{name}", projectName);
   const consequences = impact ? formatDeleteImpactConsequences(impact, "project") : [];
-  const confirmDisabled = impact !== null && impact.hasProtectedTimesheets && !impact.canForceDelete;
+  const confirmDisabled = Boolean(impact?.hasProtectedTimesheets && !impact.canForceDelete);
   const useForce = Boolean(impact?.hasProtectedTimesheets && impact.canForceDelete);
 
   return (

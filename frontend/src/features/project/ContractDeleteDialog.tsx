@@ -33,7 +33,7 @@ export const ContractDeleteDialog = ({ projectId, contractId, contractName, onCl
 
   const title = Texts.deleteContractTitle.replace("{name}", contractName);
   const consequences = impact ? formatDeleteImpactConsequences(impact, "contract") : [];
-  const confirmDisabled = impact !== null && impact.hasProtectedTimesheets && !impact.canForceDelete;
+  const confirmDisabled = Boolean(impact?.hasProtectedTimesheets && !impact.canForceDelete);
   const useForce = Boolean(impact?.hasProtectedTimesheets && impact.canForceDelete);
 
   return (
