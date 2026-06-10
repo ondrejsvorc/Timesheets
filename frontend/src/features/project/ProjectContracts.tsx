@@ -6,7 +6,6 @@ import { useCan } from "@/auth/useCan";
 import { ActionButtons, AddButton, DeleteButton, EditButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
-import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,9 +14,9 @@ import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { AddContractDialog } from "./AddContractDialog";
-import { deleteProjectContract } from "./api/deleteProjectContract";
 import type { GetProjectContractsResponse } from "./api/getProjectContracts";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
+import { ContractDeleteDialog } from "./ContractDeleteDialog";
 import { EditContractDialog } from "./EditContractDialog";
 import { type ContractsFilterCriteria, useContractsFilter } from "./hooks/useContractsFilter";
 import { useProjectContractsDispatch } from "./hooks/useProjectContractsDispatch";
@@ -118,18 +117,18 @@ export const ContractsTable = ({ contracts }: ContractsTableProps) => {
         />
       )}
 
-      <ConfirmationDialog
-        open={contractToDelete !== null}
-        onCancel={() => setContractToDelete(null)}
-        onConfirm={async (_event, signal) => {
-          if (!contractToDelete || !projectId) return;
-          await deleteProjectContract(projectId, contractToDelete.id, signal);
-          if (!signal.aborted) {
+      {contractToDelete && projectId && (
+        <ContractDeleteDialog
+          projectId={projectId}
+          contractId={contractToDelete.id}
+          contractName={contractToDelete.name}
+          onClose={() => setContractToDelete(null)}
+          onDeleted={() => {
             dispatch({ type: "delete", contractId: contractToDelete.id });
             setContractToDelete(null);
-          }
-        }}
-      />
+          }}
+        />
+      )}
     </>
   );
 };

@@ -4,7 +4,6 @@ import { useImmer } from "use-immer";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { DeleteIcon, EditIcon } from "@/components/shared/buttons/ActionButtons";
-import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -13,9 +12,9 @@ import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { cn } from "@/utils/cn";
 import { formatDate } from "@/utils/formatDate";
-import { deleteProject } from "./api/deleteProject";
 import type { ProjectItem } from "./api/shared/projectItem";
 import { useProjectsDispatch } from "./hooks/useProjectsDispatch";
+import { ProjectDeleteDialog } from "./ProjectDeleteDialog";
 import { UpdateProjectDialog } from "./UpdateProjectDialog";
 import { isProjectActive } from "./utils/isProjectActive";
 
@@ -104,17 +103,17 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
           setIsEditOpen(false);
         }}
       />
-      <ConfirmationDialog
-        open={isConfirmOpen}
-        onCancel={() => setIsConfirmOpen(false)}
-        onConfirm={async (_event, signal) => {
-          await deleteProject(project.id, signal);
-          if (!signal.aborted) {
+      {isConfirmOpen && (
+        <ProjectDeleteDialog
+          projectId={project.id}
+          projectName={project.name}
+          onClose={() => setIsConfirmOpen(false)}
+          onDeleted={() => {
             dispatch({ type: "delete", projectId: project.id });
             setIsConfirmOpen(false);
-          }
-        }}
-      />
+          }}
+        />
+      )}
     </>
   );
 };

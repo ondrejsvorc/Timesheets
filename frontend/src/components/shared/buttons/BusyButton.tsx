@@ -1,5 +1,5 @@
 import { Loader2 } from "lucide-react";
-import type { MouseEvent, ReactNode } from "react";
+import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -9,11 +9,21 @@ interface BusyButtonProps {
   icon: ReactNode;
   children: ReactNode;
   type?: "button" | "submit";
+  variant?: ComponentProps<typeof Button>["variant"];
   onSuccess?: () => void;
   onError?: (error: unknown) => void;
 }
 
-export const BusyButton = ({ onClick, disabled = false, icon, children, type = "button", onSuccess, onError }: BusyButtonProps) => {
+export const BusyButton = ({
+  onClick,
+  disabled = false,
+  icon,
+  children,
+  type = "button",
+  variant,
+  onSuccess,
+  onError,
+}: BusyButtonProps) => {
   const [isBusy, setIsBusy] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -43,7 +53,7 @@ export const BusyButton = ({ onClick, disabled = false, icon, children, type = "
   };
 
   return (
-    <Button type={type} onClick={handleClick} disabled={disabled || isBusy}>
+    <Button type={type} variant={variant} onClick={handleClick} disabled={disabled || isBusy}>
       <span className="inline-flex items-center gap-2">
         {isBusy ? <Loader2 className="size-4 animate-spin opacity-60 [animation-duration:0.5s]" /> : icon}
         {children}

@@ -58,6 +58,27 @@ export const Texts = {
   noItems: "Žádné položky",
   confirmAction: "Potvrzení akce",
   confirmActionDescription: "Opravdu si přejete pokračovat? Tuto akci nelze vrátit zpět.",
+  deleteProjectTitle: "Smazat projekt „{name}“?",
+  deleteProjectDescription: "Tato akce je nevratná. Projekt včetně všech zakázek bude trvale odstraněn.",
+  deleteContractTitle: "Smazat zakázku „{name}“?",
+  deleteContractDescription: "Tato akce je nevratná. Zakázka a přiřazené pozice budou trvale odstraněny.",
+  deleteProjectConfirm: "Smazat projekt",
+  deleteContractConfirm: "Smazat zakázku",
+  deleteImpactContracts: "Smaže se {count} zakázek.",
+  deleteImpactPositions: "Smaže se {count} přiřazených pozic.",
+  deleteImpactProjectTimesheetsDraft: "Smaže se {count} rozpracovaných projektových výkazů.",
+  deleteImpactProjectTimesheetsSubmitted: "Smaže se {count} projektových výkazů ve stavu Ke schválení.",
+  deleteImpactProjectTimesheetsApproved: "Smaže se {count} schválených projektových výkazů.",
+  deleteImpactAttendancePreserved: "Docházka zaměstnanců zůstane zachována.",
+  deleteImpactProtectedBlockedProject:
+    "Projekt nelze smazat, dokud existují odeslané nebo schválené projektové výkazy.",
+  deleteImpactProtectedBlockedContract:
+    "Zakázku nelze smazat, dokud existují odeslané nebo schválené projektové výkazy.",
+  deleteImpactForceDeleteProjectWarning:
+    "Projekt obsahuje odeslané nebo schválené projektové výkazy. Jako správce systému je můžete smazat spolu s projektem.",
+  deleteImpactForceDeleteContractWarning:
+    "Zakázka obsahuje odeslané nebo schválené projektové výkazy. Jako správce systému je můžete smazat spolu se zakázkou.",
+  deleteImpactLoading: "Načítám dopady akce…",
   dash: "-",
   addPosition: "Přidat pozici",
   contractName: "Název zakázky",

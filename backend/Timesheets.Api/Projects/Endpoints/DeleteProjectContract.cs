@@ -13,9 +13,10 @@ public sealed class DeleteProjectContract : IEndpoint
         app.MapDelete("/{projectId}/contracts/{contractId}", Handle)
            .WithSummary("Delete Project Contract");
 
-    private static async Task<Results<NoContent, NotFound, ForbidHttpResult>> Handle(
+    private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(
         Guid projectId,
         Guid contractId,
+        bool force,
         HttpContext httpContext,
         AppDbContext dbContext,
         IOptions<AdministrationOptions> administrationOptions,
@@ -29,14 +30,31 @@ public sealed class DeleteProjectContract : IEndpoint
             return TypedResults.Forbid();
         }
 
-        int affected = await dbContext.Contracts
-            .Where(c => c.ProjectId == projectId && c.Id == contractId)
-            .ExecuteDeleteAsync(cancellationToken);
+        bool exists = await dbContext.Contracts
+            .AsNoTracking()
+            .AnyAsync(c => c.ProjectId == projectId && c.Id == contractId, cancellationToken);
 
-        if (affected == 0)
+        if (!exists)
         {
             return TypedResults.NotFound();
         }
+
+        if (await ProjectDeleteImpactCalculator.HasProtectedTimesheetsAsync([contractId], dbContext, cancellationToken))
+        {
+            if (!force)
+            {
+                return TypedResults.Conflict("Zakázka obsahuje odeslané nebo schválené projektové výkazy a nelze ji smazat.");
+            }
+
+            if (!scope.HasGlobalScope)
+            {
+                return TypedResults.Forbid();
+            }
+        }
+
+        await dbContext.Contracts
+            .Where(c => c.ProjectId == projectId && c.Id == contractId)
+            .ExecuteDeleteAsync(cancellationToken);
 
         return TypedResults.NoContent();
     }
