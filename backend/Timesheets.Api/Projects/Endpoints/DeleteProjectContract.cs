@@ -17,11 +17,11 @@ public sealed class DeleteProjectContract : IEndpoint
     private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(
         Guid projectId,
         Guid contractId,
-        [FromQuery] bool force,
         HttpContext httpContext,
         AppDbContext dbContext,
         IOptions<AdministrationOptions> administrationOptions,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromQuery] bool force = false)
     {
         (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
             httpContext, dbContext, administrationOptions, cancellationToken);
