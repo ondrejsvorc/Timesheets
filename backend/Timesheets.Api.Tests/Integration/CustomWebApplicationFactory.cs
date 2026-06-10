@@ -27,7 +27,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            // Override the connection string using the environment variable or setting
             Environment.SetEnvironmentVariable("ConnectionStrings__Database", _dbContainer.GetConnectionString());
         });
 

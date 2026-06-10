@@ -26,11 +26,6 @@ public sealed class GetProject : IEndpoint
         (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
             httpContext, dbContext, administrationOptions, cancellationToken);
 
-        if (!ApiPermissions.CanAccessProject(scope, id))
-        {
-            return TypedResults.Forbid();
-        }
-
         ProjectItem? project = await dbContext.Projects
             .AsNoTracking()
             .Where(p => p.Id == id)
@@ -44,6 +39,11 @@ public sealed class GetProject : IEndpoint
         if (project is null)
         {
             return TypedResults.NotFound();
+        }
+
+        if (!ApiPermissions.CanAccessProject(scope, id))
+        {
+            return TypedResults.Forbid();
         }
 
         return TypedResults.Ok(new Response(project));

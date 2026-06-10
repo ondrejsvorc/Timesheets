@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Timesheets.Api.Administration;
@@ -16,7 +17,7 @@ public sealed class DeleteProjectContract : IEndpoint
     private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(
         Guid projectId,
         Guid contractId,
-        bool force,
+        [FromQuery] bool force,
         HttpContext httpContext,
         AppDbContext dbContext,
         IOptions<AdministrationOptions> administrationOptions,

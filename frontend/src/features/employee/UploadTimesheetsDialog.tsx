@@ -90,7 +90,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
     event.target.value = "";
   };
 
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = (event: React.DragEvent) => {
     event.preventDefault();
     setIsDragging(false);
     addFiles(Array.from(event.dataTransfer.files));
