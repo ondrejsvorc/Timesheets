@@ -26,8 +26,8 @@ export const ProjectDeleteDialog = ({ projectId, projectName, onClose, onDeleted
     return () => controller.abort();
   }, [projectId]);
 
-  const title = Texts.deleteProjectTitle.replace("{name}", projectName);
-  const consequences = impact ? formatDeleteImpactConsequences(impact, "project") : [];
+  const title = Texts.deleteTitle.replace("{name}", projectName);
+  const consequences = impact ? formatDeleteImpactConsequences(impact) : [];
   const confirmDisabled = Boolean(impact?.hasProtectedTimesheets && !impact.canForceDelete);
   const useForce = Boolean(impact?.hasProtectedTimesheets && impact.canForceDelete);
 
@@ -35,9 +35,9 @@ export const ProjectDeleteDialog = ({ projectId, projectName, onClose, onDeleted
     <ConsequenceDialog
       open
       title={title}
-      description={Texts.deleteProjectDescription}
+      description={Texts.deleteDescription}
       consequences={consequences}
-      confirmLabel={Texts.deleteProjectConfirm}
+      confirmLabel={Texts.delete}
       confirmDisabled={confirmDisabled}
       loading={impact === null}
       loadingContent={<p className="text-sm text-muted-foreground">{Texts.deleteImpactLoading}</p>}

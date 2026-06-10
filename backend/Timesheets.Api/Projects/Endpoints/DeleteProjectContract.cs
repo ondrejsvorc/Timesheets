@@ -44,7 +44,7 @@ public sealed class DeleteProjectContract : IEndpoint
         {
             if (!force)
             {
-                return TypedResults.Conflict("Zakázka obsahuje odeslané nebo schválené projektové výkazy a nelze ji smazat.");
+                return TypedResults.Conflict("Zakázku nelze smazat — jsou zde výkazy ke schválení nebo schválené.");
             }
 
             if (!scope.HasGlobalScope)

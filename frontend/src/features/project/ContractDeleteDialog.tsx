@@ -31,8 +31,8 @@ export const ContractDeleteDialog = ({ projectId, contractId, contractName, onCl
     return () => controller.abort();
   }, [projectId, contractId]);
 
-  const title = Texts.deleteContractTitle.replace("{name}", contractName);
-  const consequences = impact ? formatDeleteImpactConsequences(impact, "contract") : [];
+  const title = Texts.deleteTitle.replace("{name}", contractName);
+  const consequences = impact ? formatDeleteImpactConsequences(impact) : [];
   const confirmDisabled = Boolean(impact?.hasProtectedTimesheets && !impact.canForceDelete);
   const useForce = Boolean(impact?.hasProtectedTimesheets && impact.canForceDelete);
 
@@ -40,9 +40,9 @@ export const ContractDeleteDialog = ({ projectId, contractId, contractName, onCl
     <ConsequenceDialog
       open
       title={title}
-      description={Texts.deleteContractDescription}
+      description={Texts.deleteDescription}
       consequences={consequences}
-      confirmLabel={Texts.deleteContractConfirm}
+      confirmLabel={Texts.delete}
       confirmDisabled={confirmDisabled}
       loading={impact === null}
       loadingContent={<p className="text-sm text-muted-foreground">{Texts.deleteImpactLoading}</p>}

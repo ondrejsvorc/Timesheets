@@ -14,7 +14,7 @@ export interface ProjectDeleteImpactResponse {
 
 const formatCount = (template: string, count: number) => template.replace("{count}", String(count));
 
-export const formatDeleteImpactConsequences = (impact: ProjectDeleteImpactResponse, context: "project" | "contract"): string[] => {
+export const formatDeleteImpactConsequences = (impact: ProjectDeleteImpactResponse): string[] => {
   const consequences: string[] = [];
 
   if (impact.contractCount > 0) {
@@ -41,9 +41,9 @@ export const formatDeleteImpactConsequences = (impact: ProjectDeleteImpactRespon
 
   if (impact.hasProtectedTimesheets) {
     if (impact.canForceDelete) {
-      consequences.push(context === "project" ? Texts.deleteImpactForceDeleteProjectWarning : Texts.deleteImpactForceDeleteContractWarning);
+      consequences.push(Texts.deleteImpactForceDelete);
     } else {
-      consequences.push(context === "project" ? Texts.deleteImpactProtectedBlockedProject : Texts.deleteImpactProtectedBlockedContract);
+      consequences.push(Texts.deleteImpactProtectedBlocked);
     }
   }
 
