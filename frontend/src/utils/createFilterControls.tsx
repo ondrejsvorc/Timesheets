@@ -30,7 +30,7 @@ export const createFilterControls = <TFilter extends { query: string }>() => {
     const checked = filter[field] === true;
 
     return (
-      <div className="flex items-center gap-3">
+      <div className="flex h-9 items-center gap-3">
         <Checkbox
           id={id}
           checked={checked}
