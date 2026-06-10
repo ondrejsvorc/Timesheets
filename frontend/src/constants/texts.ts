@@ -72,8 +72,10 @@ export const Texts = {
   deleteImpactAttendancePreserved: "Docházka zaměstnanců zůstane zachována.",
   deleteImpactProtectedBlockedProject: "Projekt nelze smazat, dokud existují odeslané nebo schválené projektové výkazy.",
   deleteImpactProtectedBlockedContract: "Zakázku nelze smazat, dokud existují odeslané nebo schválené projektové výkazy.",
-  deleteImpactForceDeleteProjectWarning: "Projekt obsahuje odeslané nebo schválené projektové výkazy. Jako správce systému je můžete smazat spolu s projektem.",
-  deleteImpactForceDeleteContractWarning: "Zakázka obsahuje odeslané nebo schválené projektové výkazy. Jako správce systému je můžete smazat spolu se zakázkou.",
+  deleteImpactForceDeleteProjectWarning:
+    "Projekt obsahuje odeslané nebo schválené projektové výkazy. Jako správce systému je můžete smazat spolu s projektem.",
+  deleteImpactForceDeleteContractWarning:
+    "Zakázka obsahuje odeslané nebo schválené projektové výkazy. Jako správce systému je můžete smazat spolu se zakázkou.",
   deleteImpactLoading: "Načítám dopady akce…",
   dash: "-",
   addPosition: "Přidat pozici",

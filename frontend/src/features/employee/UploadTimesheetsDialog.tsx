@@ -268,9 +268,10 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
         {mode === "selection" ? (
           <div className="space-y-4">
             <input ref={fileInputRef} type="file" multiple accept=".xls,.xlsx" onChange={handleFileInputChange} className="hidden" />
-            <div
+            <button
+              type="button"
               className={cn(
-                "flex min-h-64 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 text-center transition-colors",
+                "flex min-h-64 w-full cursor-pointer flex-col items-center justify-center rounded-md border border-dashed px-6 py-10 text-center transition-colors",
                 isDragging ? "border-primary bg-primary/5" : "border-border",
               )}
               onClick={() => fileInputRef.current?.click()}
@@ -289,7 +290,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
             >
               <Upload className="mb-4 h-12 w-12 text-muted-foreground" />
               <p className="text-lg text-muted-foreground">{Texts.importDropFiles}</p>
-            </div>
+            </button>
 
             {uploadItems.length > 0 && (
               <div className="h-64 overflow-y-auto rounded-md border p-3">
