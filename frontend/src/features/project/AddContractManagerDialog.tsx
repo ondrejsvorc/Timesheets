@@ -1,13 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { useFetcher } from "react-router";
+import type { FetcherWithComponents } from "react-router";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import type { EmployeeItem } from "@/features/employees/api/getEmployees";
 import { addContractManager, toProjectContractManagerItem } from "./api/addContractManager";
@@ -20,22 +19,20 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
-interface ContractManagerFormData {
+export interface ContractManagerFormData {
   contracts: ProjectContractItem[];
   employees: EmployeeItem[];
 }
 
 interface AddContractManagerDialogProps {
-  projectId: string;
+  formFetcher: FetcherWithComponents<ContractManagerFormData>;
   existingManagers: ProjectContractManagerItem[];
   open: boolean;
   onClose: () => void;
   onSaved: (manager: ProjectContractManagerItem) => void;
 }
 
-export const AddContractManagerDialog = ({ projectId, existingManagers, open, onClose, onSaved }: AddContractManagerDialogProps) => {
-  const formFetcher = useFetcher<ContractManagerFormData>();
-
+export const AddContractManagerDialog = ({ formFetcher, existingManagers, open, onClose, onSaved }: AddContractManagerDialogProps) => {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     mode: "onChange",
@@ -61,10 +58,6 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
     if (!isOpen) {
       form.reset({ contractId: "", employeeId: "" });
       onClose();
-      return;
-    }
-    if (formFetcher.state === "idle") {
-      formFetcher.load(Routes.resourceProjectContracts(projectId));
     }
   };
 

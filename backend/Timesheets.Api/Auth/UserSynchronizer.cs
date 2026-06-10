@@ -23,7 +23,15 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
 
     private async Task SyncAsync(SynchronizedUser user, CancellationToken cancellationToken)
     {
-        Employee? existing = await dbContext.Employees.FirstOrDefaultAsync(e => e.Email == user.Email, cancellationToken);
+        Employee? existing = await dbContext.Employees
+            .FirstOrDefaultAsync(e => e.PersonalNumber == user.PersonalNumber, cancellationToken);
+
+        if (existing is null)
+        {
+            existing = await dbContext.Employees
+                .FirstOrDefaultAsync(e => e.Email == user.Email, cancellationToken);
+        }
+
         if (existing is null)
         {
             await CreateEmployeeAsync(user, cancellationToken);

@@ -87,10 +87,17 @@ public sealed class GetContractTimesheets : IEndpoint
             return TypedResults.NotFound();
         }
 
+        bool canViewAllTimesheets = await ApiPermissions.CanViewAllContractTimesheetsAsync(scope, id, dbContext, cancellationToken);
+
         IQueryable<AttendanceTimesheet> query = dbContext.AttendanceTimesheets
             .AsNoTracking()
             .Where(timesheet => timesheet.Year > request.FromYear || (timesheet.Year == request.FromYear && timesheet.Month >= request.FromMonth))
             .Where(timesheet => timesheet.Year < request.ToYear || (timesheet.Year == request.ToYear && timesheet.Month <= request.ToMonth));
+
+        if (!canViewAllTimesheets)
+        {
+            query = query.Where(timesheet => timesheet.EmployeeId == scope.EmployeeId);
+        }
 
         if (request.Statuses.Length != 0)
         {

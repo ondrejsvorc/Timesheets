@@ -16,10 +16,22 @@ public static class CurrentEmployeeResolver
         }
 
         string email = principal.GetEmail();
-        return await dbContext.Employees
+        string personalNumber = principal.GetPersonalNumber();
+
+        Employee? employee = await dbContext.Employees
             .AsNoTracking()
             .Include(e => e.EmployeeType)
             .FirstOrDefaultAsync(e => e.Email == email, cancellationToken);
+
+        if (employee is null)
+        {
+            employee = await dbContext.Employees
+                .AsNoTracking()
+                .Include(e => e.EmployeeType)
+                .FirstOrDefaultAsync(e => e.PersonalNumber == personalNumber, cancellationToken);
+        }
+
+        return employee;
     }
 
     public static async Task<Employee> GetRequiredAsync(ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)

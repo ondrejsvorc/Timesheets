@@ -29,7 +29,7 @@ public sealed class GetContractEmployees : IEndpoint
         (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
             httpContext, dbContext, administrationOptions, cancellationToken);
 
-        if (!await ApiPermissions.CanManageContractEmployeesAsync(scope, id, dbContext, cancellationToken))
+        if (!ApiPermissions.CanAccessContract(scope, id))
         {
             return TypedResults.Forbid();
         }

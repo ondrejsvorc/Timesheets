@@ -181,6 +181,8 @@ export const can = (
       return hasGlobalScope(permissions) || (ctx.projectId !== undefined && permissions.projectManagerOf.includes(ctx.projectId));
 
     case UiAction.contractEmployees.view:
+      return canAccessContract(permissions, ctx.contractId);
+
     case UiAction.contractEmployees.add:
     case UiAction.contractEmployees.update:
     case UiAction.contractEmployees.remove:

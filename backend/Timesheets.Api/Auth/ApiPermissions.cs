@@ -93,4 +93,19 @@ public static class ApiPermissions
         Guid? projectId = await GetProjectIdForContractAsync(contractId, dbContext, cancellationToken);
         return projectId.HasValue && CanManageContractManagers(scope, projectId.Value);
     }
+
+    public static async Task<bool> CanViewAllContractTimesheetsAsync(
+        UserPermissionsScope scope,
+        Guid contractId,
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (scope.HasGlobalScope || scope.ContractManagerOf.Contains(contractId))
+        {
+            return true;
+        }
+
+        Guid? projectId = await GetProjectIdForContractAsync(contractId, dbContext, cancellationToken);
+        return projectId.HasValue && scope.ProjectManagerOf.Contains(projectId.Value);
+    }
 }

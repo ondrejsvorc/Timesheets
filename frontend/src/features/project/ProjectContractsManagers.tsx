@@ -1,5 +1,5 @@
 import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useParams } from "react-router";
+import { Await, useAsyncValue, useFetcher, useLoaderData, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
@@ -13,7 +13,7 @@ import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { createFilterControls } from "@/utils/createFilterControls";
-import { AddContractManagerDialog } from "./AddContractManagerDialog";
+import { AddContractManagerDialog, type ContractManagerFormData } from "./AddContractManagerDialog";
 import type { GetProjectContractsManagersResponse, ProjectContractManagerItem } from "./api/getProjectContractsManagers";
 import { removeContractManager } from "./api/removeContractManager";
 import type { ContractsFilterCriteria } from "./hooks/useContractsFilter";
@@ -46,6 +46,7 @@ const ProjectContractsManagersContent = () => {
     pendingDelete: null,
   });
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const managerFormFetcher = useFetcher<ContractManagerFormData>();
   const { filter, setFilter, filtered } = useContractsManagersFilter(state.managers);
   const canAddManager = useCan(UiAction.contractManagers.add, { projectId: projectId ?? undefined });
 
@@ -54,13 +55,26 @@ const ProjectContractsManagersContent = () => {
       <FilterBar
         filter={filter}
         setFilter={setFilter}
-        actions={canAddManager ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addManager}</AddButton> : undefined}
+        actions={
+          canAddManager ? (
+            <AddButton
+              onClick={() => {
+                if (projectId) {
+                  managerFormFetcher.load(Routes.resourceProjectContracts(projectId));
+                }
+                setIsAddOpen(true);
+              }}
+            >
+              {Texts.addManager}
+            </AddButton>
+          ) : undefined
+        }
       >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <ContractsManagersTable managers={filtered} />
       <AddContractManagerDialog
-        projectId={projectId ?? ""}
+        formFetcher={managerFormFetcher}
         existingManagers={state.managers}
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}

@@ -137,7 +137,6 @@ public static class ConfigureServices
                 options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "email"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "mail"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "upn"));
-                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "preferred_username"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("displayName", ClaimValueTypes.String, "displayName"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("displayName", ClaimValueTypes.String, "name"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("personalNumber", ClaimValueTypes.String, "personalNumber"));

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Timesheets.Api.Administration;
+using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -35,12 +36,7 @@ public sealed class GetCurrentUserPermissions : IEndpoint
             return Results.Unauthorized();
         }
 
-        string email = currentUser.GetEmail();
-
-        Employee? employee = await dbContext.Employees
-            .AsNoTracking()
-            .Where(e => e.Email == email)
-            .FirstOrDefaultAsync(cancellationToken);
+        Employee? employee = await CurrentEmployeeResolver.TryGetAsync(currentUser, dbContext, cancellationToken);
 
         if (employee is null)
         {
