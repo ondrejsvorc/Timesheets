@@ -1,5 +1,5 @@
 import { isBefore, parseISO, startOfDay } from "date-fns";
-import { Suspense, useState } from "react";
+import { Fragment, Suspense, useState } from "react";
 import { Await, useAsyncValue, useFetcher, useLoaderData, useParams, useRevalidator } from "react-router";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
@@ -153,64 +153,59 @@ interface ContractEmployeesListProps {
   onEditRequested: (payload: { contractId: string; position: PositionItem }) => void;
 }
 
+const contractEmployeesTableHeadClassName = "w-24";
+const contractEmployeesTableActionsClassName = "w-28 text-right";
+
 const ContractEmployeesList = ({ contractId, employees, onDeleteRequested, onEditRequested }: ContractEmployeesListProps) => {
   if (employees.length === 0) {
     return <EmptyState />;
   }
 
   return (
-    <div className="space-y-6">
-      {employees.map((employee) => (
-        <EmployeeSection
-          key={employee.id}
-          contractId={contractId}
-          employee={employee}
-          onDeleteRequested={onDeleteRequested}
-          onEditRequested={onEditRequested}
-        />
-      ))}
-    </div>
-  );
-};
-
-interface EmployeeSectionProps {
-  contractId?: string;
-  employee: EmployeeItem;
-  onDeleteRequested: (payload: { contractId: string; contractEmployeeId: string }) => void;
-  onEditRequested: (payload: { contractId: string; position: PositionItem }) => void;
-}
-
-const EmployeeSection = ({ contractId, employee, onDeleteRequested, onEditRequested }: EmployeeSectionProps) => {
-  return (
     <div className="rounded-md border p-4">
-      <div className="mb-3 font-medium text-foreground">{employee.fullName}</div>
-      {employee.positions.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{Texts.noItems}</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{Texts.position}</TableHead>
-              <TableHead>{Texts.workload}</TableHead>
-              <TableHead>{Texts.from}</TableHead>
-              <TableHead>{Texts.to}</TableHead>
-              <TableHead>{Texts.status}</TableHead>
-              <TableHead>{Texts.actions}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {employee.positions.map((position) => (
-              <PositionRow
-                key={position.id}
-                contractId={contractId}
-                position={position}
-                onDeleteRequested={onDeleteRequested}
-                onEditRequested={onEditRequested}
-              />
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <Table className="table-fixed">
+        <TableHeader>
+          <TableRow>
+            <TableHead>{Texts.position}</TableHead>
+            <TableHead className={contractEmployeesTableHeadClassName}>{Texts.workload}</TableHead>
+            <TableHead className={contractEmployeesTableHeadClassName}>{Texts.from}</TableHead>
+            <TableHead className={contractEmployeesTableHeadClassName}>{Texts.to}</TableHead>
+            <TableHead className={contractEmployeesTableHeadClassName}>{Texts.status}</TableHead>
+            <TableHead className={contractEmployeesTableActionsClassName}>{Texts.actions}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {employees.map((employee, employeeIndex) => (
+            <Fragment key={employee.id}>
+              <TableRow className="hover:bg-transparent">
+                <TableCell
+                  colSpan={6}
+                  className={employeeIndex === 0 ? "pt-0 font-medium text-foreground" : "border-t pt-4 font-medium text-foreground"}
+                >
+                  {employee.fullName}
+                </TableCell>
+              </TableRow>
+              {employee.positions.length === 0 ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={6} className="text-sm text-muted-foreground">
+                    {Texts.noItems}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                employee.positions.map((position) => (
+                  <PositionRow
+                    key={position.id}
+                    contractId={contractId}
+                    position={position}
+                    onDeleteRequested={onDeleteRequested}
+                    onEditRequested={onEditRequested}
+                  />
+                ))
+              )}
+            </Fragment>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 };
@@ -231,12 +226,12 @@ const PositionRow = ({ contractId, position, onDeleteRequested, onEditRequested 
 
   return (
     <TableRow className="cursor-pointer">
-      <TableCell>{position.position ?? Texts.dash}</TableCell>
-      <TableCell>{formatWorkloadPercent(position.workload)}</TableCell>
-      <TableCell>{formatDate(position.startDate)}</TableCell>
-      <TableCell>{formatDate(position.endDate) ?? Texts.dash}</TableCell>
-      <TableCell>{active ? Texts.active : Texts.inactive}</TableCell>
-      <TableCell className="space-x-1">
+      <TableCell className="whitespace-normal">{position.position ?? Texts.dash}</TableCell>
+      <TableCell className={contractEmployeesTableHeadClassName}>{formatWorkloadPercent(position.workload)}</TableCell>
+      <TableCell className={contractEmployeesTableHeadClassName}>{formatDate(position.startDate)}</TableCell>
+      <TableCell className={contractEmployeesTableHeadClassName}>{formatDate(position.endDate) ?? Texts.dash}</TableCell>
+      <TableCell className={contractEmployeesTableHeadClassName}>{active ? Texts.active : Texts.inactive}</TableCell>
+      <TableCell className={`${contractEmployeesTableActionsClassName} space-x-1`}>
         {canUpdate && (
           <EditButton
             onClick={() => {
