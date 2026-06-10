@@ -4,10 +4,11 @@ import type { Timesheet, TimesheetDay } from "../../Timesheet";
 import { TimesheetLogic } from "../../TimesheetLogic";
 
 interface TimesheetFooterProps {
+  readOnly?: boolean;
   timesheet: Timesheet;
 }
 
-export const TimesheetFooter = ({ timesheet }: TimesheetFooterProps) => {
+export const TimesheetFooter = ({ readOnly = false, timesheet }: TimesheetFooterProps) => {
   const { days, projects, core } = timesheet;
 
   const sum = (fn: (d: TimesheetDay) => number) => days.reduce((acc, d) => acc + fn(d), 0);
@@ -23,7 +24,12 @@ export const TimesheetFooter = ({ timesheet }: TimesheetFooterProps) => {
   const footerCenteredCell = "min-w-0 flex items-center justify-center whitespace-nowrap tabular-nums text-[12px] uppercase tracking-wider px-2";
 
   return (
-    <div className="grid grid-cols-subgrid col-[1/-1] sticky bottom-0 z-20 self-end bg-slate-100 font-bold border-t-2 border-slate-300">
+    <div
+      className={cn(
+        "grid grid-cols-subgrid col-[1/-1] sticky bottom-0 z-20 self-end bg-slate-100 font-bold border-t-2 border-slate-300",
+        readOnly && "pointer-events-none select-none opacity-80",
+      )}
+    >
       {/* Den → Přerušení: empty */}
       <div />
       <div />

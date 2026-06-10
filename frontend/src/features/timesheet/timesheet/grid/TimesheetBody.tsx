@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { cn } from "@/utils/cn";
 import type { ProjectDefinition as Project, TimesheetDay } from "../../Timesheet";
 import { TimesheetDay as TimesheetDayRow } from "./TimesheetDay";
 
 interface TimesheetBodyProps {
+  readOnly?: boolean;
   days: TimesheetDay[];
   projects: Project[];
   totalWorkload: number;
@@ -10,7 +12,7 @@ interface TimesheetBodyProps {
   onUpdateDay: (index: number, updater: (day: TimesheetDay) => void) => void;
 }
 
-export const TimesheetBody = ({ days, projects, totalWorkload, coreWorkload, onUpdateDay }: TimesheetBodyProps) => {
+export const TimesheetBody = ({ readOnly = false, days, projects, totalWorkload, coreWorkload, onUpdateDay }: TimesheetBodyProps) => {
   // Tuned for month-sized datasets (typically 28-31 rows):
   // - render enough rows immediately so the table feels "ready"
   // - then fill the rest in small chunks to keep UI smooth
@@ -34,7 +36,7 @@ export const TimesheetBody = ({ days, projects, totalWorkload, coreWorkload, onU
   }, [renderedCount, days.length]);
 
   return (
-    <div className="grid grid-cols-subgrid col-[1/-1]">
+    <div className={cn("grid grid-cols-subgrid col-[1/-1]", readOnly && "pointer-events-none select-none opacity-80")}>
       {days.slice(0, renderedCount).map((day, index) => (
         <TimesheetDayRow
           key={day.date}
