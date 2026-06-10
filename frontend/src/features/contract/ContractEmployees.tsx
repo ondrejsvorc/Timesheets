@@ -1,6 +1,6 @@
 import { isBefore, parseISO, startOfDay } from "date-fns";
 import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useParams, useRevalidator } from "react-router";
+import { Await, useAsyncValue, useFetcher, useLoaderData, useParams, useRevalidator } from "react-router";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { AddButton, DeleteButton, EditButton } from "@/components/shared/buttons/ActionButtons";
@@ -9,7 +9,9 @@ import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
+import type { GetEmployeesResponse } from "@/features/employees/api/getEmployees";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { formatDate } from "@/utils/formatDate";
 import { formatWorkloadPercent } from "@/utils/formatWorkload";
@@ -41,6 +43,7 @@ const ContractEmployeesContent = () => {
   const response = useAsyncValue() as GetContractEmployeesResponse;
   const { filter, setFilter, filtered } = useContractEmployeesFilter(response.employees);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const employeesFetcher = useFetcher<GetEmployeesResponse>();
   const [positionToDelete, setPositionToDelete] = useState<{ contractId: string; contractEmployeeId: string } | null>(null);
   const [positionToEdit, setPositionToEdit] = useState<{
     contractId: string;
@@ -63,7 +66,18 @@ const ContractEmployeesContent = () => {
       <FilterBar
         filter={filter}
         setFilter={setFilter}
-        actions={canAddEmployee ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePositionToEmployeeTitle}</AddButton> : undefined}
+        actions={
+          canAddEmployee ? (
+            <AddButton
+              onClick={() => {
+                employeesFetcher.load(Routes.resourceEmployees());
+                setIsAddOpen(true);
+              }}
+            >
+              {Texts.addEmployeePositionToEmployeeTitle}
+            </AddButton>
+          ) : undefined
+        }
       >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
@@ -76,6 +90,7 @@ const ContractEmployeesContent = () => {
       {contractId && (
         <AddEmployeeDialog
           open={isAddOpen}
+          employeesFetcher={employeesFetcher}
           contractId={contractId}
           existingContractEmployees={response.employees}
           onClose={() => setIsAddOpen(false)}

@@ -10,7 +10,10 @@ export interface AuthContext {
   currentUser: CurrentUser | null;
 }
 
-export const loadAuthContext = async (): Promise<AuthContext> => {
+let cachedAuth: AuthContext | null = null;
+let authRequest: Promise<AuthContext> | null = null;
+
+const fetchAuthContext = async (): Promise<AuthContext> => {
   const [permissions, userResponse] = await Promise.all([
     getCurrentUserPermissions().catch(() => null),
     fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" }),
@@ -18,6 +21,32 @@ export const loadAuthContext = async (): Promise<AuthContext> => {
 
   const currentUser = userResponse.ok ? ((await userResponse.json()) as CurrentUser) : null;
   return { permissions, currentUser };
+};
+
+export const loadAuthContext = async (): Promise<AuthContext> => {
+  if (cachedAuth) {
+    return cachedAuth;
+  }
+
+  if (authRequest) {
+    return authRequest;
+  }
+
+  authRequest = fetchAuthContext()
+    .then((auth) => {
+      cachedAuth = auth;
+      return auth;
+    })
+    .finally(() => {
+      authRequest = null;
+    });
+
+  return authRequest;
+};
+
+export const resetAuthContext = () => {
+  cachedAuth = null;
+  authRequest = null;
 };
 
 export const resolveHomePath = (auth: AuthContext): string => {

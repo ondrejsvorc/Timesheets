@@ -36,6 +36,7 @@ import { getCombinedTimesheetOverview } from "./features/timesheet/timesheet/api
 import { getTimesheetComments } from "./features/timesheet/timesheet/api/getTimesheetComments";
 import { TimesheetPage } from "./features/timesheet/timesheet/TimesheetPage";
 import { resourceRoutes } from "./router/resourceRoutes";
+import { skipRevalidateForResourceFetchers } from "./router/shouldRevalidate";
 
 export type CurrentUser = {
   id: string;
@@ -119,11 +120,13 @@ export const router = createBrowserRouter([
     element: <App />,
     hydrateFallbackElement: <FullscreenLoader ariaLabel={Texts.redirectingToLogin} />,
     loader: requireAuth,
+    shouldRevalidate: skipRevalidateForResourceFetchers,
     children: [
       ...resourceRoutes,
       {
         path: "projects",
         element: <ProjectsPage />,
+        shouldRevalidate: skipRevalidateForResourceFetchers,
         loader: async ({ request }) => {
           await denyUnless(UiAction.nav.projects, {}, request);
           return getProjects();
@@ -132,6 +135,7 @@ export const router = createBrowserRouter([
       {
         path: "projects/:id",
         element: <ProjectPage />,
+        shouldRevalidate: skipRevalidateForResourceFetchers,
         loader: async ({ params, request }) => {
           const projectId = requireProjectId(params);
           await denyUnless(UiAction.projects.view, { projectId }, request);
@@ -141,6 +145,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: <ProjectContracts />,
+            shouldRevalidate: skipRevalidateForResourceFetchers,
             loader: async ({ params, request }) => {
               const projectId = requireProjectId(params);
               await denyUnless(UiAction.projects.view, { projectId }, request);
@@ -150,6 +155,7 @@ export const router = createBrowserRouter([
           {
             path: "contracts-managers",
             element: <ProjectContractsManagers />,
+            shouldRevalidate: skipRevalidateForResourceFetchers,
             loader: async ({ params, request }) => {
               const projectId = requireProjectId(params);
               await denyUnless(UiAction.contractManagers.view, { projectId }, request);
@@ -161,6 +167,7 @@ export const router = createBrowserRouter([
       {
         path: "projects/:id/contracts/:contractId",
         element: <ContractPage />,
+        shouldRevalidate: skipRevalidateForResourceFetchers,
         loader: async ({ params, request }) => {
           const { projectId, contractId } = requireContractParams(params);
           await denyUnless(UiAction.contracts.view, { projectId, contractId }, request);
@@ -174,6 +181,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: <ContractTimesheets />,
+            shouldRevalidate: skipRevalidateForResourceFetchers,
             loader: async ({ params, request }) => {
               const { projectId, contractId } = requireContractParams(params);
               await denyUnless(UiAction.contracts.view, { projectId, contractId }, request);
@@ -183,6 +191,7 @@ export const router = createBrowserRouter([
           {
             path: "employees",
             element: <ContractEmployees />,
+            shouldRevalidate: skipRevalidateForResourceFetchers,
             loader: async ({ params, request }) => {
               const { projectId, contractId } = requireContractParams(params);
               await denyUnless(UiAction.contractEmployees.view, { contractId, projectId }, request);
@@ -194,6 +203,7 @@ export const router = createBrowserRouter([
       {
         path: "employees",
         element: <EmployeesPage />,
+        shouldRevalidate: skipRevalidateForResourceFetchers,
         loader: async ({ request }) => {
           await denyUnless(UiAction.employees.list, {}, request);
           return getEmployees();
@@ -202,6 +212,7 @@ export const router = createBrowserRouter([
       {
         path: "employees/roles",
         element: <EmployeeRolesPage />,
+        shouldRevalidate: skipRevalidateForResourceFetchers,
         loader: async ({ request }) => {
           await denyUnless(UiAction.nav.employeeRoles, {}, request);
           return getEmployees();
@@ -210,6 +221,7 @@ export const router = createBrowserRouter([
       {
         path: "employees/:id",
         element: <EmployeePage />,
+        shouldRevalidate: skipRevalidateForResourceFetchers,
         loader: async ({ params, request }) => {
           const employeeId = requireEmployeeId(params);
           await denyUnless(UiAction.employees.view, { employeeId }, request);
@@ -219,6 +231,7 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: <EmployeeTimesheets />,
+            shouldRevalidate: skipRevalidateForResourceFetchers,
             loader: async ({ params, request }) => {
               const employeeId = requireEmployeeId(params);
               await denyUnless(UiAction.employees.view, { employeeId }, request);
@@ -228,6 +241,7 @@ export const router = createBrowserRouter([
           {
             path: "positions",
             element: <EmployeePositions />,
+            shouldRevalidate: skipRevalidateForResourceFetchers,
             loader: async ({ params, request }) => {
               const employeeId = requireEmployeeId(params);
               await denyUnless(UiAction.employees.view, { employeeId }, request);
@@ -243,6 +257,7 @@ export const router = createBrowserRouter([
       {
         path: "timesheet",
         element: <TimesheetPage />,
+        shouldRevalidate: skipRevalidateForResourceFetchers,
         loader: async ({ request }) => {
           const url = new URL(request.url);
           const employeeId = url.searchParams.get("employeeId");

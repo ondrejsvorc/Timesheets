@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import type { FetcherWithComponents } from "react-router";
 import { useFetcher } from "react-router";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
@@ -36,13 +36,13 @@ const addEmployeePositionSchema = z.object({
 
 interface AddEmployeePositionDialogProps {
   open: boolean;
+  projectsFetcher: FetcherWithComponents<GetProjectCatalogResponse>;
   employeeId: string;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }: AddEmployeePositionDialogProps) => {
-  const projectsFetcher = useFetcher<GetProjectCatalogResponse>();
+export const AddEmployeePositionDialog = ({ open, projectsFetcher, employeeId, onClose, onSaved }: AddEmployeePositionDialogProps) => {
   const contractsFetcher = useFetcher<GetContractCatalogResponse>();
 
   const form = useForm<AddEmployeePositionFormValues>({
@@ -65,13 +65,6 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
       value: c.id,
       label: c.name,
     })) ?? [];
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    projectsFetcher.load(Routes.resourceProjects());
-  }, [open, projectsFetcher]);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {

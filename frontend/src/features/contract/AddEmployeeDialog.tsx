@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { useFetcher } from "react-router";
+import type { FetcherWithComponents } from "react-router";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
@@ -10,7 +10,6 @@ import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercent
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
@@ -70,15 +69,14 @@ const createSchema = (existing: ContractEmployeeItem[]) =>
 
 interface AddEmployeeDialogProps {
   open: boolean;
+  employeesFetcher: FetcherWithComponents<GetEmployeesResponse>;
   contractId: string;
   existingContractEmployees: ContractEmployeeItem[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees, onClose, onSaved }: AddEmployeeDialogProps) => {
-  const employeesFetcher = useFetcher<GetEmployeesResponse>();
-
+export const AddEmployeeDialog = ({ open, employeesFetcher, contractId, existingContractEmployees, onClose, onSaved }: AddEmployeeDialogProps) => {
   const resolver = useMemo(() => zodResolver(createSchema(existingContractEmployees)), [existingContractEmployees]);
 
   const form = useForm<AddEmployeeToContractFormValues>({
@@ -94,13 +92,6 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
       value: e.id,
       label: e.fullName,
     })) ?? [];
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    employeesFetcher.load(Routes.resourceEmployees());
-  }, [open, employeesFetcher]);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
