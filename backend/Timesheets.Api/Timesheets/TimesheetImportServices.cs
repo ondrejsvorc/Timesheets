@@ -19,6 +19,7 @@ public sealed record AttendanceTimesheetImportResult(
 public sealed record AttendanceTimesheetDetectionResult(
     string FileName,
     bool CanImport,
+    bool IsReimport,
     string? ErrorMessage,
     string? EmployeePersonalNumber,
     string? EmployeeName,
@@ -153,7 +154,7 @@ public sealed class AttendanceTimesheetImportService(
         {
             return new DetectionAttempt(
                 null,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, "Soubor musí být ve formátu .xls nebo .xlsx.", null, null, null, null)
+                new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Soubor musí být ve formátu .xls nebo .xlsx.", null, null, null, null)
             );
         }
 
@@ -167,7 +168,7 @@ public sealed class AttendanceTimesheetImportService(
         {
             return new DetectionAttempt(
                 null,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, $"Chyba při čtení souboru: {ex.Message}", null, null, null, null)
+                new AttendanceTimesheetDetectionResult(file.FileName, false, false, $"Chyba při čtení souboru: {ex.Message}", null, null, null, null)
             );
         }
 
@@ -175,7 +176,7 @@ public sealed class AttendanceTimesheetImportService(
         {
             return new DetectionAttempt(
                 metadata,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, "Zaměstnanec nebyl nalezen.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
+                new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Zaměstnanec nebyl nalezen.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
             );
         }
 
@@ -183,7 +184,7 @@ public sealed class AttendanceTimesheetImportService(
         {
             return new DetectionAttempt(
                 metadata,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, "Nepodařilo se určit období výkazu.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
+                new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Nepodařilo se určit období výkazu.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
             );
         }
 
@@ -191,7 +192,7 @@ public sealed class AttendanceTimesheetImportService(
         {
             return new DetectionAttempt(
                 metadata,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, "Nepodařilo se určit osobní číslo zaměstnance.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
+                new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Nepodařilo se určit osobní číslo zaměstnance.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
             );
         }
 
@@ -200,31 +201,59 @@ public sealed class AttendanceTimesheetImportService(
         {
             return new DetectionAttempt(
                 metadata,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, "Soubor nepatří vybranému zaměstnanci.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
+                new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Soubor nepatří vybranému zaměstnanci.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
             );
         }
 
-        bool timesheetExists = await dbContext.AttendanceTimesheets
+        Data.Models.AttendanceTimesheet? existingTimesheet = await dbContext.AttendanceTimesheets
             .AsNoTracking()
-            .AnyAsync(
+            .FirstOrDefaultAsync(
                 timesheet => timesheet.EmployeeId == employee.Id
                     && timesheet.Year == metadata.Year
                     && timesheet.Month == metadata.Month,
-                cancellationToken
-            );
+                cancellationToken);
 
-        if (timesheetExists)
+        if (existingTimesheet is not null)
         {
+            if (existingTimesheet.TimesheetStatusId != TimesheetWorkflowConstants.DraftStatusId)
+            {
+                return new DetectionAttempt(
+                    metadata,
+                    new AttendanceTimesheetDetectionResult(
+                        file.FileName,
+                        false,
+                        false,
+                        "Docházku lze znovu naimportovat jen ve stavu Rozpracovaný.",
+                        metadata.EmployeePersonalNumber,
+                        metadata.EmployeeName,
+                        metadata.Year,
+                        metadata.Month));
+            }
+
             return new DetectionAttempt(
                 metadata,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, "Docházka pro toto období již existuje.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
-            );
+                new AttendanceTimesheetDetectionResult(
+                    file.FileName,
+                    true,
+                    true,
+                    null,
+                    metadata.EmployeePersonalNumber,
+                    metadata.EmployeeName,
+                    metadata.Year,
+                    metadata.Month));
         }
 
         return new DetectionAttempt(
             metadata,
-            new AttendanceTimesheetDetectionResult(file.FileName, true, null, metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
-        );
+            new AttendanceTimesheetDetectionResult(
+                file.FileName,
+                true,
+                false,
+                null,
+                metadata.EmployeePersonalNumber,
+                metadata.EmployeeName,
+                metadata.Year,
+                metadata.Month));
     }
 
     private static AttendanceTimesheetImportResult ToImportResult(AttendanceTimesheetDetectionResult result) => new(result.FileName, false, result.ErrorMessage, null, result.Year, result.Month);
@@ -264,18 +293,27 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
             );
         }
 
-        bool timesheetExists = await dbContext.AttendanceTimesheets
-            .AsNoTracking()
-            .AnyAsync(
+        Data.Models.AttendanceTimesheet? existingTimesheet = await dbContext.AttendanceTimesheets
+            .Include(t => t.Days)
+            .FirstOrDefaultAsync(
                 timesheet => timesheet.EmployeeId == employeeId
                     && timesheet.Year == importedTimesheet.Year
                     && timesheet.Month == importedTimesheet.Month,
-                cancellationToken
-            );
+                cancellationToken);
 
-        if (timesheetExists)
+        if (existingTimesheet is not null)
         {
-            throw new InvalidOperationException("Výkaz pro toto období již existuje.");
+            if (existingTimesheet.TimesheetStatusId != TimesheetWorkflowConstants.DraftStatusId)
+            {
+                throw new InvalidOperationException("Docházku lze znovu naimportovat jen ve stavu Rozpracovaný.");
+            }
+
+            return await ReimportAsync(
+                existingTimesheet,
+                employeeId,
+                importedTimesheet,
+                validInterruptionCodes,
+                cancellationToken);
         }
 
         Data.Models.TimesheetStatus draftStatus = await dbContext.TimesheetStatuses
@@ -292,6 +330,44 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
             CreatedAt = DateTime.UtcNow
         };
 
+        AddImportedDays(timesheet, importedTimesheet, validInterruptionCodes);
+        dbContext.AttendanceTimesheets.Add(timesheet);
+
+        await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return timesheet.Id;
+    }
+
+    private async Task<Guid> ReimportAsync(
+        Data.Models.AttendanceTimesheet existingTimesheet,
+        Guid employeeId,
+        AttendanceTimesheet importedTimesheet,
+        HashSet<string> validInterruptionCodes,
+        CancellationToken cancellationToken)
+    {
+        List<Guid> dayIds = existingTimesheet.Days.Select(day => day.Id).ToList();
+        if (dayIds.Count > 0)
+        {
+            await dbContext.AttendanceDays
+                .Where(day => dayIds.Contains(day.Id))
+                .ExecuteDeleteAsync(cancellationToken);
+            existingTimesheet.Days.Clear();
+        }
+
+        AddImportedDays(existingTimesheet, importedTimesheet, validInterruptionCodes);
+        existingTimesheet.UpdatedAt = DateTime.UtcNow;
+
+        await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
+        await RecalculateDraftProjectColumnsAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return existingTimesheet.Id;
+    }
+
+    private static void AddImportedDays(
+        Data.Models.AttendanceTimesheet timesheet,
+        AttendanceTimesheet importedTimesheet,
+        HashSet<string> validInterruptionCodes)
+    {
         foreach (AttendanceDay day in importedTimesheet.Days)
         {
             timesheet.Days.Add(new Data.Models.AttendanceDay
@@ -311,14 +387,50 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
                 Schedules = JsonSerializer.Serialize(day.Schedules)
             });
         }
+    }
 
-        dbContext.AttendanceTimesheets.Add(timesheet);
+    private async Task RecalculateDraftProjectColumnsAsync(
+        Guid employeeId,
+        int year,
+        int month,
+        CancellationToken cancellationToken)
+    {
+        Data.Models.AttendanceTimesheet? attendanceTimesheet = await dbContext.AttendanceTimesheets
+            .AsNoTracking()
+            .Include(t => t.Days)
+            .FirstOrDefaultAsync(
+                t => t.EmployeeId == employeeId && t.Year == year && t.Month == month,
+                cancellationToken);
 
-        // Persist monthly base workload for correct "kmene" calculation.
-        await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
+        if (attendanceTimesheet is null)
+        {
+            return;
+        }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return timesheet.Id;
+        Dictionary<DateTime, Data.Models.AttendanceDay> attendanceByDate = attendanceTimesheet.Days
+            .ToDictionary(day => ToUtcDate(day.Date).Date);
+
+        List<Data.Models.ProjectTimesheet> projectTimesheets = await dbContext.ProjectTimesheets
+            .Include(pt => pt.Days)
+            .Where(pt => pt.EmployeeId == employeeId && pt.Year == year && pt.Month == month)
+            .Where(pt => pt.TimesheetStatusId == TimesheetWorkflowConstants.DraftStatusId)
+            .ToListAsync(cancellationToken);
+
+        foreach (Data.Models.ProjectTimesheet projectTimesheet in projectTimesheets)
+        {
+            foreach (Data.Models.ProjectDay projectDay in projectTimesheet.Days)
+            {
+                if (!attendanceByDate.TryGetValue(ToUtcDate(projectDay.Date).Date, out Data.Models.AttendanceDay? attendanceDay))
+                {
+                    continue;
+                }
+
+                projectDay.IsHoliday = attendanceDay.IsHoliday;
+                projectDay.HoursObligation = decimal.Round(attendanceDay.HoursObligation * projectTimesheet.Workload, 2, MidpointRounding.AwayFromZero);
+            }
+
+            projectTimesheet.UpdatedAt = DateTime.UtcNow;
+        }
     }
 
     private async Task UpsertEmployeeWorkloadAsync(Guid employeeId, int year, int month, decimal workload, CancellationToken cancellationToken)

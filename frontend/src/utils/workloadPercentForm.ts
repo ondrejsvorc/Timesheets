@@ -10,3 +10,5 @@ export const isWholeWorkloadPercentInRange = (value: string, min: number, max: n
 export const workloadPercentToFraction = (value: string): number => {
   return Number(value.trim()) / 100;
 };
+
+export const workloadFractionToPercent = (fraction: number): string => String(Math.round(fraction * 100));

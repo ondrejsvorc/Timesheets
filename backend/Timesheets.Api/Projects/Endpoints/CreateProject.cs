@@ -72,6 +72,7 @@ public sealed class CreateProject : IEndpoint
             project.RegistrationNumber,
             project.StartDate,
             project.EndDate,
+            project.ArchivedAt,
             ContractCount: 0
         );
 

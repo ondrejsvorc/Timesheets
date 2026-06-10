@@ -125,6 +125,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
         const detection: TimesheetDetectionResult = {
           fileName: file.name,
           canImport: false,
+          isReimport: false,
           errorMessage: Texts.importError,
           employeePersonalNumber: null,
           employeeName: null,
@@ -435,7 +436,7 @@ const getSelectionStatusLabel = (status: UploadItemStatus, detection: TimesheetD
   }
 
   if (status === "ready") {
-    return Texts.importReady;
+    return detection?.isReimport ? Texts.importReimport : Texts.importReady;
   }
 
   return detection?.errorMessage ?? Texts.importError;

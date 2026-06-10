@@ -12,6 +12,7 @@ export interface ImportResult {
 export interface TimesheetDetectionResult {
   fileName: string;
   canImport: boolean;
+  isReimport: boolean;
   errorMessage: string | null;
   employeePersonalNumber: string | null;
   employeeName: string | null;

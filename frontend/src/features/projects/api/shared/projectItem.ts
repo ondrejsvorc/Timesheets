@@ -4,5 +4,6 @@ export interface ProjectItem {
   registrationNumber: string;
   startDate: string;
   endDate?: string | null;
+  archivedAt?: string | null;
   contractCount: number;
 }

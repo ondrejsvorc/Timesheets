@@ -7,6 +7,7 @@ public sealed class Project
     public string RegistrationNumber { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    public DateTime? ArchivedAt { get; set; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 

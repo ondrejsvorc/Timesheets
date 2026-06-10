@@ -27,6 +27,7 @@ export const UiAction = {
   contractEmployees: {
     view: "contractEmployees.view",
     add: "contractEmployees.add",
+    update: "contractEmployees.update",
     remove: "contractEmployees.remove",
   },
   employeePositions: {
@@ -161,6 +162,7 @@ export const can = (
 
     case UiAction.contractEmployees.view:
     case UiAction.contractEmployees.add:
+    case UiAction.contractEmployees.update:
     case UiAction.contractEmployees.remove:
       return hasGlobalScope(permissions) || (ctx.contractId !== undefined && permissions.contractManagerOf.includes(ctx.contractId));
 

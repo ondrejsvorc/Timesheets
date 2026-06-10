@@ -2,6 +2,10 @@ import { isAfter, isSameDay, parseISO, startOfDay } from "date-fns";
 import type { ProjectItem } from "../api/shared/projectItem";
 
 export const isProjectActive = (project: ProjectItem): boolean => {
+  if (project.archivedAt) {
+    return false;
+  }
+
   if (!project.endDate) {
     return true;
   }

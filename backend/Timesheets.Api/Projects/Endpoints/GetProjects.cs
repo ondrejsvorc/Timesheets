@@ -46,6 +46,7 @@ public sealed class GetProjects : IEndpoint
                 p.RegistrationNumber,
                 p.StartDate,
                 p.EndDate,
+                p.ArchivedAt,
                 p.Contracts.Count
             ))
             .ToListAsync(cancellationToken);

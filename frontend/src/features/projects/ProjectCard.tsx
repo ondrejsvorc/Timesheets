@@ -1,4 +1,4 @@
-import { MoreHorizontal } from "lucide-react";
+import { Archive, ArchiveRestore, MoreHorizontal } from "lucide-react";
 import { startTransition } from "react";
 import { useImmer } from "use-immer";
 import { Can } from "@/auth/Can";
@@ -12,6 +12,7 @@ import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { cn } from "@/utils/cn";
 import { formatDate } from "@/utils/formatDate";
+import { archiveProject, unarchiveProject } from "./api/archiveProject";
 import type { ProjectItem } from "./api/shared/projectItem";
 import { useProjectsDispatch } from "./hooks/useProjectsDispatch";
 import { ProjectDeleteDialog } from "./ProjectDeleteDialog";
@@ -29,6 +30,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
   const startDate = formatDate(project.startDate);
   const endDate = formatDate(project.endDate);
   const dateRange = project.startDate && project.endDate ? `${startDate} – ${endDate}` : formatDate(project.startDate);
+  const isArchived = Boolean(project.archivedAt);
   const isActive = isProjectActive(project);
   const navigate = useNavigateFrom();
 
@@ -61,6 +63,16 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
                     <EditIcon />
                     {Texts.edit}
                   </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      const updated = isArchived ? await unarchiveProject(project.id) : await archiveProject(project.id);
+                      dispatch({ type: "update", project: updated });
+                    }}
+                  >
+                    {isArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                    {isArchived ? Texts.unarchive : Texts.archive}
+                  </DropdownMenuItem>
                   <Can action={UiAction.projects.delete}>
                     <DropdownMenuItem
                       onClick={(e) => {
@@ -86,10 +98,14 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
             <span
               className={cn(
                 "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                isActive ? "bg-primary/10 text-primary border border-primary/20" : "bg-muted text-muted-foreground border border-border",
+                isArchived
+                  ? "bg-muted text-muted-foreground border border-border"
+                  : isActive
+                    ? "bg-primary/10 text-primary border border-primary/20"
+                    : "bg-muted text-muted-foreground border border-border",
               )}
             >
-              {isActive ? Texts.active : Texts.inactive}
+              {isArchived ? Texts.archived : isActive ? Texts.active : Texts.inactive}
             </span>
           </div>
         </CardContent>
