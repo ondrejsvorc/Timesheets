@@ -8,7 +8,6 @@ import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
-import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -29,12 +28,11 @@ export type EmployeeTimesheetsLoaderData = {
 
 export const EmployeeTimesheets = () => {
   const { filter, promise } = useLoaderData() as EmployeeTimesheetsLoaderData;
-  const location = useLocation();
 
   return (
     <Suspense fallback={<GenericSkeleton />}>
       <Await resolve={promise}>
-        <EmployeeTimesheetsContent key={location.search} filter={filter} />
+        <EmployeeTimesheetsContent filter={filter} />
       </Await>
     </Suspense>
   );
@@ -50,6 +48,7 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
   const location = useLocation();
   const revalidator = useRevalidator();
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [onlyUnapproved, setOnlyUnapproved] = useState(false);
   const availableYears = response.availableYears;
   const availableMonths = useMemo(() => getAvailableMonthsForYear(response.availableMonths, filter.year), [response.availableMonths, filter.year]);
 
@@ -68,16 +67,13 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
   let filteredMonths = response.months.filter((m) => m.year === filter.year);
   const selectedMonths = filter.months;
   if (selectedMonths !== null && selectedMonths.length > 0) filteredMonths = filteredMonths.filter((m) => selectedMonths.includes(m.month));
-  if (filter.onlyUnapproved) {
+  if (onlyUnapproved) {
     filteredMonths = filteredMonths.filter((m) => m.status !== Texts.statusApproved);
   }
 
   if (filteredMonths.length === 0) {
     return (
       <>
-        <SubPageHeader>
-          <SubPageTitle>{Texts.timesheets}</SubPageTitle>
-        </SubPageHeader>
         <FilterBar
           filter={filter}
           setFilter={setFilter}
@@ -90,7 +86,12 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
             </Can>
           }
         >
-          <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} />
+          <EmployeeTimesheetsFilterControls
+            availableYears={availableYears}
+            availableMonths={availableMonths}
+            onlyUnapproved={onlyUnapproved}
+            onOnlyUnapprovedChange={setOnlyUnapproved}
+          />
         </FilterBar>
         <EmptyState />
         {isUploadDialogOpen && (
@@ -102,9 +103,6 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
 
   return (
     <>
-      <SubPageHeader>
-        <SubPageTitle>{Texts.timesheets}</SubPageTitle>
-      </SubPageHeader>
       <FilterBar
         filter={filter}
         setFilter={setFilter}
@@ -117,7 +115,12 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
           </Can>
         }
       >
-        <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} />
+        <EmployeeTimesheetsFilterControls
+          availableYears={availableYears}
+          availableMonths={availableMonths}
+          onlyUnapproved={onlyUnapproved}
+          onOnlyUnapprovedChange={setOnlyUnapproved}
+        />
       </FilterBar>
       <div className="rounded-md border p-4">
         <Table>
@@ -166,9 +169,16 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
 interface EmployeeTimesheetsFilterControlsProps {
   availableYears: number[];
   availableMonths: number[];
+  onlyUnapproved: boolean;
+  onOnlyUnapprovedChange: (value: boolean) => void;
 }
 
-function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: EmployeeTimesheetsFilterControlsProps) {
+function EmployeeTimesheetsFilterControls({
+  availableYears,
+  availableMonths,
+  onlyUnapproved,
+  onOnlyUnapprovedChange,
+}: EmployeeTimesheetsFilterControlsProps) {
   const { filter, setFilter } = useFilterContext<EmployeeTimesheetsFilterCriteria>();
   const [monthPopoverOpen, setMonthPopoverOpen] = useState(false);
   const selectedYear = availableYears.includes(filter.year) ? String(filter.year) : undefined;
@@ -272,15 +282,7 @@ function EmployeeTimesheetsFilterControls({ availableYears, availableMonths }: E
           .
         </Label>
         <div className="flex h-9 items-center gap-3">
-          <Checkbox
-            id="only-unapproved"
-            checked={filter.onlyUnapproved}
-            onCheckedChange={(checked) =>
-              setFilter((draft) => {
-                draft.onlyUnapproved = checked === true;
-              })
-            }
-          />
+          <Checkbox id="only-unapproved" checked={onlyUnapproved} onCheckedChange={(checked) => onOnlyUnapprovedChange(checked === true)} />
           <Label htmlFor="only-unapproved" className="cursor-pointer text-sm leading-none">
             {Texts.onlyMonthsWithUnapprovedTimesheets}
           </Label>

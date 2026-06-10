@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useFetcher } from "react-router";
 import { z } from "zod";
@@ -65,13 +66,16 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
       label: c.name,
     })) ?? [];
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    projectsFetcher.load(Routes.resourceProjects());
+  }, [open, projectsFetcher]);
+
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       handleClose();
-      return;
-    }
-    if (projectsFetcher.state === "idle") {
-      projectsFetcher.load(Routes.resourceProjects());
     }
   };
 

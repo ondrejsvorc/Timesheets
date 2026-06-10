@@ -55,7 +55,8 @@ const ProjectsPageContent = () => {
         }
       >
         <FilterSearchInput placeholder={Texts.search} />
-        <FilterCheckbox field="onlyActive" label={Texts.activeOnly} />
+        <FilterCheckbox field="onlyActive" label={Texts.activeOnly} exclusiveWith={["onlyArchived"]} />
+        <FilterCheckbox field="onlyArchived" label={Texts.archivedOnly} exclusiveWith={["onlyActive"]} />
       </FilterBar>
       <ProjectCards projects={filtered} />
       <AddProjectDialog

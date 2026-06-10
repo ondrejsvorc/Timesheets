@@ -116,6 +116,26 @@ const canManageProjectPart = (permissions: CurrentUserPermissions | null, contra
 const hasManagerRole = (permissions: CurrentUserPermissions | null): boolean =>
   Boolean(permissions && (hasGlobalScope(permissions) || permissions.projectManagerOf.length > 0 || permissions.contractManagerOf.length > 0));
 
+const canManageContractEmployees = (permissions: CurrentUserPermissions | null, ctx: UiContext): boolean => {
+  if (!permissions) {
+    return false;
+  }
+
+  if (hasGlobalScope(permissions)) {
+    return true;
+  }
+
+  if (ctx.contractId && permissions.contractManagerOf.includes(ctx.contractId)) {
+    return true;
+  }
+
+  if (ctx.projectId && permissions.projectManagerOf.includes(ctx.projectId)) {
+    return true;
+  }
+
+  return false;
+};
+
 export const can = (
   permissions: CurrentUserPermissions | null,
   currentUserId: string | undefined,
@@ -164,7 +184,7 @@ export const can = (
     case UiAction.contractEmployees.add:
     case UiAction.contractEmployees.update:
     case UiAction.contractEmployees.remove:
-      return hasGlobalScope(permissions) || (ctx.contractId !== undefined && permissions.contractManagerOf.includes(ctx.contractId));
+      return canManageContractEmployees(permissions, ctx);
 
     case UiAction.employeePositions.add:
       return hasManagerRole(permissions);
@@ -175,11 +195,11 @@ export const can = (
     case UiAction.employees.view:
       return isOwnEmployee(currentUserId, ctx.employeeId) || hasManagerRole(permissions);
 
-    case UiAction.employees.editType:
-      return hasGlobalScope(permissions);
-
     case UiAction.timesheet.view:
       return isOwnEmployee(currentUserId, ctx.employeeId) || hasManagerRole(permissions);
+
+    case UiAction.employees.editType:
+      return hasGlobalScope(permissions);
 
     case UiAction.timesheet.import:
       return hasGlobalScope(permissions);

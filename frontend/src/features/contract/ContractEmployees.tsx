@@ -8,7 +8,6 @@ import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
-import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
@@ -52,15 +51,15 @@ const ContractEmployeesContent = () => {
     contractEmployeeId: string;
     request: UpdateContractEmployeeRequest;
   } | null>(null);
-  const { contractId } = useParams();
+  const { id: projectId, contractId } = useParams();
   const revalidator = useRevalidator();
-  const canAddEmployee = useCan(UiAction.contractEmployees.add, { contractId: contractId ?? undefined });
+  const canAddEmployee = useCan(UiAction.contractEmployees.add, {
+    contractId: contractId ?? undefined,
+    projectId: projectId ?? undefined,
+  });
 
   return (
     <>
-      <SubPageHeader>
-        <SubPageTitle>{Texts.employees}</SubPageTitle>
-      </SubPageHeader>
       <FilterBar
         filter={filter}
         setFilter={setFilter}
@@ -209,9 +208,11 @@ interface PositionRowProps {
 }
 
 const PositionRow = ({ contractId, position, onDeleteRequested, onEditRequested }: PositionRowProps) => {
+  const { id: projectId } = useParams();
   const active = isPositionActive(position);
-  const canRemove = useCan(UiAction.contractEmployees.remove, { contractId: contractId ?? undefined });
-  const canUpdate = useCan(UiAction.contractEmployees.update, { contractId: contractId ?? undefined });
+  const permissionContext = { contractId: contractId ?? undefined, projectId: projectId ?? undefined };
+  const canRemove = useCan(UiAction.contractEmployees.remove, permissionContext);
+  const canUpdate = useCan(UiAction.contractEmployees.update, permissionContext);
 
   return (
     <TableRow className="cursor-pointer">

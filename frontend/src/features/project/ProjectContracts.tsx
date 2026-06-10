@@ -7,7 +7,6 @@ import { ActionButtons, AddButton, DeleteButton, EditButton } from "@/components
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
-import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
@@ -49,9 +48,6 @@ const ProjectContractsContent = () => {
 
   return (
     <ProjectContractsContext.Provider value={dispatch}>
-      <SubPageHeader>
-        <SubPageTitle>{Texts.contracts}</SubPageTitle>
-      </SubPageHeader>
       <FilterBar
         filter={filter}
         setFilter={setFilter}

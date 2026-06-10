@@ -294,7 +294,6 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
         }
 
         Data.Models.AttendanceTimesheet? existingTimesheet = await dbContext.AttendanceTimesheets
-            .Include(t => t.Days)
             .FirstOrDefaultAsync(
                 timesheet => timesheet.EmployeeId == employeeId
                     && timesheet.Year == importedTimesheet.Year
@@ -330,7 +329,7 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
             CreatedAt = DateTime.UtcNow
         };
 
-        AddImportedDays(timesheet, importedTimesheet, validInterruptionCodes);
+        AddImportedDays(timesheet.Id, importedTimesheet, validInterruptionCodes);
         dbContext.AttendanceTimesheets.Add(timesheet);
 
         await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
@@ -345,35 +344,38 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
         HashSet<string> validInterruptionCodes,
         CancellationToken cancellationToken)
     {
-        List<Guid> dayIds = existingTimesheet.Days.Select(day => day.Id).ToList();
-        if (dayIds.Count > 0)
-        {
-            await dbContext.AttendanceDays
-                .Where(day => dayIds.Contains(day.Id))
-                .ExecuteDeleteAsync(cancellationToken);
-            existingTimesheet.Days.Clear();
-        }
+        Guid timesheetId = existingTimesheet.Id;
 
-        AddImportedDays(existingTimesheet, importedTimesheet, validInterruptionCodes);
-        existingTimesheet.UpdatedAt = DateTime.UtcNow;
+        await dbContext.AttendanceDays
+            .Where(day => day.AttendanceTimesheetId == timesheetId)
+            .ExecuteDeleteAsync(cancellationToken);
 
+        AddImportedDays(timesheetId, importedTimesheet, validInterruptionCodes);
         await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        await dbContext.AttendanceTimesheets
+            .Where(t => t.Id == timesheetId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(t => t.UpdatedAt, DateTime.UtcNow),
+                cancellationToken);
+
         await RecalculateDraftProjectColumnsAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        return existingTimesheet.Id;
+        return timesheetId;
     }
 
-    private static void AddImportedDays(
-        Data.Models.AttendanceTimesheet timesheet,
+    private void AddImportedDays(
+        Guid attendanceTimesheetId,
         AttendanceTimesheet importedTimesheet,
         HashSet<string> validInterruptionCodes)
     {
         foreach (AttendanceDay day in importedTimesheet.Days)
         {
-            timesheet.Days.Add(new Data.Models.AttendanceDay
+            dbContext.AttendanceDays.Add(new Data.Models.AttendanceDay
             {
                 Id = Guid.NewGuid(),
-                AttendanceTimesheetId = timesheet.Id,
+                AttendanceTimesheetId = attendanceTimesheetId,
                 Date = ToUtcDate(day.Date),
                 ClockIn = day.ClockIn,
                 ClockOut = day.ClockOut,

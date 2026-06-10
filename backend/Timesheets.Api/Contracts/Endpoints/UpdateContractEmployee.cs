@@ -55,7 +55,7 @@ public sealed class UpdateContractEmployee : IEndpoint
         (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
             httpContext, dbContext, administrationOptions, cancellationToken);
 
-        if (!ApiPermissions.CanManageContractEmployees(scope, id))
+        if (!await ApiPermissions.CanManageContractEmployeesAsync(scope, id, dbContext, cancellationToken))
         {
             return TypedResults.Forbid();
         }

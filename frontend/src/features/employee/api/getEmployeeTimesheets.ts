@@ -23,7 +23,6 @@ export interface GetEmployeeTimesheetsResponse {
 export interface EmployeeTimesheetsFilterCriteria {
   year: number;
   months: number[] | null;
-  onlyUnapproved: boolean;
 }
 
 export function buildEmployeeTimesheetsFilterFromUrl(url: URL): EmployeeTimesheetsFilterCriteria {
@@ -37,8 +36,7 @@ export function buildEmployeeTimesheetsFilterFromUrl(url: URL): EmployeeTimeshee
           .split(",")
           .map((month) => Number.parseInt(month, 10))
           .filter((month) => !Number.isNaN(month));
-  const onlyUnapproved = url.searchParams.get("onlyUnapproved") === "true";
-  return { year, months, onlyUnapproved };
+  return { year, months };
 }
 
 export function filterToSearchParams(filter: EmployeeTimesheetsFilterCriteria): URLSearchParams {
@@ -46,9 +44,6 @@ export function filterToSearchParams(filter: EmployeeTimesheetsFilterCriteria): 
   next.set("year", String(filter.year));
   if (filter.months !== null && filter.months.length > 0) {
     next.set("months", filter.months.join(","));
-  }
-  if (filter.onlyUnapproved) {
-    next.set("onlyUnapproved", "true");
   }
   return next;
 }

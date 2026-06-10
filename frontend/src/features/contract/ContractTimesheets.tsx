@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import { Await, Link, useAsyncValue, useLoaderData, useLocation, useNavigate, useNavigation } from "react-router";
 import { useImmer } from "use-immer";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
-import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { ActionDropdownMenu, EditAction } from "@/components/shared/menus/ActionDropdownMenu";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -70,9 +71,6 @@ const ContractTimesheetsContent = ({ filter, filterOptions }: ContractTimesheets
 
   return (
     <>
-      <SubPageHeader>
-        <SubPageTitle>{Texts.timesheets}</SubPageTitle>
-      </SubPageHeader>
       <FilterBar filter={draftFilter} setFilter={setDraftFilter} actions={<Button onClick={handleFilter}>{Texts.filter}</Button>}>
         <ContractTimesheetsFilterControls options={filterOptions} />
       </FilterBar>
@@ -232,11 +230,19 @@ interface EmployeeNameLinkProps {
   className?: string;
 }
 
-const EmployeeNameLink = ({ employeeId, children, className }: EmployeeNameLinkProps) => (
-  <Link to={Routes.employee(employeeId)} className={cn(overviewLinkClassName, className)}>
-    {children}
-  </Link>
-);
+const EmployeeNameLink = ({ employeeId, children, className }: EmployeeNameLinkProps) => {
+  const canViewEmployee = useCan(UiAction.employees.view, { employeeId });
+
+  if (!canViewEmployee) {
+    return <span className={className}>{children}</span>;
+  }
+
+  return (
+    <Link to={Routes.employee(employeeId)} className={cn(overviewLinkClassName, className)}>
+      {children}
+    </Link>
+  );
+};
 
 interface TimesheetMonthLinkProps {
   employeeId: string;
@@ -265,16 +271,18 @@ const TimesheetsByMonth = ({ months, isLoading }: TimesheetsByMonthProps) => {
     <div className="space-y-8">
       {months.map((monthGroup) => (
         <div key={`${monthGroup.year}-${monthGroup.month}`} className="space-y-6">
-          <div className="font-medium text-muted-foreground">{formatMonthYear(monthGroup.month, monthGroup.year)}</div>
+          <div className="mb-3 font-medium text-muted-foreground">{formatMonthYear(monthGroup.month, monthGroup.year)}</div>
           {monthGroup.items.map((employee) => (
             <div key={employee.id} className="rounded-md border p-4">
-              <div className="mb-3 flex flex-wrap items-center gap-2 font-medium">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2 font-medium">
                 <EmployeeNameLink employeeId={employee.id}>{employee.fullName}</EmployeeNameLink>
-                <span className="text-muted-foreground" aria-hidden>
-                  ·
-                </span>
-                <TimesheetMonthLink employeeId={employee.id} year={monthGroup.year} month={monthGroup.month}>
-                  {formatMonthYear(monthGroup.month, monthGroup.year)}
+                <TimesheetMonthLink
+                  employeeId={employee.id}
+                  year={monthGroup.year}
+                  month={monthGroup.month}
+                  className="text-sm text-muted-foreground"
+                >
+                  {Texts.viewCombinedTimesheet}
                 </TimesheetMonthLink>
               </div>
               {employee.timesheets.length === 0 ? (
@@ -358,9 +366,9 @@ const TimesheetsByEmployee = ({ employees, isLoading }: TimesheetsByEmployeeProp
         const months = groupTimesheetsByMonth(emp.timesheets);
         return (
           <div key={emp.id} className="space-y-6">
-            <EmployeeNameLink employeeId={emp.id} className="font-medium">
-              {emp.fullName}
-            </EmployeeNameLink>
+            <div className="mb-3 font-medium">
+              <EmployeeNameLink employeeId={emp.id}>{emp.fullName}</EmployeeNameLink>
+            </div>
             {months.length === 0 ? (
               <p className="text-sm text-muted-foreground">{Texts.noItems}</p>
             ) : (

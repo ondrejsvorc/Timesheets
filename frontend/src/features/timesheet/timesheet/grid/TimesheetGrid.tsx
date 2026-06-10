@@ -37,6 +37,14 @@ export const TimesheetGrid = ({ timesheet, readOnly = false, onUpdateDay, onTogg
   const projectCount = timesheet.projects.length;
   const template = useMemo(() => createGridTemplate(projectCount), [projectCount]);
 
+  const copyProjectColumn = (projectId: string) => {
+    const lines = timesheet.days.map((day) => {
+      const hours = day.projectHours[projectId] ?? 0;
+      return TimesheetLogic.formatHours(hours).replace(".", ",");
+    });
+    void navigator.clipboard.writeText(lines.join("\n"));
+  };
+
   return (
     <div
       className={cn(
@@ -50,6 +58,7 @@ export const TimesheetGrid = ({ timesheet, readOnly = false, onUpdateDay, onTogg
           projects={timesheet.projects}
           core={timesheet.core}
           onToggleProjectLock={onToggleProjectLock}
+          onCopyProjectColumn={copyProjectColumn}
           onGenerateMonthly={() => {
             const onUpdateByDate = (date: string, updater: (draftDay: TimesheetDay) => void) => {
               const dayIndex = timesheet.days.findIndex((d) => d.date === date);

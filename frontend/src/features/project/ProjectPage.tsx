@@ -1,8 +1,9 @@
 import { Suspense } from "react";
-import { Await, Outlet, useAsyncValue, useLoaderData } from "react-router";
+import { Await, useAsyncValue, useLoaderData } from "react-router";
 import { BackButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
+import { TabbedOutlet } from "@/components/shared/layout/TabbedOutlet";
 import { Routes } from "@/constants/routes";
 import { useBackFromLocationState } from "@/hooks/useBackFromLocationState";
 import type { GetProjectResponse } from "./api/getProject";
@@ -21,7 +22,7 @@ export const ProjectPage = () => {
         </Await>
       </Suspense>
       <Suspense fallback={<GenericSkeleton />}>
-        <Outlet />
+        <TabbedOutlet />
       </Suspense>
     </>
   );

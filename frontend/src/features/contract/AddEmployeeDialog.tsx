@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useFetcher } from "react-router";
 import { z } from "zod";
@@ -95,13 +95,16 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
       label: e.fullName,
     })) ?? [];
 
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    employeesFetcher.load(Routes.resourceEmployees());
+  }, [open, employeesFetcher]);
+
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       handleClose();
-      return;
-    }
-    if (employeesFetcher.state === "idle") {
-      employeesFetcher.load(Routes.resourceEmployees());
     }
   };
 

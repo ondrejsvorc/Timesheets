@@ -14,8 +14,20 @@ public static class ApiPermissions
 
     public static bool CanModifyProjects(UserPermissionsScope scope) => scope.HasGlobalScope;
 
-    public static bool CanManageContractEmployees(UserPermissionsScope scope, Guid contractId) =>
-        scope.HasGlobalScope || scope.ContractManagerOf.Contains(contractId);
+    public static async Task<bool> CanManageContractEmployeesAsync(
+        UserPermissionsScope scope,
+        Guid contractId,
+        AppDbContext dbContext,
+        CancellationToken cancellationToken)
+    {
+        if (scope.HasGlobalScope || scope.ContractManagerOf.Contains(contractId))
+        {
+            return true;
+        }
+
+        Guid? projectId = await GetProjectIdForContractAsync(contractId, dbContext, cancellationToken);
+        return projectId.HasValue && scope.ProjectManagerOf.Contains(projectId.Value);
+    }
 
     public static bool CanManageContractManagers(UserPermissionsScope scope, Guid projectId) =>
         scope.HasGlobalScope || scope.ProjectManagerOf.Contains(projectId);
