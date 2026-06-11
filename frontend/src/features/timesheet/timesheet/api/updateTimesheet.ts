@@ -9,6 +9,7 @@ type DayUpdate = {
   clockOut: string | null;
   breakStart: string | null;
   breakEnd: string | null;
+  coreHours: number;
   description: string | null;
   schedules: TimeRange[] | null;
 };
@@ -43,6 +44,7 @@ const buildRequest = (timesheet: Timesheet): { days: DayUpdate[]; projects: Proj
     clockOut: toApiTime(day.attendance.clockOut),
     breakStart: toApiTime(day.attendance.breakStart),
     breakEnd: toApiTime(day.attendance.breakEnd),
+    coreHours: day.coreHours ?? 0,
     description: day.attendance.interruptions.trim() || null,
     schedules: mapSchedules(day.attendance.schedules),
   })),

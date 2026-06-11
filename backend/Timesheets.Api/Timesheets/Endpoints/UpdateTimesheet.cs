@@ -24,6 +24,7 @@ public sealed class UpdateTimesheet : IEndpoint
         TimeSpan? BreakEnd,
         decimal? Workload,
         decimal? HoursObligation,
+        decimal? CoreHours,
         string? Description,
         IEnumerable<TimeRange>? Schedules
     );
@@ -85,6 +86,11 @@ public sealed class UpdateTimesheet : IEndpoint
             day.BreakEnd = dayUpdate.BreakEnd;
             day.Workload = dayUpdate.Workload ?? day.Workload;
             day.HoursObligation = dayUpdate.HoursObligation ?? day.HoursObligation;
+            if (dayUpdate.CoreHours is not null)
+            {
+                day.CoreHours = decimal.Round(dayUpdate.CoreHours.Value, 2, MidpointRounding.AwayFromZero);
+            }
+
             day.Description = dayUpdate.Description;
 
             if (day.ClockIn.HasValue && day.ClockOut.HasValue)

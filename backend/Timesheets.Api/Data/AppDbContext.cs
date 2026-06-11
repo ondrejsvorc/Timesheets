@@ -346,6 +346,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .IsRequired()
             .HasPrecision(5, 2);
 
+        builder.Property(ad => ad.CoreHours)
+            .IsRequired()
+            .HasPrecision(5, 2)
+            .HasDefaultValue(0m);
+
         builder.Property(ad => ad.Schedules)
             .IsRequired()
             .HasColumnType("jsonb")

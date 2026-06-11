@@ -13,6 +13,7 @@ interface CompactDayItem {
   day: number;
   work: [number | null, number | null];
   break: [number | null, number | null];
+  coreHours: number;
   projectHours: number[];
   isHoliday: boolean;
   isWeekend: boolean;
@@ -76,7 +77,7 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
         nightHours: 0,
         schedules: mapSchedules(day.schedules),
       },
-      coreHours: null,
+      coreHours: day.coreHours > 0 ? day.coreHours : null,
       projectHours,
       isHoliday: day.isHoliday,
       isWeekend: day.isWeekend,

@@ -24,6 +24,7 @@ export const AppHeader = () => {
   const currentUser = rootData?.currentUser ?? null;
   const canNavProjects = useCan(UiAction.nav.projects);
   const canNavEmployees = useCan(UiAction.nav.employees);
+  const canNavMyTimesheets = useCan(UiAction.nav.myTimesheets);
   const homeRoute = canNavProjects ? Routes.projects() : currentUser ? Routes.employee(currentUser.id) : Routes.projects();
 
   const handleLogout = () => {
@@ -56,7 +57,7 @@ export const AppHeader = () => {
               {Texts.employees}
             </Link>
           )}
-          {currentUser && !canNavEmployees && (
+          {canNavMyTimesheets && currentUser && (
             <Link
               to={Routes.employee(currentUser.id)}
               className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
@@ -95,10 +96,10 @@ export const AppHeader = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>{currentUser?.fullName ?? Texts.user}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {currentUser && (
+              {canNavMyTimesheets && currentUser && (
                 <>
                   <DropdownMenuItem asChild>
-                    <Link to={Routes.employee(currentUser.id)}>{Texts.timesheets}</Link>
+                    <Link to={Routes.employee(currentUser.id)}>{Texts.myTimesheets}</Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>

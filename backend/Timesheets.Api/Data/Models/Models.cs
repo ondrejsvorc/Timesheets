@@ -160,6 +160,7 @@ public sealed class AttendanceDay
     public decimal Workload { get; set; }
     public decimal HoursWithoutBreak { get; set; }
     public decimal HoursObligation { get; set; }
+    public decimal CoreHours { get; set; }
     public bool IsHoliday { get; set; }
     public string? Description { get; set; }
     public string Schedules { get; set; } = "[]";
