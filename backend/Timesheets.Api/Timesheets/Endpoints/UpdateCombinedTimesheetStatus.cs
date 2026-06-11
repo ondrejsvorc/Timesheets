@@ -3,8 +3,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
@@ -44,14 +43,11 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
     private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> Handle(
         [FromBody] Request request,
-        HttpContext httpContext,
         AppDbContext dbContext,
         NotificationSender notificationSender,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        Employee changedBy = await CurrentEmployeeResolver.GetRequiredAsync(httpContext.User, dbContext, cancellationToken);
-
         CombinedTimesheetScope? scope = await CombinedTimesheetScopeLoader.LoadAsync(
             request.EmployeeId,
             request.Year,
@@ -103,12 +99,6 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return TypedResults.BadRequest("One or more selected timesheets are invalid for this employee and period.");
         }
 
-        EmployeeWorkflowPermissions workflowPermissions = await TimesheetWorkflowAuthorization.LoadAsync(
-            changedBy,
-            dbContext,
-            administrationOptions,
-            cancellationToken);
-
         if (includesAttendance)
         {
             return await UpdateAttendanceStatusAsync(
@@ -116,7 +106,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
                 scope,
                 attendanceTimesheet,
                 newStatus,
-                workflowPermissions,
+                user,
                 dbContext,
                 notificationSender,
                 cancellationToken);
@@ -128,7 +118,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             attendanceTimesheet,
             selectedProjectIds,
             newStatus,
-            workflowPermissions,
+            user,
             dbContext,
             notificationSender,
             cancellationToken);
@@ -139,7 +129,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         CombinedTimesheetScope scope,
         Data.Models.AttendanceTimesheet attendanceTimesheet,
         TimesheetStatus newStatus,
-        EmployeeWorkflowPermissions workflowPermissions,
+        ICurrentUser user,
         AppDbContext dbContext,
         NotificationSender notificationSender,
         CancellationToken cancellationToken)
@@ -158,8 +148,8 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         {
             bool isSubmit = request.StatusId == TimesheetWorkflowConstants.SubmittedStatusId;
             bool authorized = isSubmit
-                ? TimesheetWorkflowAuthorization.CanSubmitTimesheet(workflowPermissions, attendanceTimesheet.EmployeeId)
-                : TimesheetWorkflowAuthorization.CanManageWholeTimesheet(workflowPermissions);
+                ? user.EmployeeId == attendanceTimesheet.EmployeeId
+                : user.IsGlobalManagerRole();
 
             if (!authorized)
             {
@@ -200,7 +190,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             }
             else if (request.StatusId == TimesheetWorkflowConstants.ApprovedStatusId)
             {
-                attendanceTimesheet.ApprovedBy = workflowPermissions.EmployeeId;
+                attendanceTimesheet.ApprovedBy = user.EmployeeId;
                 attendanceTimesheet.ApprovedAt = DateTime.UtcNow;
             }
             else if (request.StatusId == TimesheetWorkflowConstants.DraftStatusId)
@@ -219,7 +209,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
                 AttendanceTimesheetId = attendanceTimesheet.Id,
                 FromStatusId = statusChanged ? currentStatusId : request.StatusId,
                 ToStatusId = request.StatusId,
-                ChangedByEmployeeId = workflowPermissions.EmployeeId,
+                ChangedByEmployeeId = user.EmployeeId,
                 Comment = request.Comment,
             };
 
@@ -249,18 +239,18 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         Data.Models.AttendanceTimesheet attendanceTimesheet,
         HashSet<Guid> selectedProjectIds,
         TimesheetStatus newStatus,
-        EmployeeWorkflowPermissions workflowPermissions,
+        ICurrentUser user,
         AppDbContext dbContext,
         NotificationSender notificationSender,
         CancellationToken cancellationToken)
     {
-        List<ProjectTimesheetScope> projectScopes = await TimesheetWorkflowAuthorization.LoadProjectScopesAsync(
+        List<ProjectTimesheetPart> projectScopes = await ProjectTimesheetScopeLoader.LoadAsync(
             selectedProjectIds,
             dbContext,
             cancellationToken);
 
         if (projectScopes.Count != selectedProjectIds.Count
-            || !TimesheetWorkflowAuthorization.CanManageProjectTimesheets(workflowPermissions, projectScopes))
+            || !user.CanManageProjectTimesheetParts(projectScopes))
         {
             return TypedResults.Unauthorized();
         }
@@ -329,7 +319,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             else if (request.StatusId == TimesheetWorkflowConstants.ApprovedStatusId)
             {
                 projectTimesheet.LockedAt = DateTime.UtcNow;
-                projectTimesheet.LockedBy = workflowPermissions.EmployeeId;
+                projectTimesheet.LockedBy = user.EmployeeId;
             }
 
             if (statusChanged || isReturnWhilePendingReview || !string.IsNullOrWhiteSpace(request.Comment))
@@ -344,7 +334,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
                         ? TimesheetWorkflowConstants.SubmittedStatusId
                         : currentStatusId,
                     ToStatusId = request.StatusId,
-                    ChangedByEmployeeId = workflowPermissions.EmployeeId,
+                    ChangedByEmployeeId = user.EmployeeId,
                     Comment = request.Comment,
                 };
 
@@ -369,7 +359,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
                 AttendanceTimesheetId = attendanceTimesheet.Id,
                 FromStatusId = attendanceStatusBefore,
                 ToStatusId = TimesheetWorkflowConstants.DraftStatusId,
-                ChangedByEmployeeId = workflowPermissions.EmployeeId,
+                ChangedByEmployeeId = user.EmployeeId,
                 Comment = request.Comment,
             };
 

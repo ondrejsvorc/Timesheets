@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 
@@ -18,14 +16,10 @@ public sealed class GetProject : IEndpoint
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
         Guid id,
-        HttpContext httpContext,
         AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
         ProjectItem? project = await dbContext.Projects
             .AsNoTracking()
             .Where(p => p.Id == id)
@@ -41,7 +35,7 @@ public sealed class GetProject : IEndpoint
             return TypedResults.NotFound();
         }
 
-        if (!ApiPermissions.CanAccessProject(scope, id))
+        if (!user.Satisfies(UserRole.Employee, projectId: id))
         {
             return TypedResults.Forbid();
         }

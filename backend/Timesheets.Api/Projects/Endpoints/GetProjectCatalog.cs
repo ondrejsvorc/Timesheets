@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -18,24 +16,20 @@ public sealed class GetProjectCatalog : IEndpoint
     public sealed record Response(IEnumerable<ProjectItem> Projects);
 
     private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(
-        HttpContext httpContext,
         AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
-        if (!ApiPermissions.CanManageEmployeePositions(scope))
+        if (!user.IsContractManager())
         {
             return TypedResults.Forbid();
         }
 
         IQueryable<Project> query = dbContext.Projects.AsNoTracking();
 
-        if (!scope.HasGlobalScope)
+        if (!user.IsGlobalManagerRole())
         {
-            query = query.Where(p => scope.VisibleProjectIds.Contains(p.Id));
+            query = query.Where(p => user.VisibleProjectIds.Contains(p.Id));
         }
 
         List<ProjectItem> projects = await query

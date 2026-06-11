@@ -1,1 +1,1 @@
-﻿namespace Timesheets.Api.Timesheets.Endpoints;
+namespace Timesheets.Api.Timesheets.Endpoints;

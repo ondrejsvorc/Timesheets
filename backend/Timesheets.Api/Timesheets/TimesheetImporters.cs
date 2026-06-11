@@ -1,4 +1,4 @@
-﻿using CzechHolidays;
+using CzechHolidays;
 
 namespace Timesheets.Api.Timesheets;
 

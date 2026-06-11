@@ -2,8 +2,6 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
@@ -65,15 +63,11 @@ public sealed class GetContractTimesheets : IEndpoint
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
         Guid id,
         [AsParameters] Request request,
-        HttpContext httpContext,
         AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
-        if (!ApiPermissions.CanAccessContract(scope, id))
+        if (!user.Satisfies(UserRole.Employee, contractId: id))
         {
             return TypedResults.Forbid();
         }
@@ -87,7 +81,7 @@ public sealed class GetContractTimesheets : IEndpoint
             return TypedResults.NotFound();
         }
 
-        bool canViewAllTimesheets = await ApiPermissions.CanViewAllContractTimesheetsAsync(scope, id, dbContext, cancellationToken);
+        bool canViewAllTimesheets = await user.CanViewAllContractTimesheetsAsync(id, cancellationToken);
 
         IQueryable<AttendanceTimesheet> query = dbContext.AttendanceTimesheets
             .AsNoTracking()
@@ -96,7 +90,7 @@ public sealed class GetContractTimesheets : IEndpoint
 
         if (!canViewAllTimesheets)
         {
-            query = query.Where(timesheet => timesheet.EmployeeId == scope.EmployeeId);
+            query = query.Where(timesheet => timesheet.EmployeeId == user.EmployeeId);
         }
 
         if (request.Statuses.Length != 0)

@@ -24,6 +24,19 @@ csharp_style_var_for_built_in_types = true:silent
 csharp_style_var_when_type_is_apparent = true:silent
 csharp_style_var_elsewhere = false:silent
 
+# Expression-bodied members: => on the same line when the body is a single expression.
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+csharp_style_expression_bodied_properties = when_on_single_line:silent
+csharp_style_expression_bodied_accessors = when_on_single_line:silent
+csharp_style_expression_bodied_lambdas = true:silent
+csharp_style_expression_bodied_local_functions = false:silent
+csharp_style_expression_bodied_operators = when_on_single_line:silent
+
+# Control flow always uses braces; keep short if/return blocks on one line when possible.
+csharp_prefer_braces = true:silent
+csharp_preserve_single_line_blocks = true
+csharp_preserve_single_line_statements = true
+
 # Formatting
 csharp_new_line_before_open_brace = all
 csharp_new_line_before_else = true
@@ -35,6 +48,11 @@ csharp_new_line_before_members_in_anonymous_types = true
 csharp_indent_case_contents = true
 csharp_indent_switch_labels = true
 csharp_indent_labels = one_less_than_current
+
+# Method signatures and call sites: keep on one line unless manually wrapped.
+dotnet_formatter_wrap_parameters = false
+dotnet_formatter_wrap_arguments = false
+dotnet_formatter_wrap_chained_expression = false
 
 dotnet_sort_system_directives_first = true
 

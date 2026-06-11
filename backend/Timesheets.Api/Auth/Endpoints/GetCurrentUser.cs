@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;

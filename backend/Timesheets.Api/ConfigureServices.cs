@@ -237,6 +237,8 @@ public static class ConfigureServices
     {
         builder.Services.Configure<AdministrationOptions>(builder.Configuration.GetSection(AdministrationOptions.SectionName));
         builder.Services.AddScoped<UserSynchronizer>();
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<ICurrentUser, CurrentUser>();
         builder.Services.AddSingleton<ICellParser, CellParser>();
         builder.Services.AddSingleton<IAttendanceTimesheetMetadataReader, AttendanceTimesheetMetadataReader>();
         builder.Services.AddSingleton<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();

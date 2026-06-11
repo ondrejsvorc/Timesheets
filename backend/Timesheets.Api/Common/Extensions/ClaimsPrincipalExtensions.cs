@@ -1,4 +1,4 @@
-﻿namespace Timesheets.Api.Common.Extensions;
+namespace Timesheets.Api.Common.Extensions;
 
 using System.Security.Claims;
 

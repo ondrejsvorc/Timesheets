@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Data;
@@ -34,15 +32,11 @@ public sealed class GetTimesheetComments : IEndpoint
 
     private static async Task<Results<Ok<IReadOnlyList<CommentItem>>, NotFound, ForbidHttpResult>> Handle(
         [AsParameters] Request request,
-        HttpContext httpContext,
         AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (_, UserPermissionsScope permissionsScope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
-        if (!await ApiPermissions.CanAccessEmployeeAsync(permissionsScope, request.EmployeeId, dbContext, cancellationToken))
+        if (!await user.CanAccessEmployeeAsync(request.EmployeeId, cancellationToken))
         {
             return TypedResults.Forbid();
         }

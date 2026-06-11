@@ -2,9 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
-using Timesheets.Api.Common;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -26,13 +24,11 @@ public sealed class UpdateEmployeeGlobalManagerRole : IEndpoint
     private static async Task<Results<NoContent, NotFound, BadRequest<string>, UnauthorizedHttpResult>> Handle(
         Guid id,
         [FromBody] Request request,
-        HttpContext httpContext,
         AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        Employee changedBy = await CurrentEmployeeResolver.GetRequiredAsync(httpContext.User, dbContext, cancellationToken);
-        if (!RoleManagerAuthorization.IsRoleManager(changedBy.Email, administrationOptions.Value))
+        if (!user.IsAdmin())
         {
             return TypedResults.Unauthorized();
         }

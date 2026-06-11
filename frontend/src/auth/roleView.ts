@@ -1,4 +1,5 @@
 import type { CurrentUserPermissions } from "./api/getCurrentUserPermissions";
+import { UserRole } from "./userRole";
 
 export type RoleViewMode = "actual" | "employee" | "globalManager" | "projectManager" | "contractManager" | "roleManager";
 
@@ -9,6 +10,14 @@ export interface RoleViewState {
 }
 
 const STORAGE_KEY = "timesheets:role-view";
+
+const roleViewRole: Record<Exclude<RoleViewMode, "actual">, UserRole> = {
+  employee: UserRole.Employee,
+  globalManager: UserRole.GlobalManager,
+  projectManager: UserRole.ProjectManager,
+  contractManager: UserRole.ContractManager,
+  roleManager: UserRole.Admin,
+};
 
 export const defaultRoleViewState = (): RoleViewState => ({
   mode: "actual",
@@ -42,20 +51,22 @@ export const saveRoleViewState = (state: RoleViewState) => {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 };
 
+const emptyPermissions = (role: UserRole): CurrentUserPermissions => ({
+  role,
+  projectManagerOf: [],
+  contractManagerOf: [],
+  employeeOnContractIds: [],
+  visibleProjectIds: [],
+  visibleContractIds: [],
+});
+
 export const applyRoleViewOverride = (actual: CurrentUserPermissions | null, roleView: RoleViewState): CurrentUserPermissions | null => {
   if (!actual || roleView.mode === "actual") {
     return actual;
   }
 
-  const base: CurrentUserPermissions = {
-    isRoleManager: false,
-    isGlobalManager: false,
-    projectManagerOf: [],
-    contractManagerOf: [],
-    employeeOnContractIds: [],
-    visibleProjectIds: [],
-    visibleContractIds: [],
-  };
+  const role = roleViewRole[roleView.mode];
+  const base = emptyPermissions(role);
 
   switch (roleView.mode) {
     case "employee":
@@ -67,7 +78,8 @@ export const applyRoleViewOverride = (actual: CurrentUserPermissions | null, rol
           actual.employeeOnContractIds.length > 0 ? actual.visibleProjectIds.filter((id) => !actual.projectManagerOf.includes(id)) : [],
       };
     case "globalManager":
-      return { ...base, isGlobalManager: true };
+    case "roleManager":
+      return base;
     case "projectManager":
       return {
         ...base,
@@ -80,8 +92,6 @@ export const applyRoleViewOverride = (actual: CurrentUserPermissions | null, rol
         contractManagerOf: roleView.contractId ? [roleView.contractId] : [],
         visibleContractIds: roleView.contractId ? [roleView.contractId] : [],
       };
-    case "roleManager":
-      return { ...base, isRoleManager: true };
     default:
       return actual;
   }

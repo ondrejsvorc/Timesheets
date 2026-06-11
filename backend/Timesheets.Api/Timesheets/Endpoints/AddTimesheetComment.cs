@@ -2,8 +2,6 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
@@ -37,15 +35,11 @@ public sealed class AddTimesheetComment : IEndpoint
 
     private static async Task<Results<Created<Response>, NotFound, ForbidHttpResult>> Handle(
         [FromBody] Request request,
-        HttpContext httpContext,
         AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (Employee author, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
-        if (!await ApiPermissions.CanAccessEmployeeAsync(scope, request.EmployeeId, dbContext, cancellationToken))
+        if (!await user.CanAccessEmployeeAsync(request.EmployeeId, cancellationToken))
         {
             return TypedResults.Forbid();
         }
@@ -62,12 +56,16 @@ public sealed class AddTimesheetComment : IEndpoint
             return TypedResults.NotFound();
         }
 
+        Employee author = await dbContext.Employees
+            .AsNoTracking()
+            .FirstAsync(e => e.Id == user.EmployeeId, cancellationToken);
+
         Data.Models.TimesheetComment comment = new()
         {
             Id = Guid.NewGuid(),
             AttendanceTimesheetId = timesheetScope.AttendanceTimesheetId,
             Text = request.Text.Trim(),
-            AuthorEmployeeId = author.Id,
+            AuthorEmployeeId = user.EmployeeId,
         };
 
         dbContext.TimesheetComments.Add(comment);

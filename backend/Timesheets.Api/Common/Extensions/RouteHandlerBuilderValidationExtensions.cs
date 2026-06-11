@@ -1,4 +1,4 @@
-﻿using Timesheets.Api.Common.Filters;
+using Timesheets.Api.Common.Filters;
 
 namespace Timesheets.Api.Common.Extensions;
 

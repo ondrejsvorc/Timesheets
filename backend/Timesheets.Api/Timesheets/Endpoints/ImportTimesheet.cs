@@ -1,8 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
@@ -36,16 +34,12 @@ public sealed class ImportTimesheet : IEndpoint
 
     private static async Task<Results<Ok<Response>, BadRequest<string>, ForbidHttpResult>> Handle(
         [FromForm] Request request,
-        HttpContext httpContext,
         AppDbContext dbContext,
         [FromServices] IAttendanceTimesheetImportService importService,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
-        if (!ApiPermissions.CanImportTimesheets(scope))
+        if (!user.IsGlobalManagerRole())
         {
             return TypedResults.Forbid();
         }

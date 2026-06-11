@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
@@ -12,24 +12,17 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
 
     public async Task SyncFromPrincipalAsync(ClaimsPrincipal principal, CancellationToken cancellationToken)
     {
-        string email = principal.GetEmail();
-        string fullName = principal.GetFullName();
-        string personalNumber = principal.GetPersonalNumber();
-        string? titleBefore = principal.GetTitleBefore();
-        string? titleAfter = principal.GetTitleAfter();
-        SynchronizedUser user = new(email, fullName, personalNumber, titleBefore, titleAfter);
-        await SyncAsync(user, cancellationToken);
+        SynchronizedUser synchronizedUser = new(principal.GetEmail(), principal.GetFullName(), principal.GetPersonalNumber(), principal.GetTitleBefore(), principal.GetTitleAfter());
+        await SyncUserAsync(synchronizedUser, cancellationToken);
     }
 
-    private async Task SyncAsync(SynchronizedUser user, CancellationToken cancellationToken)
+    private async Task SyncUserAsync(SynchronizedUser user, CancellationToken cancellationToken)
     {
-        Employee? existing = await dbContext.Employees
-            .FirstOrDefaultAsync(e => e.PersonalNumber == user.PersonalNumber, cancellationToken);
+        Employee? existing = await dbContext.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.PersonalNumber == user.PersonalNumber, cancellationToken);
 
         if (existing is null)
         {
-            existing = await dbContext.Employees
-                .FirstOrDefaultAsync(e => e.Email == user.Email, cancellationToken);
+            existing = await dbContext.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.Email == user.Email, cancellationToken);
         }
 
         if (existing is null)
@@ -56,42 +49,51 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
             EmployeeTypeId = null,
             CreatedAt = DateTime.UtcNow
         };
+
         dbContext.Employees.Add(employee);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task UpdateEmployeeAsync(Employee existing, SynchronizedUser user, CancellationToken cancellationToken)
     {
-        bool changed = false;
+        bool hasChanges = false;
+
         if (existing.FullName != user.FullName)
         {
             existing.FullName = user.FullName;
-            changed = true;
+            hasChanges = true;
         }
+
         if (existing.PersonalNumber != user.PersonalNumber)
         {
             existing.PersonalNumber = user.PersonalNumber;
-            changed = true;
+            hasChanges = true;
         }
+
         if (existing.TitleBefore != user.TitleBefore)
         {
             existing.TitleBefore = user.TitleBefore;
-            changed = true;
+            hasChanges = true;
         }
+
         if (existing.TitleAfter != user.TitleAfter)
         {
             existing.TitleAfter = user.TitleAfter;
-            changed = true;
+            hasChanges = true;
         }
+
         if (existing.Email != user.Email)
         {
             existing.Email = user.Email;
-            changed = true;
+            hasChanges = true;
         }
-        if (changed)
+
+        if (!hasChanges)
         {
-            existing.UpdatedAt = DateTime.UtcNow;
-            await dbContext.SaveChangesAsync(cancellationToken);
+            return;
         }
+
+        existing.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

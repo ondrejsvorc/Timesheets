@@ -1,11 +1,6 @@
-﻿using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Auth.Endpoints;
 
@@ -13,56 +8,34 @@ public sealed class GetCurrentUserPermissions : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
         app.MapGet("/currentUserPermissions", Handle)
-           .WithSummary("Get Currently Authenticated User Permissions");
+           .WithSummary("Get Currently Authenticated User Permissions")
+           .AddEndpointFilter(RequireAuthenticatedFilter.Instance)
+           .AddEndpointFilter<EnsureCurrentUserLoadedFilter>();
 
     public sealed record Response(
-        bool IsRoleManager,
-        bool IsGlobalManager,
+        UserRole Role,
         IReadOnlyList<Guid> ProjectManagerOf,
         IReadOnlyList<Guid> ContractManagerOf,
         IReadOnlyList<Guid> EmployeeOnContractIds,
         IReadOnlyList<Guid> VisibleProjectIds,
         IReadOnlyList<Guid> VisibleContractIds);
 
-    private static async Task<IResult> Handle(
-        HttpContext httpContext,
-        AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
-        CancellationToken cancellationToken)
+    private static Task<IResult> Handle(ICurrentUser user) =>
+        Task.FromResult<IResult>(Results.Ok(new Response(
+            Role: user.Role,
+            ProjectManagerOf: user.ProjectManagerOf,
+            ContractManagerOf: user.ContractManagerOf,
+            EmployeeOnContractIds: user.EmployeeOnContractIds,
+            VisibleProjectIds: user.VisibleProjectIds,
+            VisibleContractIds: user.VisibleContractIds)));
+
+    private sealed class RequireAuthenticatedFilter : IEndpointFilter
     {
-        ClaimsPrincipal currentUser = httpContext.User;
-        if (!currentUser.IsAuthenticated())
-        {
-            return Results.Unauthorized();
-        }
+        public static readonly RequireAuthenticatedFilter Instance = new();
 
-        Employee? employee = await CurrentEmployeeResolver.TryGetAsync(currentUser, dbContext, cancellationToken);
-
-        if (employee is null)
-        {
-            return Results.NotFound("Employee not found.");
-        }
-
-        UserPermissionsScope? scope = await UserPermissionsScopeLoader.LoadAsync(
-            employee,
-            dbContext,
-            administrationOptions,
-            cancellationToken);
-
-        if (scope is null)
-        {
-            return Results.NotFound("Employee not found.");
-        }
-
-        Response response = new(
-            IsRoleManager: scope.IsRoleManager,
-            IsGlobalManager: scope.IsGlobalManager,
-            ProjectManagerOf: scope.ProjectManagerOf,
-            ContractManagerOf: scope.ContractManagerOf,
-            EmployeeOnContractIds: scope.EmployeeOnContractIds,
-            VisibleProjectIds: scope.VisibleProjectIds,
-            VisibleContractIds: scope.VisibleContractIds);
-
-        return Results.Ok(response);
+        public ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next) =>
+            context.HttpContext.User.IsAuthenticated()
+                ? next(context)
+                : ValueTask.FromResult<object?>(Results.Unauthorized());
     }
 }

@@ -3,8 +3,6 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
@@ -53,14 +51,10 @@ public sealed class UpdateTimesheet : IEndpoint
     private static async Task<Results<Ok<Response>, BadRequest<string>, NotFound, ForbidHttpResult>> Handle(
         Guid id,
         [FromBody] Request request,
-        HttpContext httpContext,
         AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
         Data.Models.AttendanceTimesheet? timesheet = await dbContext.AttendanceTimesheets
             .Include(t => t.TimesheetStatus)
             .Include(t => t.Days)
@@ -71,7 +65,7 @@ public sealed class UpdateTimesheet : IEndpoint
             return TypedResults.NotFound();
         }
 
-        if (!ApiPermissions.CanUpdateOwnTimesheet(scope, timesheet.EmployeeId)
+        if (user.EmployeeId != timesheet.EmployeeId
             || timesheet.TimesheetStatusId != TimesheetWorkflowConstants.DraftStatusId)
         {
             return TypedResults.Forbid();

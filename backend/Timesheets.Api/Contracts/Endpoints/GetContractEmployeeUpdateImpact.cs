@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -20,15 +18,11 @@ public sealed class GetContractEmployeeUpdateImpact : IEndpoint
         Guid id,
         Guid contractEmployeeId,
         [FromBody] ContractEmployeeUpdateRequest request,
-        HttpContext httpContext,
         AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
-        if (!await ApiPermissions.CanManageContractEmployeesAsync(scope, id, dbContext, cancellationToken))
+        if (!user.Satisfies(UserRole.ContractManager, contractId: id))
         {
             return TypedResults.Forbid();
         }

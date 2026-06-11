@@ -7,8 +7,7 @@ public static class AuthenticationConfig
 {
     public const string SectionName = "Authentication";
 
-    public static bool IsEnabled(IConfiguration configuration) =>
-        configuration.GetSection(SectionName).GetValue("Enabled", true);
+    public static bool IsEnabled(IConfiguration configuration) => configuration.GetSection(SectionName).GetValue("Enabled", true);
 
     public static ClaimsPrincipal CreateDevPrincipal(IConfiguration configuration)
     {

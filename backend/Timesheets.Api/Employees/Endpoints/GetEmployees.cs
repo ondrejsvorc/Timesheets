@@ -1,7 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common;
 using Timesheets.Api.Data;
@@ -19,25 +17,21 @@ public sealed class GetEmployees : IEndpoint
     public sealed record Response(IEnumerable<EmployeeItem> Employees);
 
     private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(
-        HttpContext httpContext,
         AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
-        if (!scope.CanListEmployees)
+        if (!user.IsContractManager())
         {
             return TypedResults.Forbid();
         }
 
         IQueryable<Employee> query = dbContext.Employees.AsNoTracking();
 
-        if (!scope.HasGlobalScope)
+        if (!user.IsGlobalManagerRole())
         {
-            HashSet<Guid> visibleContractIds = scope.VisibleContractIds.ToHashSet();
-            HashSet<Guid> visibleProjectIds = scope.VisibleProjectIds.ToHashSet();
+            HashSet<Guid> visibleContractIds = user.VisibleContractIds.ToHashSet();
+            HashSet<Guid> visibleProjectIds = user.VisibleProjectIds.ToHashSet();
 
             query = query.Where(e =>
                 dbContext.ContractEmployees.Any(ce =>

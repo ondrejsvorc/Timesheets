@@ -6,33 +6,26 @@ using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Auth;
 
-public sealed record UserPermissionsScope(
-    Guid EmployeeId,
-    bool IsRoleManager,
-    bool IsGlobalManager,
-    bool HasGlobalScope,
-    IReadOnlyList<Guid> ProjectManagerOf,
-    IReadOnlyList<Guid> ContractManagerOf,
-    IReadOnlyList<Guid> EmployeeOnContractIds,
-    IReadOnlyList<Guid> VisibleProjectIds,
-    IReadOnlyList<Guid> VisibleContractIds)
+internal sealed class UserPermissions
 {
-    public bool CanListEmployees =>
-        HasGlobalScope || ProjectManagerOf.Count > 0 || ContractManagerOf.Count > 0;
-
-    public bool CanViewAllProjects => HasGlobalScope;
+    public Guid EmployeeId { get; init; }
+    public UserRole Role { get; init; }
+    public IReadOnlyList<Guid> ProjectManagerOf { get; init; } = [];
+    public IReadOnlyList<Guid> ContractManagerOf { get; init; } = [];
+    public IReadOnlyList<Guid> EmployeeOnContractIds { get; init; } = [];
+    public IReadOnlyList<Guid> VisibleProjectIds { get; init; } = [];
+    public IReadOnlyList<Guid> VisibleContractIds { get; init; } = [];
 }
 
-internal static class UserPermissionsScopeLoader
+internal static class UserPermissionsLoader
 {
-    public static async Task<UserPermissionsScope?> LoadAsync(
+    public static async Task<UserPermissions> LoadAsync(
         Employee employee,
         AppDbContext dbContext,
         IOptions<AdministrationOptions> administrationOptions,
         CancellationToken cancellationToken)
     {
         bool isRoleManager = RoleManagerAuthorization.IsRoleManager(employee.Email, administrationOptions.Value);
-        bool hasGlobalScope = employee.IsGlobalManager || isRoleManager;
 
         List<Guid> projectManagerOf = await dbContext.ProjectManagers
             .AsNoTracking()
@@ -53,7 +46,9 @@ internal static class UserPermissionsScopeLoader
             .Distinct()
             .ToListAsync(cancellationToken);
 
-        if (hasGlobalScope)
+        UserRole role = ResolveRole(isRoleManager, employee.IsGlobalManager, projectManagerOf, contractManagerOf);
+
+        if (role >= UserRole.GlobalManager)
         {
             List<Guid> allProjectIds = await dbContext.Projects
                 .AsNoTracking()
@@ -65,16 +60,16 @@ internal static class UserPermissionsScopeLoader
                 .Select(c => c.Id)
                 .ToListAsync(cancellationToken);
 
-            return new UserPermissionsScope(
-                employee.Id,
-                isRoleManager,
-                employee.IsGlobalManager,
-                HasGlobalScope: true,
-                projectManagerOf,
-                contractManagerOf,
-                employeeOnContractIds,
-                allProjectIds,
-                allContractIds);
+            return new UserPermissions
+            {
+                EmployeeId = employee.Id,
+                Role = role,
+                ProjectManagerOf = projectManagerOf,
+                ContractManagerOf = contractManagerOf,
+                EmployeeOnContractIds = employeeOnContractIds,
+                VisibleProjectIds = allProjectIds,
+                VisibleContractIds = allContractIds,
+            };
         }
 
         HashSet<Guid> visibleContractIds = contractManagerOf
@@ -117,15 +112,45 @@ internal static class UserPermissionsScopeLoader
             visibleContractIds.Add(contractId);
         }
 
-        return new UserPermissionsScope(
-            employee.Id,
-            isRoleManager,
-            employee.IsGlobalManager,
-            HasGlobalScope: false,
-            projectManagerOf,
-            contractManagerOf,
-            employeeOnContractIds,
-            visibleProjectIds.ToList(),
-            visibleContractIds.ToList());
+        return new UserPermissions
+        {
+            EmployeeId = employee.Id,
+            Role = role,
+            ProjectManagerOf = projectManagerOf,
+            ContractManagerOf = contractManagerOf,
+            EmployeeOnContractIds = employeeOnContractIds,
+            VisibleProjectIds = visibleProjectIds.ToList(),
+            VisibleContractIds = visibleContractIds.ToList(),
+        };
+    }
+
+    private static UserRole ResolveRole(
+        bool isRoleManager,
+        bool isGlobalManager,
+        IReadOnlyList<Guid> projectManagerOf,
+        IReadOnlyList<Guid> contractManagerOf)
+    {
+        UserRole role = UserRole.Employee;
+        if (contractManagerOf.Count > 0)
+        {
+            role = UserRole.ContractManager;
+        }
+
+        if (projectManagerOf.Count > 0)
+        {
+            role = UserRole.ProjectManager;
+        }
+
+        if (isGlobalManager)
+        {
+            role = UserRole.GlobalManager;
+        }
+
+        if (isRoleManager)
+        {
+            role = UserRole.Admin;
+        }
+
+        return role;
     }
 }

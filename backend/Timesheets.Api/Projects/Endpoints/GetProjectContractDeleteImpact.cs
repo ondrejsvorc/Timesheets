@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 
@@ -15,15 +13,11 @@ public sealed class GetProjectContractDeleteImpact : IEndpoint
     private static async Task<Results<Ok<ProjectDeleteImpact>, NotFound, ForbidHttpResult>> Handle(
         Guid projectId,
         Guid contractId,
-        HttpContext httpContext,
         AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
-        if (!ApiPermissions.CanModifyProjects(scope))
+        if (!user.IsGlobalManagerRole())
         {
             return TypedResults.Forbid();
         }
@@ -31,7 +25,7 @@ public sealed class GetProjectContractDeleteImpact : IEndpoint
         ProjectDeleteImpact? impact = await ProjectDeleteImpactCalculator.ForContractAsync(
             projectId,
             contractId,
-            scope.HasGlobalScope,
+            user.IsGlobalManagerRole(),
             dbContext,
             cancellationToken);
 

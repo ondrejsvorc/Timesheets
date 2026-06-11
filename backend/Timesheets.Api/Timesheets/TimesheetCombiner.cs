@@ -1,4 +1,4 @@
-﻿namespace Timesheets.Api.Timesheets;
+namespace Timesheets.Api.Timesheets;
 
 interface ITimesheetCombiner
 {

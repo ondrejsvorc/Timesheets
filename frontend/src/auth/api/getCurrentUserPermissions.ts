@@ -1,8 +1,8 @@
 import { BaseUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import type { UserRole } from "../userRole";
 
 export interface CurrentUserPermissions {
-  isRoleManager: boolean;
-  isGlobalManager: boolean;
+  role: UserRole;
   projectManagerOf: string[];
   contractManagerOf: string[];
   employeeOnContractIds: string[];
@@ -11,8 +11,7 @@ export interface CurrentUserPermissions {
 }
 
 interface GetCurrentUserPermissionsResponse {
-  isRoleManager: boolean;
-  isGlobalManager: boolean;
+  role: UserRole;
   projectManagerOf: string[];
   contractManagerOf: string[];
   employeeOnContractIds: string[];

@@ -1,10 +1,8 @@
-﻿using CzechHolidays;
+using CzechHolidays;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
@@ -46,16 +44,12 @@ public sealed class UpdateContractEmployee : IEndpoint
         Guid id,
         Guid contractEmployeeId,
         [FromBody] Request request,
-        HttpContext httpContext,
         AppDbContext dbContext,
         ICzechHolidaysFactory holidaysFactory,
-        IOptions<AdministrationOptions> administrationOptions,
+        ICurrentUser user,
         CancellationToken cancellationToken)
     {
-        (_, UserPermissionsScope scope) = await PermissionsScopeResolver.ResolveRequiredAsync(
-            httpContext, dbContext, administrationOptions, cancellationToken);
-
-        if (!await ApiPermissions.CanManageContractEmployeesAsync(scope, id, dbContext, cancellationToken))
+        if (!user.Satisfies(UserRole.ContractManager, contractId: id))
         {
             return TypedResults.Forbid();
         }
@@ -102,7 +96,7 @@ public sealed class UpdateContractEmployee : IEndpoint
 
             if (overlapping)
             {
-                return TypedResults.BadRequest("Zaměstnanec už má tuto pozici na zakázce v překrývajícím se období.");
+                return TypedResults.BadRequest("Zam?stnanec u? m? tuto pozici na zak?zce v p?ekr?vaj?c?m se obdob?.");
             }
 
             string? workloadError = await ContractEmployeeValidation.ValidateMonthlyWorkloadAsync(
