@@ -251,11 +251,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(ce => ce.PositionCode)
             .IsRequired()
-            .HasMaxLength(50);
+            .HasMaxLength(ContractEmployeeSchema.PositionCode.MaxLength);
 
         builder.Property(ce => ce.Position)
             .IsRequired()
-            .HasMaxLength(200);
+            .HasMaxLength(ContractEmployeeSchema.Position.MaxLength);
 
         builder.Property(ce => ce.Workload)
             .IsRequired()
