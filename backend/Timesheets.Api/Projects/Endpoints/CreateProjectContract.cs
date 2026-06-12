@@ -18,7 +18,14 @@ public sealed class CreateProjectContract : IEndpoint
 
     public sealed record Request(string Name, string RegistrationNumber);
     public sealed record Response(ProjectContractItem ProjectContract);
-    public sealed class Validator : AbstractValidator<Request> { }
+    public sealed class Validator : AbstractValidator<Request>
+    {
+        public Validator()
+        {
+            RuleFor(x => x.Name).NotEmpty().MaximumLength(ContractSchema.Name.MaxLength);
+            RuleFor(x => x.RegistrationNumber).MaximumLength(ContractSchema.RegistrationNumber.MaxLength);
+        }
+    }
 
     private static async Task<Results<Created<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(
         Guid id,
