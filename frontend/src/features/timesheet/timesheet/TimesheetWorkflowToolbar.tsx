@@ -1,6 +1,7 @@
 import { Check, RotateCcw, Send } from "lucide-react";
 import { useState } from "react";
 import { useRevalidator, useSearchParams } from "react-router";
+import { toast } from "sonner";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { FullscreenButton, SaveButton, UnlockIcon } from "@/components/shared/buttons/ActionButtons";
@@ -65,24 +66,19 @@ export const TimesheetWorkflowToolbar = ({
     onWorkflowSuccess();
   };
 
-  const blockIfInvalid = (): boolean => {
-    const validations = TimesheetValidations.validateForSubmit(timesheet);
-    if (TimesheetValidations.hasErrors(validations)) {
-      setSubmitBlockedOpen(true);
-      return true;
-    }
-    return false;
-  };
+  const hasValidationErrors = (): boolean => TimesheetValidations.hasErrors(TimesheetValidations.validateForSubmit(timesheet));
 
   const handleSubmitClick = () => {
-    if (blockIfInvalid()) {
+    if (hasValidationErrors()) {
+      setSubmitBlockedOpen(true);
       return;
     }
     setActiveWorkflow("submit");
   };
 
   const handleSaveClick = async (signal: AbortSignal) => {
-    if (blockIfInvalid()) {
+    if (hasValidationErrors()) {
+      toast.error(Texts.workflowSaveBlockedTitle, { description: Texts.workflowSaveBlockedDescription });
       return;
     }
     await onSave(signal);

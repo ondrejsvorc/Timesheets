@@ -150,9 +150,12 @@ export const Texts = {
   unlockTimesheet: "Odemknout",
   workflowSubmitTitle: "Odeslat výkaz ke schválení",
   workflowSubmitDescription: "Opravdu chcete odeslat kombinovaný výkaz za {period} ke schválení? Nejdříve se uloží aktuální změny.",
+  workflowSaveBlockedTitle: "Nelze uložit změny",
+  workflowSaveBlockedDescription:
+    "Výkaz obsahuje chyby (včetně nevyrovnané bilance nebo nedostatečného kmene pro STAG). Opravte je v tabulce a uložte znovu.",
   workflowSubmitBlockedTitle: "Nelze odeslat ke schválení",
   workflowSubmitBlockedDescription:
-    "Výkaz obsahuje chyby (včetně nevyrovnané bilance nebo nedostatečného kmene pro STAG). Opravte je v tabulce a zkuste to znovu. Upozornění uložení neblokují.",
+    "Výkaz obsahuje chyby (včetně nevyrovnané bilance nebo nedostatečného kmene pro STAG). Opravte je v tabulce a zkuste to znovu. Upozornění odeslání neblokují.",
   workflowApproveTitle: "Schválit výkaz",
   workflowApproveDescription: "Opravdu chcete schválit kombinovaný výkaz za {period}?",
   workflowReturnTitle: "Vrátit k přepracování",
