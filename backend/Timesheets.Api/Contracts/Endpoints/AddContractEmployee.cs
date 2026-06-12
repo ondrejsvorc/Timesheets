@@ -29,6 +29,10 @@ public sealed class AddContractEmployee : IEndpoint
             RuleFor(x => x.PositionCode).NotEmpty().MaximumLength(50);
             RuleFor(x => x.Position).NotEmpty().MaximumLength(200);
             RuleFor(x => x.Workload).GreaterThan(0);
+            RuleFor(x => x.StartDate).NotEmpty();
+            RuleFor(x => x.StartDate)
+                .LessThan(x => x.EndDate!.Value)
+                .When(x => x.EndDate.HasValue);
         }
     }
 
