@@ -15,9 +15,7 @@ public sealed class ReviewTimesheet : IEndpoint
     private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         Data.Models.AttendanceTimesheet? timesheet = await dbContext.AttendanceTimesheets
-            .AsNoTracking()
             .Include(t => t.Days)
-                .ThenInclude(d => d.DayInterruptions)
             .Include(t => t.Employee)
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
 
@@ -26,7 +24,7 @@ public sealed class ReviewTimesheet : IEndpoint
             return TypedResults.NotFound();
         }
 
-        TimesheetReview review = AttendanceTimesheetReviewMapper.Review(timesheet);
+        TimesheetReview review = await CombinedTimesheetReviewMapper.ReviewAsync(timesheet, dbContext, cancellationToken);
 
         return TypedResults.Ok(new Response(review));
     }

@@ -2,18 +2,24 @@ namespace Timesheets.Api.Timesheets;
 
 interface ITimesheetCombiner
 {
-    public CombinedTimesheet Combine(AttendanceTimesheet attendance, IReadOnlyList<ProjectTimesheet> projects);
+    public CombinedTimesheet Combine(AttendanceTimesheet attendance, IReadOnlyList<ProjectTimesheet> projects, decimal coreWorkload);
 }
 
 public class TimesheetCombiner : ITimesheetCombiner
 {
-    public CombinedTimesheet Combine(AttendanceTimesheet attendance, IReadOnlyList<ProjectTimesheet> projects)
+    public CombinedTimesheet Combine(
+        AttendanceTimesheet attendance,
+        IReadOnlyList<ProjectTimesheet> projects,
+        decimal coreWorkload)
     {
-        IReadOnlyList<CombinedDay> days = CombineDays(attendance, projects);
-        return new CombinedTimesheet(attendance.Year, attendance.Month, days);
+        IReadOnlyList<CombinedDay> days = CombineDays(attendance, projects, coreWorkload);
+        return new CombinedTimesheet(attendance.Year, attendance.Month, coreWorkload, days);
     }
 
-    private static List<CombinedDay> CombineDays(AttendanceTimesheet attendance, IReadOnlyList<ProjectTimesheet> projects)
+    private static List<CombinedDay> CombineDays(
+        AttendanceTimesheet attendance,
+        IReadOnlyList<ProjectTimesheet> projects,
+        decimal coreWorkload)
     {
         return attendance.Days.Select((attendanceDay, index) =>
         {
@@ -24,13 +30,14 @@ public class TimesheetCombiner : ITimesheetCombiner
             return new CombinedDay(
                 Date: attendanceDay.Date,
                 IsHoliday: attendanceDay.IsHoliday,
-                IsWeekend: attendanceDay.IsWeekend,
-                IsWorkday: attendanceDay.IsWorkday,
-                AttendanceHours: attendanceDay.TotalHours,
+                Workload: attendanceDay.Workload,
+                CoreWorkload: coreWorkload,
+                WorkedHours: attendanceDay.TotalHours,
+                CoreHours: 0,
                 ProjectHours: projectDays.Sum(d => d.Hours),
-                AttendanceWorkload: attendanceDay.Workload,
-                ProjectWorkload: projectDays.Sum(d => d.Workload)
-            );
+                StagHours: TimesheetLogic.CalculateStagHours(attendanceDay.Schedules),
+                HasAttendanceFilled: attendanceDay.ClockIn is not null || attendanceDay.ClockOut is not null,
+                SkipAllocationRules: TimesheetInterruptions.SkipAllocationRules(attendanceDay.OtherInterruption));
         })
         .ToList();
     }

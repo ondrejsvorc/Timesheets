@@ -65,13 +65,27 @@ export const TimesheetWorkflowToolbar = ({
     onWorkflowSuccess();
   };
 
-  const handleSubmitClick = () => {
+  const blockIfInvalid = (): boolean => {
     const validations = TimesheetValidations.validateForSubmit(timesheet);
     if (TimesheetValidations.hasErrors(validations)) {
       setSubmitBlockedOpen(true);
+      return true;
+    }
+    return false;
+  };
+
+  const handleSubmitClick = () => {
+    if (blockIfInvalid()) {
       return;
     }
     setActiveWorkflow("submit");
+  };
+
+  const handleSaveClick = async (signal: AbortSignal) => {
+    if (blockIfInvalid()) {
+      return;
+    }
+    await onSave(signal);
   };
 
   const handleWorkflowConfirm = async (comment: string, signal: AbortSignal) => {
@@ -146,7 +160,7 @@ export const TimesheetWorkflowToolbar = ({
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <FullscreenButton onClick={onToggleFullscreen} isFullscreen={isFullscreen} />
-          {isDraft && canSubmit && <SaveButton onClick={(_, signal) => onSave(signal)}>{Texts.saveChanges}</SaveButton>}
+          {isDraft && canSubmit && <SaveButton onClick={(_, signal) => handleSaveClick(signal)}>{Texts.saveChanges}</SaveButton>}
         </div>
       </div>
 

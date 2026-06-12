@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
+using Timesheets.Api.Timesheets;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
 
@@ -147,6 +148,12 @@ public sealed class UpdateTimesheet : IEndpoint
                     day.Hours = dayUpdate.Hours;
                 }
             }
+        }
+
+        TimesheetReview review = await CombinedTimesheetReviewMapper.ReviewAsync(timesheet, dbContext, cancellationToken);
+        if (review.HasErrors)
+        {
+            return TypedResults.BadRequest("Výkaz obsahuje chyby a nelze ho uložit.");
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

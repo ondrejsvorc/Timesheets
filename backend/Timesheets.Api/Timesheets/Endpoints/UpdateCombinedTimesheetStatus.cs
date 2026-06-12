@@ -162,7 +162,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             await dbContext.Entry(attendanceTimesheet).Reference(t => t.Employee).LoadAsync(cancellationToken);
             await dbContext.Entry(attendanceTimesheet).Collection(t => t.Days).LoadAsync(cancellationToken);
 
-            TimesheetReview review = AttendanceTimesheetReviewMapper.Review(attendanceTimesheet);
+            TimesheetReview review = await CombinedTimesheetReviewMapper.ReviewAsync(attendanceTimesheet, dbContext, cancellationToken);
             if (review.HasErrors)
             {
                 return TypedResults.BadRequest("Výkaz obsahuje chyby a nelze ho odeslat ke schválení.");

@@ -152,7 +152,7 @@ export const Texts = {
   workflowSubmitDescription: "Opravdu chcete odeslat kombinovaný výkaz za {period} ke schválení? Nejdříve se uloží aktuální změny.",
   workflowSubmitBlockedTitle: "Nelze odeslat ke schválení",
   workflowSubmitBlockedDescription:
-    "Výkaz obsahuje chyby. Opravte je v tabulce (červeně označená pole) a zkuste to znovu. Upozornění odeslání neblokují.",
+    "Výkaz obsahuje chyby (včetně nevyrovnané bilance nebo nedostatečného kmene pro STAG). Opravte je v tabulce a zkuste to znovu. Upozornění uložení neblokují.",
   workflowApproveTitle: "Schválit výkaz",
   workflowApproveDescription: "Opravdu chcete schválit kombinovaný výkaz za {period}?",
   workflowReturnTitle: "Vrátit k přepracování",

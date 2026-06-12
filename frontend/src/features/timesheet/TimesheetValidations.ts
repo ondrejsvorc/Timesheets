@@ -17,6 +17,14 @@ const MIN_BREAK_DURATION_HOURS = 0.5;
 const MIN_REST_BETWEEN_SHIFTS_HOURS = 11;
 /** Minimální odpracované hodiny před začátkem přestávky (interní pravidlo univerzity). */
 const MIN_HOURS_WORKED_BEFORE_BREAK_ALLOWED = 4;
+const parseInterruptionCodes = (raw: string): string[] => {
+  if (!raw.trim()) return [];
+  return raw
+    .split(",")
+    .map((code) => code.trim().toUpperCase())
+    .filter(Boolean);
+};
+
 const HOURS_PRECISION = 2;
 
 const toMinutes = (time: string): number => {
@@ -411,6 +419,40 @@ export const TimesheetValidations = {
             field: "clockIn",
           });
         }
+      }
+    }
+
+    const interruptionCodes = parseInterruptionCodes(day.attendance.interruptions);
+    const skipAllocation =
+      TimesheetLogic.hasBusinessTripInterruption(day.attendance) ||
+      (interruptionCodes.length > 0 && !TimesheetLogic.hasCoreOnlyInterruption(day.attendance));
+
+    if (!skipAllocation) {
+      const workedHours = TimesheetLogic.calculateWorkedHours(day.attendance);
+      const balance = TimesheetLogic.getDelta(day);
+      if (hasAnyAttendance(day) && workedHours > 0 && workedHours <= MAX_WORK_SHIFT_HOURS && balance !== 0) {
+        const controlTotal = TimesheetLogic.calculateControlTotal(day);
+        const message =
+          balance > 0
+            ? `Nerozdělené hodiny: docházka ${workedHours.toFixed(2)} h, kmen + projekty ${controlTotal.toFixed(2)} h.`
+            : `Překročení docházky: kmen + projekty ${controlTotal.toFixed(2)} h, docházka ${workedHours.toFixed(2)} h.`;
+        validations.push({
+          code: "ERR-ALL-01",
+          type: "error",
+          message,
+          field: "coreHours",
+        });
+      }
+
+      const stagHours = Math.min(12, TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules));
+      const coreHours = day.coreHours ?? 0;
+      if ((options.coreWorkload ?? 0) > 0 && stagHours > 0 && coreHours + 0.009 < stagHours) {
+        validations.push({
+          code: "ERR-ALL-02",
+          type: "error",
+          message: `STAG vyžaduje v kmeni alespoň ${stagHours.toFixed(2)} h (aktuálně ${coreHours.toFixed(2)} h).`,
+          field: "coreHours",
+        });
       }
     }
 

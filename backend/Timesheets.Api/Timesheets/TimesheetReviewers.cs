@@ -78,14 +78,16 @@ public interface ITimesheetReviewer<T> where T : ITimesheet
     TimesheetReview Review(T timesheet);
 }
 
-public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimesheet>
+public sealed class CombinedTimesheetReviewer
 {
-    public TimesheetReview Review(CombinedTimesheet timesheet)
+    public TimesheetReview Review(CombinedTimesheet timesheet, AttendanceTimesheet attendance)
     {
+        TimesheetReview attendanceReview = new AttendanceTimesheetReviewer().Review(attendance);
+
         return new TimesheetReview
         {
-            Issues = ReviewTimesheet(timesheet),
-            DayIssues = timesheet.Days.SelectMany(ReviewDay)
+            Issues = ReviewTimesheet(timesheet).Concat(attendanceReview.Issues),
+            DayIssues = timesheet.Days.SelectMany(ReviewDay).Concat(attendanceReview.DayIssues)
         };
     }
 
@@ -98,11 +100,63 @@ public sealed class CombinedTimesheetReviewer : ITimesheetReviewer<CombinedTimes
 
     private static IEnumerable<DayIssue> ReviewDay(CombinedDay day) =>
     [
+        .. ReviewDayBalance(day),
+        .. ReviewStagMinCore(day),
         .. ReviewOvertime(day),
         .. ReviewUndertime(day),
         .. ReviewTooLongWorkday(day),
         .. ReviewWeekendAndHolidayWork(day)
     ];
+
+    private static IEnumerable<DayIssue> ReviewDayBalance(CombinedDay day)
+    {
+        if (day.SkipAllocationRules || !day.HasAttendanceFilled)
+        {
+            yield break;
+        }
+
+        if (day.WorkedHours > TimesheetLimits.MaxWorkShiftHours)
+        {
+            yield break;
+        }
+
+        if (!TimesheetLogic.HasUnequalHours(day.WorkedHours, day.AllocatedHours))
+        {
+            yield break;
+        }
+
+        decimal balance = TimesheetLogic.Normalize(day.WorkedHours - day.AllocatedHours);
+        string description = balance > 0
+            ? $"Nerozdělené hodiny: docházka {day.WorkedHours:F2} h, kmen + projekty {day.AllocatedHours:F2} h."
+            : $"Překročení docházky: kmen + projekty {day.AllocatedHours:F2} h, docházka {day.WorkedHours:F2} h.";
+
+        yield return new DayIssue(
+            Code: "ERR-ALL-01",
+            Type: IssueType.Error,
+            Description: description,
+            Day: day.Date.Day,
+            Field: "coreHours");
+    }
+
+    private static IEnumerable<DayIssue> ReviewStagMinCore(CombinedDay day)
+    {
+        if (day.SkipAllocationRules || day.CoreWorkload <= 0 || day.StagHours <= 0)
+        {
+            yield break;
+        }
+
+        if (day.CoreHours + 0.009m >= day.StagHours)
+        {
+            yield break;
+        }
+
+        yield return new DayIssue(
+            Code: "ERR-ALL-02",
+            Type: IssueType.Error,
+            Description: $"STAG vyžaduje v kmeni alespoň {day.StagHours:F2} h (aktuálně {day.CoreHours:F2} h).",
+            Day: day.Date.Day,
+            Field: "coreHours");
+    }
 
     private static IEnumerable<TimesheetIssue> ReviewOvertime(CombinedTimesheet timesheet)
     {
@@ -464,14 +518,6 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
                 );
             }
         }
-    }
-}
-
-public sealed class ProjectTimesheetReviewer : ITimesheetReviewer<ProjectTimesheet>
-{
-    public TimesheetReview Review(ProjectTimesheet timesheet)
-    {
-        throw new NotImplementedException();
     }
 }
 
