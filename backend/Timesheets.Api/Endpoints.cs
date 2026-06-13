@@ -89,7 +89,6 @@ public static class Endpoints
         .MapEndpoint<GetCombinedTimesheet>()
         .MapEndpoint<GetTimesheetCatalog>()
         .MapEndpoint<GetTimesheetStatuses>()
-        .MapEndpoint<CreateTimesheet>()
         .MapEndpoint<UpdateTimesheet>()
         .MapEndpoint<UpdateCombinedTimesheetStatus>()
         .MapEndpoint<GetTimesheetComments>()

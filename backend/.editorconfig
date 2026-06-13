@@ -49,7 +49,9 @@ csharp_indent_case_contents = true
 csharp_indent_switch_labels = true
 csharp_indent_labels = one_less_than_current
 
-# Method signatures and call sites: keep on one line unless manually wrapped.
+# Method signatures and call sites: keep parameters on one line.
+# dotnet format with wrap=false preserves single-line code and does not re-wrap it.
+# It does not collapse existing multi-line signatures/calls — put them on one line first.
 dotnet_formatter_wrap_parameters = false
 dotnet_formatter_wrap_arguments = false
 dotnet_formatter_wrap_chained_expression = false
