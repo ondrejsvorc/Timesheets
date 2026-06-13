@@ -26,8 +26,8 @@ public sealed class AddContractEmployee : IEndpoint
         public Validator()
         {
             RuleFor(x => x.EmployeeId).NotEmpty();
-            RuleFor(x => x.PositionCode).NotEmpty().MaximumLength(50);
-            RuleFor(x => x.Position).NotEmpty().MaximumLength(200);
+            RuleFor(x => x.PositionCode).NotEmpty().MaximumLength(ContractEmployeeSchema.PositionCode.MaxLength);
+            RuleFor(x => x.Position).NotEmpty().MaximumLength(ContractEmployeeSchema.Position.MaxLength);
             RuleFor(x => x.Workload).GreaterThan(0);
             RuleFor(x => x.StartDate).NotEmpty();
             RuleFor(x => x.StartDate)
