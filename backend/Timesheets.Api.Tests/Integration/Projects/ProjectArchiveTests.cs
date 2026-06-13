@@ -15,6 +15,7 @@ public class ProjectArchiveTests : BaseIntegrationTest
     public async Task ArchiveProject_SetsArchivedAt()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 
@@ -39,6 +40,7 @@ public class ProjectArchiveTests : BaseIntegrationTest
     public async Task ArchiveProject_WhenAlreadyArchived_ReturnsBadRequest()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 2, 1, 0, 0, 0, DateTimeKind.Utc));
 
@@ -53,6 +55,7 @@ public class ProjectArchiveTests : BaseIntegrationTest
     public async Task UnarchiveProject_ClearsArchivedAt()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc));
 
@@ -71,6 +74,7 @@ public class ProjectArchiveTests : BaseIntegrationTest
     public async Task UnarchiveProject_WhenNotArchived_ReturnsBadRequest()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 4, 1, 0, 0, 0, DateTimeKind.Utc));
 

@@ -18,6 +18,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateImpact_Split_ReturnsCreatesNewAssignment()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
@@ -47,6 +48,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateContractEmployee_Split_EndsOldAndCreatesNew()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
@@ -85,6 +87,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateImpact_ShortenEnd_WithDraftDaysOutside_ReturnsDraftDaysToRemove()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
@@ -113,6 +116,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateContractEmployee_ShortenEnd_RemovesDraftDaysOutsideRange()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
@@ -146,6 +150,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateImpact_ShortenEnd_WithSubmittedOutside_ReturnsBlocked()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
@@ -176,6 +181,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateImpact_Unchanged_ReturnsBlocked()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
@@ -202,6 +208,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateImpact_ExtendEnd_ReturnsNewMonths()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 6, 30, 0, 0, 0, DateTimeKind.Utc));

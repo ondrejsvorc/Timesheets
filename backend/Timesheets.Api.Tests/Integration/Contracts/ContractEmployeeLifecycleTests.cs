@@ -1,9 +1,9 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Timesheets.Api.Contracts.Endpoints;
-using Timesheets.Api.Employees.Endpoints;
 using Timesheets.Api.Projects.Endpoints;
 using Timesheets.Api.Tests.Integration;
 using Xunit;
@@ -42,18 +42,7 @@ public class ContractEmployeeLifecycleTests : BaseIntegrationTest
         var contractId = createdContract!.ProjectContract.Id;
 
         // 3. Setup: Create Employee
-        var createEmployeeRequest = new CreateEmployee.Request(
-            Guid.Parse("00000000-0000-0000-0000-000000000001"), // using a seeded Akademik type
-            "9999",
-            "John Doe Contract",
-            "john.doe@contracts.com"
-        );
-        var employeeResponse = await Client.PostAsJsonAsync("/api/employees", createEmployeeRequest);
-        // If Employee creation requires a real EmployeeType from the DB seed, this might fail with 500 or 400. 
-        // We'll proceed with this and fix if it fails during execution check.
-        Assert.Equal(HttpStatusCode.Created, employeeResponse.StatusCode);
-        var createdEmployee = await employeeResponse.Content.ReadFromJsonAsync<CreateEmployee.Response>();
-        var employeeId = createdEmployee!.Id;
+        Guid employeeId = await SeedEmployeeAsync("9999", "John Doe Contract", "john.doe@contracts.com");
 
         // 4. POST /api/contracts/{id}/employees
         var addEmployeeRequest = new AddContractEmployee.Request(

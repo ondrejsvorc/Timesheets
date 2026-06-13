@@ -18,6 +18,7 @@ public class TimesheetReimportTests : BaseIntegrationTest
     public async Task DetectTimesheetImport_ForNewMonth_ReturnsCanImportWithoutReimport()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             workload: 0.5m);
@@ -44,6 +45,7 @@ public class TimesheetReimportTests : BaseIntegrationTest
     public async Task DetectTimesheetImport_ForDraftMonth_ReturnsReimport()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             workload: 0.5m);
@@ -76,6 +78,7 @@ public class TimesheetReimportTests : BaseIntegrationTest
     public async Task DetectTimesheetImport_ForSubmittedMonth_ReturnsBlocked()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             workload: 0.5m);
@@ -111,6 +114,7 @@ public class TimesheetReimportTests : BaseIntegrationTest
     public async Task ImportTimesheet_Reimport_PreservesTimesheetIdAndComments()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             workload: 0.5m);

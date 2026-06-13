@@ -4,7 +4,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Timesheets.Api.Contracts.Endpoints;
-using Timesheets.Api.Employees.Endpoints;
 using Timesheets.Api.Projects.Endpoints;
 using Xunit;
 
@@ -26,9 +25,7 @@ public class UpdateContractEmployeeValidationTests : BaseIntegrationTest
         var contResp = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", contractRequest);
         var contractId = (await contResp.Content.ReadFromJsonAsync<CreateProjectContract.Response>())!.ProjectContract.Id;
 
-        var empRequest = new CreateEmployee.Request(Guid.Parse("00000000-0000-0000-0000-000000000001"), "9997", "John UpdContract", "john@upd.com");
-        var empResp = await Client.PostAsJsonAsync("/api/employees", empRequest);
-        var employeeId = (await empResp.Content.ReadFromJsonAsync<CreateEmployee.Response>())!.Id;
+        Guid employeeId = await SeedEmployeeAsync("9997", "John UpdContract", "john@upd.com");
 
         var addRequest = new AddContractEmployee.Request(employeeId, "P1", "Dev", 1m, DateTime.UtcNow.Date, null);
         var addResp = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", addRequest);

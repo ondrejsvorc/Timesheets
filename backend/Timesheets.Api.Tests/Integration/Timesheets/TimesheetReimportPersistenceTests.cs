@@ -13,6 +13,7 @@ public class TimesheetReimportPersistenceTests : BaseIntegrationTest
     public async Task PersistAsync_SecondImport_ReplacesDays()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             workload: 0.5m);

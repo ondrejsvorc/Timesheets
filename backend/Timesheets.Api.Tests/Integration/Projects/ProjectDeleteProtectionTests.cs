@@ -17,6 +17,7 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
     public async Task DeleteProject_WithOnlyDraftTimesheets_ReturnsNoContent()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 3, 31, 0, 0, 0, DateTimeKind.Utc));
@@ -29,6 +30,7 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
     public async Task GetProjectDeleteImpact_WithDraftTimesheets_AllowsDelete()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 2, 28, 0, 0, 0, DateTimeKind.Utc));
@@ -47,6 +49,7 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
     public async Task DeleteProject_WithSubmittedTimesheets_ReturnsConflict()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 2, 28, 0, 0, 0, DateTimeKind.Utc));
@@ -62,6 +65,7 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
     public async Task DeleteProject_WithSubmittedTimesheetsAndForce_ReturnsNoContent()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 4, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 5, 31, 0, 0, 0, DateTimeKind.Utc));
@@ -77,6 +81,7 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
     public async Task GetProjectDeleteImpact_WithSubmittedTimesheets_ReportsProtectedCounts()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
             Client,
             new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc),
             new DateTime(2024, 7, 31, 0, 0, 0, DateTimeKind.Utc));

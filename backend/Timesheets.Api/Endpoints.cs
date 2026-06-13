@@ -104,7 +104,6 @@ public static class Endpoints
         .MapEndpoint<UpdateEmployeeGlobalManagerRole>()
         .MapEndpoint<UpdateEmployeeType>()
         .MapEndpoint<GetEmployees>()
-        .MapEndpoint<CreateEmployee>()
         .MapEndpoint<GetEmployeePositions>()
         .MapEndpoint<GetEmployeeTimesheets>();
 
