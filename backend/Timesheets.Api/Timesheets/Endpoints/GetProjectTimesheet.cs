@@ -1,1 +1,0 @@
-namespace Timesheets.Api.Timesheets.Endpoints;

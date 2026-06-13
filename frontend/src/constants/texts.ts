@@ -41,7 +41,6 @@ export const Texts = {
   cancel: "Zrušit",
   searchByNameEmailOrNumber: "Hledat podle jména, emailu, os. čísla…",
   employeesInMyContracts: "Zaměstnanci v mých zakázkách",
-  registerEmployee: "Registrovat zaměstnance",
   personalNumber: "Osobní číslo",
   fullName: "Celé jméno",
   email: "E-mail",

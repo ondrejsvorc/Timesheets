@@ -101,10 +101,8 @@ public static class Endpoints
     private static void MapEmployeeEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/employees").WithTags("Employees")
         .MapEndpoint<GetEmployee>()
-        .MapEndpoint<UpdateEmployee>()
         .MapEndpoint<UpdateEmployeeGlobalManagerRole>()
         .MapEndpoint<UpdateEmployeeType>()
-        .MapEndpoint<DeleteEmployee>()
         .MapEndpoint<GetEmployees>()
         .MapEndpoint<CreateEmployee>()
         .MapEndpoint<GetEmployeePositions>()
