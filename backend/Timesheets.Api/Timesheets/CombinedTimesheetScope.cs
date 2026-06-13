@@ -9,12 +9,7 @@ internal sealed record CombinedTimesheetScope(
 
 internal static class CombinedTimesheetScopeLoader
 {
-    public static async Task<CombinedTimesheetScope?> LoadAsync(
-        Guid employeeId,
-        int year,
-        int month,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    public static async Task<CombinedTimesheetScope?> LoadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         Guid? attendanceTimesheetId = await dbContext.AttendanceTimesheets
             .AsNoTracking()
@@ -30,16 +25,8 @@ internal static class CombinedTimesheetScopeLoader
         List<(Guid Id, string ContractName)> projectRows = await dbContext.ProjectTimesheets
             .AsNoTracking()
             .Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month)
-            .Join(
-                dbContext.ContractEmployees.AsNoTracking(),
-                timesheet => timesheet.ContractEmployeeId,
-                contractEmployee => contractEmployee.Id,
-                (timesheet, contractEmployee) => new { timesheet, contractEmployee })
-            .Join(
-                dbContext.Contracts.AsNoTracking(),
-                x => x.contractEmployee.ContractId,
-                contract => contract.Id,
-                (x, contract) => new { x.timesheet.Id, contract.Name })
+            .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { timesheet, contractEmployee })
+            .Join(dbContext.Contracts.AsNoTracking(), x => x.contractEmployee.ContractId, contract => contract.Id, (x, contract) => new { x.timesheet.Id, contract.Name })
             .OrderBy(x => x.Name)
             .Select(x => new ValueTuple<Guid, string>(x.Id, x.Name))
             .ToListAsync(cancellationToken);

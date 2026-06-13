@@ -13,11 +13,7 @@ public sealed class GetProjectContracts : IEndpoint
 
     public sealed record Response(IEnumerable<ProjectContractItem> ProjectContracts);
 
-    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(
-        Guid id,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.Satisfies(UserRole.Employee, projectId: id))
         {

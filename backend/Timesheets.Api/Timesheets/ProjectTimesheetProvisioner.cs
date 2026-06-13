@@ -27,13 +27,7 @@ internal static class ProjectTimesheetProvisioner
         return end >= periodStart;
     }
 
-    public static async Task EnsureForEmployeeMonthAsync(
-        Guid employeeId,
-        int year,
-        int month,
-        AppDbContext dbContext,
-        ICzechHolidaysFactory holidaysFactory,
-        CancellationToken cancellationToken)
+    public static async Task EnsureForEmployeeMonthAsync(Guid employeeId, int year, int month, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)
     {
         List<ContractEmployee> assignments = await dbContext.ContractEmployees
             .AsNoTracking()
@@ -52,13 +46,7 @@ internal static class ProjectTimesheetProvisioner
         }
     }
 
-    public static async Task<bool> EnsureForAssignmentMonthAsync(
-        ContractEmployee assignment,
-        int year,
-        int month,
-        AppDbContext dbContext,
-        ICzechHolidaysFactory holidaysFactory,
-        CancellationToken cancellationToken)
+    public static async Task<bool> EnsureForAssignmentMonthAsync(ContractEmployee assignment, int year, int month, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)
     {
         if (!IsAssignmentActiveForMonth(assignment, year, month))
         {

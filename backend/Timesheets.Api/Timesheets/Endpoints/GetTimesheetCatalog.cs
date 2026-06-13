@@ -32,16 +32,8 @@ public sealed class GetTimesheetCatalog : IEndpoint
         List<ProjectTimesheetRow> projectRows = await dbContext.ProjectTimesheets
             .AsNoTracking()
             .Where(timesheet => timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month)
-            .Join(
-                dbContext.ContractEmployees.AsNoTracking(),
-                timesheet => timesheet.ContractEmployeeId,
-                contractEmployee => contractEmployee.Id,
-                (timesheet, contractEmployee) => new { timesheet, contractEmployee })
-            .Join(
-                dbContext.Contracts.AsNoTracking(),
-                x => x.contractEmployee.ContractId,
-                contract => contract.Id,
-                (x, contract) => new { x.timesheet, contract })
+            .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { timesheet, contractEmployee })
+            .Join(dbContext.Contracts.AsNoTracking(), x => x.contractEmployee.ContractId, contract => contract.Id, (x, contract) => new { x.timesheet, contract })
             .OrderBy(x => x.contract.Name)
             .Select(x => new ProjectTimesheetRow(x.timesheet.Id, x.contract.Name))
             .ToListAsync(cancellationToken);

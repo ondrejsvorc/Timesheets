@@ -14,10 +14,7 @@ public sealed class GetProjects : IEndpoint
 
     public sealed record Response(IEnumerable<ProjectItem> Projects);
 
-    private static async Task<Results<Ok<Response>, UnauthorizedHttpResult>> Handle(
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, UnauthorizedHttpResult>> Handle(AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         IQueryable<Data.Models.Project> query = dbContext.Projects.AsNoTracking();
 

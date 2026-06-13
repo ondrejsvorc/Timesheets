@@ -16,10 +16,7 @@ public sealed class GetEmployees : IEndpoint
     public sealed record EmployeeItem(Guid Id, Guid? EmployeeTypeId, string PersonalNumber, string FullName, string? Email, bool IsGlobalManager);
     public sealed record Response(IEnumerable<EmployeeItem> Employees);
 
-    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsContractManager())
         {

@@ -30,19 +30,11 @@ public sealed class AddContractEmployee : IEndpoint
             RuleFor(x => x.Position).NotEmpty().MaximumLength(ContractEmployeeSchema.Position.MaxLength);
             RuleFor(x => x.Workload).GreaterThan(0);
             RuleFor(x => x.StartDate).NotEmpty();
-            RuleFor(x => x.StartDate)
-                .LessThan(x => x.EndDate!.Value)
-                .When(x => x.EndDate.HasValue);
+            RuleFor(x => x.StartDate).LessThan(x => x.EndDate!.Value).When(x => x.EndDate.HasValue);
         }
     }
 
-    private static async Task<Results<Created<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(
-        Guid id,
-        [FromBody] Request request,
-        AppDbContext dbContext,
-        ICzechHolidaysFactory holidaysFactory,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Created<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.Satisfies(UserRole.ContractManager, contractId: id))
         {
@@ -152,12 +144,7 @@ public sealed class AddContractEmployee : IEndpoint
         return TypedResults.Created($"/contracts/{id}/employees/{request.EmployeeId}", response);
     }
 
-    private static async Task EnsureTimesheetsForAssignmentAsync(
-        ContractEmployee contractEmployee,
-        Request request,
-        AppDbContext dbContext,
-        ICzechHolidaysFactory holidaysFactory,
-        CancellationToken cancellationToken)
+    private static async Task EnsureTimesheetsForAssignmentAsync(ContractEmployee contractEmployee, Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)
     {
         DateTime start = request.StartDate.Kind == DateTimeKind.Utc ? request.StartDate : DateTime.SpecifyKind(request.StartDate, DateTimeKind.Utc);
         DateTime end = request.EndDate.HasValue

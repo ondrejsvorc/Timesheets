@@ -30,11 +30,7 @@ public sealed class GetTimesheetComments : IEndpoint
         CommentAuthor? Author,
         StatusChangeDetails? StatusChange);
 
-    private static async Task<Results<Ok<IReadOnlyList<CommentItem>>, NotFound, ForbidHttpResult>> Handle(
-        [AsParameters] Request request,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<IReadOnlyList<CommentItem>>, NotFound, ForbidHttpResult>> Handle([AsParameters] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!await user.CanAccessEmployeeAsync(request.EmployeeId, cancellationToken))
         {

@@ -42,12 +42,7 @@ internal sealed record PendingAttendanceTimesheetImport(int Index, IFormFile Fil
 internal sealed record AttendanceTimesheetImportTarget(Guid Id, string PersonalNumber);
 internal sealed record DetectionAttempt(AttendanceTimesheetMetadata? Metadata, AttendanceTimesheetDetectionResult Result);
 
-public sealed class AttendanceTimesheetImportService(
-    AppDbContext dbContext,
-    IAttendanceTimesheetMetadataReader metadataReader,
-    ITimesheetImporter<AttendanceTimesheet> importer,
-    IAttendanceTimesheetPersistenceService persistenceService
-) : IAttendanceTimesheetImportService
+public sealed class AttendanceTimesheetImportService(AppDbContext dbContext, IAttendanceTimesheetMetadataReader metadataReader, ITimesheetImporter<AttendanceTimesheet> importer, IAttendanceTimesheetPersistenceService persistenceService) : IAttendanceTimesheetImportService
 {
     public async Task<AttendanceTimesheetDetectionResult> DetectAsync(Guid employeeId, IFormFile file, CancellationToken cancellationToken)
     {
@@ -152,9 +147,7 @@ public sealed class AttendanceTimesheetImportService(
     {
         if (!HasSupportedExtension(file.FileName))
         {
-            return new DetectionAttempt(
-                null,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Soubor musí být ve formátu .xls nebo .xlsx.", null, null, null, null)
+            return new DetectionAttempt(null, new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Soubor musí být ve formátu .xls nebo .xlsx.", null, null, null, null)
             );
         }
 
@@ -166,42 +159,32 @@ public sealed class AttendanceTimesheetImportService(
         }
         catch (Exception ex)
         {
-            return new DetectionAttempt(
-                null,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, false, $"Chyba při čtení souboru: {ex.Message}", null, null, null, null)
+            return new DetectionAttempt(null, new AttendanceTimesheetDetectionResult(file.FileName, false, false, $"Chyba při čtení souboru: {ex.Message}", null, null, null, null)
             );
         }
 
         if (employee is null)
         {
-            return new DetectionAttempt(
-                metadata,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Zaměstnanec nebyl nalezen.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
+            return new DetectionAttempt(metadata, new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Zaměstnanec nebyl nalezen.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
             );
         }
 
         if (metadata.Year <= 0 || metadata.Month is < 1 or > 12)
         {
-            return new DetectionAttempt(
-                metadata,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Nepodařilo se určit období výkazu.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
+            return new DetectionAttempt(metadata, new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Nepodařilo se určit období výkazu.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
             );
         }
 
         if (string.IsNullOrWhiteSpace(metadata.EmployeePersonalNumber))
         {
-            return new DetectionAttempt(
-                metadata,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Nepodařilo se určit osobní číslo zaměstnance.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
+            return new DetectionAttempt(metadata, new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Nepodařilo se určit osobní číslo zaměstnance.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
             );
         }
 
         // Accept variants like "ST101972" vs "101972" (e.g. "ST101972".Contains("101972")).
         if (!employee.PersonalNumber.Contains(metadata.EmployeePersonalNumber.Trim(), StringComparison.OrdinalIgnoreCase))
         {
-            return new DetectionAttempt(
-                metadata,
-                new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Soubor nepatří vybranému zaměstnanci.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
+            return new DetectionAttempt(metadata, new AttendanceTimesheetDetectionResult(file.FileName, false, false, "Soubor nepatří vybranému zaměstnanci.", metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Year, metadata.Month)
             );
         }
 
@@ -337,12 +320,7 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
         return timesheet.Id;
     }
 
-    private async Task<Guid> ReimportAsync(
-        Data.Models.AttendanceTimesheet existingTimesheet,
-        Guid employeeId,
-        AttendanceTimesheet importedTimesheet,
-        HashSet<string> validInterruptionCodes,
-        CancellationToken cancellationToken)
+    private async Task<Guid> ReimportAsync(Data.Models.AttendanceTimesheet existingTimesheet, Guid employeeId, AttendanceTimesheet importedTimesheet, HashSet<string> validInterruptionCodes, CancellationToken cancellationToken)
     {
         Guid timesheetId = existingTimesheet.Id;
 
@@ -365,10 +343,7 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
         return timesheetId;
     }
 
-    private void AddImportedDays(
-        Guid attendanceTimesheetId,
-        AttendanceTimesheet importedTimesheet,
-        HashSet<string> validInterruptionCodes)
+    private void AddImportedDays(Guid attendanceTimesheetId, AttendanceTimesheet importedTimesheet, HashSet<string> validInterruptionCodes)
     {
         foreach (AttendanceDay day in importedTimesheet.Days)
         {
@@ -391,11 +366,7 @@ public sealed class AttendanceTimesheetPersistenceService(AppDbContext dbContext
         }
     }
 
-    private async Task RecalculateDraftProjectColumnsAsync(
-        Guid employeeId,
-        int year,
-        int month,
-        CancellationToken cancellationToken)
+    private async Task RecalculateDraftProjectColumnsAsync(Guid employeeId, int year, int month, CancellationToken cancellationToken)
     {
         Data.Models.AttendanceTimesheet? attendanceTimesheet = await dbContext.AttendanceTimesheets
             .AsNoTracking()

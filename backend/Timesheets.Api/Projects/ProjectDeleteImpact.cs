@@ -16,11 +16,7 @@ public sealed record ProjectDeleteImpact(
 
 internal static class ProjectDeleteImpactCalculator
 {
-    public static async Task<ProjectDeleteImpact?> ForProjectAsync(
-        Guid projectId,
-        bool canForceDelete,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    public static async Task<ProjectDeleteImpact?> ForProjectAsync(Guid projectId, bool canForceDelete, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         bool exists = await dbContext.Projects.AsNoTracking().AnyAsync(p => p.Id == projectId, cancellationToken);
         if (!exists)
@@ -37,12 +33,7 @@ internal static class ProjectDeleteImpactCalculator
         return await BuildAsync(contractIds, canForceDelete, dbContext, cancellationToken);
     }
 
-    public static async Task<ProjectDeleteImpact?> ForContractAsync(
-        Guid projectId,
-        Guid contractId,
-        bool canForceDelete,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    public static async Task<ProjectDeleteImpact?> ForContractAsync(Guid projectId, Guid contractId, bool canForceDelete, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         bool exists = await dbContext.Contracts
             .AsNoTracking()
@@ -56,10 +47,7 @@ internal static class ProjectDeleteImpactCalculator
         return await BuildAsync([contractId], canForceDelete, dbContext, cancellationToken);
     }
 
-    public static async Task<bool> HasProtectedTimesheetsAsync(
-        IReadOnlyList<Guid> contractIds,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    public static async Task<bool> HasProtectedTimesheetsAsync(IReadOnlyList<Guid> contractIds, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         if (contractIds.Count == 0)
         {
@@ -74,11 +62,7 @@ internal static class ProjectDeleteImpactCalculator
             .AnyAsync(cancellationToken);
     }
 
-    private static async Task<ProjectDeleteImpact> BuildAsync(
-        IReadOnlyList<Guid> contractIds,
-        bool canForceDelete,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task<ProjectDeleteImpact> BuildAsync(IReadOnlyList<Guid> contractIds, bool canForceDelete, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         int positionCount = contractIds.Count == 0
             ? 0

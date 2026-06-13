@@ -60,12 +60,7 @@ public sealed class GetContractTimesheets : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        [AsParameters] Request request,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, [AsParameters] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.Satisfies(UserRole.Employee, contractId: id))
         {

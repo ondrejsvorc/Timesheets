@@ -7,29 +7,18 @@ using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Auth;
 
-internal sealed class CurrentUser(
-    IHttpContextAccessor httpContextAccessor,
-    AppDbContext dbContext,
-    IOptions<AdministrationOptions> administrationOptions) : ICurrentUser
+internal sealed class CurrentUser(IHttpContextAccessor httpContextAccessor, AppDbContext dbContext, IOptions<AdministrationOptions> administrationOptions) : ICurrentUser
 {
     private UserPermissions? _permissions;
+    private UserPermissions Permissions => _permissions ?? throw new InvalidOperationException("Current user is not loaded.");
 
     public Guid EmployeeId => Permissions.EmployeeId;
-
     public UserRole Role => Permissions.Role;
-
     public IReadOnlyList<Guid> ProjectManagerOf => Permissions.ProjectManagerOf;
-
     public IReadOnlyList<Guid> ContractManagerOf => Permissions.ContractManagerOf;
-
     public IReadOnlyList<Guid> EmployeeOnContractIds => Permissions.EmployeeOnContractIds;
-
     public IReadOnlyList<Guid> VisibleProjectIds => Permissions.VisibleProjectIds;
-
     public IReadOnlyList<Guid> VisibleContractIds => Permissions.VisibleContractIds;
-
-    private UserPermissions Permissions =>
-        _permissions ?? throw new InvalidOperationException("Current user is not loaded.");
 
     internal async Task EnsureLoadedAsync(CancellationToken cancellationToken)
     {
@@ -38,9 +27,7 @@ internal sealed class CurrentUser(
             return;
         }
 
-        HttpContext httpContext = httpContextAccessor.HttpContext
-            ?? throw new InvalidOperationException("HttpContext is not available.");
-
+        HttpContext httpContext = httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HttpContext is not available.");
         Employee employee = await CurrentEmployeeResolver.GetRequiredAsync(httpContext.User, dbContext, cancellationToken);
         _permissions = await UserPermissionsLoader.LoadAsync(employee, dbContext, administrationOptions, cancellationToken);
     }
@@ -95,9 +82,7 @@ internal sealed class CurrentUser(
         return await dbContext.ContractEmployees
             .AsNoTracking()
             .Where(ce => ce.EmployeeId == employeeId)
-            .AnyAsync(
-                ce => visibleContractIds.Contains(ce.ContractId) || visibleProjectIds.Contains(ce.Contract.ProjectId),
-                cancellationToken);
+            .AnyAsync(ce => visibleContractIds.Contains(ce.ContractId) || visibleProjectIds.Contains(ce.Contract.ProjectId), cancellationToken);
     }
 
     public async Task<bool> CanViewAllContractTimesheetsAsync(Guid contractId, CancellationToken cancellationToken)

@@ -5,15 +5,7 @@ namespace Timesheets.Api.Contracts;
 
 internal static class ContractEmployeeValidation
 {
-    public static async Task<bool> HasOverlappingSamePositionAsync(
-        Guid contractId,
-        Guid employeeId,
-        string position,
-        DateTime startDate,
-        DateTime? endDate,
-        Guid? excludeContractEmployeeId,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    public static async Task<bool> HasOverlappingSamePositionAsync(Guid contractId, Guid employeeId, string position, DateTime startDate, DateTime? endDate, Guid? excludeContractEmployeeId, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         return await dbContext.ContractEmployees
             .AsNoTracking()
@@ -28,14 +20,7 @@ internal static class ContractEmployeeValidation
                 cancellationToken);
     }
 
-    public static async Task<string?> ValidateMonthlyWorkloadAsync(
-        Guid employeeId,
-        decimal additionalWorkload,
-        DateTime startDate,
-        DateTime? endDate,
-        Guid? excludeContractEmployeeId,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    public static async Task<string?> ValidateMonthlyWorkloadAsync(Guid employeeId, decimal additionalWorkload, DateTime startDate, DateTime? endDate, Guid? excludeContractEmployeeId, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         DateTime start = ToUtcDate(startDate);
         DateTime end = endDate.HasValue ? ToUtcDate(endDate.Value) : start;
@@ -68,12 +53,7 @@ internal static class ContractEmployeeValidation
         return null;
     }
 
-    private static async Task<decimal?> GetBaseWorkloadAsync(
-        Guid employeeId,
-        int year,
-        int month,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task<decimal?> GetBaseWorkloadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);

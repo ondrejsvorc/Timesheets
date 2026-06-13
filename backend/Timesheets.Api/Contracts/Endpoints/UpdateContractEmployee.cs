@@ -44,14 +44,7 @@ public sealed class UpdateContractEmployee : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(
-        Guid id,
-        Guid contractEmployeeId,
-        [FromBody] Request request,
-        AppDbContext dbContext,
-        ICzechHolidaysFactory holidaysFactory,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, Guid contractEmployeeId, [FromBody] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.Satisfies(UserRole.ContractManager, contractId: id))
         {
@@ -164,11 +157,7 @@ public sealed class UpdateContractEmployee : IEndpoint
             resultAssignment.EndDate));
     }
 
-    private static async Task RemoveDraftProjectDaysOutsideRangeAsync(
-        Guid contractEmployeeId,
-        DateTime newEnd,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task RemoveDraftProjectDaysOutsideRangeAsync(Guid contractEmployeeId, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         List<Guid> dayIds = await dbContext.ProjectTimesheets
             .Where(t => t.ContractEmployeeId == contractEmployeeId)
@@ -188,11 +177,7 @@ public sealed class UpdateContractEmployee : IEndpoint
             .ExecuteDeleteAsync(cancellationToken);
     }
 
-    private static async Task EnsureTimesheetsForAssignmentAsync(
-        ContractEmployee contractEmployee,
-        AppDbContext dbContext,
-        ICzechHolidaysFactory holidaysFactory,
-        CancellationToken cancellationToken)
+    private static async Task EnsureTimesheetsForAssignmentAsync(ContractEmployee contractEmployee, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)
     {
         DateTime start = ContractEmployeeValidation.ToUtcDate(contractEmployee.StartDate);
         DateTime end = contractEmployee.EndDate.HasValue

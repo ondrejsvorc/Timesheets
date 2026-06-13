@@ -12,12 +12,7 @@ public sealed class DeleteProject : IEndpoint
         app.MapDelete("/{id}", Handle)
            .WithSummary("Delete Project");
 
-    private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(
-        Guid id,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken,
-        [FromQuery] bool force = false)
+    private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken, [FromQuery] bool force = false)
     {
         if (!user.IsGlobalManagerRole())
         {

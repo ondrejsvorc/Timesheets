@@ -24,11 +24,7 @@ public sealed class GetEmployeePositions : IEndpoint
     );
     public sealed record Response(Guid EmployeeId, IEnumerable<EmployeePositionItem> Positions);
 
-    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!await user.CanAccessEmployeeAsync(id, cancellationToken))
         {

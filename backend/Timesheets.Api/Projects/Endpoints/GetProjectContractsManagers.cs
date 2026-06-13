@@ -21,11 +21,7 @@ public sealed class GetProjectContractsManagers : IEndpoint
         string EmployeeEmail);
     public sealed record Response(IEnumerable<ContractManagerItem> Managers);
 
-    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(
-        Guid id,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.Satisfies(UserRole.ProjectManager, projectId: id))
         {

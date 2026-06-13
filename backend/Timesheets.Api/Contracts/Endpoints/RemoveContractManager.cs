@@ -11,12 +11,7 @@ public sealed class RemoveContractManager : IEndpoint
         app.MapDelete("/{id}/managers/{employeeId}", Handle)
            .WithSummary("Remove Manager from Contract");
 
-    private static async Task<Results<NoContent, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        Guid employeeId,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound, ForbidHttpResult>> Handle(Guid id, Guid employeeId, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.Satisfies(UserRole.ProjectManager, contractId: id))
         {

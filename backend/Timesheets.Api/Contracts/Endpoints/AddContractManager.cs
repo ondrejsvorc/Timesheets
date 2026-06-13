@@ -21,12 +21,7 @@ public sealed class AddContractManager : IEndpoint
     public sealed record Response(Guid ContractId, Guid EmployeeId, string ContractRegistrationNumber, string EmployeePersonalNumber, string EmployeeFullName, string EmployeeEmail);
     public sealed class Validator : AbstractValidator<Request> { }
 
-    private static async Task<Results<Created<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(
-        Guid id,
-        [FromBody] Request request,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Created<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.Satisfies(UserRole.ProjectManager, contractId: id))
         {

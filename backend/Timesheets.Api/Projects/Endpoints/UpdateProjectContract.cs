@@ -25,13 +25,7 @@ public sealed class UpdateProjectContract : IEndpoint
         }
     }
 
-    private static async Task<Results<NoContent, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(
-        Guid projectId,
-        Guid contractId,
-        [FromBody] Request request,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid projectId, Guid contractId, [FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsGlobalManagerRole())
         {

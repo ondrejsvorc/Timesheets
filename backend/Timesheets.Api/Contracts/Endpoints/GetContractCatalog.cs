@@ -15,11 +15,7 @@ public sealed class GetContractCatalog : IEndpoint
     public sealed record ContractItem(Guid Id, Guid ProjectId, string Name);
     public sealed record Response(IEnumerable<ContractItem> Contracts);
 
-    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(
-        Guid? projectId,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(Guid? projectId, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsContractManager())
         {

@@ -14,11 +14,7 @@ public sealed class UnarchiveProject : IEndpoint
 
     public sealed record Response(ProjectItem Project);
 
-    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(
-        Guid id,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsGlobalManagerRole())
         {

@@ -19,11 +19,7 @@ internal sealed class UserPermissions
 
 internal static class UserPermissionsLoader
 {
-    public static async Task<UserPermissions> LoadAsync(
-        Employee employee,
-        AppDbContext dbContext,
-        IOptions<AdministrationOptions> administrationOptions,
-        CancellationToken cancellationToken)
+    public static async Task<UserPermissions> LoadAsync(Employee employee, AppDbContext dbContext, IOptions<AdministrationOptions> administrationOptions, CancellationToken cancellationToken)
     {
         bool isRoleManager = RoleManagerAuthorization.IsRoleManager(employee.Email, administrationOptions.Value);
 
@@ -124,11 +120,7 @@ internal static class UserPermissionsLoader
         };
     }
 
-    private static UserRole ResolveRole(
-        bool isRoleManager,
-        bool isGlobalManager,
-        IReadOnlyList<Guid> projectManagerOf,
-        IReadOnlyList<Guid> contractManagerOf)
+    private static UserRole ResolveRole(bool isRoleManager, bool isGlobalManager, IReadOnlyList<Guid> projectManagerOf, IReadOnlyList<Guid> contractManagerOf)
     {
         UserRole role = UserRole.Employee;
         if (contractManagerOf.Count > 0)

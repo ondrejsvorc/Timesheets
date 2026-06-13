@@ -10,12 +10,7 @@ public sealed class GetProjectContractDeleteImpact : IEndpoint
         app.MapGet("/{projectId}/contracts/{contractId}/delete-impact", Handle)
            .WithSummary("Get Project Contract Delete Impact");
 
-    private static async Task<Results<Ok<ProjectDeleteImpact>, NotFound, ForbidHttpResult>> Handle(
-        Guid projectId,
-        Guid contractId,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<ProjectDeleteImpact>, NotFound, ForbidHttpResult>> Handle(Guid projectId, Guid contractId, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsGlobalManagerRole())
         {

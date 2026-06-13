@@ -13,12 +13,7 @@ public sealed class RemoveContractEmployee : IEndpoint
         app.MapDelete("/{id}/employees/{contractEmployeeId}", Handle)
            .WithSummary("Remove Employee Position from Contract");
 
-    private static async Task<Results<NoContent, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        Guid contractEmployeeId,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound, ForbidHttpResult>> Handle(Guid id, Guid contractEmployeeId, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.Satisfies(UserRole.ContractManager, contractId: id))
         {

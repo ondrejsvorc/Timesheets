@@ -6,10 +6,7 @@ namespace Timesheets.Api.Timesheets;
 
 internal static class ProjectTimesheetScopeLoader
 {
-    public static async Task<List<ProjectTimesheetPart>> LoadAsync(
-        IEnumerable<Guid> projectTimesheetIds,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    public static async Task<List<ProjectTimesheetPart>> LoadAsync(IEnumerable<Guid> projectTimesheetIds, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         return await dbContext.ProjectTimesheets
             .AsNoTracking()

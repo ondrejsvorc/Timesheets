@@ -12,13 +12,7 @@ public sealed class DeleteProjectContract : IEndpoint
         app.MapDelete("/{projectId}/contracts/{contractId}", Handle)
            .WithSummary("Delete Project Contract");
 
-    private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(
-        Guid projectId,
-        Guid contractId,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken,
-        [FromQuery] bool force = false)
+    private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(Guid projectId, Guid contractId, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken, [FromQuery] bool force = false)
     {
         if (!user.IsGlobalManagerRole())
         {

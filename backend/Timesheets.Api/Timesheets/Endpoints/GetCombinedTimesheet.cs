@@ -23,12 +23,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
     private sealed record ProjectDaySource(DateTime Date, decimal Hours, bool IsHoliday);
     private sealed record ProjectTimesheetSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, Guid? LockedBy, List<ProjectDaySource> Days);
 
-    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
-        [AsParameters] Request request,
-        AppDbContext dbContext,
-        ICzechHolidaysFactory holidaysFactory,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle([AsParameters] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!await user.CanAccessEmployeeAsync(request.EmployeeId, cancellationToken))
         {

@@ -21,12 +21,7 @@ public sealed class UpdateEmployeeGlobalManagerRole : IEndpoint
 
     public sealed class Validator : AbstractValidator<Request> { }
 
-    private static async Task<Results<NoContent, NotFound, BadRequest<string>, UnauthorizedHttpResult>> Handle(
-        Guid id,
-        [FromBody] Request request,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound, BadRequest<string>, UnauthorizedHttpResult>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsAdmin())
         {

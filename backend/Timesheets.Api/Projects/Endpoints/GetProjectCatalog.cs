@@ -15,10 +15,7 @@ public sealed class GetProjectCatalog : IEndpoint
     public sealed record ProjectItem(Guid Id, string Name);
     public sealed record Response(IEnumerable<ProjectItem> Projects);
 
-    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsContractManager())
         {

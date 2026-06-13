@@ -6,10 +6,7 @@ namespace Timesheets.Api.Timesheets;
 
 internal static class CombinedTimesheetReviewMapper
 {
-    public static async Task<TimesheetReview> ReviewAsync(
-        Data.Models.AttendanceTimesheet timesheet,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    public static async Task<TimesheetReview> ReviewAsync(Data.Models.AttendanceTimesheet timesheet, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         await dbContext.Entry(timesheet).Reference(t => t.Employee).LoadAsync(cancellationToken);
         await dbContext.Entry(timesheet).Collection(t => t.Days).LoadAsync(cancellationToken);
@@ -57,12 +54,7 @@ internal static class CombinedTimesheetReviewMapper
         return reviewer.Review(combined, attendance);
     }
 
-    private static async Task<decimal?> GetBaseWorkloadAsync(
-        Guid employeeId,
-        int year,
-        int month,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task<decimal?> GetBaseWorkloadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);

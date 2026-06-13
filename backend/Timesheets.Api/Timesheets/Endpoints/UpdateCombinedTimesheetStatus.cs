@@ -41,12 +41,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> Handle(
-        [FromBody] Request request,
-        AppDbContext dbContext,
-        NotificationSender notificationSender,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> Handle([FromBody] Request request, AppDbContext dbContext, NotificationSender notificationSender, ICurrentUser user, CancellationToken cancellationToken)
     {
         CombinedTimesheetScope? scope = await CombinedTimesheetScopeLoader.LoadAsync(
             request.EmployeeId,
@@ -124,15 +119,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             cancellationToken);
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateAttendanceStatusAsync(
-        Request request,
-        CombinedTimesheetScope scope,
-        Data.Models.AttendanceTimesheet attendanceTimesheet,
-        TimesheetStatus newStatus,
-        ICurrentUser user,
-        AppDbContext dbContext,
-        NotificationSender notificationSender,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateAttendanceStatusAsync(Request request, CombinedTimesheetScope scope, Data.Models.AttendanceTimesheet attendanceTimesheet, TimesheetStatus newStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
     {
         Guid currentStatusId = attendanceTimesheet.TimesheetStatusId;
         string currentStatusName = attendanceTimesheet.TimesheetStatus.Name;
@@ -233,16 +220,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         return TypedResults.Ok();
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateProjectStatusesAsync(
-        Request request,
-        CombinedTimesheetScope scope,
-        Data.Models.AttendanceTimesheet attendanceTimesheet,
-        HashSet<Guid> selectedProjectIds,
-        TimesheetStatus newStatus,
-        ICurrentUser user,
-        AppDbContext dbContext,
-        NotificationSender notificationSender,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateProjectStatusesAsync(Request request, CombinedTimesheetScope scope, Data.Models.AttendanceTimesheet attendanceTimesheet, HashSet<Guid> selectedProjectIds, TimesheetStatus newStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
     {
         List<ProjectTimesheetPart> projectScopes = await ProjectTimesheetScopeLoader.LoadAsync(
             selectedProjectIds,
@@ -371,12 +349,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         if (anyProjectStatusChanged || attendanceReopened)
         {
             string notificationMessage = attendanceReopened
-                ? BuildNotificationMessage(
-                    request.Year,
-                    request.Month,
-                    attendanceStatusNameBefore,
-                    TimesheetWorkflowConstants.DraftStatusName,
-                    request.Comment)
+                ? BuildNotificationMessage(request.Year, request.Month, attendanceStatusNameBefore, TimesheetWorkflowConstants.DraftStatusName, request.Comment)
                 : BuildProjectNotificationMessage(request.Year, request.Month, newStatus.Name, request.Comment);
 
             await notificationSender.SendAsync(attendanceTimesheet.EmployeeId, notificationMessage, cancellationToken);
@@ -385,10 +358,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         return TypedResults.Ok();
     }
 
-    private static async Task<bool> AreAllProjectsApprovedAsync(
-        CombinedTimesheetScope scope,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task<bool> AreAllProjectsApprovedAsync(CombinedTimesheetScope scope, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         if (scope.ProjectTimesheetLabels.Count == 0)
         {
@@ -405,10 +375,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             && projectStatusIds.All(id => id == TimesheetWorkflowConstants.ApprovedStatusId);
     }
 
-    private static async Task ResetAllProjectsToDraftAsync(
-        CombinedTimesheetScope scope,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task ResetAllProjectsToDraftAsync(CombinedTimesheetScope scope, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         if (scope.ProjectTimesheetLabels.Count == 0)
         {

@@ -14,11 +14,7 @@ public sealed class GetProject : IEndpoint
     public sealed record ProjectItem(Guid Id, string Name, string RegistrationNumber);
     public sealed record Response(ProjectItem Project);
 
-    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         ProjectItem? project = await dbContext.Projects
             .AsNoTracking()

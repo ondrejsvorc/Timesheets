@@ -167,11 +167,7 @@ public static class TimesheetLogic
     public static decimal CalculateTotalHours(AttendanceDay day) =>
         CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
 
-    public static decimal CalculateWorkedHoursFromAttendance(
-        TimeSpan? clockIn,
-        TimeSpan? clockOut,
-        TimeSpan? breakStart,
-        TimeSpan? breakEnd)
+    public static decimal CalculateWorkedHoursFromAttendance(TimeSpan? clockIn, TimeSpan? clockOut, TimeSpan? breakStart, TimeSpan? breakEnd)
     {
         decimal workedHours = CalculateWorkedHours(clockIn, clockOut);
         decimal breakHours = CalculateBreakHours(breakStart, breakEnd, clockIn, clockOut);
@@ -207,11 +203,7 @@ public static class TimesheetLogic
         return 0;
     }
 
-    public static decimal CalculateBreakHours(
-        TimeSpan? breakStart,
-        TimeSpan? breakEnd,
-        TimeSpan? clockIn,
-        TimeSpan? clockOut)
+    public static decimal CalculateBreakHours(TimeSpan? breakStart, TimeSpan? breakEnd, TimeSpan? clockIn, TimeSpan? clockOut)
     {
         if (breakStart is null || breakEnd is null)
         {

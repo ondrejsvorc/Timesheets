@@ -7,19 +7,13 @@ interface ITimesheetCombiner
 
 public class TimesheetCombiner : ITimesheetCombiner
 {
-    public CombinedTimesheet Combine(
-        AttendanceTimesheet attendance,
-        IReadOnlyList<ProjectTimesheet> projects,
-        decimal coreWorkload)
+    public CombinedTimesheet Combine(AttendanceTimesheet attendance, IReadOnlyList<ProjectTimesheet> projects, decimal coreWorkload)
     {
         IReadOnlyList<CombinedDay> days = CombineDays(attendance, projects, coreWorkload);
         return new CombinedTimesheet(attendance.Year, attendance.Month, coreWorkload, days);
     }
 
-    private static List<CombinedDay> CombineDays(
-        AttendanceTimesheet attendance,
-        IReadOnlyList<ProjectTimesheet> projects,
-        decimal coreWorkload)
+    private static List<CombinedDay> CombineDays(AttendanceTimesheet attendance, IReadOnlyList<ProjectTimesheet> projects, decimal coreWorkload)
     {
         return attendance.Days.Select((attendanceDay, index) =>
         {

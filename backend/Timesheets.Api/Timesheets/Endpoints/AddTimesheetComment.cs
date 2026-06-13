@@ -33,11 +33,7 @@ public sealed class AddTimesheetComment : IEndpoint
         }
     }
 
-    private static async Task<Results<Created<Response>, NotFound, ForbidHttpResult>> Handle(
-        [FromBody] Request request,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Created<Response>, NotFound, ForbidHttpResult>> Handle([FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!await user.CanAccessEmployeeAsync(request.EmployeeId, cancellationToken))
         {

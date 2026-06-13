@@ -14,11 +14,7 @@ public sealed class GetEmployee : IEndpoint
 
     public sealed record Response(Guid Id, Guid? EmployeeTypeId, string FullName, string PersonalNumber, string Email);
 
-    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!await user.CanAccessEmployeeAsync(id, cancellationToken))
         {

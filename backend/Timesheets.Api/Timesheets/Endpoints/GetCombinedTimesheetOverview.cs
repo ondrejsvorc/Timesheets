@@ -36,12 +36,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         decimal Workload,
         Guid TimesheetStatusId);
 
-    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
-        [AsParameters] Request request,
-        AppDbContext dbContext,
-        ICzechHolidaysFactory holidaysFactory,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle([AsParameters] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!await user.CanAccessEmployeeAsync(request.EmployeeId, cancellationToken))
         {

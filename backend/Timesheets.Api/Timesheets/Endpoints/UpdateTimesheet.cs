@@ -50,12 +50,7 @@ public sealed class UpdateTimesheet : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, BadRequest<string>, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        [FromBody] Request request,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, BadRequest<string>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         Data.Models.AttendanceTimesheet? timesheet = await dbContext.AttendanceTimesheets
             .Include(t => t.TimesheetStatus)

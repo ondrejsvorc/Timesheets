@@ -35,11 +35,7 @@ public sealed class CreateProject : IEndpoint
         }
     }
 
-    private static async Task<Results<Created<Response>, BadRequest<string>, ForbidHttpResult>> Handle(
-        [FromBody] Request request,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Created<Response>, BadRequest<string>, ForbidHttpResult>> Handle([FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsGlobalManagerRole())
         {

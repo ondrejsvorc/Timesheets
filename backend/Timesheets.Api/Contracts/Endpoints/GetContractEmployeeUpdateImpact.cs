@@ -14,13 +14,7 @@ public sealed class GetContractEmployeeUpdateImpact : IEndpoint
            .WithSummary("Get Contract Employee Update Impact")
            .DisableAntiforgery();
 
-    private static async Task<Results<Ok<ContractEmployeeUpdateImpact>, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        Guid contractEmployeeId,
-        [FromBody] ContractEmployeeUpdateRequest request,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<ContractEmployeeUpdateImpact>, NotFound, ForbidHttpResult>> Handle(Guid id, Guid contractEmployeeId, [FromBody] ContractEmployeeUpdateRequest request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.Satisfies(UserRole.ContractManager, contractId: id))
         {

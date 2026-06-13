@@ -40,11 +40,7 @@ internal static class ContractEmployeeUpdatePlanner
         && ContractEmployeeValidation.ToUtcDate(existing.StartDate) == ContractEmployeeValidation.ToUtcDate(request.StartDate)
         && NullableDatesEqual(existing.EndDate, request.EndDate);
 
-    public static async Task<ContractEmployeeUpdateImpact> PlanAsync(
-        ContractEmployee existing,
-        ContractEmployeeUpdateRequest request,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    public static async Task<ContractEmployeeUpdateImpact> PlanAsync(ContractEmployee existing, ContractEmployeeUpdateRequest request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         if (IsUnchanged(existing, request))
         {
@@ -121,11 +117,7 @@ internal static class ContractEmployeeUpdatePlanner
         return newEnd.Value > existingEnd.Value;
     }
 
-    private static async Task<ContractEmployeeUpdateImpact> PlanShortenEndAsync(
-        ContractEmployee existing,
-        DateTime newEnd,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task<ContractEmployeeUpdateImpact> PlanShortenEndAsync(ContractEmployee existing, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         (int submitted, int approved, int draftDaysOutside) = await AnalyzeProtectedOutsideRangeAsync(
             existing.Id,
@@ -156,11 +148,7 @@ internal static class ContractEmployeeUpdatePlanner
             ApprovedTimesheetCount: approvedOnAssignment);
     }
 
-    private static async Task<ContractEmployeeUpdateImpact> PlanExtendEndAsync(
-        ContractEmployee existing,
-        DateTime? newEnd,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task<ContractEmployeeUpdateImpact> PlanExtendEndAsync(ContractEmployee existing, DateTime? newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         DateTime rangeStart = ContractEmployeeValidation.ToUtcDate(existing.StartDate);
         DateTime rangeEnd = newEnd ?? rangeStart;
@@ -184,12 +172,7 @@ internal static class ContractEmployeeUpdatePlanner
             ApprovedTimesheetCount: approved);
     }
 
-    private static async Task<ContractEmployeeUpdateImpact> PlanSplitAsync(
-        ContractEmployee existing,
-        DateTime newStart,
-        DateTime newEnd,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task<ContractEmployeeUpdateImpact> PlanSplitAsync(ContractEmployee existing, DateTime newStart, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         DateTime existingStart = ContractEmployeeValidation.ToUtcDate(existing.StartDate);
         DateTime oldEnd = newStart.AddDays(-1);
@@ -216,11 +199,7 @@ internal static class ContractEmployeeUpdatePlanner
             ApprovedTimesheetCount: approved);
     }
 
-    private static async Task<(int Submitted, int Approved, int DraftDaysOutside)> AnalyzeProtectedOutsideRangeAsync(
-        Guid contractEmployeeId,
-        DateTime newEnd,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task<(int Submitted, int Approved, int DraftDaysOutside)> AnalyzeProtectedOutsideRangeAsync(Guid contractEmployeeId, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         List<Data.Models.ProjectTimesheet> timesheets = await dbContext.ProjectTimesheets
             .AsNoTracking()
@@ -305,10 +284,7 @@ internal static class ContractEmployeeUpdatePlanner
         return count;
     }
 
-    private static async Task<(int Draft, int Submitted, int Approved)> CountTimesheetsOnAssignmentAsync(
-        Guid contractEmployeeId,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    private static async Task<(int Draft, int Submitted, int Approved)> CountTimesheetsOnAssignmentAsync(Guid contractEmployeeId, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         List<Guid> statusIds = await dbContext.ProjectTimesheets
             .AsNoTracking()

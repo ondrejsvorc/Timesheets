@@ -16,12 +16,7 @@ public sealed class GetEmployeeTimesheets : IEndpoint
     public sealed record MonthItem(int Year, int Month, bool HasAttendanceImport, string? Status);
     public sealed record Response(Guid EmployeeId, IEnumerable<MonthItem> Months, IEnumerable<int> AvailableYears, IEnumerable<int> AvailableMonths);
 
-    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        [AsParameters] Request request,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, [AsParameters] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!await user.CanAccessEmployeeAsync(id, cancellationToken))
         {

@@ -214,12 +214,7 @@ public sealed class CombinedTimesheetReviewer
     {
         if (day.IsWorkday && day.TotalHours > day.TotalHoursObligation)
         {
-            yield return new DayIssue(
-                Code: "WAR-ATT-02A",
-                Type: IssueType.Warning,
-                Description: "Odpracovaný čas za den je vyšší než denní pracovní povinnost.",
-                Day: day.Date.Day,
-                Field: nameof(day.TotalHours)
+            yield return new DayIssue(Code: "WAR-ATT-02A", Type: IssueType.Warning, Description: "Odpracovaný čas za den je vyšší než denní pracovní povinnost.", Day: day.Date.Day, Field: nameof(day.TotalHours)
             );
         }
     }
@@ -228,12 +223,7 @@ public sealed class CombinedTimesheetReviewer
     {
         if (day.IsWorkday && day.TotalHours < day.TotalHoursObligation)
         {
-            yield return new DayIssue(
-                Code: "WAR-ATT-02B",
-                Type: IssueType.Warning,
-                Description: "Odpracovaný čas za den je nižší než denní pracovní povinnost.",
-                Day: day.Date.Day,
-                Field: nameof(day.TotalHours)
+            yield return new DayIssue(Code: "WAR-ATT-02B", Type: IssueType.Warning, Description: "Odpracovaný čas za den je nižší než denní pracovní povinnost.", Day: day.Date.Day, Field: nameof(day.TotalHours)
             );
         }
     }
@@ -243,12 +233,7 @@ public sealed class CombinedTimesheetReviewer
         if (day.IsWorkday && day.TotalHours is > TimesheetLimits.MaxWorkShiftHours)
         {
             yield return new DayIssue
-            (
-                Code: "ERR-ATT-05",
-                Type: IssueType.Error,
-                Description: $"Odpracovaný čas za den překračuje {TimesheetLimits.MaxWorkShiftHours} hodin.",
-                Day: day.Date.Day,
-                Field: nameof(day.TotalHours)
+            (Code: "ERR-ATT-05", Type: IssueType.Error, Description: $"Odpracovaný čas za den překračuje {TimesheetLimits.MaxWorkShiftHours} hodin.", Day: day.Date.Day, Field: nameof(day.TotalHours)
             );
         }
     }
@@ -257,22 +242,12 @@ public sealed class CombinedTimesheetReviewer
     {
         if (day.IsWeekend && day.TotalHours > 0)
         {
-            yield return new DayIssue(
-                Code: "WAR-COM-01",
-                Type: IssueType.Warning,
-                Description: "Práce evidovaná o víkendu. Očekává se, že bude kompenzována v jiném pracovním dni.",
-                Day: day.Date.Day,
-                Field: nameof(day.TotalHours)
+            yield return new DayIssue(Code: "WAR-COM-01", Type: IssueType.Warning, Description: "Práce evidovaná o víkendu. Očekává se, že bude kompenzována v jiném pracovním dni.", Day: day.Date.Day, Field: nameof(day.TotalHours)
             );
         }
         else if (day.IsHoliday && day.TotalHours > 0)
         {
-            yield return new DayIssue(
-                Code: "WAR-COM-02",
-                Type: IssueType.Warning,
-                Description: "Práce evidovaná ve státní svátek. Očekává se, že bude kompenzována v jiném pracovním dni.",
-                Day: day.Date.Day,
-                Field: nameof(day.TotalHours)
+            yield return new DayIssue(Code: "WAR-COM-02", Type: IssueType.Warning, Description: "Práce evidovaná ve státní svátek. Očekává se, že bude kompenzována v jiném pracovním dni.", Day: day.Date.Day, Field: nameof(day.TotalHours)
             );
         }
     }
@@ -379,12 +354,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         if (day.IsWorkday && (day.ClockIn is not null || day.ClockOut is not null) && (clockInStartsAtNight || clockOutEndsAtNight))
         {
             yield return new DayIssue
-            (
-                Code: "WAR-ATT-04",
-                Type: IssueType.Warning,
-                Description: "Pracovní doba spadá do nočního intervalu (22:00 – 05:59).",
-                Day: day.Date.Day,
-                Field: nameof(day.ClockIn)
+            (Code: "WAR-ATT-04", Type: IssueType.Warning, Description: "Pracovní doba spadá do nočního intervalu (22:00 – 05:59).", Day: day.Date.Day, Field: nameof(day.ClockIn)
             );
         }
     }
@@ -397,12 +367,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         if (day.IsWorkday && hasBreak && missingClockBoundary)
         {
             yield return new DayIssue
-            (
-                Code: "WAR-ATT-05",
-                Type: IssueType.Warning,
-                Description: "Zadána přestávka, ale chybí příchod nebo odchod.",
-                Day: day.Date.Day,
-                Field: nameof(day.BreakStart)
+            (Code: "WAR-ATT-05", Type: IssueType.Warning, Description: "Zadána přestávka, ale chybí příchod nebo odchod.", Day: day.Date.Day, Field: nameof(day.BreakStart)
             );
         }
     }
@@ -412,12 +377,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         if (day.IsWorkday && day.TotalHoursObligation is 0 && HasAttendanceActivity(day))
         {
             yield return new DayIssue
-            (
-                Code: "ERR-ATT-01",
-                Type: IssueType.Error,
-                Description: "Není uvedena denní pracovní povinnost pro pracovní den.",
-                Day: day.Date.Day,
-                Field: nameof(day.TotalHoursObligation)
+            (Code: "ERR-ATT-01", Type: IssueType.Error, Description: "Není uvedena denní pracovní povinnost pro pracovní den.", Day: day.Date.Day, Field: nameof(day.TotalHoursObligation)
             );
         }
     }
@@ -427,12 +387,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         if (day.IsWorkday && day.ClockIn is not null && day.ClockOut is not null && day.ClockOut <= day.ClockIn)
         {
             yield return new DayIssue
-            (
-                Code: "ERR-ATT-02",
-                Type: IssueType.Error,
-                Description: "Čas odchodu je dřívější nebo stejný jako příchod.",
-                Day: day.Date.Day,
-                Field: nameof(day.ClockOut)
+            (Code: "ERR-ATT-02", Type: IssueType.Error, Description: "Čas odchodu je dřívější nebo stejný jako příchod.", Day: day.Date.Day, Field: nameof(day.ClockOut)
             );
         }
     }
@@ -442,12 +397,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         if (day.IsWorkday && day.ClockIn is null && HasAttendanceActivity(day))
         {
             yield return new DayIssue
-            (
-                Code: "ERR-ATT-03",
-                Type: IssueType.Error,
-                Description: "Není vyplněn čas příchodu.",
-                Day: day.Date.Day,
-                Field: nameof(day.ClockIn)
+            (Code: "ERR-ATT-03", Type: IssueType.Error, Description: "Není vyplněn čas příchodu.", Day: day.Date.Day, Field: nameof(day.ClockIn)
             );
         }
     }
@@ -457,12 +407,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         if (day.IsWorkday && day.ClockOut is null && HasAttendanceActivity(day))
         {
             yield return new DayIssue
-            (
-                Code: "ERR-ATT-04",
-                Type: IssueType.Error,
-                Description: "Není vyplněn čas odchodu.",
-                Day: day.Date.Day,
-                Field: nameof(day.ClockOut)
+            (Code: "ERR-ATT-04", Type: IssueType.Error, Description: "Není vyplněn čas odchodu.", Day: day.Date.Day, Field: nameof(day.ClockOut)
             );
         }
     }
@@ -473,12 +418,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         {
             if (day.TotalHours > TimesheetLimits.MaxContinuousWorkBeforeBreakHours && day.BreakStart is null)
             {
-                yield return new DayIssue(
-                    Code: "ERR-ATT-06",
-                    Type: IssueType.Error,
-                    Description: $"Chybí povinná přestávka po nejdéle {TimesheetLimits.MaxContinuousWorkBeforeBreakHours} hodinách práce.",
-                    Day: day.Date.Day,
-                    Field: nameof(day.BreakStart)
+                yield return new DayIssue(Code: "ERR-ATT-06", Type: IssueType.Error, Description: $"Chybí povinná přestávka po nejdéle {TimesheetLimits.MaxContinuousWorkBeforeBreakHours} hodinách práce.", Day: day.Date.Day, Field: nameof(day.BreakStart)
                 );
             }
         }
@@ -491,12 +431,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             decimal hoursWorkedBeforeBreak = (decimal)(day.BreakStart.Value - day.ClockIn.Value).TotalHours;
             if (hoursWorkedBeforeBreak > TimesheetLimits.MaxContinuousWorkBeforeBreakHours)
             {
-                yield return new DayIssue(
-                    Code: "ERR-ATT-07",
-                    Type: IssueType.Error,
-                    Description: $"Přestávka začíná až po {TimesheetLimits.MaxContinuousWorkBeforeBreakHours:F1} hodinách, což překračuje zákonný limit {TimesheetLimits.MaxContinuousWorkBeforeBreakHours} h.",
-                    Day: day.Date.Day,
-                    Field: nameof(day.BreakStart)
+                yield return new DayIssue(Code: "ERR-ATT-07", Type: IssueType.Error, Description: $"Přestávka začíná až po {TimesheetLimits.MaxContinuousWorkBeforeBreakHours:F1} hodinách, což překračuje zákonný limit {TimesheetLimits.MaxContinuousWorkBeforeBreakHours} h.", Day: day.Date.Day, Field: nameof(day.BreakStart)
                 );
             }
         }
@@ -509,12 +444,7 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
             decimal breakDuration = (decimal)(day.BreakEnd.Value - day.BreakStart.Value).TotalHours;
             if (breakDuration < TimesheetLimits.MinBreakDurationHours)
             {
-                yield return new DayIssue(
-                    Code: "ERR-ATT-08",
-                    Type: IssueType.Error,
-                    Description: $"Délka přestávky musí být alepsoň {(TimesheetLimits.MinBreakDurationHours * 60):F0} minut.",
-                    Day: day.Date.Day,
-                    Field: nameof(day.BreakEnd)
+                yield return new DayIssue(Code: "ERR-ATT-08", Type: IssueType.Error, Description: $"Délka přestávky musí být alepsoň {(TimesheetLimits.MinBreakDurationHours * 60):F0} minut.", Day: day.Date.Day, Field: nameof(day.BreakEnd)
                 );
             }
         }

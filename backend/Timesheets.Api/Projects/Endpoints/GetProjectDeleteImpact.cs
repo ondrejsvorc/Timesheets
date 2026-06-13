@@ -10,11 +10,7 @@ public sealed class GetProjectDeleteImpact : IEndpoint
         app.MapGet("/{id}/delete-impact", Handle)
            .WithSummary("Get Project Delete Impact");
 
-    private static async Task<Results<Ok<ProjectDeleteImpact>, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<ProjectDeleteImpact>, NotFound, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsGlobalManagerRole())
         {
