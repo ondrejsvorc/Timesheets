@@ -1,31 +1,50 @@
-import type { FetcherWithComponents } from "react-router";
-import { canConfirmProtectedDelete, FetcherConsequenceDialog, forceProtectedDelete } from "@/components/shared/dialogs/FetcherConsequenceDialog";
+import { useEffect, useState } from "react";
+import { ConsequenceDialog } from "@/components/shared/dialogs/ConsequenceDialog";
 import { Texts } from "@/constants/texts";
+import { canConfirmProtectedDelete, forceProtectedDelete } from "@/utils/deleteImpactConsequences";
 import { deleteProject } from "./api/deleteProject";
-import { type DeleteProjectImpactResponse, formatProjectDeleteImpactConsequences } from "./api/projectDeleteImpact";
+import { type DeleteProjectImpactResponse, formatProjectDeleteImpactConsequences, getProjectDeleteImpact } from "./api/projectDeleteImpact";
 
 interface ProjectDeleteDialogProps {
   projectId: string;
   projectName: string;
-  fetcher: FetcherWithComponents<DeleteProjectImpactResponse>;
   onClose: () => void;
   onDeleted: () => void;
 }
 
-export const ProjectDeleteDialog = ({ projectId, projectName, fetcher, onClose, onDeleted }: ProjectDeleteDialogProps) => (
-  <FetcherConsequenceDialog
-    fetcher={fetcher}
-    title={Texts.deleteTitle.replace("{name}", projectName)}
-    description={Texts.deleteDescription}
-    confirmLabel={Texts.delete}
-    formatConsequences={formatProjectDeleteImpactConsequences}
-    canConfirm={canConfirmProtectedDelete}
-    onClose={onClose}
-    onConfirm={async (impact, signal) => {
-      await deleteProject(projectId, { force: forceProtectedDelete(impact) }, signal);
-      if (!signal.aborted) {
-        onDeleted();
-      }
-    }}
-  />
-);
+export const ProjectDeleteDialog = ({ projectId, projectName, onClose, onDeleted }: ProjectDeleteDialogProps) => {
+  const [impact, setImpact] = useState<DeleteProjectImpactResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    getProjectDeleteImpact(projectId, controller.signal)
+      .then(setImpact)
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [projectId]);
+
+  return (
+    <ConsequenceDialog
+      open
+      title={Texts.deleteTitle.replace("{name}", projectName)}
+      description={Texts.deleteDescription}
+      consequences={impact ? formatProjectDeleteImpactConsequences(impact) : []}
+      confirmLabel={Texts.delete}
+      confirmDisabled={!impact || !canConfirmProtectedDelete(impact)}
+      loading={loading}
+      loadingContent={<p className="text-sm text-muted-foreground">{Texts.deleteImpactLoading}</p>}
+      onCancel={onClose}
+      onConfirm={async (_event, signal) => {
+        if (!impact || !canConfirmProtectedDelete(impact)) {
+          return;
+        }
+        await deleteProject(projectId, { force: forceProtectedDelete(impact) }, signal);
+        if (!signal.aborted) {
+          onDeleted();
+        }
+      }}
+    />
+  );
+};

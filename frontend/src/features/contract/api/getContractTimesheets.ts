@@ -1,5 +1,5 @@
 import { redirect } from "react-router";
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import { Texts } from "@/constants/texts";
 import { getContractTimesheetsFilterOptions } from "./getContractTimesheetsFilterOptions";
 
@@ -62,7 +62,7 @@ export function getContractTimesheets(
 ): Promise<GetContractTimesheetsResponse> {
   const query = buildTimesheetsQuery(request);
   const url = `${ApiUrl}/contracts/${contractId}/timesheets${query ? `?${query}` : ""}`;
-  return withOptionalDelay("slow", () => customFetch<GetContractTimesheetsResponse>(url));
+  return withDelay("slow", () => customFetch<GetContractTimesheetsResponse>(url));
 }
 
 export function buildTimesheetsRequestFromUrl(url: URL): ContractTimesheetsFilterCriteria {

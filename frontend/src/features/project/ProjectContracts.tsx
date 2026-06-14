@@ -1,6 +1,6 @@
 import type { Dispatch } from "react";
 import { useState } from "react";
-import { useAsyncValue, useFetcher, useLoaderData, useParams } from "react-router";
+import { useAsyncValue, useLoaderData, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
@@ -14,7 +14,6 @@ import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { AddContractDialog } from "./AddContractDialog";
-import type { DeleteContractImpactResponse } from "./api/contractDeleteImpact";
 import type { GetProjectContractsResponse } from "./api/getProjectContracts";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
 import { ContractDeleteDialog } from "./ContractDeleteDialog";
@@ -76,12 +75,6 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
   const { id: projectId } = useParams<{ id: string }>();
   const [contractToEdit, setContractToEdit] = useState<ProjectContractItem | null>(null);
   const [contractToDelete, setContractToDelete] = useState<ProjectContractItem | null>(null);
-  const deleteImpactFetcher = useFetcher<DeleteContractImpactResponse>();
-
-  const handleDeleteRequest = (contract: ProjectContractItem) => {
-    deleteImpactFetcher.load(Routes.resourceContractDeleteImpact(contract.id));
-    setContractToDelete(contract);
-  };
 
   if (contracts.length === 0) {
     return <EmptyState />;
@@ -100,7 +93,7 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
           </TableHeader>
           <TableBody>
             {contracts.map((contract) => (
-              <ContractRow key={contract.id} contract={contract} onEdit={setContractToEdit} onDelete={handleDeleteRequest} />
+              <ContractRow key={contract.id} contract={contract} onEdit={setContractToEdit} onDelete={setContractToDelete} />
             ))}
           </TableBody>
         </Table>
@@ -123,7 +116,6 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
           projectId={projectId}
           contractId={contractToDelete.id}
           contractName={contractToDelete.name}
-          fetcher={deleteImpactFetcher}
           onClose={() => setContractToDelete(null)}
           onDeleted={() => {
             dispatch({ type: "delete", contractId: contractToDelete.id });

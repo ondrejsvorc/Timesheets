@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import type { TimeRange, Timesheet } from "../../Timesheet";
 
 interface CompactProjectDefinition {
@@ -103,13 +103,11 @@ export const getCombinedTimesheet = (employeeId: string, year: number, month: nu
     month: String(month),
   });
 
-  return {
-    promise: withOptionalDelay("slowest", async () => {
-      const response = await customFetch<GetCombinedTimesheetResponse>(`${ApiUrl}/timesheets/combined?${params.toString()}`);
-      if (import.meta.env.DEV) {
-        performance.mark("timesheet:data-ready");
-      }
-      return mapToTimesheet(response);
-    }),
-  };
+  return withDelay("slowest", async () => {
+    const response = await customFetch<GetCombinedTimesheetResponse>(`${ApiUrl}/timesheets/combined?${params.toString()}`);
+    if (import.meta.env.DEV) {
+      performance.mark("timesheet:data-ready");
+    }
+    return mapToTimesheet(response);
+  });
 };

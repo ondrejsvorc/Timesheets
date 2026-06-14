@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAsyncValue, useFetcher, useLoaderData, useRevalidator } from "react-router";
+import { useAsyncValue, useLoaderData, useRevalidator } from "react-router";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { AddButton } from "@/components/shared/buttons/ActionButtons";
@@ -7,9 +7,7 @@ import { EmptyState } from "@/components/shared/data/EmptyState";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import type { GetProjectCatalogResponse } from "@/features/employees/api/getProjectCatalog";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { formatDate } from "@/utils/formatDate";
 import { formatWorkloadPercent } from "@/utils/formatWorkload";
@@ -36,7 +34,6 @@ const EmployeePositionsContent = () => {
   const { filter, setFilter, filtered } = usePositionsFilter(response.positions);
   const revalidator = useRevalidator();
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const projectsFetcher = useFetcher<GetProjectCatalogResponse>();
 
   return (
     <>
@@ -45,14 +42,7 @@ const EmployeePositionsContent = () => {
         setFilter={setFilter}
         actions={
           <Can action={UiAction.employeePositions.add}>
-            <AddButton
-              onClick={() => {
-                projectsFetcher.load(Routes.resourceProjects());
-                setIsAddOpen(true);
-              }}
-            >
-              {Texts.addEmployeePosition}
-            </AddButton>
+            <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePosition}</AddButton>
           </Can>
         }
       >
@@ -61,7 +51,6 @@ const EmployeePositionsContent = () => {
       <PositionsTable positions={filtered} />
       <AddEmployeePositionDialog
         open={isAddOpen}
-        projectsFetcher={projectsFetcher}
         employeeId={response.employeeId}
         onClose={() => setIsAddOpen(false)}
         onSaved={() => {

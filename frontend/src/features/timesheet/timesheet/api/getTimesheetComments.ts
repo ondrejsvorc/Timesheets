@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import type { TimesheetComment, TimesheetCommentAuthorRole } from "../comments/Comment";
 
 export interface TimesheetCommentAuthor {
@@ -60,10 +60,8 @@ export const getTimesheetComments = (employeeId: string, year: number, month: nu
     month: String(month),
   });
 
-  return {
-    promise: withOptionalDelay("fast", async () => {
-      const response = await customFetch<TimesheetCommentItem[]>(`${ApiUrl}/timesheets/combined/comments?${params.toString()}`);
-      return response.map(mapComment);
-    }),
-  };
+  return withDelay("fast", async () => {
+    const response = await customFetch<TimesheetCommentItem[]>(`${ApiUrl}/timesheets/combined/comments?${params.toString()}`);
+    return response.map(mapComment);
+  });
 };

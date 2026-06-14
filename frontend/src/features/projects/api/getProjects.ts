@@ -1,12 +1,8 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import type { ProjectItem } from "./shared/projectItem";
 
 export interface GetProjectsResponse {
   projects: ProjectItem[];
 }
 
-export const getProjects = () => {
-  return {
-    promise: withOptionalDelay("slow", () => customFetch<GetProjectsResponse>(`${ApiUrl}/projects`)),
-  };
-};
+export const getProjects = () => withDelay("slow", () => customFetch<GetProjectsResponse>(`${ApiUrl}/projects`));

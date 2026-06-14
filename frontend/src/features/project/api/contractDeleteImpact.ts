@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import { appendTimesheetDeleteImpactConsequences } from "@/utils/deleteImpactConsequences";
 
 export interface DeleteContractImpactResponse {
@@ -18,4 +18,4 @@ export const formatContractDeleteImpactConsequences = (impact: DeleteContractImp
 };
 
 export const getContractDeleteImpact = (contractId: string, signal?: AbortSignal) =>
-  withOptionalDelay("fast", () => customFetch<DeleteContractImpactResponse>(`${ApiUrl}/contracts/${contractId}/delete-impact`, { signal }));
+  withDelay("fast", () => customFetch<DeleteContractImpactResponse>(`${ApiUrl}/contracts/${contractId}/delete-impact`, { signal }));

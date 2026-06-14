@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import type { FetcherWithComponents } from "react-router";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
@@ -11,9 +10,9 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
+import { getEmployees } from "@/features/employees/api/getEmployees";
 import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
-import type { GetEmployeesResponse } from "../employees/api/getEmployees";
 import { addContractEmployee } from "./api/addContractEmployee";
 import type { EmployeeItem as ContractEmployeeItem } from "./api/getContractEmployees";
 
@@ -69,14 +68,15 @@ const createSchema = (existing: ContractEmployeeItem[]) =>
 
 interface AddEmployeeDialogProps {
   open: boolean;
-  employeesFetcher: FetcherWithComponents<GetEmployeesResponse>;
   contractId: string;
   existingContractEmployees: ContractEmployeeItem[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const AddEmployeeDialog = ({ open, employeesFetcher, contractId, existingContractEmployees, onClose, onSaved }: AddEmployeeDialogProps) => {
+export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees, onClose, onSaved }: AddEmployeeDialogProps) => {
+  const [employees, setEmployees] = useState<ComboBoxItem[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
   const resolver = useMemo(() => zodResolver(createSchema(existingContractEmployees)), [existingContractEmployees]);
 
   const form = useForm<AddEmployeeToContractFormValues>({
@@ -87,11 +87,23 @@ export const AddEmployeeDialog = ({ open, employeesFetcher, contractId, existing
   const startDate = form.watch("startDate");
   const endDate = form.watch("endDate");
 
-  const employees: ComboBoxItem[] =
-    employeesFetcher.data?.employees.map((e) => ({
-      value: e.id,
-      label: e.fullName,
-    })) ?? [];
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setEmployeesLoading(true);
+    getEmployees()
+      .then((response) =>
+        setEmployees(
+          response.employees.map((employee) => ({
+            value: employee.id,
+            label: employee.fullName,
+          })),
+        ),
+      )
+      .finally(() => setEmployeesLoading(false));
+  }, [open]);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -146,7 +158,7 @@ export const AddEmployeeDialog = ({ open, employeesFetcher, contractId, existing
                       value={field.value}
                       items={employees}
                       placeholder={Texts.employees}
-                      loading={employeesFetcher.state !== "idle"}
+                      loading={employeesLoading}
                       onChange={field.onChange}
                     />
                   </FormControl>

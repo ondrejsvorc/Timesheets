@@ -1,16 +1,14 @@
 import { Eye } from "lucide-react";
-import { useState } from "react";
-import { useFetcher } from "react-router";
+import { useEffect, useState } from "react";
 import { useEffectivePermissions } from "@/auth/RoleViewContext";
 import type { RoleViewMode } from "@/auth/roleView";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import type { GetContractCatalogResponse } from "@/features/employees/api/getContractCatalog";
-import type { GetProjectCatalogResponse } from "@/features/employees/api/getProjectCatalog";
+import { getContractCatalog } from "@/features/employees/api/getContractCatalog";
+import { getProjectCatalog, type ProjectCatalogItem } from "@/features/employees/api/getProjectCatalog";
 import { cn } from "@/utils/cn";
 
 const roleViewModeOptions: { value: RoleViewMode; label: string }[] = [
@@ -25,18 +23,25 @@ const roleViewModeOptions: { value: RoleViewMode; label: string }[] = [
 export const RoleViewSwitcher = () => {
   const { roleView, setRoleView, isOverridden } = useEffectivePermissions();
   const [open, setOpen] = useState(false);
-  const projectsFetcher = useFetcher<GetProjectCatalogResponse>();
-  const contractsFetcher = useFetcher<GetContractCatalogResponse>();
+  const [projects, setProjects] = useState<ProjectCatalogItem[]>([]);
+  const [contracts, setContracts] = useState<{ id: string; name: string }[]>([]);
 
-  const projects = projectsFetcher.data?.projects ?? [];
-  const contracts = contractsFetcher.data?.contracts ?? [];
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen);
-    if (nextOpen && projectsFetcher.state === "idle") {
-      projectsFetcher.load(Routes.resourceProjects());
+  useEffect(() => {
+    if (!open) {
+      return;
     }
-  };
+
+    getProjectCatalog().then((response) => setProjects(response.projects));
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || roleView.mode !== "contractManager" || !roleView.projectId) {
+      setContracts([]);
+      return;
+    }
+
+    getContractCatalog(roleView.projectId).then((response) => setContracts(response.contracts));
+  }, [open, roleView.mode, roleView.projectId]);
 
   const handleProjectChange = (projectId: string, resetContract: boolean) => {
     setRoleView({
@@ -44,15 +49,12 @@ export const RoleViewSwitcher = () => {
       projectId,
       contractId: resetContract ? null : roleView.contractId,
     });
-    if (roleView.mode === "contractManager" && projectId) {
-      contractsFetcher.load(Routes.resourceContracts(projectId));
-    }
   };
 
   const selectedMode = roleViewModeOptions.find((option) => option.value === roleView.mode);
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"

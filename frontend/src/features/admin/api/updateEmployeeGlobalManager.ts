@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export type UpdateEmployeeGlobalManagerRequest = {
   isGlobalManager: boolean;
@@ -9,7 +9,7 @@ export const updateEmployeeGlobalManager = async (
   request: UpdateEmployeeGlobalManagerRequest,
   signal: AbortSignal,
 ): Promise<void> =>
-  withOptionalDelay("fast", () =>
+  withDelay("fast", () =>
     customFetch<void>(`${ApiUrl}/employees/${employeeId}/global-manager`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

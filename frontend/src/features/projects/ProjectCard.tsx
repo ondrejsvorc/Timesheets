@@ -1,6 +1,5 @@
 import { Archive, ArchiveRestore, MoreHorizontal } from "lucide-react";
 import { useState } from "react";
-import { useFetcher } from "react-router";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { DeleteIcon, EditIcon } from "@/components/shared/buttons/ActionButtons";
@@ -13,7 +12,6 @@ import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { cn } from "@/utils/cn";
 import { formatDate } from "@/utils/formatDate";
 import { archiveProject, unarchiveProject } from "./api/archiveProject";
-import type { DeleteProjectImpactResponse } from "./api/projectDeleteImpact";
 import type { ProjectItem } from "./api/shared/projectItem";
 import { ProjectDeleteDialog } from "./ProjectDeleteDialog";
 import { UpdateProjectDialog } from "./UpdateProjectDialog";
@@ -28,7 +26,6 @@ interface ProjectCardProps {
 export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const deleteImpactFetcher = useFetcher<DeleteProjectImpactResponse>();
   const startDate = formatDate(project.startDate);
   const endDate = formatDate(project.endDate);
   const dateRange = project.startDate && project.endDate ? `${startDate} – ${endDate}` : formatDate(project.startDate);
@@ -78,7 +75,6 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteImpactFetcher.load(Routes.resourceProjectDeleteImpact(project.id));
                         setIsConfirmOpen(true);
                       }}
                     >
@@ -125,7 +121,6 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
         <ProjectDeleteDialog
           projectId={project.id}
           projectName={project.name}
-          fetcher={deleteImpactFetcher}
           onClose={() => setIsConfirmOpen(false)}
           onDeleted={() => {
             onDelete(project.id);

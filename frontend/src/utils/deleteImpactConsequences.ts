@@ -48,3 +48,9 @@ export const appendTimesheetDeleteImpactConsequences = (
     }
   }
 };
+
+export const canConfirmProtectedDelete = (impact: { hasProtectedTimesheets: boolean; canForceDelete: boolean }) =>
+  !impact.hasProtectedTimesheets || impact.canForceDelete;
+
+export const forceProtectedDelete = (impact: { hasProtectedTimesheets: boolean; canForceDelete: boolean }) =>
+  impact.hasProtectedTimesheets && impact.canForceDelete;

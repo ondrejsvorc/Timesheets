@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export interface TimesheetStatusItem {
   id: string;
@@ -9,6 +9,4 @@ export interface GetTimesheetStatusesResponse {
   statuses: TimesheetStatusItem[];
 }
 
-export const getTimesheetStatuses = () => ({
-  promise: withOptionalDelay("fast", () => customFetch<GetTimesheetStatusesResponse>(`${ApiUrl}/timesheets/statuses`)),
-});
+export const getTimesheetStatuses = () => withDelay("fast", () => customFetch<GetTimesheetStatusesResponse>(`${ApiUrl}/timesheets/statuses`));

@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export interface EmployeePositionItem {
   projectId: string;
@@ -17,8 +17,5 @@ export interface GetEmployeePositionsResponse {
   positions: EmployeePositionItem[];
 }
 
-export const getEmployeePositions = (employeeId: string) => {
-  return {
-    promise: withOptionalDelay("slow", () => customFetch<GetEmployeePositionsResponse>(`${ApiUrl}/employees/${employeeId}/positions`)),
-  };
-};
+export const getEmployeePositions = (employeeId: string) =>
+  withDelay("slow", () => customFetch<GetEmployeePositionsResponse>(`${ApiUrl}/employees/${employeeId}/positions`));

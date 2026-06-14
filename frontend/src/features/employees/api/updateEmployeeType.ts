@@ -1,11 +1,11 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export type UpdateEmployeeTypeRequest = {
   employeeTypeId: string | null;
 };
 
 export const updateEmployeeType = async (employeeId: string, request: UpdateEmployeeTypeRequest, signal: AbortSignal): Promise<void> => {
-  return withOptionalDelay("fast", () =>
+  return withDelay("fast", () =>
     customFetch<void>(`${ApiUrl}/employees/${employeeId}/type`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

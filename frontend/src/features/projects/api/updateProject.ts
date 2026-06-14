@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import type { ProjectItem } from "./shared/projectItem";
 
 export type UpdateProjectRequest = {
@@ -13,7 +13,7 @@ export type UpdateProjectResponse = {
 };
 
 export const updateProject = async (id: string, request: UpdateProjectRequest, signal: AbortSignal): Promise<UpdateProjectResponse> => {
-  return withOptionalDelay("fast", () =>
+  return withDelay("fast", () =>
     customFetch<UpdateProjectResponse>(`${ApiUrl}/projects/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },

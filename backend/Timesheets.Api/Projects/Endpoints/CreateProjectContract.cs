@@ -43,33 +43,30 @@ public sealed class CreateProjectContract : IEndpoint
             return TypedResults.NotFound();
         }
 
-        string name = request.Name.Trim();
-        string registrationNumber = request.RegistrationNumber.Trim();
-        bool exists = await dbContext.Contracts
-            .AsNoTracking()
-            .AnyAsync(c => c.ProjectId == id && (c.Name == name || c.RegistrationNumber == registrationNumber), cancellationToken);
-        if (exists)
-        {
-            return TypedResults.BadRequest("Zakázka s tímto Id nebo názvem už v projektu existuje.");
-        }
-
         Contract contract = new()
         {
             Id = Guid.NewGuid(),
             ProjectId = id,
-            Name = name,
-            RegistrationNumber = registrationNumber,
+            Name = request.Name.Trim(),
+            RegistrationNumber = request.RegistrationNumber.Trim(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null
         };
 
         dbContext.Contracts.Add(contract);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            return TypedResults.BadRequest("Zakázka s tímto Id nebo názvem už v projektu existuje.");
+        }
 
         ProjectContractItem projectContract = new(
             contract.Id,
-            request.Name,
-            request.RegistrationNumber,
+            contract.Name,
+            contract.RegistrationNumber,
             EmployeeCount: 0
         );
 

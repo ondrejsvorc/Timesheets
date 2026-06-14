@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import type { ProjectItem } from "./shared/projectItem";
 
 interface ArchiveProjectResponse {
@@ -6,7 +6,7 @@ interface ArchiveProjectResponse {
 }
 
 export const archiveProject = (projectId: string, signal?: AbortSignal) =>
-  withOptionalDelay("fast", () =>
+  withDelay("fast", () =>
     customFetch<ArchiveProjectResponse>(`${ApiUrl}/projects/${projectId}/archive`, {
       method: "POST",
       signal,
@@ -14,7 +14,7 @@ export const archiveProject = (projectId: string, signal?: AbortSignal) =>
   );
 
 export const unarchiveProject = (projectId: string, signal?: AbortSignal) =>
-  withOptionalDelay("fast", () =>
+  withDelay("fast", () =>
     customFetch<ArchiveProjectResponse>(`${ApiUrl}/projects/${projectId}/unarchive`, {
       method: "POST",
       signal,

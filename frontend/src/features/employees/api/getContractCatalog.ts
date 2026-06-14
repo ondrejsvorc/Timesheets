@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export interface ContractCatalogItem {
   id: string;
@@ -16,5 +16,5 @@ export const getContractCatalog = async (projectId?: string): Promise<GetContrac
   }
 
   const params = new URLSearchParams({ projectId });
-  return withOptionalDelay("slow", () => customFetch<GetContractCatalogResponse>(`${ApiUrl}/contracts/catalog?${params.toString()}`));
+  return withDelay("slow", () => customFetch<GetContractCatalogResponse>(`${ApiUrl}/contracts/catalog?${params.toString()}`));
 };

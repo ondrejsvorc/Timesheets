@@ -2,7 +2,6 @@ import { Loader2 } from "lucide-react";
 import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ApiAuthError } from "@/constants/api";
 
 interface BusyButtonProps {
   onClick: (event: MouseEvent<HTMLButtonElement>, signal: AbortSignal) => Promise<void>;
@@ -35,9 +34,6 @@ export const BusyButton = ({ onClick, disabled = false, icon, children, type = "
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        return;
-      }
-      if (error instanceof ApiAuthError) {
         return;
       }
       onError?.(error);

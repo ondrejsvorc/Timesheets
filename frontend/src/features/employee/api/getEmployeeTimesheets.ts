@@ -1,5 +1,5 @@
 import { redirect } from "react-router";
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import { normalizeEmployeeTimesheetsFilter } from "../utils/normalizeEmployeeTimesheetsFilter";
 
 export interface EmployeeTimesheetItem {
@@ -48,16 +48,13 @@ export function filterToSearchParams(filter: EmployeeTimesheetsFilterCriteria): 
   return next;
 }
 
-export const getEmployeeTimesheets = (employeeId: string) => {
-  return {
-    promise: withOptionalDelay("slow", () => customFetch<GetEmployeeTimesheetsResponse>(`${ApiUrl}/employees/${employeeId}/timesheets`)),
-  };
-};
+export const getEmployeeTimesheets = (employeeId: string) =>
+  withDelay("slow", () => customFetch<GetEmployeeTimesheetsResponse>(`${ApiUrl}/employees/${employeeId}/timesheets`));
 
 export async function loadEmployeeTimesheetsPage(employeeId: string, request: Request) {
   const url = new URL(request.url);
   const requestedFilter = buildEmployeeTimesheetsFilterFromUrl(url);
-  const response = await getEmployeeTimesheets(employeeId).promise;
+  const response = await getEmployeeTimesheets(employeeId);
   const filter = normalizeEmployeeTimesheetsFilter(requestedFilter, response);
 
   if (filterToSearchParams(requestedFilter).toString() !== filterToSearchParams(filter).toString()) {

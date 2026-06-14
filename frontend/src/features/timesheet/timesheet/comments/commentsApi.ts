@@ -9,8 +9,7 @@ export interface TimesheetCommentsScope {
 }
 
 export const listTimesheetComments = async (scope: TimesheetCommentsScope, signal?: AbortSignal): Promise<TimesheetComment[]> => {
-  const { promise } = getTimesheetComments(scope.employeeId, scope.year, scope.month);
-  const comments = await promise;
+  const comments = await getTimesheetComments(scope.employeeId, scope.year, scope.month);
   if (signal?.aborted) {
     throw new DOMException("Aborted", "AbortError");
   }

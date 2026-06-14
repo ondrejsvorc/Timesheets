@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export interface ProjectCatalogItem {
   id: string;
@@ -10,5 +10,5 @@ export interface GetProjectCatalogResponse {
 }
 
 export const getProjectCatalog = async (): Promise<GetProjectCatalogResponse> => {
-  return withOptionalDelay("slow", () => customFetch<GetProjectCatalogResponse>(`${ApiUrl}/projects/catalog`));
+  return withDelay("slow", () => customFetch<GetProjectCatalogResponse>(`${ApiUrl}/projects/catalog`));
 };

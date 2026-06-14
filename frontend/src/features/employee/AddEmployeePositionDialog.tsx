@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import type { FetcherWithComponents } from "react-router";
-import { useFetcher } from "react-router";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
@@ -10,13 +9,12 @@ import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercent
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
+import { getContractCatalog } from "@/features/employees/api/getContractCatalog";
+import { getProjectCatalog } from "@/features/employees/api/getProjectCatalog";
 import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 import { addContractEmployee } from "../contract/api/addContractEmployee";
-import type { GetContractCatalogResponse } from "../employees/api/getContractCatalog";
-import type { GetProjectCatalogResponse } from "../employees/api/getProjectCatalog";
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
 
@@ -36,14 +34,16 @@ const addEmployeePositionSchema = z.object({
 
 interface AddEmployeePositionDialogProps {
   open: boolean;
-  projectsFetcher: FetcherWithComponents<GetProjectCatalogResponse>;
   employeeId: string;
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const AddEmployeePositionDialog = ({ open, projectsFetcher, employeeId, onClose, onSaved }: AddEmployeePositionDialogProps) => {
-  const contractsFetcher = useFetcher<GetContractCatalogResponse>();
+export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }: AddEmployeePositionDialogProps) => {
+  const [projects, setProjects] = useState<ComboBoxItem[]>([]);
+  const [contracts, setContracts] = useState<ComboBoxItem[]>([]);
+  const [projectsLoading, setProjectsLoading] = useState(false);
+  const [contractsLoading, setContractsLoading] = useState(false);
 
   const form = useForm<AddEmployeePositionFormValues>({
     resolver: zodResolver(addEmployeePositionSchema),
@@ -54,17 +54,48 @@ export const AddEmployeePositionDialog = ({ open, projectsFetcher, employeeId, o
   const startDate = form.watch("startDate");
   const endDate = form.watch("endDate");
 
-  const projects: ComboBoxItem[] =
-    projectsFetcher.data?.projects.map((p) => ({
-      value: p.id,
-      label: p.name,
-    })) ?? [];
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
 
-  const contracts: ComboBoxItem[] =
-    contractsFetcher.data?.contracts.map((c) => ({
-      value: c.id,
-      label: c.name,
-    })) ?? [];
+    const controller = new AbortController();
+    setProjectsLoading(true);
+    getProjectCatalog()
+      .then((response) =>
+        setProjects(
+          response.projects.map((project) => ({
+            value: project.id,
+            label: project.name,
+          })),
+        ),
+      )
+      .finally(() => setProjectsLoading(false));
+
+    return () => controller.abort();
+  }, [open]);
+
+  useEffect(() => {
+    if (!projectId) {
+      setContracts([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    setContractsLoading(true);
+    getContractCatalog(projectId)
+      .then((response) =>
+        setContracts(
+          response.contracts.map((contract) => ({
+            value: contract.id,
+            label: contract.name,
+          })),
+        ),
+      )
+      .finally(() => setContractsLoading(false));
+
+    return () => controller.abort();
+  }, [projectId]);
 
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
@@ -75,9 +106,6 @@ export const AddEmployeePositionDialog = ({ open, projectsFetcher, employeeId, o
   const handleProjectChange = (nextProjectId: string) => {
     form.setValue("projectId", nextProjectId);
     form.setValue("contractId", "");
-    if (nextProjectId) {
-      contractsFetcher.load(Routes.resourceContracts(nextProjectId));
-    }
   };
 
   const handleClose = () => {
@@ -123,7 +151,7 @@ export const AddEmployeePositionDialog = ({ open, projectsFetcher, employeeId, o
                       value={field.value}
                       items={projects}
                       placeholder={Texts.selectProject}
-                      loading={projectsFetcher.state !== "idle"}
+                      loading={projectsLoading}
                       onChange={handleProjectChange}
                     />
                   </FormControl>
@@ -142,7 +170,7 @@ export const AddEmployeePositionDialog = ({ open, projectsFetcher, employeeId, o
                       value={field.value}
                       items={contracts}
                       placeholder={Texts.selectContract}
-                      loading={contractsFetcher.state !== "idle"}
+                      loading={contractsLoading}
                       disabled={!projectId}
                       onChange={field.onChange}
                     />

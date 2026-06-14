@@ -44,21 +44,11 @@ public sealed class CreateProject : IEndpoint
             return TypedResults.Forbid();
         }
 
-        string name = request.Name.Trim();
-        string registrationNumber = request.RegistrationNumber.Trim();
-        bool exists = await dbContext.Projects
-            .AsNoTracking()
-            .AnyAsync(p => p.Name == name || p.RegistrationNumber == registrationNumber, cancellationToken);
-        if (exists)
-        {
-            return TypedResults.BadRequest("Projekt s tímto Id nebo názvem už existuje.");
-        }
-
         Project project = new()
         {
             Id = Guid.NewGuid(),
-            Name = name,
-            RegistrationNumber = registrationNumber,
+            Name = request.Name.Trim(),
+            RegistrationNumber = request.RegistrationNumber.Trim(),
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             CreatedAt = DateTime.UtcNow,
@@ -66,7 +56,14 @@ public sealed class CreateProject : IEndpoint
         };
 
         dbContext.Projects.Add(project);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            return TypedResults.BadRequest("Projekt s tímto Id nebo názvem už existuje.");
+        }
 
         ProjectItem projectItem = new(
             project.Id,

@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export const deleteProjectContract = async (
   projectId: string,
@@ -7,7 +7,7 @@ export const deleteProjectContract = async (
   signal: AbortSignal,
 ): Promise<void> => {
   const query = options.force ? "?force=true" : "";
-  return withOptionalDelay("fast", () =>
+  return withDelay("fast", () =>
     customFetch<void>(`${ApiUrl}/projects/${projectId}/contracts/${contractId}${query}`, {
       method: "DELETE",
       signal,

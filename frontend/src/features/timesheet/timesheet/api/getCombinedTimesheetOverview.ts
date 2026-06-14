@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export interface CombinedTimesheetOverviewItem {
   timesheetId: string | null;
@@ -28,9 +28,5 @@ export const getCombinedTimesheetOverview = (employeeId: string, year: number, m
     month: String(month),
   });
 
-  return {
-    promise: withOptionalDelay("slow", () =>
-      customFetch<GetCombinedTimesheetOverviewResponse>(`${ApiUrl}/timesheets/combined/overview?${params.toString()}`),
-    ),
-  };
+  return withDelay("slow", () => customFetch<GetCombinedTimesheetOverviewResponse>(`${ApiUrl}/timesheets/combined/overview?${params.toString()}`));
 };

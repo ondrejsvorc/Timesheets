@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import type { ProjectContractItem } from "./shared/projectContractItem";
 
 export type CreateProjectContractRequest = {
@@ -15,7 +15,7 @@ export const createProjectContract = async (
   request: CreateProjectContractRequest,
   signal: AbortSignal,
 ): Promise<CreateProjectContractResponse> => {
-  return withOptionalDelay("fast", () =>
+  return withDelay("fast", () =>
     customFetch<CreateProjectContractResponse>(`${ApiUrl}/projects/${projectId}/contracts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -11,12 +11,4 @@ export const Routes = {
   employee: (id: string) => `/employees/${id}`,
   employeePositions: (id: string) => `/employees/${id}/positions`,
   timesheet: (employeeId: string, year: number, month: number) => `/timesheet?employeeId=${employeeId}&year=${year}&month=${month}`,
-  resourceProjects: () => "/_resources/projects",
-  resourceContracts: (projectId: string) => `/_resources/contracts?projectId=${encodeURIComponent(projectId)}`,
-  resourceEmployees: () => "/_resources/employees",
-  resourceProjectContracts: (projectId: string) => `/_resources/project-contracts/${projectId}`,
-  resourceProjectDeleteImpact: (projectId: string) => `/_resources/project-delete-impact/${projectId}`,
-  resourceContractDeleteImpact: (contractId: string) => `/_resources/contract-delete-impact/${contractId}`,
-  resourceContractEmployeeUpdateImpact: (contractId: string, contractEmployeeId: string) =>
-    `/_resources/contract-employee-update-impact/${contractId}/${contractEmployeeId}`,
 };

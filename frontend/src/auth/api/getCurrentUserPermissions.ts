@@ -1,4 +1,4 @@
-import { BaseUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { BaseUrl, customFetch, withDelay } from "@/constants/api";
 import type { UserRole } from "../userRole";
 
 export interface CurrentUserPermissions {
@@ -20,7 +20,7 @@ interface GetCurrentUserPermissionsResponse {
 }
 
 export const getCurrentUserPermissions = () =>
-  withOptionalDelay("fast", () =>
+  withDelay("fast", () =>
     customFetch<GetCurrentUserPermissionsResponse>(`${BaseUrl}/auth/currentUserPermissions`, {
       credentials: "include",
     }),

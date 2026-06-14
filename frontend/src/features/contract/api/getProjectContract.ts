@@ -1,4 +1,4 @@
-import { ApiUrl, redirectIfUnauthorized, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export interface GetProjectContractResponse {
   id: string;
@@ -6,14 +6,14 @@ export interface GetProjectContractResponse {
   registrationNumber: string;
 }
 
-export const getProjectContract = (projectId: string, contractId: string): { promise: Promise<GetProjectContractResponse | null> } => {
-  return {
-    promise: withOptionalDelay("fast", async () => {
-      const response = await fetch(`${ApiUrl}/projects/${projectId}/contracts/${contractId}`, { credentials: "include" });
-      redirectIfUnauthorized(response);
-      if (response.status === 404) return null;
-      if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-      return response.json() as Promise<GetProjectContractResponse>;
-    }),
-  };
-};
+export const getProjectContract = (projectId: string, contractId: string) =>
+  withDelay("fast", async () => {
+    try {
+      return await customFetch<GetProjectContractResponse>(`${ApiUrl}/projects/${projectId}/contracts/${contractId}`);
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith("404")) {
+        return null;
+      }
+      throw error;
+    }
+  });

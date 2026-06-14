@@ -64,65 +64,19 @@ export interface UiContext {
   timesheetProjectId?: string;
 }
 
-const hasGlobalScope = (permissions: CurrentUserPermissions | null): boolean =>
-  Boolean(permissions && isAtLeast(permissions.role, UserRole.GlobalManager));
-
-export const isOwnEmployee = (currentUserId: string | undefined, employeeId: string | undefined): boolean =>
+const isGlobalManager = (permissions: CurrentUserPermissions) => isAtLeast(permissions.role, UserRole.GlobalManager);
+const isManager = (permissions: CurrentUserPermissions) => isAtLeast(permissions.role, UserRole.ContractManager);
+const isOwnEmployee = (currentUserId: string | undefined, employeeId: string | undefined) =>
   Boolean(currentUserId && employeeId && currentUserId === employeeId);
 
-export const canAccessProject = (permissions: CurrentUserPermissions | null, projectId: string | undefined): boolean => {
-  if (!permissions || !projectId) {
-    return false;
-  }
+const canSeeProject = (permissions: CurrentUserPermissions, projectId?: string) =>
+  isGlobalManager(permissions) || Boolean(projectId && permissions.visibleProjectIds.includes(projectId));
 
-  if (hasGlobalScope(permissions)) {
-    return true;
-  }
+const canSeeContract = (permissions: CurrentUserPermissions, contractId?: string) =>
+  isGlobalManager(permissions) || Boolean(contractId && permissions.visibleContractIds.includes(contractId));
 
-  return permissions.visibleProjectIds.includes(projectId);
-};
-
-export const canAccessContract = (permissions: CurrentUserPermissions | null, contractId: string | undefined): boolean => {
-  if (!permissions || !contractId) {
-    return false;
-  }
-
-  if (hasGlobalScope(permissions)) {
-    return true;
-  }
-
-  return permissions.visibleContractIds.includes(contractId);
-};
-
-const canManageProjectPart = (permissions: CurrentUserPermissions | null, contractId: string | undefined, projectId: string | undefined): boolean => {
-  if (!permissions) {
-    return false;
-  }
-
-  if (hasGlobalScope(permissions)) {
-    return true;
-  }
-
-  if (contractId && permissions.contractManagerOf.includes(contractId)) {
-    return true;
-  }
-
-  if (projectId && permissions.projectManagerOf.includes(projectId)) {
-    return true;
-  }
-
-  return false;
-};
-
-const hasManagerRole = (permissions: CurrentUserPermissions | null): boolean =>
-  Boolean(permissions && isAtLeast(permissions.role, UserRole.ContractManager));
-
-const canManageContractEmployees = (permissions: CurrentUserPermissions | null, ctx: UiContext): boolean => {
-  if (!permissions) {
-    return false;
-  }
-
-  if (hasGlobalScope(permissions)) {
+const canManageContractScope = (permissions: CurrentUserPermissions, ctx: UiContext) => {
+  if (isGlobalManager(permissions)) {
     return true;
   }
 
@@ -149,65 +103,50 @@ export const can = (
 
   switch (action) {
     case UiAction.nav.projects:
-      return hasGlobalScope(permissions) || permissions.visibleProjectIds.length > 0;
-
+      return isGlobalManager(permissions) || permissions.visibleProjectIds.length > 0;
     case UiAction.nav.employees:
-      return hasManagerRole(permissions);
-
+      return isManager(permissions);
     case UiAction.nav.myTimesheets:
       return Boolean(currentUserId);
-
     case UiAction.nav.employeeRoles:
       return permissions.role === UserRole.Admin;
 
     case UiAction.projects.add:
     case UiAction.projects.edit:
     case UiAction.projects.delete:
-      return isAtLeast(permissions.role, UserRole.GlobalManager);
-
-    case UiAction.projects.view:
-      return canAccessProject(permissions, ctx.projectId);
-
     case UiAction.contracts.add:
     case UiAction.contracts.edit:
     case UiAction.contracts.delete:
-      return isAtLeast(permissions.role, UserRole.GlobalManager);
+    case UiAction.employees.editType:
+    case UiAction.timesheet.import:
+    case UiAction.timesheet.finalApprove:
+    case UiAction.timesheet.returnWhole:
+    case UiAction.timesheet.unlock:
+      return isGlobalManager(permissions);
 
+    case UiAction.projects.view:
+      return canSeeProject(permissions, ctx.projectId);
     case UiAction.contracts.view:
-      return canAccessContract(permissions, ctx.contractId);
+    case UiAction.contractEmployees.view:
+      return canSeeContract(permissions, ctx.contractId);
 
     case UiAction.contractManagers.view:
     case UiAction.contractManagers.add:
     case UiAction.contractManagers.remove:
-      return (
-        isAtLeast(permissions.role, UserRole.GlobalManager) || (ctx.projectId !== undefined && permissions.projectManagerOf.includes(ctx.projectId))
-      );
-
-    case UiAction.contractEmployees.view:
-      return canAccessContract(permissions, ctx.contractId);
+      return isGlobalManager(permissions) || Boolean(ctx.projectId && permissions.projectManagerOf.includes(ctx.projectId));
 
     case UiAction.contractEmployees.add:
     case UiAction.contractEmployees.update:
     case UiAction.contractEmployees.remove:
-      return canManageContractEmployees(permissions, ctx);
+      return canManageContractScope(permissions, ctx);
 
     case UiAction.employeePositions.add:
-      return hasManagerRole(permissions);
-
     case UiAction.employees.list:
-      return hasManagerRole(permissions);
+      return isManager(permissions);
 
     case UiAction.employees.view:
-      return isOwnEmployee(currentUserId, ctx.employeeId) || hasManagerRole(permissions);
-
     case UiAction.timesheet.view:
-      return isOwnEmployee(currentUserId, ctx.employeeId) || hasManagerRole(permissions);
-
-    case UiAction.employees.editType:
-      return isAtLeast(permissions.role, UserRole.GlobalManager);
-
-    case UiAction.timesheet.import:
-      return isAtLeast(permissions.role, UserRole.GlobalManager);
+      return isOwnEmployee(currentUserId, ctx.employeeId) || isManager(permissions);
 
     case UiAction.timesheet.edit:
     case UiAction.timesheet.submit:
@@ -215,12 +154,10 @@ export const can = (
 
     case UiAction.timesheet.approveProject:
     case UiAction.timesheet.returnProject:
-      return canManageProjectPart(permissions, ctx.timesheetContractId ?? ctx.contractId, ctx.timesheetProjectId ?? ctx.projectId);
-
-    case UiAction.timesheet.finalApprove:
-    case UiAction.timesheet.returnWhole:
-    case UiAction.timesheet.unlock:
-      return isAtLeast(permissions.role, UserRole.GlobalManager);
+      return canManageContractScope(permissions, {
+        contractId: ctx.timesheetContractId ?? ctx.contractId,
+        projectId: ctx.timesheetProjectId ?? ctx.projectId,
+      });
 
     default:
       return false;

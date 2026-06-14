@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export interface GetProjectResponse {
   project: {
@@ -8,8 +8,4 @@ export interface GetProjectResponse {
   };
 }
 
-export const getProject = (id: string) => {
-  return {
-    promise: withOptionalDelay("fast", () => customFetch<GetProjectResponse>(`${ApiUrl}/projects/${id}`)),
-  };
-};
+export const getProject = (id: string) => withDelay("fast", () => customFetch<GetProjectResponse>(`${ApiUrl}/projects/${id}`));

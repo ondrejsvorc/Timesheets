@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
 export interface ProjectTimesheetCatalogItem {
   id: string;
@@ -18,7 +18,5 @@ export const getTimesheetCatalog = (employeeId: string, year: number, month: num
     month: String(month),
   });
 
-  return {
-    promise: withOptionalDelay("fast", () => customFetch<GetTimesheetCatalogResponse>(`${ApiUrl}/timesheets/catalog?${params.toString()}`)),
-  };
+  return withDelay("fast", () => customFetch<GetTimesheetCatalogResponse>(`${ApiUrl}/timesheets/catalog?${params.toString()}`));
 };

@@ -1,4 +1,4 @@
-import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
+import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import { Texts } from "@/constants/texts";
 import { formatDate } from "@/utils/formatDate";
 import type { UpdateContractEmployeeRequest } from "./updateContractEmployee";
@@ -66,7 +66,7 @@ export const getContractEmployeeUpdateImpact = (
   request: UpdateContractEmployeeRequest,
   signal?: AbortSignal,
 ) =>
-  withOptionalDelay("fast", () =>
+  withDelay("fast", () =>
     customFetch<ContractEmployeeUpdateImpactResponse>(`${ApiUrl}/contracts/${contractId}/employees/${contractEmployeeId}/update-impact`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

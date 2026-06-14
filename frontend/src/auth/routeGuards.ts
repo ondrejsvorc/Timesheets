@@ -1,5 +1,5 @@
 import { redirect } from "react-router";
-import { ApiAuthError, BaseUrl } from "@/constants/api";
+import { BaseUrl, goToLogin } from "@/constants/api";
 import { Routes } from "@/constants/routes";
 import type { CurrentUser } from "@/router";
 import { type CurrentUserPermissions, getCurrentUserPermissions } from "./api/getCurrentUserPermissions";
@@ -13,13 +13,6 @@ export interface AuthContext {
 let cachedAuth: AuthContext | null = null;
 let authRequest: Promise<AuthContext> | null = null;
 
-const redirectToLogin = () => {
-  resetAuthContext();
-  const returnTo = `${window.location.pathname}${window.location.search}`;
-  const safeReturnTo = returnTo.startsWith("/redirecting") ? "/" : returnTo;
-  window.location.assign(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(safeReturnTo)}`);
-};
-
 const fetchAuthContext = async (): Promise<AuthContext> => {
   const [permissions, userResponse] = await Promise.all([
     getCurrentUserPermissions().catch(() => null),
@@ -27,8 +20,9 @@ const fetchAuthContext = async (): Promise<AuthContext> => {
   ]);
 
   if (userResponse.status === 401) {
-    redirectToLogin();
-    throw new ApiAuthError();
+    resetAuthContext();
+    goToLogin();
+    return new Promise(() => {});
   }
 
   const currentUser = userResponse.ok ? ((await userResponse.json()) as CurrentUser) : null;

@@ -33,27 +33,24 @@ public sealed class UpdateProjectContract : IEndpoint
             return TypedResults.Forbid();
         }
 
-        string name = request.Name.Trim();
-        string registrationNumber = request.RegistrationNumber.Trim();
-        bool exists = await dbContext.Contracts
-            .AsNoTracking()
-            .AnyAsync(c => c.ProjectId == projectId && c.Id != contractId && (c.Name == name || c.RegistrationNumber == registrationNumber), cancellationToken);
-        if (exists)
+        try
+        {
+            int affected = await dbContext.Contracts
+                .Where(c => c.ProjectId == projectId && c.Id == contractId)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(c => c.Name, request.Name.Trim())
+                    .SetProperty(c => c.RegistrationNumber, request.RegistrationNumber.Trim())
+                    .SetProperty(c => c.UpdatedAt, DateTime.UtcNow),
+                    cancellationToken);
+
+            if (affected == 0)
+            {
+                return TypedResults.NotFound();
+            }
+        }
+        catch (DbUpdateException)
         {
             return TypedResults.BadRequest("Zakázka s tímto Id nebo názvem už v projektu existuje.");
-        }
-
-        int affected = await dbContext.Contracts
-            .Where(c => c.ProjectId == projectId && c.Id == contractId)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(c => c.Name, name)
-                .SetProperty(c => c.RegistrationNumber, registrationNumber)
-                .SetProperty(c => c.UpdatedAt, DateTime.UtcNow),
-                cancellationToken);
-
-        if (affected == 0)
-        {
-            return TypedResults.NotFound();
         }
 
         ProjectContractItem? contract = await dbContext.Contracts
