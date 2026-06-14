@@ -18,7 +18,10 @@ export const ContractEmployeeUpdateDialog = ({ contractId, contractEmployeeId, r
   const fetcher = useFetcher<ContractEmployeeUpdateImpactResponse>();
 
   useEffect(() => {
-    fetcher.submit({ ...request }, { method: "POST", encType: "application/json", action: Routes.resourceContractEmployeeUpdateImpact(contractId, contractEmployeeId) });
+    fetcher.submit(
+      { ...request },
+      { method: "POST", encType: "application/json", action: Routes.resourceContractEmployeeUpdateImpact(contractId, contractEmployeeId) },
+    );
   }, [contractId, contractEmployeeId, request, fetcher]);
 
   return (
