@@ -22,7 +22,7 @@ public sealed class UpdateProjectContract : IEndpoint
         public Validator()
         {
             RuleFor(x => x.Name).NotEmpty().MaximumLength(ContractSchema.Name.MaxLength);
-            RuleFor(x => x.RegistrationNumber).MaximumLength(ContractSchema.RegistrationNumber.MaxLength);
+            RuleFor(x => x.RegistrationNumber).NotEmpty().MaximumLength(ContractSchema.RegistrationNumber.MaxLength);
         }
     }
 
@@ -33,11 +33,21 @@ public sealed class UpdateProjectContract : IEndpoint
             return TypedResults.Forbid();
         }
 
+        string name = request.Name.Trim();
+        string registrationNumber = request.RegistrationNumber.Trim();
+        bool exists = await dbContext.Contracts
+            .AsNoTracking()
+            .AnyAsync(c => c.ProjectId == projectId && c.Id != contractId && (c.Name == name || c.RegistrationNumber == registrationNumber), cancellationToken);
+        if (exists)
+        {
+            return TypedResults.BadRequest("Zakázka s tímto Id nebo názvem už v projektu existuje.");
+        }
+
         int affected = await dbContext.Contracts
             .Where(c => c.ProjectId == projectId && c.Id == contractId)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(c => c.Name, request.Name)
-                .SetProperty(c => c.RegistrationNumber, request.RegistrationNumber)
+                .SetProperty(c => c.Name, name)
+                .SetProperty(c => c.RegistrationNumber, registrationNumber)
                 .SetProperty(c => c.UpdatedAt, DateTime.UtcNow),
                 cancellationToken);
 

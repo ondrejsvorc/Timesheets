@@ -146,7 +146,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(ProjectSchema.Name.MaxLength);
 
         builder.Property(p => p.RegistrationNumber)
+            .IsRequired()
             .HasMaxLength(ProjectSchema.RegistrationNumber.MaxLength);
+
+        builder.HasIndex(p => p.Name)
+            .IsUnique();
+
+        builder.HasIndex(p => p.RegistrationNumber)
+            .IsUnique();
 
         builder.Property(p => p.StartDate)
             .IsRequired();
@@ -199,7 +206,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(ContractSchema.Name.MaxLength);
 
         builder.Property(c => c.RegistrationNumber)
+            .IsRequired()
             .HasMaxLength(ContractSchema.RegistrationNumber.MaxLength);
+
+        builder.HasIndex(c => new { c.ProjectId, c.Name })
+            .IsUnique();
+
+        builder.HasIndex(c => new { c.ProjectId, c.RegistrationNumber })
+            .IsUnique();
 
         builder.Property(c => c.CreatedAt)
             .IsRequired();

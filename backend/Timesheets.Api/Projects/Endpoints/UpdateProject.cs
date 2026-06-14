@@ -27,6 +27,7 @@ public sealed class UpdateProject : IEndpoint
                 .MaximumLength(ProjectSchema.Name.MaxLength);
 
             RuleFor(x => x.RegistrationNumber)
+                .NotEmpty()
                 .MaximumLength(ProjectSchema.RegistrationNumber.MaxLength);
 
             RuleFor(x => x.StartDate)
@@ -42,11 +43,21 @@ public sealed class UpdateProject : IEndpoint
             return TypedResults.Forbid();
         }
 
+        string name = request.Name.Trim();
+        string registrationNumber = request.RegistrationNumber.Trim();
+        bool exists = await dbContext.Projects
+            .AsNoTracking()
+            .AnyAsync(p => p.Id != id && (p.Name == name || p.RegistrationNumber == registrationNumber), cancellationToken);
+        if (exists)
+        {
+            return TypedResults.BadRequest("Projekt s tímto Id nebo názvem už existuje.");
+        }
+
         int affected = await dbContext.Projects
             .Where(p => p.Id == id)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(p => p.Name, request.Name)
-                .SetProperty(p => p.RegistrationNumber, request.RegistrationNumber)
+                .SetProperty(p => p.Name, name)
+                .SetProperty(p => p.RegistrationNumber, registrationNumber)
                 .SetProperty(p => p.StartDate, request.StartDate)
                 .SetProperty(p => p.EndDate, request.EndDate)
                 .SetProperty(p => p.UpdatedAt, DateTime.UtcNow),

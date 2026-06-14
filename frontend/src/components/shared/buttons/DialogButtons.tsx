@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import type { MouseEvent } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { parseApiErrorMessage } from "@/constants/api";
 import { Texts } from "@/constants/texts";
 import { BusyButton } from "./BusyButton";
 
@@ -17,7 +18,7 @@ export const DialogConfirmButton = ({ onClick, disabled }: DialogConfirmButtonPr
     icon={<Check className="size-4" />}
     type="submit"
     onSuccess={() => toast.success(Texts.actionSuccessful)}
-    onError={() => toast.error(Texts.actionFailed)}
+    onError={(error) => toast.error(parseApiErrorMessage(error, Texts.actionFailed))}
   >
     {Texts.confirm}
   </BusyButton>

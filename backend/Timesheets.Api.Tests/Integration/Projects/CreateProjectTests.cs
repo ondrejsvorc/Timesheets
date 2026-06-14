@@ -60,6 +60,32 @@ public class CreateProjectTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task CreateProject_WithDuplicateRegistrationNumber_ReturnsBadRequest()
+    {
+        CreateProject.Request first = new("First Project", "REG-DUP-001", DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10));
+        HttpResponseMessage firstResponse = await Client.PostAsJsonAsync("/api/projects", first);
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+
+        CreateProject.Request duplicate = new("Second Project", "REG-DUP-001", DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10));
+        HttpResponseMessage duplicateResponse = await Client.PostAsJsonAsync("/api/projects", duplicate);
+        Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
+        Assert.Contains("existuje", await duplicateResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateProject_WithDuplicateName_ReturnsBadRequest()
+    {
+        CreateProject.Request first = new("Duplicate Name Project", "REG-DUP-002", DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10));
+        HttpResponseMessage firstResponse = await Client.PostAsJsonAsync("/api/projects", first);
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+
+        CreateProject.Request duplicate = new("Duplicate Name Project", "REG-DUP-003", DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10));
+        HttpResponseMessage duplicateResponse = await Client.PostAsJsonAsync("/api/projects", duplicate);
+        Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
+        Assert.Contains("existuje", await duplicateResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task CreateProject_WithUtcMidnightJsonString_ReturnsCreated()
     {
         using StringContent content = new("""{"name":"Utc Midnight Project","registrationNumber":"REG-CREATE-007","startDate":"2026-01-01T00:00:00.000Z","endDate":null}""", Encoding.UTF8, "application/json");

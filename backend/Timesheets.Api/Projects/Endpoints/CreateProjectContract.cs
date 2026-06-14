@@ -23,7 +23,7 @@ public sealed class CreateProjectContract : IEndpoint
         public Validator()
         {
             RuleFor(x => x.Name).NotEmpty().MaximumLength(ContractSchema.Name.MaxLength);
-            RuleFor(x => x.RegistrationNumber).MaximumLength(ContractSchema.RegistrationNumber.MaxLength);
+            RuleFor(x => x.RegistrationNumber).NotEmpty().MaximumLength(ContractSchema.RegistrationNumber.MaxLength);
         }
     }
 
@@ -43,12 +43,22 @@ public sealed class CreateProjectContract : IEndpoint
             return TypedResults.NotFound();
         }
 
+        string name = request.Name.Trim();
+        string registrationNumber = request.RegistrationNumber.Trim();
+        bool exists = await dbContext.Contracts
+            .AsNoTracking()
+            .AnyAsync(c => c.ProjectId == id && (c.Name == name || c.RegistrationNumber == registrationNumber), cancellationToken);
+        if (exists)
+        {
+            return TypedResults.BadRequest("Zakázka s tímto Id nebo názvem už v projektu existuje.");
+        }
+
         Contract contract = new()
         {
             Id = Guid.NewGuid(),
             ProjectId = id,
-            Name = request.Name,
-            RegistrationNumber = request.RegistrationNumber,
+            Name = name,
+            RegistrationNumber = registrationNumber,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null
         };

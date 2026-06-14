@@ -10,6 +10,28 @@ const delays = { fast: 600, slow: 1200, slowest: 1800 } as const;
 export const ApiUrl = envApiUrl;
 export const BaseUrl = ApiUrl.replace(/\/api\/?$/, "");
 
+export class ApiAuthError extends Error {
+  constructor() {
+    super("Unauthorized");
+    this.name = "ApiAuthError";
+  }
+}
+
+const redirectToLogin = () => {
+  const returnTo = `${window.location.pathname}${window.location.search}`;
+  const safeReturnTo = returnTo.startsWith("/redirecting") ? "/" : returnTo;
+  window.location.assign(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(safeReturnTo)}`);
+};
+
+export const redirectIfUnauthorized = (response: Response): void => {
+  if (response.status !== 401) {
+    return;
+  }
+
+  redirectToLogin();
+  throw new ApiAuthError();
+};
+
 export const withOptionalDelay = async <T>(delay: keyof typeof delays, fn: () => Promise<T>): Promise<T> => {
   if (delayEnabled) {
     await new Promise<void>((resolve) => setTimeout(resolve, delays[delay]));
@@ -21,6 +43,9 @@ const withErrorHandling = async <T>(fn: () => Promise<T>, label: string): Promis
   try {
     return await fn();
   } catch (error) {
+    if (error instanceof ApiAuthError) {
+      throw error;
+    }
     const message = error instanceof Error ? error.message : String(error);
     console.error(`[API ERROR] ${label}: ${message}`);
     throw error;
@@ -28,6 +53,10 @@ const withErrorHandling = async <T>(fn: () => Promise<T>, label: string): Promis
 };
 
 export const parseApiErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof ApiAuthError) {
+    return fallback;
+  }
+
   if (!(error instanceof Error)) {
     return fallback;
   }
@@ -35,6 +64,11 @@ export const parseApiErrorMessage = (error: unknown, fallback: string): string =
   const quoted = error.message.match(/: "([^"]+)"/);
   if (quoted?.[1]) {
     return quoted[1];
+  }
+
+  const plain = error.message.match(/:\s(.+)$/);
+  if (plain?.[1]) {
+    return plain[1].trim();
   }
 
   return error.message || fallback;
@@ -45,9 +79,10 @@ export const customFetch = async <T>(input: RequestInfo | URL, init?: RequestIni
   const start = apiLoggingEnabled ? performance.now() : 0;
 
   return withErrorHandling(async () => {
-    const response = await fetch(input, init);
+    const response = await fetch(input, { credentials: "include", ...init });
     if (!response.ok) {
-      console.log(init);
+      redirectIfUnauthorized(response);
+
       let details = "";
       try {
         const text = await response.text();

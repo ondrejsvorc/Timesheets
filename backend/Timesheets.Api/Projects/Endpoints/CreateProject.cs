@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
@@ -27,6 +28,7 @@ public sealed class CreateProject : IEndpoint
                 .MaximumLength(ProjectSchema.Name.MaxLength);
 
             RuleFor(x => x.RegistrationNumber)
+                .NotEmpty()
                 .MaximumLength(ProjectSchema.RegistrationNumber.MaxLength);
 
             RuleFor(x => x.StartDate)
@@ -42,11 +44,21 @@ public sealed class CreateProject : IEndpoint
             return TypedResults.Forbid();
         }
 
+        string name = request.Name.Trim();
+        string registrationNumber = request.RegistrationNumber.Trim();
+        bool exists = await dbContext.Projects
+            .AsNoTracking()
+            .AnyAsync(p => p.Name == name || p.RegistrationNumber == registrationNumber, cancellationToken);
+        if (exists)
+        {
+            return TypedResults.BadRequest("Projekt s tímto Id nebo názvem už existuje.");
+        }
+
         Project project = new()
         {
             Id = Guid.NewGuid(),
-            Name = request.Name,
-            RegistrationNumber = request.RegistrationNumber,
+            Name = name,
+            RegistrationNumber = registrationNumber,
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             CreatedAt = DateTime.UtcNow,

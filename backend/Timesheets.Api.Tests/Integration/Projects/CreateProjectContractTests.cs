@@ -11,7 +11,8 @@ public class CreateProjectContractTests : BaseIntegrationTest
 
     private async Task<Guid> CreateProjectAsync()
     {
-        CreateProject.Request request = new("Test Project For Contract", "REG-123", DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        CreateProject.Request request = new($"Test Project For Contract {suffix}", $"REG-{suffix}", DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
         HttpResponseMessage response = await Client.PostAsJsonAsync("/api/projects", request);
         CreateProject.Response? content = await response.Content.ReadFromJsonAsync<CreateProject.Response>();
         return content!.Project.Id;
@@ -51,5 +52,47 @@ public class CreateProjectContractTests : BaseIntegrationTest
         CreateProjectContract.Request request = new("Valid Name", new string('B', 101));
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", request);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateProjectContract_WithDuplicateRegistrationNumberInSameProject_ReturnsBadRequest()
+    {
+        Guid projectId = await CreateProjectAsync();
+        CreateProjectContract.Request first = new("First Contract", "CONT-DUP-001");
+        HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", first);
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+
+        CreateProjectContract.Request duplicate = new("Second Contract", "CONT-DUP-001");
+        HttpResponseMessage duplicateResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", duplicate);
+        Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
+        Assert.Contains("existuje", await duplicateResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateProjectContract_WithDuplicateNameInSameProject_ReturnsBadRequest()
+    {
+        Guid projectId = await CreateProjectAsync();
+        CreateProjectContract.Request first = new("Duplicate Contract", "CONT-DUP-002");
+        HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", first);
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+
+        CreateProjectContract.Request duplicate = new("Duplicate Contract", "CONT-DUP-003");
+        HttpResponseMessage duplicateResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", duplicate);
+        Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
+        Assert.Contains("existuje", await duplicateResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateProjectContract_WithSameRegistrationNumberInDifferentProject_ReturnsCreated()
+    {
+        Guid firstProjectId = await CreateProjectAsync();
+        CreateProjectContract.Request first = new("Shared Id Contract", "CONT-SHARED-001");
+        HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{firstProjectId}/contracts", first);
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+
+        Guid secondProjectId = await CreateProjectAsync();
+        CreateProjectContract.Request second = new("Other Contract", "CONT-SHARED-001");
+        HttpResponseMessage secondResponse = await Client.PostAsJsonAsync($"/api/projects/{secondProjectId}/contracts", second);
+        Assert.Equal(HttpStatusCode.Created, secondResponse.StatusCode);
     }
 }
