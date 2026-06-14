@@ -96,14 +96,6 @@ export const AppHeader = () => {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>{currentUser?.fullName ?? Texts.user}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {canNavMyTimesheets && currentUser && (
-                <>
-                  <DropdownMenuItem asChild>
-                    <Link to={Routes.employee(currentUser.id)}>{Texts.myTimesheets}</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
               <DropdownMenuItem
                 onSelect={(event) => {
                   event.preventDefault();
