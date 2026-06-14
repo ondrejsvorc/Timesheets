@@ -41,7 +41,7 @@ const ProjectContractsContent = () => {
   const [state, dispatch] = useImmerReducer(projectContractsReducer, response.projectContracts);
   const { filter, setFilter, filtered } = useContractsFilter(state);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const canAddContract = useCan(UiAction.contracts.add);
+  const canAddContract = useCan(UiAction.contracts.add, { projectId: projectId ?? undefined });
 
   return (
     <>
@@ -132,8 +132,8 @@ interface ContractRowProps {
 export const ContractRow = ({ contract, onEdit, onDelete }: ContractRowProps) => {
   const navigate = useNavigateFrom();
   const projectId = useParams().id;
-  const canEdit = useCan(UiAction.contracts.edit);
-  const canDelete = useCan(UiAction.contracts.delete);
+  const canEdit = useCan(UiAction.contracts.edit, { projectId, contractId: contract.id });
+  const canDelete = useCan(UiAction.contracts.delete, { projectId, contractId: contract.id });
 
   return (
     <TableRow className="cursor-pointer" onClick={() => projectId && navigate(Routes.contract(projectId, contract.id))}>

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 
@@ -12,7 +13,18 @@ public sealed class GetContractDeleteImpact : IEndpoint
 
     private static async Task<Results<Ok<ContractDeleteImpact>, NotFound, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
-        if (!user.IsGlobalManagerRole())
+        Guid? projectId = await dbContext.Contracts
+            .AsNoTracking()
+            .Where(c => c.Id == id)
+            .Select(c => (Guid?)c.ProjectId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (projectId is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        if (!user.CanManageContract(id, projectId.Value))
         {
             return TypedResults.Forbid();
         }

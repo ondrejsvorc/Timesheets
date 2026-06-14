@@ -14,7 +14,7 @@ public sealed class DeleteProjectContract : IEndpoint
 
     private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(Guid projectId, Guid contractId, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken, [FromQuery] bool force = false)
     {
-        if (!user.IsGlobalManagerRole())
+        if (!user.CanManageContract(contractId, projectId))
         {
             return TypedResults.Forbid();
         }

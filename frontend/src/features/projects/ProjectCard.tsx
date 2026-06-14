@@ -44,7 +44,7 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
           <CardTitle className="group-hover:text-primary transition-colors">{project.name}</CardTitle>
           {project.registrationNumber && <div className="text-sm text-muted-foreground font-mono">{project.registrationNumber}</div>}
           <CardAction>
-            <Can action={UiAction.projects.edit}>
+            <Can action={UiAction.projects.edit} context={{ projectId: project.id }}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">

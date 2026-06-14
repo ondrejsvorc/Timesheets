@@ -16,7 +16,7 @@ public sealed class ArchiveProject : IEndpoint
 
     private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
-        if (!user.IsGlobalManagerRole())
+        if (!user.CanManageProject(id))
         {
             return TypedResults.Forbid();
         }
