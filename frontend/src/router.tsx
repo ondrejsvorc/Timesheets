@@ -5,7 +5,7 @@ import { denyUnless, loadAuthContext, resolveHomePath } from "./auth/routeGuards
 import { can, UiAction } from "./auth/uiPermissions";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { FullscreenLoader } from "./components/shared/layout/FullscreenLoader";
-import { BaseUrl } from "./constants/api";
+import { goToLogin } from "./constants/api";
 import { Routes } from "./constants/routes";
 import { Texts } from "./constants/texts";
 import { EmployeeRolesPage } from "./features/admin/EmployeeRolesPage";
@@ -77,7 +77,7 @@ const redirectToLogin = ({ request }: { request: Request }) => {
   const url = new URL(request.url);
   const returnToRaw = url.searchParams.get("returnTo") ?? "/";
   const returnTo = returnToRaw.startsWith("/redirecting") ? "/" : returnToRaw;
-  window.location.assign(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(returnTo)}`);
+  goToLogin(returnTo);
   return null;
 };
 

@@ -11,6 +11,7 @@ const delayEnabled = false;
 const delayMs = { fast: 600, slow: 1200, slowest: 1800 } as const;
 
 const sessionExpiredHandlers = new Set<() => void>();
+let loginRedirectStarted = false;
 
 export const onSessionExpired = (handler: () => void): (() => void) => {
   sessionExpiredHandlers.add(handler);
@@ -24,13 +25,25 @@ export const withDelay = async <T>(speed: keyof typeof delayMs, fn: () => Promis
   return fn();
 };
 
-export const goToLogin = () => {
+export const goToLogin = (returnTo?: string) => {
+  if (loginRedirectStarted || typeof window === "undefined") {
+    return;
+  }
+
+  const topWindow = window.top ?? window;
+  const currentPath = topWindow.location.pathname;
+  if (currentPath.startsWith("/auth/") || currentPath === "/login-oidc" || currentPath === "/logout-oidc") {
+    return;
+  }
+
+  loginRedirectStarted = true;
   for (const handler of sessionExpiredHandlers) {
     handler();
   }
-  const returnTo = `${window.location.pathname}${window.location.search}`;
-  const safeReturnTo = returnTo.startsWith("/redirecting") ? "/" : returnTo;
-  window.location.assign(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(safeReturnTo)}`);
+
+  const resolvedReturnTo = returnTo ?? `${window.location.pathname}${window.location.search}`;
+  const safeReturnTo = resolvedReturnTo.startsWith("/redirecting") ? "/" : resolvedReturnTo;
+  topWindow.location.replace(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(safeReturnTo)}`);
 };
 
 const isAuthFailure = (response: Response): boolean => response.type === "opaqueredirect" || response.status === 401 || (response.status >= 300 && response.status < 400);
