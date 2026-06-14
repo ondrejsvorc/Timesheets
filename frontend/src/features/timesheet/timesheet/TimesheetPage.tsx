@@ -1,11 +1,11 @@
-import { Suspense, startTransition, useCallback, useMemo, useRef, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useNavigate, useRevalidator, useRouteLoaderData, useSearchParams } from "react-router";
+import { startTransition, useCallback, useMemo, useRef, useState } from "react";
+import { useAsyncValue, useLoaderData, useNavigate, useRevalidator, useRouteLoaderData, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { BackButton } from "@/components/shared/buttons/ActionButtons";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Routes } from "@/constants/routes";
@@ -44,30 +44,22 @@ export const TimesheetPage = () => {
   return (
     <TimesheetWorkflowRefreshProvider value={onWorkflowSuccess}>
       <div>
-        <Suspense fallback={<GenericSkeleton />}>
-          <Await resolve={loaderData.employeePromise}>
-            <TimesheetPageHeader />
-          </Await>
-        </Suspense>
+        <AwaitContent promise={loaderData.employeePromise}>
+          <TimesheetPageHeader />
+        </AwaitContent>
       </div>
       <div>
-        <Suspense fallback={<GenericSkeleton />}>
-          <Await resolve={loaderData.overviewPromise}>
-            <TimesheetsOverview />
-          </Await>
-        </Suspense>
+        <AwaitContent promise={loaderData.overviewPromise}>
+          <TimesheetsOverview />
+        </AwaitContent>
       </div>
-      <Suspense fallback={<GenericSkeleton />}>
-        <Await resolve={loaderData.timesheetPromise}>
-          <TimesheetPageContent />
-        </Await>
-      </Suspense>
+      <AwaitContent promise={loaderData.timesheetPromise}>
+        <TimesheetPageContent />
+      </AwaitContent>
       {commentsScope && (
-        <Suspense fallback={<GenericSkeleton />}>
-          <Await resolve={loaderData.commentsPromise}>
-            <TimesheetComments scope={commentsScope} />
-          </Await>
-        </Suspense>
+        <AwaitContent promise={loaderData.commentsPromise}>
+          <TimesheetComments scope={commentsScope} />
+        </AwaitContent>
       )}
     </TimesheetWorkflowRefreshProvider>
   );
@@ -106,9 +98,9 @@ const TimesheetPageContent = () => {
   const { overviewPromise } = useLoaderData() as TimesheetPageLoaderData;
 
   return (
-    <Await resolve={overviewPromise}>
+    <AwaitContent promise={overviewPromise}>
       <TimesheetEditor key={initialTimesheet.id} initialTimesheet={initialTimesheet} />
-    </Await>
+    </AwaitContent>
   );
 };
 
@@ -204,11 +196,9 @@ const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
   return (
     <div className={cn(isFullscreen && "fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background p-4 md:p-6")}>
       {!isFullscreen && (
-        <Suspense fallback={<GenericSkeleton />}>
-          <Await resolve={overviewPromise}>
-            <CombinedTimesheetSubHeader />
-          </Await>
-        </Suspense>
+        <AwaitContent promise={overviewPromise}>
+          <CombinedTimesheetSubHeader />
+        </AwaitContent>
       )}
       <TimesheetWorkflowToolbar
         timesheet={timesheet}

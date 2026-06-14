@@ -1,5 +1,5 @@
 import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
-import { Texts } from "@/constants/texts";
+import { appendTimesheetDeleteImpactConsequences } from "@/utils/deleteImpactConsequences";
 
 export interface DeleteProjectImpactResponse {
   contractCount: number;
@@ -12,41 +12,9 @@ export interface DeleteProjectImpactResponse {
   canForceDelete: boolean;
 }
 
-const formatCount = (template: string, count: number) => template.replace("{count}", String(count));
-
 export const formatProjectDeleteImpactConsequences = (impact: DeleteProjectImpactResponse): string[] => {
   const consequences: string[] = [];
-
-  if (impact.contractCount > 0) {
-    consequences.push(formatCount(Texts.deleteImpactContracts, impact.contractCount));
-  }
-
-  if (impact.positionCount > 0) {
-    consequences.push(formatCount(Texts.deleteImpactPositions, impact.positionCount));
-  }
-
-  if (impact.draftProjectTimesheetCount > 0) {
-    consequences.push(formatCount(Texts.deleteImpactProjectTimesheetsDraft, impact.draftProjectTimesheetCount));
-  }
-
-  if (impact.submittedProjectTimesheetCount > 0) {
-    consequences.push(formatCount(Texts.deleteImpactProjectTimesheetsSubmitted, impact.submittedProjectTimesheetCount));
-  }
-
-  if (impact.approvedProjectTimesheetCount > 0) {
-    consequences.push(formatCount(Texts.deleteImpactProjectTimesheetsApproved, impact.approvedProjectTimesheetCount));
-  }
-
-  consequences.push(Texts.deleteImpactAttendancePreserved);
-
-  if (impact.hasProtectedTimesheets) {
-    if (impact.canForceDelete) {
-      consequences.push(Texts.deleteImpactForceDelete);
-    } else {
-      consequences.push(Texts.deleteImpactProtectedBlocked);
-    }
-  }
-
+  appendTimesheetDeleteImpactConsequences(consequences, impact, { contractCount: impact.contractCount });
   return consequences;
 };
 

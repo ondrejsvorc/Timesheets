@@ -1,5 +1,5 @@
 import type { FetcherWithComponents } from "react-router";
-import { ConsequenceDialog } from "@/components/shared/dialogs/ConsequenceDialog";
+import { canConfirmProtectedDelete, FetcherConsequenceDialog, forceProtectedDelete } from "@/components/shared/dialogs/FetcherConsequenceDialog";
 import { Texts } from "@/constants/texts";
 import { deleteProject } from "./api/deleteProject";
 import { type DeleteProjectImpactResponse, formatProjectDeleteImpactConsequences } from "./api/projectDeleteImpact";
@@ -12,33 +12,20 @@ interface ProjectDeleteDialogProps {
   onDeleted: () => void;
 }
 
-export const ProjectDeleteDialog = ({ projectId, projectName, fetcher, onClose, onDeleted }: ProjectDeleteDialogProps) => {
-  const impact = fetcher.data;
-  const loading = fetcher.state === "loading";
-
-  const title = Texts.deleteTitle.replace("{name}", projectName);
-  const consequences = impact ? formatProjectDeleteImpactConsequences(impact) : [];
-  const confirmDisabled = !impact || Boolean(impact.hasProtectedTimesheets && !impact.canForceDelete);
-  const useForce = Boolean(impact?.hasProtectedTimesheets && impact.canForceDelete);
-
-  return (
-    <ConsequenceDialog
-      open
-      title={title}
-      description={Texts.deleteDescription}
-      consequences={consequences}
-      confirmLabel={Texts.delete}
-      confirmDisabled={confirmDisabled}
-      loading={loading}
-      loadingContent={<p className="text-sm text-muted-foreground">{Texts.deleteImpactLoading}</p>}
-      onCancel={onClose}
-      onConfirm={async (_event, signal) => {
-        if (!impact) return;
-        await deleteProject(projectId, { force: useForce }, signal);
-        if (!signal.aborted) {
-          onDeleted();
-        }
-      }}
-    />
-  );
-};
+export const ProjectDeleteDialog = ({ projectId, projectName, fetcher, onClose, onDeleted }: ProjectDeleteDialogProps) => (
+  <FetcherConsequenceDialog
+    fetcher={fetcher}
+    title={Texts.deleteTitle.replace("{name}", projectName)}
+    description={Texts.deleteDescription}
+    confirmLabel={Texts.delete}
+    formatConsequences={formatProjectDeleteImpactConsequences}
+    canConfirm={canConfirmProtectedDelete}
+    onClose={onClose}
+    onConfirm={async (impact, signal) => {
+      await deleteProject(projectId, { force: forceProtectedDelete(impact) }, signal);
+      if (!signal.aborted) {
+        onDeleted();
+      }
+    }}
+  />
+);

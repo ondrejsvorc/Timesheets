@@ -3,8 +3,9 @@ import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
+import { FormDialog } from "@/components/shared/dialogs/FormDialog";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { EmployeeTypeAcademicId, EmployeeTypeNonAcademicId } from "@/constants/api";
 import { Texts } from "@/constants/texts";
@@ -53,8 +54,10 @@ export const EditEmployeeTypeDialog = ({ open, employee, onClose, onSaved }: Edi
   };
 
   return (
-    <Dialog
+    <FormDialog
       open={open}
+      title={Texts.employeeType}
+      onClose={handleClose}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           handleClose();
@@ -63,33 +66,27 @@ export const EditEmployeeTypeDialog = ({ open, employee, onClose, onSaved }: Edi
         form.reset({ employeeTypeId: employee.employeeTypeId ?? "" });
       }}
     >
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{Texts.employeeType}</DialogTitle>
-        </DialogHeader>
+      <Form {...form}>
+        <form className="space-y-4">
+          <FormField
+            control={form.control}
+            name="employeeTypeId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{Texts.employeeType}</FormLabel>
+                <FormControl>
+                  <ComboBox value={field.value} items={items} placeholder="" onChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
 
-        <Form {...form}>
-          <form className="space-y-4">
-            <FormField
-              control={form.control}
-              name="employeeTypeId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{Texts.employeeType}</FormLabel>
-                  <FormControl>
-                    <ComboBox value={field.value} items={items} placeholder="" onChange={field.onChange} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            <DialogFooter>
-              <DialogCancelButton onClick={handleClose} />
-              <DialogConfirmButton onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()} />
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <DialogCancelButton onClick={handleClose} />
+            <DialogConfirmButton onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()} />
+          </DialogFooter>
+        </form>
+      </Form>
+    </FormDialog>
   );
 };

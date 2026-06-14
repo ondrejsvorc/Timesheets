@@ -1,10 +1,10 @@
-import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useFetcher, useLoaderData, useRevalidator } from "react-router";
+import { useState } from "react";
+import { useAsyncValue, useFetcher, useLoaderData, useRevalidator } from "react-router";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
@@ -23,11 +23,9 @@ export const EmployeePositions = () => {
   };
 
   return (
-    <Suspense fallback={<GenericSkeleton />}>
-      <Await resolve={promise}>
-        <EmployeePositionsContent />
-      </Await>
-    </Suspense>
+    <AwaitContent promise={promise}>
+      <EmployeePositionsContent />
+    </AwaitContent>
   );
 };
 

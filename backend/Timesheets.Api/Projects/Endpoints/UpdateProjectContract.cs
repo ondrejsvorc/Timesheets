@@ -16,6 +16,7 @@ public sealed class UpdateProjectContract : IEndpoint
            .WithRequestValidation<Request>();
 
     public sealed record Request(string Name, string RegistrationNumber);
+    public sealed record Response(ProjectContractItem ProjectContract);
     public sealed class Validator : AbstractValidator<Request>
     {
         public Validator()
@@ -25,7 +26,7 @@ public sealed class UpdateProjectContract : IEndpoint
         }
     }
 
-    private static async Task<Results<NoContent, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid projectId, Guid contractId, [FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid projectId, Guid contractId, [FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsGlobalManagerRole())
         {
@@ -45,6 +46,16 @@ public sealed class UpdateProjectContract : IEndpoint
             return TypedResults.NotFound();
         }
 
-        return TypedResults.NoContent();
+        ProjectContractItem? contract = await dbContext.Contracts
+            .AsNoTracking()
+            .Where(c => c.ProjectId == projectId && c.Id == contractId)
+            .Select(c => new ProjectContractItem(
+                c.Id,
+                c.Name,
+                c.RegistrationNumber,
+                c.ContractEmployees.Count))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return contract is null ? TypedResults.NotFound() : TypedResults.Ok(new Response(contract));
     }
 }

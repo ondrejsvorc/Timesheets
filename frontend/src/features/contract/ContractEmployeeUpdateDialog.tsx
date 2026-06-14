@@ -1,11 +1,9 @@
-import { useEffect, useState } from "react";
-import { ConsequenceDialog } from "@/components/shared/dialogs/ConsequenceDialog";
+import { useEffect } from "react";
+import { useFetcher } from "react-router";
+import { FetcherConsequenceDialog } from "@/components/shared/dialogs/FetcherConsequenceDialog";
+import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import {
-  type ContractEmployeeUpdateImpactResponse,
-  formatUpdateImpactConsequences,
-  getContractEmployeeUpdateImpact,
-} from "./api/contractEmployeeUpdateImpact";
+import { type ContractEmployeeUpdateImpactResponse, formatUpdateImpactConsequences } from "./api/contractEmployeeUpdateImpact";
 import { type UpdateContractEmployeeRequest, updateContractEmployee } from "./api/updateContractEmployee";
 
 interface ContractEmployeeUpdateDialogProps {
@@ -17,36 +15,22 @@ interface ContractEmployeeUpdateDialogProps {
 }
 
 export const ContractEmployeeUpdateDialog = ({ contractId, contractEmployeeId, request, onClose, onSaved }: ContractEmployeeUpdateDialogProps) => {
-  const [impact, setImpact] = useState<ContractEmployeeUpdateImpactResponse | null>(null);
+  const fetcher = useFetcher<ContractEmployeeUpdateImpactResponse>();
 
   useEffect(() => {
-    const controller = new AbortController();
-    getContractEmployeeUpdateImpact(contractId, contractEmployeeId, request, controller.signal)
-      .then(setImpact)
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setImpact(null);
-        }
-      });
-    return () => controller.abort();
-  }, [contractId, contractEmployeeId, request]);
-
-  const title = Texts.editPositionTitle;
-  const consequences = impact ? formatUpdateImpactConsequences(impact) : [];
+    fetcher.submit({ ...request }, { method: "POST", encType: "application/json", action: Routes.resourceContractEmployeeUpdateImpact(contractId, contractEmployeeId) });
+  }, [contractId, contractEmployeeId, request, fetcher]);
 
   return (
-    <ConsequenceDialog
-      open
-      title={title}
+    <FetcherConsequenceDialog
+      fetcher={fetcher}
+      title={Texts.editPositionTitle}
       description={Texts.updatePositionDescription}
-      consequences={consequences}
       confirmLabel={Texts.confirm}
-      confirmDisabled={Boolean(impact && !impact.canUpdate)}
-      loading={impact === null}
-      loadingContent={<p className="text-sm text-muted-foreground">{Texts.deleteImpactLoading}</p>}
-      onCancel={onClose}
-      onConfirm={async (_event, signal) => {
-        if (!impact?.canUpdate) return;
+      formatConsequences={formatUpdateImpactConsequences}
+      canConfirm={(impact) => impact.canUpdate}
+      onClose={onClose}
+      onConfirm={async (_impact, signal) => {
         await updateContractEmployee(contractId, contractEmployeeId, request, signal);
         if (!signal.aborted) {
           onSaved();

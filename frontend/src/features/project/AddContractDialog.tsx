@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/dialogs/FormDialog";
 import { Texts } from "@/constants/texts";
 import { createProjectContract } from "./api/createProjectContract";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
@@ -26,13 +26,8 @@ export const AddContractDialog = ({ projectId, open, onClose, onSaved }: AddCont
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{Texts.newContract}</DialogTitle>
-        </DialogHeader>
-        <ContractForm onSubmit={handleSubmit} onCancel={onClose} />
-      </DialogContent>
-    </Dialog>
+    <FormDialog open={open} title={Texts.newContract} onClose={onClose}>
+      <ContractForm onSubmit={handleSubmit} onCancel={onClose} />
+    </FormDialog>
   );
 };

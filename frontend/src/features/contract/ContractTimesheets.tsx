@@ -1,5 +1,4 @@
-import { Suspense } from "react";
-import { Await, Link, useAsyncValue, useLoaderData, useLocation, useNavigate, useNavigation } from "react-router";
+import { Link, useAsyncValue, useLoaderData, useLocation, useNavigate, useNavigation } from "react-router";
 import { useImmer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
@@ -7,6 +6,7 @@ import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
 import { ActionDropdownMenu, EditAction } from "@/components/shared/menus/ActionDropdownMenu";
 import { Button } from "@/components/ui/button";
@@ -38,11 +38,9 @@ export const ContractTimesheets = () => {
   const location = useLocation();
 
   return (
-    <Suspense fallback={<GenericSkeleton />}>
-      <Await resolve={promise}>
-        <ContractTimesheetsContent key={location.search} filter={filter} filterOptions={filterOptions} />
-      </Await>
-    </Suspense>
+    <AwaitContent promise={promise}>
+      <ContractTimesheetsContent key={location.search} filter={filter} filterOptions={filterOptions} />
+    </AwaitContent>
   );
 };
 

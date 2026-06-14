@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { BusyButton } from "@/components/shared/buttons/BusyButton";
 import { DialogCancelButton } from "@/components/shared/buttons/DialogButtons";
@@ -74,18 +74,17 @@ export const TimesheetWorkflowConfirmDialog = ({ action, periodLabel, targetLabe
   const open = action !== null;
   const config = action ? getWorkflowActionConfig(action, periodLabel, targetLabel) : null;
 
-  useEffect(() => {
-    if (!open) {
-      setComment("");
-    }
-  }, [open]);
+  const handleClose = () => {
+    setComment("");
+    onClose();
+  };
 
   if (!config) {
     return null;
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{config.title}</DialogTitle>
@@ -104,12 +103,12 @@ export const TimesheetWorkflowConfirmDialog = ({ action, periodLabel, targetLabe
         </div>
 
         <DialogFooter>
-          <DialogCancelButton onClick={onClose} />
+          <DialogCancelButton onClick={handleClose} />
           <BusyButton
             icon={<Check className="size-4" />}
             onClick={async (_, signal) => {
               await onConfirm(comment, signal);
-              onClose();
+              handleClose();
             }}
             onSuccess={() => toast.success(Texts.actionSuccessful)}
             onError={(error) => toast.error(parseApiErrorMessage(error, Texts.actionFailed))}

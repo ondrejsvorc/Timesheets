@@ -1,12 +1,12 @@
 import { type Draft, produce } from "immer";
 import { ChevronDown, Upload } from "lucide-react";
-import { Suspense, useMemo, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useLocation, useNavigate, useRevalidator } from "react-router";
+import { useMemo, useState } from "react";
+import { useAsyncValue, useLoaderData, useLocation, useNavigate, useRevalidator } from "react-router";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { EmptyState } from "@/components/shared/data/EmptyState";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,11 +30,9 @@ export const EmployeeTimesheets = () => {
   const { filter, promise } = useLoaderData() as EmployeeTimesheetsLoaderData;
 
   return (
-    <Suspense fallback={<GenericSkeleton />}>
-      <Await resolve={promise}>
-        <EmployeeTimesheetsContent filter={filter} />
-      </Await>
-    </Suspense>
+    <AwaitContent promise={promise}>
+      <EmployeeTimesheetsContent filter={filter} />
+    </AwaitContent>
   );
 };
 

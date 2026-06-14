@@ -1,11 +1,11 @@
-import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { useState } from "react";
+import { useAsyncValue, useLoaderData } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Texts } from "@/constants/texts";
@@ -15,7 +15,6 @@ import type { GetProjectsResponse } from "./api/getProjects";
 import type { ProjectItem } from "./api/shared/projectItem";
 import { type ProjectsFilterCriteria, useProjectsFilter } from "./hooks/useProjectsFilter";
 import { ProjectCard } from "./ProjectCard";
-import { ProjectsStatusFilter } from "./ProjectsStatusFilter";
 import { projectsReducer } from "./utils/projectsReducer";
 
 export const ProjectsPage = () => {
@@ -28,16 +27,20 @@ export const ProjectsPage = () => {
       <PageHeader>
         <PageTitle>{Texts.projects}</PageTitle>
       </PageHeader>
-      <Suspense fallback={<GenericSkeleton />}>
-        <Await resolve={promise}>
-          <ProjectsPageContent />
-        </Await>
-      </Suspense>
+      <AwaitContent promise={promise}>
+        <ProjectsPageContent />
+      </AwaitContent>
     </>
   );
 };
 
-const { FilterSearchInput } = createFilterControls<ProjectsFilterCriteria>();
+const { FilterSearchInput, FilterSelect } = createFilterControls<ProjectsFilterCriteria>();
+
+const projectStatusFilterOptions = [
+  { value: "active", label: Texts.activeOnly },
+  { value: "archived", label: Texts.archivedOnly },
+  { value: "all", label: Texts.allProjects },
+] as const;
 
 const ProjectsPageContent = () => {
   const response = useAsyncValue() as GetProjectsResponse;
@@ -60,7 +63,7 @@ const ProjectsPageContent = () => {
         }
       >
         <FilterSearchInput placeholder={Texts.search} />
-        <ProjectsStatusFilter />
+        <FilterSelect field="status" options={projectStatusFilterOptions} />
       </FilterBar>
       {filtered.length === 0 ? (
         <EmptyState />

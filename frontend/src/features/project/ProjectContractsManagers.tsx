@@ -1,12 +1,13 @@
-import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useFetcher, useLoaderData, useParams } from "react-router";
+import type { Dispatch } from "react";
+import { useState } from "react";
+import { useAsyncValue, useFetcher, useLoaderData, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { AddButton, DeleteButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
@@ -17,10 +18,8 @@ import { AddContractManagerDialog, type ContractManagerFormData } from "./AddCon
 import type { GetProjectContractsManagersResponse, ProjectContractManagerItem } from "./api/getProjectContractsManagers";
 import { removeContractManager } from "./api/removeContractManager";
 import type { ContractsFilterCriteria } from "./hooks/useContractsFilter";
-import { useContractsManagersDispatch } from "./hooks/useContractsManagersDispatch";
 import { useContractsManagersFilter } from "./hooks/useContractsManagersFilter";
-import { ContractsManagersContext } from "./utils/contractsManagersContext";
-import { contractsManagersReducer } from "./utils/contractsManagersReducer";
+import { type ContractsManagersAction, contractsManagersReducer } from "./utils/contractsManagersReducer";
 
 export const ProjectContractsManagers = () => {
   const { promise } = useLoaderData() as {
@@ -28,11 +27,9 @@ export const ProjectContractsManagers = () => {
   };
 
   return (
-    <Suspense fallback={<GenericSkeleton />}>
-      <Await resolve={promise}>
-        <ProjectContractsManagersContent />
-      </Await>
-    </Suspense>
+    <AwaitContent promise={promise}>
+      <ProjectContractsManagersContent />
+    </AwaitContent>
   );
 };
 
@@ -51,7 +48,7 @@ const ProjectContractsManagersContent = () => {
   const canAddManager = useCan(UiAction.contractManagers.add, { projectId: projectId ?? undefined });
 
   return (
-    <ContractsManagersContext.Provider value={dispatch}>
+    <>
       <FilterBar
         filter={filter}
         setFilter={setFilter}
@@ -72,7 +69,7 @@ const ProjectContractsManagersContent = () => {
       >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-      <ContractsManagersTable managers={filtered} />
+      <ContractsManagersTable managers={filtered} dispatch={dispatch} />
       <AddContractManagerDialog
         formFetcher={managerFormFetcher}
         existingManagers={state.managers}
@@ -95,15 +92,16 @@ const ProjectContractsManagersContent = () => {
           }
         }}
       />
-    </ContractsManagersContext.Provider>
+    </>
   );
 };
 
 interface ContractsManagersTableProps {
   managers: ProjectContractManagerItem[];
+  dispatch: Dispatch<ContractsManagersAction>;
 }
 
-export const ContractsManagersTable = ({ managers }: ContractsManagersTableProps) => {
+export const ContractsManagersTable = ({ managers, dispatch }: ContractsManagersTableProps) => {
   if (managers.length === 0) {
     return <EmptyState />;
   }
@@ -122,7 +120,7 @@ export const ContractsManagersTable = ({ managers }: ContractsManagersTableProps
         </TableHeader>
         <TableBody>
           {managers.map((manager) => (
-            <ContractManagerRow key={`${manager.contractId}-${manager.employeeId}`} manager={manager} />
+            <ContractManagerRow key={`${manager.contractId}-${manager.employeeId}`} manager={manager} dispatch={dispatch} />
           ))}
         </TableBody>
       </Table>
@@ -132,10 +130,10 @@ export const ContractsManagersTable = ({ managers }: ContractsManagersTableProps
 
 interface ContractManagerRowProps {
   manager: ProjectContractManagerItem;
+  dispatch: Dispatch<ContractsManagersAction>;
 }
 
-export const ContractManagerRow = ({ manager }: ContractManagerRowProps) => {
-  const dispatch = useContractsManagersDispatch();
+export const ContractManagerRow = ({ manager, dispatch }: ContractManagerRowProps) => {
   const navigate = useNavigateFrom();
   const { id: projectId } = useParams<{ id: string }>();
   const canRemove = useCan(UiAction.contractManagers.remove, { projectId: projectId ?? undefined });

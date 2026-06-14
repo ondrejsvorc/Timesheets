@@ -1,11 +1,12 @@
-import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useLoaderData, useParams } from "react-router";
+import type { Dispatch } from "react";
+import { useState } from "react";
+import { useAsyncValue, useFetcher, useLoaderData, useParams } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { ActionButtons, AddButton, DeleteButton, EditButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
@@ -13,14 +14,13 @@ import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { AddContractDialog } from "./AddContractDialog";
+import type { DeleteContractImpactResponse } from "./api/contractDeleteImpact";
 import type { GetProjectContractsResponse } from "./api/getProjectContracts";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
 import { ContractDeleteDialog } from "./ContractDeleteDialog";
 import { EditContractDialog } from "./EditContractDialog";
 import { type ContractsFilterCriteria, useContractsFilter } from "./hooks/useContractsFilter";
-import { useProjectContractsDispatch } from "./hooks/useProjectContractsDispatch";
-import { ProjectContractsContext } from "./utils/projectContractsContext";
-import { projectContractsReducer } from "./utils/projectContractsReducer";
+import { type ProjectContractsAction, projectContractsReducer } from "./utils/projectContractsReducer";
 
 export const ProjectContracts = () => {
   const { promise } = useLoaderData() as {
@@ -28,11 +28,9 @@ export const ProjectContracts = () => {
   };
 
   return (
-    <Suspense fallback={<GenericSkeleton />}>
-      <Await resolve={promise}>
-        <ProjectContractsContent />
-      </Await>
-    </Suspense>
+    <AwaitContent promise={promise}>
+      <ProjectContractsContent />
+    </AwaitContent>
   );
 };
 
@@ -47,7 +45,7 @@ const ProjectContractsContent = () => {
   const canAddContract = useCan(UiAction.contracts.add);
 
   return (
-    <ProjectContractsContext.Provider value={dispatch}>
+    <>
       <FilterBar
         filter={filter}
         setFilter={setFilter}
@@ -55,7 +53,7 @@ const ProjectContractsContent = () => {
       >
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-      <ContractsTable contracts={filtered} />
+      <ContractsTable contracts={filtered} dispatch={dispatch} />
       <AddContractDialog
         open={isAddOpen}
         projectId={projectId ?? ""}
@@ -65,18 +63,25 @@ const ProjectContractsContent = () => {
           setIsAddOpen(false);
         }}
       />
-    </ProjectContractsContext.Provider>
+    </>
   );
 };
 
 interface ContractsTableProps {
   contracts: ProjectContractItem[];
+  dispatch: Dispatch<ProjectContractsAction>;
 }
-export const ContractsTable = ({ contracts }: ContractsTableProps) => {
+
+export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => {
   const { id: projectId } = useParams<{ id: string }>();
   const [contractToEdit, setContractToEdit] = useState<ProjectContractItem | null>(null);
   const [contractToDelete, setContractToDelete] = useState<ProjectContractItem | null>(null);
-  const dispatch = useProjectContractsDispatch();
+  const deleteImpactFetcher = useFetcher<DeleteContractImpactResponse>();
+
+  const handleDeleteRequest = (contract: ProjectContractItem) => {
+    deleteImpactFetcher.load(Routes.resourceContractDeleteImpact(contract.id));
+    setContractToDelete(contract);
+  };
 
   if (contracts.length === 0) {
     return <EmptyState />;
@@ -95,7 +100,7 @@ export const ContractsTable = ({ contracts }: ContractsTableProps) => {
           </TableHeader>
           <TableBody>
             {contracts.map((contract) => (
-              <ContractRow key={contract.id} contract={contract} onEdit={setContractToEdit} onDelete={setContractToDelete} />
+              <ContractRow key={contract.id} contract={contract} onEdit={setContractToEdit} onDelete={handleDeleteRequest} />
             ))}
           </TableBody>
         </Table>
@@ -118,6 +123,7 @@ export const ContractsTable = ({ contracts }: ContractsTableProps) => {
           projectId={projectId}
           contractId={contractToDelete.id}
           contractName={contractToDelete.name}
+          fetcher={deleteImpactFetcher}
           onClose={() => setContractToDelete(null)}
           onDeleted={() => {
             dispatch({ type: "delete", contractId: contractToDelete.id });

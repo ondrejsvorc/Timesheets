@@ -1,5 +1,5 @@
 import { useParams } from "react-router";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FormDialog } from "@/components/shared/dialogs/FormDialog";
 import { Texts } from "@/constants/texts";
 import type { ProjectContractItem } from "./api/shared/projectContractItem";
 import { updateProjectContract } from "./api/updateProjectContract";
@@ -17,7 +17,7 @@ export const EditContractDialog = ({ open, contract, onClose, onSaved }: EditCon
 
   const handleSubmit = async (values: ContractFormValues, signal: AbortSignal) => {
     if (!projectId) return;
-    await updateProjectContract(
+    const response = await updateProjectContract(
       projectId,
       contract.id,
       {
@@ -26,29 +26,20 @@ export const EditContractDialog = ({ open, contract, onClose, onSaved }: EditCon
       },
       signal,
     );
-    onSaved({
-      ...contract,
-      name: values.name,
-      registrationNumber: values.contractId,
-    });
+    onSaved(response.projectContract);
     onClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{Texts.editContract}</DialogTitle>
-        </DialogHeader>
-        <ContractForm
-          initialValues={{
-            name: contract.name,
-            contractId: contract.registrationNumber,
-          }}
-          onSubmit={handleSubmit}
-          onCancel={onClose}
-        />
-      </DialogContent>
-    </Dialog>
+    <FormDialog open={open} title={Texts.editContract} onClose={onClose}>
+      <ContractForm
+        initialValues={{
+          name: contract.name,
+          contractId: contract.registrationNumber,
+        }}
+        onSubmit={handleSubmit}
+        onCancel={onClose}
+      />
+    </FormDialog>
   );
 };

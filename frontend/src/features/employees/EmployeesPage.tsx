@@ -1,9 +1,9 @@
-import { lazy, Suspense } from "react";
-import { Await, Navigate, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
+import { lazy } from "react";
+import { Navigate, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
 import { useImmer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Routes } from "@/constants/routes";
@@ -32,11 +32,9 @@ export const EmployeesPage = () => {
       <PageHeader>
         <PageTitle>{Texts.employees}</PageTitle>
       </PageHeader>
-      <Suspense fallback={<GenericSkeleton />}>
-        <Await resolve={promise}>
-          <EmployeesPageContentLazy />
-        </Await>
-      </Suspense>
+      <AwaitContent promise={promise}>
+        <EmployeesPageContentLazy />
+      </AwaitContent>
     </>
   );
 };

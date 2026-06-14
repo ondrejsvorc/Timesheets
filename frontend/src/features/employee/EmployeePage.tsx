@@ -1,7 +1,8 @@
 import { Suspense } from "react";
-import { Await, useAsyncValue, useLoaderData } from "react-router";
+import { useAsyncValue, useLoaderData } from "react-router";
 import { BackButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { TabbedOutlet } from "@/components/shared/layout/TabbedOutlet";
 import { Routes } from "@/constants/routes";
@@ -17,11 +18,9 @@ export const EmployeePage = () => {
 
   return (
     <>
-      <Suspense fallback={<GenericSkeleton />}>
-        <Await resolve={promise}>
-          <EmployeePageHeader />
-        </Await>
-      </Suspense>
+      <AwaitContent promise={promise}>
+        <EmployeePageHeader />
+      </AwaitContent>
       <Suspense fallback={<GenericSkeleton />}>
         <TabbedOutlet />
       </Suspense>

@@ -1,12 +1,12 @@
 import { isBefore, parseISO, startOfDay } from "date-fns";
-import { Suspense, useState } from "react";
-import { Await, useAsyncValue, useFetcher, useLoaderData, useParams, useRevalidator } from "react-router";
+import { useState } from "react";
+import { useAsyncValue, useFetcher, useLoaderData, useParams, useRevalidator } from "react-router";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { AddButton, DeleteButton, EditButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
@@ -29,11 +29,9 @@ export const ContractEmployees = () => {
   };
 
   return (
-    <Suspense fallback={<GenericSkeleton />}>
-      <Await resolve={promise}>
-        <ContractEmployeesContent />
-      </Await>
-    </Suspense>
+    <AwaitContent promise={promise}>
+      <ContractEmployeesContent />
+    </AwaitContent>
   );
 };
 

@@ -1,11 +1,11 @@
-import { lazy, Suspense, useState } from "react";
-import { Await, Navigate, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
+import { lazy, useState } from "react";
+import { Navigate, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
 import { toast } from "sonner";
 import { useImmer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { EmptyState } from "@/components/shared/data/EmptyState";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -36,11 +36,9 @@ export const EmployeeRolesPage = () => {
         <PageTitle>{Texts.employeeRoles}</PageTitle>
         <PageSubtitle>{Texts.employeeRolesDescription}</PageSubtitle>
       </PageHeader>
-      <Suspense fallback={<GenericSkeleton />}>
-        <Await resolve={promise}>
-          <EmployeeRolesPageContentLazy />
-        </Await>
-      </Suspense>
+      <AwaitContent promise={promise}>
+        <EmployeeRolesPageContentLazy />
+      </AwaitContent>
     </>
   );
 };
