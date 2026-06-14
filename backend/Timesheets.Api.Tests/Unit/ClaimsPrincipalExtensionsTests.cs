@@ -28,11 +28,23 @@ public sealed class ClaimsPrincipalExtensionsTests
     }
 
     [Fact]
-    public void GetEmail_uses_preferred_username_when_email_is_unavailable()
+    public void GetEmail_uses_eduPersonPrincipalName()
     {
-        ClaimsPrincipal principal = Principal(new Claim("preferred_username", "st101971"));
+        ClaimsPrincipal principal = Principal(
+            new Claim("email", "ignored@students.ujep.cz"),
+            new Claim("eduPersonPrincipalName", " st101971@ujep.cz "));
 
-        Assert.Equal("st101971", principal.GetEmail());
+        Assert.Equal("st101971@ujep.cz", principal.GetEmail());
+    }
+
+    [Fact]
+    public void GetEmail_requires_eduPersonPrincipalName()
+    {
+        ClaimsPrincipal principal = Principal(new Claim("email", "ignored@students.ujep.cz"));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(principal.GetEmail);
+
+        Assert.Contains("eduPersonPrincipalName", exception.Message, StringComparison.Ordinal);
     }
 
     private static ClaimsPrincipal Principal(params Claim[] claims) =>

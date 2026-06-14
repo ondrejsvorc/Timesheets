@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using System.Security.Claims;
-using System.Text.Json;
 using CzechHolidays;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -160,9 +159,7 @@ public static class ConfigureServices
                 options.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
 
                 // Be explicit about claim mapping (IdP can return these either in id_token or from UserInfo).
-                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "email"));
-                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "mail"));
-                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "upn"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("eduPersonPrincipalName", ClaimValueTypes.String, "eduPersonPrincipalName"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("displayName", ClaimValueTypes.String, "displayName"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("displayName", ClaimValueTypes.String, "name"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("personalNumber", ClaimValueTypes.String, "personalNumber"));
@@ -228,19 +225,6 @@ public static class ConfigureServices
 
                         return Task.CompletedTask;
                     },
-                    OnUserInformationReceived = context =>
-                    {
-                        ILogger logger = context.HttpContext.RequestServices
-                            .GetRequiredService<ILoggerFactory>()
-                            .CreateLogger("OIDC-DIAGNOSTIC");
-
-                        logger.LogWarning(
-                            "OIDC raw UserInfo: {UserInfo}",
-                            context.User.RootElement.GetRawText()
-                        );
-
-                        return Task.CompletedTask;
-                    },
                     OnTokenValidated = async context =>
                     {
                         if (context.Principal is null)
@@ -257,22 +241,6 @@ public static class ConfigureServices
                         {
                             throw new InvalidOperationException("OIDC Principal is missing.");
                         }
-
-                        ILogger logger = context.HttpContext.RequestServices
-                            .GetRequiredService<ILoggerFactory>()
-                            .CreateLogger("OIDC-DIAGNOSTIC");
-
-                        Dictionary<string, string[]> claims = context.Principal.Claims
-                            .GroupBy(claim => claim.Type)
-                            .ToDictionary(
-                                group => group.Key,
-                                group => group.Select(claim => claim.Value).ToArray()
-                            );
-
-                        logger.LogWarning(
-                            "OIDC mapped claims: {Claims}",
-                            JsonSerializer.Serialize(claims)
-                        );
 
                         UserSynchronizer synchronizer = context.HttpContext.RequestServices.GetRequiredService<UserSynchronizer>();
                         await synchronizer.SyncFromPrincipalAsync(context.Principal, context.HttpContext.RequestAborted);

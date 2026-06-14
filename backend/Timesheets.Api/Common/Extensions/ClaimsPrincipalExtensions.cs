@@ -2,41 +2,17 @@ namespace Timesheets.Api.Common.Extensions;
 
 using System.Security.Claims;
 
-public static class ClaimsPrincipalExtensions
-{
-    private static readonly string[] EmailClaimTypes =
-    [
-        "email",
-        ClaimTypes.Email,
-        "mail",
-        "upn",
-        "preferred_username",
-    ];
-
-    public static bool IsAuthenticated(this ClaimsPrincipal principal) => principal.Identity?.IsAuthenticated == true;
-
-    public static string GetEmail(this ClaimsPrincipal principal)
-    {
-        foreach (string claimType in EmailClaimTypes)
-        {
-            string? value = principal.FindFirstValue(claimType)?.Trim();
-            if (!string.IsNullOrWhiteSpace(value) && value.Contains('@', StringComparison.Ordinal))
-            {
-                return value;
-            }
-        }
-
-        foreach (string claimType in EmailClaimTypes)
-        {
-            string? value = principal.FindFirstValue(claimType)?.Trim();
-            if (!string.IsNullOrWhiteSpace(value))
-            {
-                return value;
-            }
-        }
-
-        throw new InvalidOperationException("User email claim is missing.");
-    }
+public static class ClaimsPrincipalExtensions
+{
+    public static bool IsAuthenticated(this ClaimsPrincipal principal) => principal.Identity?.IsAuthenticated == true;
+
+    public static string GetEmail(this ClaimsPrincipal principal)
+    {
+        string? email = principal.FindFirstValue("eduPersonPrincipalName")?.Trim();
+        return !string.IsNullOrWhiteSpace(email)
+            ? email
+            : throw new InvalidOperationException("User eduPersonPrincipalName claim is missing.");
+    }
 
     public static string GetFullName(this ClaimsPrincipal principal)
     {
