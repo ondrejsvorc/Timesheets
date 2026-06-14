@@ -1,5 +1,5 @@
 import { redirect } from "react-router";
-import { BaseUrl, goToLogin } from "@/constants/api";
+import { BaseUrl, fetchWithAuth, goToLogin, onSessionExpired } from "@/constants/api";
 import { Routes } from "@/constants/routes";
 import type { CurrentUser } from "@/router";
 import { type CurrentUserPermissions, getCurrentUserPermissions } from "./api/getCurrentUserPermissions";
@@ -14,10 +14,9 @@ let cachedAuth: AuthContext | null = null;
 let authRequest: Promise<AuthContext> | null = null;
 
 const fetchAuthContext = async (): Promise<AuthContext> => {
-  const [permissions, userResponse] = await Promise.all([getCurrentUserPermissions().catch(() => null), fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" })]);
+  const [permissions, userResponse] = await Promise.all([getCurrentUserPermissions().catch(() => null), fetchWithAuth(`${BaseUrl}/auth/currentUser`)]);
 
   if (userResponse.status === 401) {
-    resetAuthContext();
     goToLogin();
     return new Promise(() => {});
   }
@@ -51,6 +50,8 @@ export const resetAuthContext = () => {
   cachedAuth = null;
   authRequest = null;
 };
+
+onSessionExpired(resetAuthContext);
 
 export const resolveHomePath = (auth: AuthContext): string => {
   if (can(auth.permissions, auth.currentUser?.id, UiAction.nav.projects)) {
