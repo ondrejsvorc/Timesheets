@@ -35,7 +35,7 @@ public sealed class DetectTimesheetImport : IEndpoint
 
     private static async Task<Results<Ok<Response>, BadRequest<string>, ForbidHttpResult>> Handle([FromForm] Request request, AppDbContext dbContext, [FromServices] IAttendanceTimesheetImportService importService, ICurrentUser user, CancellationToken cancellationToken)
     {
-        if (!user.IsGlobalManagerRole())
+        if (!user.IsGlobalManagerRole() && user.EmployeeId != request.EmployeeId)
         {
             return TypedResults.Forbid();
         }

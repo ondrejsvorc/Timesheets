@@ -13,6 +13,20 @@ const delayMs = { fast: 600, slow: 1200, slowest: 1800 } as const;
 const sessionExpiredHandlers = new Set<() => void>();
 let loginRedirectStarted = false;
 
+if (typeof window !== "undefined") {
+  const path = window.location.pathname;
+  if (!path.startsWith("/auth/") && path !== "/login-oidc" && path !== "/logout-oidc") {
+    loginRedirectStarted = false;
+  }
+}
+
+const isOidcCallbackInProgress = (): boolean => {
+  const top = window.top ?? window;
+  const path = top.location.pathname;
+  const search = top.location.search;
+  return path === "/login-oidc" || path === "/logout-oidc" || (search.includes("code=") && search.includes("state="));
+};
+
 export const onSessionExpired = (handler: () => void): (() => void) => {
   sessionExpiredHandlers.add(handler);
   return () => sessionExpiredHandlers.delete(handler);
@@ -46,7 +60,7 @@ export const goToLogin = (returnTo?: string) => {
   topWindow.location.replace(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(safeReturnTo)}`);
 };
 
-const isAuthFailure = (response: Response): boolean => response.type === "opaqueredirect" || response.status === 401 || (response.status >= 300 && response.status < 400);
+const isAuthFailure = (response: Response): boolean => response.status === 401 || response.type === "opaqueredirect";
 
 export const fetchWithAuth = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const response = await fetch(input, {
@@ -55,6 +69,9 @@ export const fetchWithAuth = async (input: RequestInfo | URL, init?: RequestInit
     redirect: "manual",
   });
   if (isAuthFailure(response)) {
+    if (typeof window !== "undefined" && isOidcCallbackInProgress()) {
+      return new Promise(() => {});
+    }
     goToLogin();
     return new Promise(() => {});
   }

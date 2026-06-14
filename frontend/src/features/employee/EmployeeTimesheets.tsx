@@ -76,7 +76,7 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
           filter={filter}
           setFilter={setFilter}
           actions={
-            <Can action={UiAction.timesheet.import}>
+            <Can action={UiAction.timesheet.import} context={{ employeeId: response.employeeId }}>
               <Button variant="outline" onClick={handleUploadClick}>
                 <Upload className="mr-2 h-4 w-4" />
                 {Texts.importFiles}
@@ -98,7 +98,7 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
         filter={filter}
         setFilter={setFilter}
         actions={
-          <Can action={UiAction.timesheet.import}>
+          <Can action={UiAction.timesheet.import} context={{ employeeId: response.employeeId }}>
             <Button variant="outline" onClick={handleUploadClick}>
               <Upload className="mr-2 h-4 w-4" />
               {Texts.importFiles}

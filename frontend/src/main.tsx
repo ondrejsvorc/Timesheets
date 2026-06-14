@@ -4,13 +4,18 @@ import { createRoot } from "react-dom/client";
 import { RouterProvider } from "react-router";
 import { router } from "./router";
 
-const rootElement = document.getElementById("root");
-if (!rootElement) {
-  throw new Error("Root element #root not found");
-}
+const { pathname, search, hash } = window.location;
+if (pathname !== "/login-oidc" && search.includes("code=") && search.includes("state=")) {
+  (window.top ?? window).location.replace(`${window.location.origin}/login-oidc${search}${hash}`);
+} else {
+  const rootElement = document.getElementById("root");
+  if (!rootElement) {
+    throw new Error("Root element #root not found");
+  }
 
-createRoot(rootElement).render(
-  <StrictMode>
-    <RouterProvider router={router} />
-  </StrictMode>,
-);
+  createRoot(rootElement).render(
+    <StrictMode>
+      <RouterProvider router={router} />
+    </StrictMode>,
+  );
+}
