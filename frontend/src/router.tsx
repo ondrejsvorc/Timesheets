@@ -34,7 +34,7 @@ import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { getCombinedTimesheet } from "./features/timesheet/timesheet/api/getCombinedTimesheet";
 import { getCombinedTimesheetOverview } from "./features/timesheet/timesheet/api/getCombinedTimesheetOverview";
 import { getTimesheetComments } from "./features/timesheet/timesheet/api/getTimesheetComments";
-import { TimesheetPage } from "./features/timesheet/timesheet/TimesheetPage";
+import { TimesheetPage, type TimesheetPageData } from "./features/timesheet/timesheet/TimesheetPage";
 
 export type CurrentUser = {
   id: string;
@@ -254,10 +254,12 @@ export const router = createBrowserRouter([
           await denyUnless(UiAction.timesheet.view, { employeeId }, request);
 
           return {
-            employeePromise: getEmployee(employeeId),
-            overviewPromise: getCombinedTimesheetOverview(employeeId, year, month),
-            timesheetPromise: getCombinedTimesheet(employeeId, year, month),
-            commentsPromise: getTimesheetComments(employeeId, year, month),
+            promise: Promise.all([
+              getEmployee(employeeId),
+              getCombinedTimesheetOverview(employeeId, year, month),
+              getCombinedTimesheet(employeeId, year, month),
+              getTimesheetComments(employeeId, year, month),
+            ]).then(([employee, overview, timesheet, comments]) => ({ employee, overview, timesheet, comments }) satisfies TimesheetPageData),
           };
         },
       },

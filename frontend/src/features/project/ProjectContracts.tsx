@@ -45,11 +45,7 @@ const ProjectContractsContent = () => {
 
   return (
     <>
-      <FilterBar
-        filter={filter}
-        setFilter={setFilter}
-        actions={canAddContract ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addContract}</AddButton> : undefined}
-      >
+      <FilterBar filter={filter} setFilter={setFilter} actions={canAddContract ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addContract}</AddButton> : undefined}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <ContractsTable contracts={filtered} dispatch={dispatch} />

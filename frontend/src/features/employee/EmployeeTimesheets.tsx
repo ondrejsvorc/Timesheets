@@ -84,17 +84,10 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
             </Can>
           }
         >
-          <EmployeeTimesheetsFilterControls
-            availableYears={availableYears}
-            availableMonths={availableMonths}
-            onlyUnapproved={onlyUnapproved}
-            onOnlyUnapprovedChange={setOnlyUnapproved}
-          />
+          <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} onlyUnapproved={onlyUnapproved} onOnlyUnapprovedChange={setOnlyUnapproved} />
         </FilterBar>
         <EmptyState />
-        {isUploadDialogOpen && (
-          <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => revalidator.revalidate()} />
-        )}
+        {isUploadDialogOpen && <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => revalidator.revalidate()} />}
       </>
     );
   }
@@ -113,12 +106,7 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
           </Can>
         }
       >
-        <EmployeeTimesheetsFilterControls
-          availableYears={availableYears}
-          availableMonths={availableMonths}
-          onlyUnapproved={onlyUnapproved}
-          onOnlyUnapprovedChange={setOnlyUnapproved}
-        />
+        <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} onlyUnapproved={onlyUnapproved} onOnlyUnapprovedChange={setOnlyUnapproved} />
       </FilterBar>
       <div className="rounded-md border p-4">
         <Table>
@@ -157,9 +145,7 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
           </TableBody>
         </Table>
       </div>
-      {isUploadDialogOpen && (
-        <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => revalidator.revalidate()} />
-      )}
+      {isUploadDialogOpen && <UploadTimesheetsDialog open={isUploadDialogOpen} onClose={() => setIsUploadDialogOpen(false)} onSuccess={() => revalidator.revalidate()} />}
     </>
   );
 };
@@ -171,12 +157,7 @@ interface EmployeeTimesheetsFilterControlsProps {
   onOnlyUnapprovedChange: (value: boolean) => void;
 }
 
-function EmployeeTimesheetsFilterControls({
-  availableYears,
-  availableMonths,
-  onlyUnapproved,
-  onOnlyUnapprovedChange,
-}: EmployeeTimesheetsFilterControlsProps) {
+function EmployeeTimesheetsFilterControls({ availableYears, availableMonths, onlyUnapproved, onOnlyUnapprovedChange }: EmployeeTimesheetsFilterControlsProps) {
   const { filter, setFilter } = useFilterContext<EmployeeTimesheetsFilterCriteria>();
   const [monthPopoverOpen, setMonthPopoverOpen] = useState(false);
   const selectedYear = availableYears.includes(filter.year) ? String(filter.year) : undefined;
@@ -248,11 +229,7 @@ function EmployeeTimesheetsFilterControls({
           </PopoverTrigger>
           <PopoverContent className="w-[200px] p-2" align="start">
             <div className="space-y-1">
-              <button
-                type="button"
-                className="flex w-full items-center space-x-2 rounded-sm px-2 py-1.5 text-left hover:bg-accent"
-                onClick={() => handleMonthToggle(null)}
-              >
+              <button type="button" className="flex w-full items-center space-x-2 rounded-sm px-2 py-1.5 text-left hover:bg-accent" onClick={() => handleMonthToggle(null)}>
                 <Checkbox checked={isAllMonthsSelected} className="pointer-events-none" />
                 <span className="text-sm font-normal">{Texts.allMonths}</span>
               </button>
@@ -260,12 +237,7 @@ function EmployeeTimesheetsFilterControls({
               {availableMonths.map((month) => {
                 const isSelected = filter.months?.includes(month) ?? false;
                 return (
-                  <button
-                    type="button"
-                    key={month}
-                    className="flex w-full items-center space-x-2 rounded-sm px-2 py-1.5 text-left hover:bg-accent"
-                    onClick={() => handleMonthToggle(month)}
-                  >
+                  <button type="button" key={month} className="flex w-full items-center space-x-2 rounded-sm px-2 py-1.5 text-left hover:bg-accent" onClick={() => handleMonthToggle(month)}>
                     <Checkbox checked={isSelected} className="pointer-events-none" />
                     <span className="text-sm font-normal">{CZECH_MONTH_NAMES[month]}</span>
                   </button>

@@ -16,24 +16,14 @@ export const EmployeeTabs = () => {
         <NavLink
           to={Routes.employee(id)}
           end
-          className={({ isActive }) =>
-            cn(
-              "pb-2 text-sm font-medium transition-colors",
-              isActive ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground",
-            )
-          }
+          className={({ isActive }) => cn("pb-2 text-sm font-medium transition-colors", isActive ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground")}
         >
           {Texts.timesheets}
         </NavLink>
 
         <NavLink
           to={Routes.employeePositions(id)}
-          className={({ isActive }) =>
-            cn(
-              "pb-2 text-sm font-medium transition-colors",
-              isActive ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground",
-            )
-          }
+          className={({ isActive }) => cn("pb-2 text-sm font-medium transition-colors", isActive ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground")}
         >
           {Texts.positions}
         </NavLink>

@@ -60,12 +60,7 @@ export const formatUpdateImpactConsequences = (impact: ContractEmployeeUpdateImp
   return consequences;
 };
 
-export const getContractEmployeeUpdateImpact = (
-  contractId: string,
-  contractEmployeeId: string,
-  request: UpdateContractEmployeeRequest,
-  signal?: AbortSignal,
-) =>
+export const getContractEmployeeUpdateImpact = (contractId: string, contractEmployeeId: string, request: UpdateContractEmployeeRequest, signal?: AbortSignal) =>
   withDelay("fast", () =>
     customFetch<ContractEmployeeUpdateImpactResponse>(`${ApiUrl}/contracts/${contractId}/employees/${contractEmployeeId}/update-impact`, {
       method: "POST",

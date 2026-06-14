@@ -1,5 +1,6 @@
 import type { Timesheet, TimesheetDay } from "./Timesheet";
 import { TimesheetLogic } from "./TimesheetLogic";
+import { parseInterruptionCodes, toMinutes } from "./timesheetUtils";
 
 export type ValidationType = "error" | "warning";
 
@@ -17,28 +18,12 @@ const MIN_BREAK_DURATION_HOURS = 0.5;
 const MIN_REST_BETWEEN_SHIFTS_HOURS = 11;
 /** Minimální odpracované hodiny před začátkem přestávky (interní pravidlo univerzity). */
 const MIN_HOURS_WORKED_BEFORE_BREAK_ALLOWED = 4;
-const parseInterruptionCodes = (raw: string): string[] => {
-  if (!raw.trim()) return [];
-  return raw
-    .split(",")
-    .map((code) => code.trim().toUpperCase())
-    .filter(Boolean);
-};
-
-const HOURS_PRECISION = 2;
-
-const toMinutes = (time: string): number => {
-  if (!time) return 0;
-  const [hours, minutes] = time.split(":").map(Number);
-  return (hours || 0) * 60 + (minutes || 0);
-};
 
 const toHours = (minutes: number): number => {
-  return Number((minutes / 60).toFixed(HOURS_PRECISION));
+  return Number((minutes / 60).toFixed(2));
 };
 
-const hasAnyAttendance = (day: TimesheetDay): boolean =>
-  Boolean(day.attendance.clockIn || day.attendance.clockOut || day.attendance.breakStart || day.attendance.breakEnd);
+const hasAnyAttendance = (day: TimesheetDay): boolean => Boolean(day.attendance.clockIn || day.attendance.clockOut || day.attendance.breakStart || day.attendance.breakEnd);
 
 interface ValidateDayOptions {
   coreWorkload?: number;
@@ -266,9 +251,7 @@ export const TimesheetValidations = {
 
       if (day.attendance.breakStart) {
         const breakStart = toMinutes(day.attendance.breakStart);
-        const breakStartValid = isNightShift
-          ? (breakStart >= clockIn && breakStart <= 24 * 60 - 1) || (breakStart >= 0 && breakStart <= clockOut)
-          : breakStart >= clockIn && breakStart <= clockOut;
+        const breakStartValid = isNightShift ? (breakStart >= clockIn && breakStart <= 24 * 60 - 1) || (breakStart >= 0 && breakStart <= clockOut) : breakStart >= clockIn && breakStart <= clockOut;
         if (!breakStartValid) {
           validations.push({
             code: "ERR-ATT-09",
@@ -281,9 +264,7 @@ export const TimesheetValidations = {
 
       if (day.attendance.breakEnd) {
         const breakEnd = toMinutes(day.attendance.breakEnd);
-        const breakEndValid = isNightShift
-          ? (breakEnd >= clockIn && breakEnd <= 24 * 60 - 1) || (breakEnd >= 0 && breakEnd <= clockOut)
-          : breakEnd >= clockIn && breakEnd <= clockOut;
+        const breakEndValid = isNightShift ? (breakEnd >= clockIn && breakEnd <= 24 * 60 - 1) || (breakEnd >= 0 && breakEnd <= clockOut) : breakEnd >= clockIn && breakEnd <= clockOut;
         if (!breakEndValid) {
           validations.push({
             code: "ERR-ATT-09",
@@ -423,9 +404,7 @@ export const TimesheetValidations = {
     }
 
     const interruptionCodes = parseInterruptionCodes(day.attendance.interruptions);
-    const skipAllocation =
-      TimesheetLogic.hasBusinessTripInterruption(day.attendance) ||
-      (interruptionCodes.length > 0 && !TimesheetLogic.hasCoreOnlyInterruption(day.attendance));
+    const skipAllocation = TimesheetLogic.hasBusinessTripInterruption(day.attendance) || (interruptionCodes.length > 0 && !TimesheetLogic.hasCoreOnlyInterruption(day.attendance));
 
     if (!skipAllocation) {
       const workedHours = TimesheetLogic.calculateWorkedHours(day.attendance);

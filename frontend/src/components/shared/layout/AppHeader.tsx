@@ -5,14 +5,7 @@ import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { RoleViewSwitcher } from "@/components/shared/dev/RoleViewSwitcher";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { BaseUrl } from "@/constants/api";
 import { Routes } from "@/constants/routes";
 import { Texts } from "../../../constants/texts";
@@ -42,34 +35,22 @@ export const AppHeader = () => {
         {/* Navigation */}
         <nav className="flex items-center gap-1">
           {canNavProjects && (
-            <Link
-              to="/projects"
-              className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
-            >
+            <Link to="/projects" className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all">
               {Texts.projects}
             </Link>
           )}
           {canNavEmployees && (
-            <Link
-              to="/employees"
-              className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
-            >
+            <Link to="/employees" className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all">
               {Texts.employees}
             </Link>
           )}
           {canNavMyTimesheets && currentUser && (
-            <Link
-              to={Routes.employee(currentUser.id)}
-              className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
-            >
+            <Link to={Routes.employee(currentUser.id)} className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all">
               {Texts.myTimesheets}
             </Link>
           )}
           <Can action={UiAction.nav.employeeRoles}>
-            <Link
-              to={Routes.employeeRoles()}
-              className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all"
-            >
+            <Link to={Routes.employeeRoles()} className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all">
               {Texts.employeeRoles}
             </Link>
           </Can>
@@ -78,12 +59,7 @@ export const AppHeader = () => {
         {/* Actions */}
         <div className="flex items-center gap-1">
           <RoleViewSwitcher />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleNotificationsClick}
-            className="text-muted-foreground hover:text-foreground hover:bg-accent"
-          >
+          <Button variant="ghost" size="icon" onClick={handleNotificationsClick} className="text-muted-foreground hover:text-foreground hover:bg-accent">
             <Bell className="h-5 w-5" />
           </Button>
 

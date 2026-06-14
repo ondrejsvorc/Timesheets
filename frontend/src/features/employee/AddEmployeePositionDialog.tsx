@@ -147,13 +147,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                 <FormItem>
                   <FormLabel>Projekt *</FormLabel>
                   <FormControl>
-                    <ComboBox
-                      value={field.value}
-                      items={projects}
-                      placeholder={Texts.selectProject}
-                      loading={projectsLoading}
-                      onChange={handleProjectChange}
-                    />
+                    <ComboBox value={field.value} items={projects} placeholder={Texts.selectProject} loading={projectsLoading} onChange={handleProjectChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -166,14 +160,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                 <FormItem>
                   <FormLabel>Zakázka *</FormLabel>
                   <FormControl>
-                    <ComboBox
-                      value={field.value}
-                      items={contracts}
-                      placeholder={Texts.selectContract}
-                      loading={contractsLoading}
-                      disabled={!projectId}
-                      onChange={field.onChange}
-                    />
+                    <ComboBox value={field.value} items={contracts} placeholder={Texts.selectContract} loading={contractsLoading} disabled={!projectId} onChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -233,15 +220,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                         <DatePicker
                           value={field.value}
                           clearable={name !== "startDate"}
-                          disabledDate={(date) =>
-                            name === "startDate"
-                              ? endDate
-                                ? date >= parseCalendarDate(endDate)
-                                : false
-                              : startDate
-                                ? date <= parseCalendarDate(startDate)
-                                : false
-                          }
+                          disabledDate={(date) => (name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false)}
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />
                       </FormControl>
@@ -253,10 +232,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
 
             <DialogFooter>
               <DialogCancelButton onClick={handleClose} />
-              <DialogConfirmButton
-                disabled={!form.formState.isValid}
-                onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()}
-              />
+              <DialogConfirmButton disabled={!form.formState.isValid} onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()} />
             </DialogFooter>
           </form>
         </Form>

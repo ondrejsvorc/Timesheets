@@ -1,4 +1,3 @@
-import { useAsyncValue } from "react-router";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
@@ -12,9 +11,11 @@ const formatWorkload = (value: number) =>
     .toString()
     .replace(".", ",")} %`;
 
-export const TimesheetsOverview = () => {
-  const overview = useAsyncValue() as GetCombinedTimesheetOverviewResponse;
+interface TimesheetsOverviewProps {
+  overview: GetCombinedTimesheetOverviewResponse;
+}
 
+export const TimesheetsOverview = ({ overview }: TimesheetsOverviewProps) => {
   if (overview.items.length === 0) {
     return <EmptyState />;
   }
@@ -47,9 +48,7 @@ export const TimesheetsOverview = () => {
                 <TableCell>{item.contractName ?? Texts.dash}</TableCell>
                 <TableCell>{item.position ?? Texts.dash}</TableCell>
                 <TableCell>{formatWorkload(item.workload)}</TableCell>
-                <TableCell className="max-w-[20rem] whitespace-normal break-words">
-                  {item.managers.length > 0 ? item.managers.join(", ") : Texts.dash}
-                </TableCell>
+                <TableCell className="max-w-[20rem] whitespace-normal break-words">{item.managers.length > 0 ? item.managers.join(", ") : Texts.dash}</TableCell>
                 <TableCell>
                   <TimesheetOverviewRowActions item={item} overview={overview} />
                 </TableCell>

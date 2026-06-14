@@ -29,14 +29,13 @@ type EditableCells = {
 // ==============================
 
 import type { Timesheet, TimesheetDay } from "./Timesheet";
+import { dayHasBusinessTripInterruption, dayHasCoreOnlyInterruption, toMinutes } from "./timesheetUtils";
 
 export interface TimesheetGenerationConfig {
   roundingStep: number;
   defaultDailyWorkHours: number;
 }
 
-const BUSINESS_TRIP_INTERRUPTION_CODES = new Set(["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"]);
-const CORE_INTERRUPTION_CODES = new Set(["M"]);
 const PREFERRED_STEPS_CENTS = [100, 50, 5, 1] as const; // 1h, 0.5h, 0.05h, 0.01h
 
 // ==============================
@@ -117,12 +116,7 @@ const allocateMonth = (timesheet: Timesheet, remaining: RemainingTargets, config
 // Day layer
 // ==============================
 
-const computeDayAllocation = (
-  day: TimesheetDay,
-  remaining: RemainingTargets,
-  timesheet: Timesheet,
-  config: TimesheetGenerationConfig,
-): Allocation => {
+const computeDayAllocation = (day: TimesheetDay, remaining: RemainingTargets, timesheet: Timesheet, config: TimesheetGenerationConfig): Allocation => {
   if (hasInterruption(day)) {
     return allocateFromInterruption(day, timesheet, config);
   }
@@ -159,25 +153,12 @@ const computeDayAllocation = (
 // ==============================
 
 const hasInterruption = (day: TimesheetDay): boolean => {
-  return day.attendance.interruptions !== "" && !hasBusinessTripInterruption(day);
+  return day.attendance.interruptions !== "" && !dayHasBusinessTripInterruption(day);
 };
 
-const hasBusinessTripInterruption = (day: TimesheetDay): boolean => {
-  return parseInterruptionCodes(day).some((code) => BUSINESS_TRIP_INTERRUPTION_CODES.has(code));
-};
+const hasBusinessTripInterruption = dayHasBusinessTripInterruption;
 
-const hasCoreOnlyInterruption = (day: TimesheetDay): boolean => {
-  return parseInterruptionCodes(day).some((code) => CORE_INTERRUPTION_CODES.has(code) || code.startsWith("N"));
-};
-
-const parseInterruptionCodes = (day: TimesheetDay): string[] => {
-  const raw = day.attendance.interruptions;
-  if (!raw?.trim()) return [];
-  return raw
-    .split(",")
-    .map((code) => code.trim().toUpperCase())
-    .filter(Boolean);
-};
+const hasCoreOnlyInterruption = dayHasCoreOnlyInterruption;
 
 const allocateFromInterruption = (day: TimesheetDay, timesheet: Timesheet, config: TimesheetGenerationConfig): Allocation => {
   const hours: number = Math.min(12, computeInterruptionHours(day, config));
@@ -293,14 +274,7 @@ const distribute = (remaining: number, weights: ProjectMap): ProjectMap => {
 // Apply
 // ==============================
 
-const applyAllocation = (
-  day: TimesheetDay,
-  allocation: Allocation,
-  remaining: RemainingTargets,
-  timesheet: Timesheet,
-  config: TimesheetGenerationConfig,
-  editable: EditableCells,
-): void => {
+const applyAllocation = (day: TimesheetDay, allocation: Allocation, remaining: RemainingTargets, timesheet: Timesheet, config: TimesheetGenerationConfig, editable: EditableCells): void => {
   if (allocation.core > 0 && editable.coreByDate[day.date]) {
     const free = getDayFreeCapacity(day, config);
     const valueCents = Math.min(1200, Math.min(toCents(allocation.core), Math.min(toCents(remaining.core), toCents(free))));
@@ -324,12 +298,7 @@ const applyAllocation = (
   }
 };
 
-const reconcileMonthRemainders = (
-  timesheet: Timesheet,
-  remaining: RemainingTargets,
-  config: TimesheetGenerationConfig,
-  editable: EditableCells,
-): void => {
+const reconcileMonthRemainders = (timesheet: Timesheet, remaining: RemainingTargets, config: TimesheetGenerationConfig, editable: EditableCells): void => {
   const orderedDays = getDaysByPriority(timesheet.days);
   // Core first.
   let coreLeft = toCents(remaining.core);
@@ -371,12 +340,7 @@ const reconcileMonthRemainders = (
   }
 };
 
-const enforceExactMonthlyTotals = (
-  timesheet: Timesheet,
-  targets: MonthlyTargets,
-  config: TimesheetGenerationConfig,
-  editable: EditableCells,
-): void => {
+const enforceExactMonthlyTotals = (timesheet: Timesheet, targets: MonthlyTargets, config: TimesheetGenerationConfig, editable: EditableCells): void => {
   const orderedDays = getDaysByPriority(timesheet.days);
 
   const targetCore = toCents(targets.core);
@@ -421,13 +385,7 @@ const addCoreCents = (orderedDays: TimesheetDay[], cents: number, config: Timesh
   }
 };
 
-const addProjectCents = (
-  orderedDays: TimesheetDay[],
-  projectId: string,
-  cents: number,
-  config: TimesheetGenerationConfig,
-  editable: EditableCells,
-): void => {
+const addProjectCents = (orderedDays: TimesheetDay[], projectId: string, cents: number, config: TimesheetGenerationConfig, editable: EditableCells): void => {
   let left = cents;
   for (const day of orderedDays) {
     if (left <= 0) break;
@@ -601,11 +559,6 @@ const normalizeWorkloadRatio = (value: number): number => {
   if (value > 1) return value / 100;
   if (value < 0) return 0;
   return value;
-};
-
-const toMinutes = (value: string): number => {
-  const [hours, minutes] = value.split(":").map(Number);
-  return (hours || 0) * 60 + (minutes || 0);
 };
 
 const getDayFreeCapacity = (day: TimesheetDay, config: TimesheetGenerationConfig): number => {

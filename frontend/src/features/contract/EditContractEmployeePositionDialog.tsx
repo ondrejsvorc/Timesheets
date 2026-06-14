@@ -33,9 +33,7 @@ const createSchema = (position: PositionItem) =>
     })
     .superRefine((values, ctx) => {
       const metadataChanged =
-        values.positionCode.trim() !== position.positionCode ||
-        values.positionName.trim() !== position.position ||
-        workloadPercentToFraction(values.workload) !== position.workload;
+        values.positionCode.trim() !== position.positionCode || values.positionName.trim() !== position.position || workloadPercentToFraction(values.workload) !== position.workload;
 
       const endIso = toIsoOrEmpty(values.endDate) ?? null;
       const endChanged = endIso !== position.endDate;
@@ -162,15 +160,7 @@ export const EditContractEmployeePositionDialog = ({ open, position, onClose, on
                         <DatePicker
                           value={field.value}
                           clearable={name !== "startDate"}
-                          disabledDate={(date) =>
-                            name === "startDate"
-                              ? endDate
-                                ? date >= parseCalendarDate(endDate)
-                                : false
-                              : startDate
-                                ? date <= parseCalendarDate(startDate)
-                                : false
-                          }
+                          disabledDate={(date) => (name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false)}
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />
                       </FormControl>

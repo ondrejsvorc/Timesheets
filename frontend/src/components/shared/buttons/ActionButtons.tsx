@@ -82,8 +82,7 @@ interface FullscreenButtonProps {
   children?: ReactNode;
 }
 
-export const FullscreenIcon = ({ isFullscreen = false }: { isFullscreen?: boolean }) =>
-  isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />;
+export const FullscreenIcon = ({ isFullscreen = false }: { isFullscreen?: boolean }) => (isFullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />);
 export const FullscreenButton = ({ onClick, disabled, isFullscreen = false, children }: FullscreenButtonProps) => (
   <Button type="button" variant="outline" onClick={onClick} disabled={disabled}>
     <span className="inline-flex items-center gap-2">

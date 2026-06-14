@@ -13,5 +13,4 @@ export interface GetProjectContractsManagersResponse {
   managers: ProjectContractManagerItem[];
 }
 
-export const getProjectContractsManagers = (id: string) =>
-  withDelay("slow", () => customFetch<GetProjectContractsManagersResponse>(`${ApiUrl}/projects/${id}/contracts/managers`));
+export const getProjectContractsManagers = (id: string) => withDelay("slow", () => customFetch<GetProjectContractsManagersResponse>(`${ApiUrl}/projects/${id}/contracts/managers`));

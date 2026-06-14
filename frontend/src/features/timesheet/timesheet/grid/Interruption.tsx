@@ -4,11 +4,7 @@ interface InterruptionProps {
   value: string;
 }
 
-const parseCodes = (value: string): string[] =>
-  value
-    .split(",")
-    .map((v) => v.trim())
-    .filter(Boolean);
+const parseCodes = (value: string): string[] => value.split(/,\s*/).filter(Boolean);
 
 export const Interruption = ({ value }: InterruptionProps) => {
   const codes = parseCodes(value ?? "");

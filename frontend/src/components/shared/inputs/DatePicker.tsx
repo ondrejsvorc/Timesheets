@@ -43,12 +43,7 @@ export const DatePicker = ({ value, disabled, clearable = true, disabledDate, on
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={disabled}
-          className={cn("w-full pl-3 text-left font-normal flex items-center gap-2", !value && "text-muted-foreground")}
-        >
+        <Button type="button" variant="outline" disabled={disabled} className={cn("w-full pl-3 text-left font-normal flex items-center gap-2", !value && "text-muted-foreground")}>
           <span className="flex-1 truncate">{label}</span>
           {clearable && value && !disabled ? (
             <button

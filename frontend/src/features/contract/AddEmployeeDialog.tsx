@@ -154,13 +154,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                 <FormItem>
                   <FormLabel>{Texts.employees}</FormLabel>
                   <FormControl>
-                    <ComboBox
-                      value={field.value}
-                      items={employees}
-                      placeholder={Texts.employees}
-                      loading={employeesLoading}
-                      onChange={field.onChange}
-                    />
+                    <ComboBox value={field.value} items={employees} placeholder={Texts.employees} loading={employeesLoading} onChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -220,15 +214,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                         <DatePicker
                           value={field.value}
                           clearable={name !== "startDate"}
-                          disabledDate={(date) =>
-                            name === "startDate"
-                              ? endDate
-                                ? date >= parseCalendarDate(endDate)
-                                : false
-                              : startDate
-                                ? date <= parseCalendarDate(startDate)
-                                : false
-                          }
+                          disabledDate={(date) => (name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false)}
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />
                       </FormControl>
@@ -240,10 +226,7 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
 
             <DialogFooter>
               <DialogCancelButton onClick={handleClose} />
-              <DialogConfirmButton
-                disabled={!form.formState.isValid}
-                onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()}
-              />
+              <DialogConfirmButton disabled={!form.formState.isValid} onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()} />
             </DialogFooter>
           </form>
         </Form>

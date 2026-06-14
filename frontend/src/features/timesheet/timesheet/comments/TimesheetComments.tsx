@@ -1,19 +1,25 @@
 import { useRef, useState } from "react";
-import { useAsyncValue, useRevalidator } from "react-router";
+import { useRevalidator } from "react-router";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Texts } from "@/constants/texts";
+import { addTimesheetComment } from "../api/addTimesheetComment";
 import type { TimesheetComment } from "./Comment";
-import { addTimesheetComment, type TimesheetCommentsScope } from "./commentsApi";
 import { StatusChangeCommentEntry } from "./StatusChangeCommentEntry";
+
+export interface TimesheetCommentsScope {
+  employeeId: string;
+  year: number;
+  month: number;
+}
 
 interface TimesheetCommentsProps {
   scope: TimesheetCommentsScope;
+  comments: TimesheetComment[];
 }
 
-export const TimesheetComments = ({ scope }: TimesheetCommentsProps) => {
-  const items = useAsyncValue() as TimesheetComment[];
+export const TimesheetComments = ({ scope, comments }: TimesheetCommentsProps) => {
   const revalidator = useRevalidator();
   const MAX_COMMENT_LENGTH = 500;
   const [draft, setDraft] = useState("");
@@ -35,17 +41,28 @@ export const TimesheetComments = ({ scope }: TimesheetCommentsProps) => {
   };
 
   const onSend = async () => {
-    if (isSending) return;
+    if (isSending) {
+      return;
+    }
+
     setIsSending(true);
     setSendError(null);
     try {
       const controller = new AbortController();
-      await addTimesheetComment(scope, { text: draft }, controller.signal);
+      await addTimesheetComment(
+        {
+          employeeId: scope.employeeId,
+          year: scope.year,
+          month: scope.month,
+          text: draft,
+        },
+        controller.signal,
+      );
       setDraft("");
       revalidator.revalidate();
       requestAnimationFrame(() => textareaRef.current?.focus());
-    } catch (e) {
-      setSendError(e instanceof Error ? e.message : Texts.sendCommentFailed);
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : Texts.sendCommentFailed);
     } finally {
       setIsSending(false);
     }
@@ -58,22 +75,22 @@ export const TimesheetComments = ({ scope }: TimesheetCommentsProps) => {
       </SubPageHeader>
       <div className="pb-8 space-y-4">
         <div className="rounded-md border bg-card p-4 md:p-5 space-y-5">
-          {items.length === 0 ? (
+          {comments.length === 0 ? (
             <div className="text-sm text-muted-foreground">{Texts.noCommentsYet}</div>
           ) : (
-            items.map((c) =>
-              c.type === "statusChange" ? (
-                <StatusChangeCommentEntry key={c.id} createdAt={c.createdAt} statusChange={c.statusChange} />
+            comments.map((comment) =>
+              comment.type === "statusChange" ? (
+                <StatusChangeCommentEntry key={comment.id} createdAt={comment.createdAt} statusChange={comment.statusChange} />
               ) : (
-                <div key={c.id} className="rounded-md border bg-background px-3 py-3 md:px-4 md:py-3.5">
+                <div key={comment.id} className="rounded-md border bg-background px-3 py-3 md:px-4 md:py-3.5">
                   <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <div className="text-sm font-medium text-foreground">
-                      {c.author.name}
-                      <span className="ml-2 text-xs font-normal text-muted-foreground">({roleLabel(c.author.role)})</span>
+                      {comment.author.name}
+                      <span className="ml-2 text-xs font-normal text-muted-foreground">({roleLabel(comment.author.role)})</span>
                     </div>
-                    <div className="text-xs text-muted-foreground tabular-nums">{new Date(c.createdAt).toLocaleString("cs-CZ")}</div>
+                    <div className="text-xs text-muted-foreground tabular-nums">{new Date(comment.createdAt).toLocaleString("cs-CZ")}</div>
                   </div>
-                  <div className="mt-2 text-sm leading-6 text-foreground/90 whitespace-pre-wrap">{c.text}</div>
+                  <div className="mt-2 text-sm leading-6 text-foreground/90 whitespace-pre-wrap">{comment.text}</div>
                 </div>
               ),
             )
@@ -84,15 +101,17 @@ export const TimesheetComments = ({ scope }: TimesheetCommentsProps) => {
           <Textarea
             ref={textareaRef}
             value={draft}
-            onChange={(e) => setDraft(e.currentTarget.value)}
+            onChange={(event) => setDraft(event.currentTarget.value)}
             placeholder={Texts.writeCommentPlaceholder}
             disabled={isSending}
             maxLength={MAX_COMMENT_LENGTH}
             className="w-full max-h-40 resize-none"
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                if (draft.trim().length === 0) return;
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                if (draft.trim().length === 0) {
+                  return;
+                }
                 void onSend();
               }
             }}

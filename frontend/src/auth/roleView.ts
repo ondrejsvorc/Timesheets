@@ -74,8 +74,7 @@ export const applyRoleViewOverride = (actual: CurrentUserPermissions | null, rol
         ...base,
         employeeOnContractIds: actual.employeeOnContractIds,
         visibleContractIds: actual.employeeOnContractIds,
-        visibleProjectIds:
-          actual.employeeOnContractIds.length > 0 ? actual.visibleProjectIds.filter((id) => !actual.projectManagerOf.includes(id)) : [],
+        visibleProjectIds: actual.employeeOnContractIds.length > 0 ? actual.visibleProjectIds.filter((id) => !actual.projectManagerOf.includes(id)) : [],
       };
     case "globalManager":
     case "roleManager":

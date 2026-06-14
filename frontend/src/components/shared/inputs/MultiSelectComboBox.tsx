@@ -24,15 +24,7 @@ interface MultiSelectComboBoxProps {
 
 const getItemLabel = (items: MultiSelectComboBoxItem[], itemValue: string) => items.find((item) => item.value === itemValue)?.label ?? itemValue;
 
-export const MultiSelectComboBox = ({
-  value = [],
-  items,
-  placeholder,
-  loading,
-  maxVisibleItems = 1,
-  className = "w-[160px]",
-  onChange,
-}: MultiSelectComboBoxProps) => {
+export const MultiSelectComboBox = ({ value = [], items, placeholder, loading, maxVisibleItems = 1, className = "w-[160px]", onChange }: MultiSelectComboBoxProps) => {
   const [open, setOpen] = useState(false);
 
   const toggleValue = (itemValue: string) => {
@@ -49,11 +41,7 @@ export const MultiSelectComboBox = ({
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className={cn(
-              "flex items-center justify-between gap-2 px-3 py-2 transition-all duration-200",
-              "w-full h-full",
-              value.length === 0 && "text-muted-foreground",
-            )}
+            className={cn("flex items-center justify-between gap-2 px-3 py-2 transition-all duration-200", "w-full h-full", value.length === 0 && "text-muted-foreground")}
           >
             <div className="flex gap-1 flex-1 items-center overflow-hidden flex-nowrap">
               {value.length === 0 ? (
@@ -76,11 +64,7 @@ export const MultiSelectComboBox = ({
                       </button>
                     </Badge>
                   ))}
-                  {value.length > maxVisibleItems && (
-                    <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">
-                      +{value.length - maxVisibleItems}
-                    </span>
-                  )}
+                  {value.length > maxVisibleItems && <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-sm">+{value.length - maxVisibleItems}</span>}
                 </>
               )}
             </div>
@@ -103,12 +87,7 @@ export const MultiSelectComboBox = ({
               {items.map((item) => {
                 const isSelected = value.includes(item.value);
                 return (
-                  <CommandItem
-                    key={item.value}
-                    value={`${item.value} ${item.label ?? ""}`}
-                    onSelect={() => toggleValue(item.value)}
-                    className="cursor-pointer"
-                  >
+                  <CommandItem key={item.value} value={`${item.value} ${item.label ?? ""}`} onSelect={() => toggleValue(item.value)} className="cursor-pointer">
                     <Check className={cn("mr-2 h-4 w-4", isSelected ? "opacity-100" : "opacity-0")} />
                     {item.label ?? item.value}
                   </CommandItem>

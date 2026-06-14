@@ -15,8 +15,6 @@ import { TimesheetValidations } from "../TimesheetValidations";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
 import { updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
-import { useTimesheetWorkflowRefresh } from "./TimesheetWorkflowRefreshContext";
-import { areAllProjectsApproved } from "./timesheetWorkflowUtils";
 
 interface TimesheetWorkflowToolbarProps {
   timesheet: Timesheet;
@@ -27,17 +25,9 @@ interface TimesheetWorkflowToolbarProps {
   onClearAttendanceFields: () => void;
 }
 
-export const TimesheetWorkflowToolbar = ({
-  timesheet,
-  overview,
-  isFullscreen,
-  onToggleFullscreen,
-  onSave,
-  onClearAttendanceFields,
-}: TimesheetWorkflowToolbarProps) => {
+export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, onToggleFullscreen, onSave, onClearAttendanceFields }: TimesheetWorkflowToolbarProps) => {
   const [searchParams] = useSearchParams();
   const revalidator = useRevalidator();
-  const onWorkflowSuccess = useTimesheetWorkflowRefresh();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
   const [submitBlockedOpen, setSubmitBlockedOpen] = useState(false);
 
@@ -46,7 +36,8 @@ export const TimesheetWorkflowToolbar = ({
   const isDraft = overview.status === Texts.statusInProgress;
   const isSubmitted = overview.status === Texts.statusPendingApproval;
   const isApproved = overview.status === Texts.statusApproved;
-  const allProjectsApproved = areAllProjectsApproved(overview);
+  const projectItems = overview.items.filter((item) => item.kind === "project");
+  const allProjectsApproved = projectItems.length === 0 || projectItems.every((item) => item.status === Texts.statusApproved);
   const canSubmit = useCan(UiAction.timesheet.submit, { employeeId });
   const canManageWhole = useCan(UiAction.timesheet.finalApprove);
 
@@ -63,7 +54,6 @@ export const TimesheetWorkflowToolbar = ({
       signal,
     );
     revalidator.revalidate();
-    onWorkflowSuccess();
   };
 
   const hasValidationErrors = (): boolean => TimesheetValidations.hasErrors(TimesheetValidations.validateForSubmit(timesheet));
@@ -160,18 +150,8 @@ export const TimesheetWorkflowToolbar = ({
         </div>
       </div>
 
-      <TimesheetWorkflowConfirmDialog
-        action={activeWorkflow}
-        periodLabel={periodLabel}
-        onClose={() => setActiveWorkflow(null)}
-        onConfirm={handleWorkflowConfirm}
-      />
-      <MessageAlertDialog
-        open={submitBlockedOpen}
-        title={Texts.workflowSubmitBlockedTitle}
-        description={Texts.workflowSubmitBlockedDescription}
-        onClose={() => setSubmitBlockedOpen(false)}
-      />
+      <TimesheetWorkflowConfirmDialog action={activeWorkflow} periodLabel={periodLabel} onClose={() => setActiveWorkflow(null)} onConfirm={handleWorkflowConfirm} />
+      <MessageAlertDialog open={submitBlockedOpen} title={Texts.workflowSubmitBlockedTitle} description={Texts.workflowSubmitBlockedDescription} onClose={() => setSubmitBlockedOpen(false)} />
     </>
   );
 };

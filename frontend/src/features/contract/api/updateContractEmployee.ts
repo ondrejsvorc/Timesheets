@@ -19,12 +19,7 @@ export interface UpdateContractEmployeeResponse {
   endDate: string | null;
 }
 
-export const updateContractEmployee = async (
-  contractId: string,
-  contractEmployeeId: string,
-  request: UpdateContractEmployeeRequest,
-  signal?: AbortSignal,
-) =>
+export const updateContractEmployee = async (contractId: string, contractEmployeeId: string, request: UpdateContractEmployeeRequest, signal?: AbortSignal) =>
   customFetch<UpdateContractEmployeeResponse>(`${ApiUrl}/contracts/${contractId}/employees/${contractEmployeeId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },

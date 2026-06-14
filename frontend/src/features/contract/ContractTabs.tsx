@@ -18,24 +18,14 @@ export const ContractTabs = () => {
         <NavLink
           to={Routes.contractTimesheets(projectId, contractId)}
           end
-          className={({ isActive }) =>
-            cn(
-              "pb-2 text-sm font-medium transition-colors",
-              isActive ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground",
-            )
-          }
+          className={({ isActive }) => cn("pb-2 text-sm font-medium transition-colors", isActive ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground")}
         >
           {Texts.timesheets}
         </NavLink>
         <Can action={UiAction.contractEmployees.view} context={{ contractId }}>
           <NavLink
             to={Routes.contractEmployees(projectId, contractId)}
-            className={({ isActive }) =>
-              cn(
-                "pb-2 text-sm font-medium transition-colors",
-                isActive ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground",
-              )
-            }
+            className={({ isActive }) => cn("pb-2 text-sm font-medium transition-colors", isActive ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground")}
           >
             {Texts.employees}
           </NavLink>

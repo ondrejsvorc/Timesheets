@@ -66,14 +66,11 @@ export interface UiContext {
 
 const isGlobalManager = (permissions: CurrentUserPermissions) => isAtLeast(permissions.role, UserRole.GlobalManager);
 const isManager = (permissions: CurrentUserPermissions) => isAtLeast(permissions.role, UserRole.ContractManager);
-const isOwnEmployee = (currentUserId: string | undefined, employeeId: string | undefined) =>
-  Boolean(currentUserId && employeeId && currentUserId === employeeId);
+const isOwnEmployee = (currentUserId: string | undefined, employeeId: string | undefined) => Boolean(currentUserId && employeeId && currentUserId === employeeId);
 
-const canSeeProject = (permissions: CurrentUserPermissions, projectId?: string) =>
-  isGlobalManager(permissions) || Boolean(projectId && permissions.visibleProjectIds.includes(projectId));
+const canSeeProject = (permissions: CurrentUserPermissions, projectId?: string) => isGlobalManager(permissions) || Boolean(projectId && permissions.visibleProjectIds.includes(projectId));
 
-const canSeeContract = (permissions: CurrentUserPermissions, contractId?: string) =>
-  isGlobalManager(permissions) || Boolean(contractId && permissions.visibleContractIds.includes(contractId));
+const canSeeContract = (permissions: CurrentUserPermissions, contractId?: string) => isGlobalManager(permissions) || Boolean(contractId && permissions.visibleContractIds.includes(contractId));
 
 const canManageContractScope = (permissions: CurrentUserPermissions, ctx: UiContext) => {
   if (isGlobalManager(permissions)) {
@@ -91,12 +88,7 @@ const canManageContractScope = (permissions: CurrentUserPermissions, ctx: UiCont
   return false;
 };
 
-export const can = (
-  permissions: CurrentUserPermissions | null,
-  currentUserId: string | undefined,
-  action: UiActionId,
-  ctx: UiContext = {},
-): boolean => {
+export const can = (permissions: CurrentUserPermissions | null, currentUserId: string | undefined, action: UiActionId, ctx: UiContext = {}): boolean => {
   if (!permissions) {
     return false;
   }

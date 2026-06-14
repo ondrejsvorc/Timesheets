@@ -31,9 +31,7 @@ const toApiTime = (value: string): string | null => {
 const dayDate = (year: number, month: number, day: number) => new Date(Date.UTC(year, month - 1, day)).toISOString();
 
 const mapSchedules = (schedules: TimeRange[]): TimeRange[] | null => {
-  const mapped = schedules
-    .filter((range) => range.start || range.end)
-    .map((range) => ({ start: toApiTime(range.start) ?? "", end: toApiTime(range.end) ?? "" }));
+  const mapped = schedules.filter((range) => range.start || range.end).map((range) => ({ start: toApiTime(range.start) ?? "", end: toApiTime(range.end) ?? "" }));
   return mapped.length > 0 ? mapped : null;
 };
 

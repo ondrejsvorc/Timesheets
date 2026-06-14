@@ -14,10 +14,7 @@ let cachedAuth: AuthContext | null = null;
 let authRequest: Promise<AuthContext> | null = null;
 
 const fetchAuthContext = async (): Promise<AuthContext> => {
-  const [permissions, userResponse] = await Promise.all([
-    getCurrentUserPermissions().catch(() => null),
-    fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" }),
-  ]);
+  const [permissions, userResponse] = await Promise.all([getCurrentUserPermissions().catch(() => null), fetch(`${BaseUrl}/auth/currentUser`, { credentials: "include" })]);
 
   if (userResponse.status === 401) {
     resetAuthContext();

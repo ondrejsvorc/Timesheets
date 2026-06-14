@@ -54,13 +54,7 @@ export const TimesheetGrid = ({ timesheet, readOnly = false, onUpdateDay, onTogg
   };
 
   return (
-    <div
-      className={cn(
-        "rounded-md border border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full shadow-sm",
-        readOnly && "bg-muted/40",
-        className,
-      )}
-    >
+    <div className={cn("rounded-md border border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full shadow-sm", readOnly && "bg-muted/40", className)}>
       <div className="relative grid w-full min-w-max" style={{ gridTemplateColumns: template }}>
         {readOnly && <div className="pointer-events-none absolute inset-0 z-[5] bg-muted/20" aria-hidden />}
         <TimesheetHeader

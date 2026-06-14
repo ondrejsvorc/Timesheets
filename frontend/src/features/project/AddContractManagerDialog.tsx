@@ -98,13 +98,7 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
                 <FormItem>
                   <FormLabel>{Texts.contract}</FormLabel>
                   <FormControl>
-                    <ComboBox
-                      value={field.value}
-                      items={contractItems}
-                      placeholder={Texts.contract}
-                      loading={loading}
-                      onChange={handleContractChange}
-                    />
+                    <ComboBox value={field.value} items={contractItems} placeholder={Texts.contract} loading={loading} onChange={handleContractChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -116,24 +110,14 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
                 <FormItem>
                   <FormLabel>{Texts.employees}</FormLabel>
                   <FormControl>
-                    <ComboBox
-                      value={field.value}
-                      items={employeeItems}
-                      placeholder={Texts.employees}
-                      loading={loading}
-                      disabled={!selectedContractId}
-                      onChange={field.onChange}
-                    />
+                    <ComboBox value={field.value} items={employeeItems} placeholder={Texts.employees} loading={loading} disabled={!selectedContractId} onChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
             />
             <DialogFooter>
               <DialogCancelButton onClick={onClose} />
-              <DialogConfirmButton
-                disabled={!form.watch("contractId") || !form.watch("employeeId")}
-                onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()}
-              />
+              <DialogConfirmButton disabled={!form.watch("contractId") || !form.watch("employeeId")} onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()} />
             </DialogFooter>
           </form>
         </Form>

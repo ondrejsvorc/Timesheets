@@ -48,11 +48,7 @@ const ProjectContractsManagersContent = () => {
 
   return (
     <>
-      <FilterBar
-        filter={filter}
-        setFilter={setFilter}
-        actions={canAddManager ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addManager}</AddButton> : undefined}
-      >
+      <FilterBar filter={filter} setFilter={setFilter} actions={canAddManager ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addManager}</AddButton> : undefined}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
       <ContractsManagersTable managers={filtered} dispatch={dispatch} />

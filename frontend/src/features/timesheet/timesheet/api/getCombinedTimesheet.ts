@@ -105,9 +105,6 @@ export const getCombinedTimesheet = (employeeId: string, year: number, month: nu
 
   return withDelay("slowest", async () => {
     const response = await customFetch<GetCombinedTimesheetResponse>(`${ApiUrl}/timesheets/combined?${params.toString()}`);
-    if (import.meta.env.DEV) {
-      performance.mark("timesheet:data-ready");
-    }
     return mapToTimesheet(response);
   });
 };

@@ -23,14 +23,7 @@ interface SmartDecimalInputProps {
   disabled?: boolean;
 }
 
-export const SmartDecimalInput = ({
-  value,
-  onChange,
-  precision = 3,
-  commitOnChange = false,
-  className,
-  disabled = false,
-}: SmartDecimalInputProps) => {
+export const SmartDecimalInput = ({ value, onChange, precision = 3, commitOnChange = false, className, disabled = false }: SmartDecimalInputProps) => {
   const [displayValue, setDisplayValue] = useState(() => formatDecimalForDisplay(value, precision));
 
   const valueBeforeEditRef = useRef<number | null>(value);
@@ -147,11 +140,7 @@ export const SmartDecimalInput = ({
         }
       }}
       disabled={disabled}
-      className={cn(
-        "tabular-nums",
-        disabled && "cursor-not-allowed border-dashed border-slate-300 bg-slate-100/80 text-slate-600 opacity-100",
-        className,
-      )}
+      className={cn("tabular-nums", disabled && "cursor-not-allowed border-dashed border-slate-300 bg-slate-100/80 text-slate-600 opacity-100", className)}
       maxLength={6}
     />
   );

@@ -10,7 +10,6 @@ import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { CombinedTimesheetOverviewItem, GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
 import { updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
-import { useTimesheetWorkflowRefresh } from "./TimesheetWorkflowRefreshContext";
 
 interface TimesheetOverviewRowActionsProps {
   item: CombinedTimesheetOverviewItem;
@@ -20,7 +19,6 @@ interface TimesheetOverviewRowActionsProps {
 export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOverviewRowActionsProps) => {
   const [searchParams] = useSearchParams();
   const revalidator = useRevalidator();
-  const onWorkflowSuccess = useTimesheetWorkflowRefresh();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
 
   const employeeId = searchParams.get("employeeId") ?? "";
@@ -52,7 +50,6 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
       signal,
     );
     revalidator.revalidate();
-    onWorkflowSuccess();
   };
 
   const handleWorkflowConfirm = async (comment: string, signal: AbortSignal) => {
@@ -88,13 +85,7 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
         )}
       </div>
 
-      <TimesheetWorkflowConfirmDialog
-        action={activeWorkflow}
-        periodLabel={periodLabel}
-        targetLabel={item.label}
-        onClose={() => setActiveWorkflow(null)}
-        onConfirm={handleWorkflowConfirm}
-      />
+      <TimesheetWorkflowConfirmDialog action={activeWorkflow} periodLabel={periodLabel} targetLabel={item.label} onClose={() => setActiveWorkflow(null)} onConfirm={handleWorkflowConfirm} />
     </>
   );
 };

@@ -10,11 +10,7 @@ export type CreateProjectContractResponse = {
   projectContract: ProjectContractItem;
 };
 
-export const createProjectContract = async (
-  projectId: string,
-  request: CreateProjectContractRequest,
-  signal: AbortSignal,
-): Promise<CreateProjectContractResponse> => {
+export const createProjectContract = async (projectId: string, request: CreateProjectContractRequest, signal: AbortSignal): Promise<CreateProjectContractResponse> => {
   return withDelay("fast", () =>
     customFetch<CreateProjectContractResponse>(`${ApiUrl}/projects/${projectId}/contracts`, {
       method: "POST",

@@ -13,11 +13,7 @@ export interface TimesheetDeleteImpactCounts {
 }
 
 /** Builds the standard delete-impact consequence lines; callers add entity-specific lines first. */
-export const appendTimesheetDeleteImpactConsequences = (
-  consequences: string[],
-  impact: TimesheetDeleteImpactCounts,
-  options?: { contractCount?: number },
-): void => {
+export const appendTimesheetDeleteImpactConsequences = (consequences: string[], impact: TimesheetDeleteImpactCounts, options?: { contractCount?: number }): void => {
   if (options?.contractCount !== undefined && options.contractCount > 0) {
     consequences.push(formatCount(Texts.deleteImpactContracts, options.contractCount));
   }
@@ -49,8 +45,6 @@ export const appendTimesheetDeleteImpactConsequences = (
   }
 };
 
-export const canConfirmProtectedDelete = (impact: { hasProtectedTimesheets: boolean; canForceDelete: boolean }) =>
-  !impact.hasProtectedTimesheets || impact.canForceDelete;
+export const canConfirmProtectedDelete = (impact: { hasProtectedTimesheets: boolean; canForceDelete: boolean }) => !impact.hasProtectedTimesheets || impact.canForceDelete;
 
-export const forceProtectedDelete = (impact: { hasProtectedTimesheets: boolean; canForceDelete: boolean }) =>
-  impact.hasProtectedTimesheets && impact.canForceDelete;
+export const forceProtectedDelete = (impact: { hasProtectedTimesheets: boolean; canForceDelete: boolean }) => impact.hasProtectedTimesheets && impact.canForceDelete;

@@ -48,8 +48,7 @@ export function filterToSearchParams(filter: EmployeeTimesheetsFilterCriteria): 
   return next;
 }
 
-export const getEmployeeTimesheets = (employeeId: string) =>
-  withDelay("slow", () => customFetch<GetEmployeeTimesheetsResponse>(`${ApiUrl}/employees/${employeeId}/timesheets`));
+export const getEmployeeTimesheets = (employeeId: string) => withDelay("slow", () => customFetch<GetEmployeeTimesheetsResponse>(`${ApiUrl}/employees/${employeeId}/timesheets`));
 
 export async function loadEmployeeTimesheetsPage(employeeId: string, request: Request) {
   const url = new URL(request.url);

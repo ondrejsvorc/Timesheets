@@ -17,8 +17,7 @@ interface WorkflowActionConfig {
   confirmLabel: string;
 }
 
-const replaceTokens = (template: string, periodLabel: string, targetLabel?: string) =>
-  template.replace("{period}", periodLabel).replace("{target}", targetLabel ?? "");
+const replaceTokens = (template: string, periodLabel: string, targetLabel?: string) => template.replace("{period}", periodLabel).replace("{target}", targetLabel ?? "");
 
 const getWorkflowActionConfig = (action: TimesheetWorkflowAction, periodLabel: string, targetLabel?: string): WorkflowActionConfig => {
   switch (action) {
@@ -93,13 +92,7 @@ export const TimesheetWorkflowConfirmDialog = ({ action, periodLabel, targetLabe
 
         <div className="space-y-2">
           <Label htmlFor="workflow-comment">{Texts.comment}</Label>
-          <Textarea
-            id="workflow-comment"
-            value={comment}
-            onChange={(event) => setComment(event.target.value)}
-            rows={4}
-            placeholder={Texts.writeCommentPlaceholder}
-          />
+          <Textarea id="workflow-comment" value={comment} onChange={(event) => setComment(event.target.value)} rows={4} placeholder={Texts.writeCommentPlaceholder} />
         </div>
 
         <DialogFooter>

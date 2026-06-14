@@ -28,13 +28,7 @@ export const ComboBox = ({ value, items, placeholder, loading, disabled, onChang
     <div className="w-full">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant="outline"
-            role="combobox"
-            disabled={disabled}
-            className={cn("flex w-full items-center gap-2", !value && "text-muted-foreground")}
-          >
+          <Button type="button" variant="outline" role="combobox" disabled={disabled} className={cn("flex w-full items-center gap-2", !value && "text-muted-foreground")}>
             <span className="flex-1 truncate text-left">{selected?.label ?? placeholder}</span>
             <ChevronsUpDown className="size-4 opacity-50" />
           </Button>

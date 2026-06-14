@@ -58,19 +58,10 @@ const ContractEmployeesContent = () => {
 
   return (
     <>
-      <FilterBar
-        filter={filter}
-        setFilter={setFilter}
-        actions={canAddEmployee ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePositionToEmployeeTitle}</AddButton> : undefined}
-      >
+      <FilterBar filter={filter} setFilter={setFilter} actions={canAddEmployee ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePositionToEmployeeTitle}</AddButton> : undefined}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-      <ContractEmployeesList
-        contractId={contractId}
-        employees={filtered}
-        onDeleteRequested={(payload) => setPositionToDelete(payload)}
-        onEditRequested={(payload) => setPositionToEdit(payload)}
-      />
+      <ContractEmployeesList contractId={contractId} employees={filtered} onDeleteRequested={(payload) => setPositionToDelete(payload)} onEditRequested={(payload) => setPositionToEdit(payload)} />
       {contractId && (
         <AddEmployeeDialog
           open={isAddOpen}
@@ -144,13 +135,7 @@ const ContractEmployeesList = ({ contractId, employees, onDeleteRequested, onEdi
   return (
     <div className="space-y-6">
       {employees.map((employee) => (
-        <EmployeeSection
-          key={employee.id}
-          contractId={contractId}
-          employee={employee}
-          onDeleteRequested={onDeleteRequested}
-          onEditRequested={onEditRequested}
-        />
+        <EmployeeSection key={employee.id} contractId={contractId} employee={employee} onDeleteRequested={onDeleteRequested} onEditRequested={onEditRequested} />
       ))}
     </div>
   );
@@ -183,13 +168,7 @@ const EmployeeSection = ({ contractId, employee, onDeleteRequested, onEditReques
           </TableHeader>
           <TableBody>
             {employee.positions.map((position) => (
-              <PositionRow
-                key={position.id}
-                contractId={contractId}
-                position={position}
-                onDeleteRequested={onDeleteRequested}
-                onEditRequested={onEditRequested}
-              />
+              <PositionRow key={position.id} contractId={contractId} position={position} onDeleteRequested={onDeleteRequested} onEditRequested={onEditRequested} />
             ))}
           </TableBody>
         </Table>

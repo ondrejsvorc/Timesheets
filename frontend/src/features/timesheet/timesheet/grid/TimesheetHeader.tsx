@@ -20,19 +20,10 @@ const formatWorkloadPercent = (workload: number) => {
     .replace(".", ",");
 };
 
-export const TimesheetHeader = ({
-  readOnly = false,
-  projects,
-  core,
-  onGenerateMonthly,
-  onToggleProjectLock,
-  onCopyProjectColumn,
-}: TimesheetHeaderProps) => {
+export const TimesheetHeader = ({ readOnly = false, projects, core, onGenerateMonthly, onToggleProjectLock, onCopyProjectColumn }: TimesheetHeaderProps) => {
   return (
     <div className="relative z-20 grid grid-cols-subgrid col-[1/-1] sticky top-0 self-start bg-slate-100 border-b border-slate-300">
-      <div className="sticky left-0 z-40 bg-slate-100 border-r border-slate-300 h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
-        {Texts.day}
-      </div>
+      <div className="sticky left-0 z-40 bg-slate-100 border-r border-slate-300 h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.day}</div>
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.clockIn}</div>
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.clockOut}</div>
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.breakStart}</div>
@@ -41,9 +32,7 @@ export const TimesheetHeader = ({
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.attendance}</div>
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.nightWork}</div>
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">STAG</div>
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">
-        Kmen ({formatWorkloadPercent(core.workload)}%)
-      </div>
+      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Kmen ({formatWorkloadPercent(core.workload)}%)</div>
       {projects.map((project) => (
         <div key={project.id} className="h-10 px-2 flex items-center justify-center gap-1 text-center font-medium whitespace-nowrap min-w-0">
           <Tooltip delayDuration={120}>

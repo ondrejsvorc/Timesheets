@@ -162,9 +162,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
     setHasSuccessfulImport(false);
     setUploadItems((current) =>
       current.map((item) =>
-        item.status === "ready" || item.status === "success" || item.status === "error"
-          ? { ...item, status: item.detection?.canImport ? "ready" : "invalid", result: null }
-          : item,
+        item.status === "ready" || item.status === "success" || item.status === "error" ? { ...item, status: item.detection?.canImport ? "ready" : "invalid", result: null } : item,
       ),
     );
 
@@ -177,9 +175,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
           break;
         }
 
-        setUploadItems((current) =>
-          current.map((currentItem) => (currentItem.key === item.key ? { ...currentItem, status: "importing" } : currentItem)),
-        );
+        setUploadItems((current) => current.map((currentItem) => (currentItem.key === item.key ? { ...currentItem, status: "importing" } : currentItem)));
 
         try {
           const result = await importTimesheet(employeeIdFromUrl, item.file, signal);
@@ -187,9 +183,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
           successCount += result.success ? 1 : 0;
           failCount += result.success ? 0 : 1;
 
-          setUploadItems((current) =>
-            current.map((currentItem) => (currentItem.key === item.key ? { ...currentItem, status, result } : currentItem)),
-          );
+          setUploadItems((current) => current.map((currentItem) => (currentItem.key === item.key ? { ...currentItem, status, result } : currentItem)));
         } catch (error) {
           if (error instanceof DOMException && error.name === "AbortError") {
             throw error;
@@ -205,9 +199,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
             month: null,
           };
 
-          setUploadItems((current) =>
-            current.map((currentItem) => (currentItem.key === item.key ? { ...currentItem, status: "error", result } : currentItem)),
-          );
+          setUploadItems((current) => current.map((currentItem) => (currentItem.key === item.key ? { ...currentItem, status: "error", result } : currentItem)));
           // eslint-disable-next-line no-console
           console.error(error);
         }
@@ -374,9 +366,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
                             {Texts.importPeriodLabel}: {period}
                           </div>
                         )}
-                        {(item.result?.errorMessage ?? metadata?.errorMessage) && (
-                          <div className="mt-1 text-xs text-destructive">{item.result?.errorMessage ?? metadata?.errorMessage}</div>
-                        )}
+                        {(item.result?.errorMessage ?? metadata?.errorMessage) && <div className="mt-1 text-xs text-destructive">{item.result?.errorMessage ?? metadata?.errorMessage}</div>}
                       </div>
                     </div>
                   </li>
@@ -390,10 +380,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
           {mode === "selection" ? (
             <>
               <DialogCancelButton onClick={handleClose} />
-              <DialogConfirmButton
-                disabled={uploadItems.length === 0 || readyItemsCount === 0 || isImporting || isDetecting}
-                onClick={(_, signal) => handleImport(signal)}
-              />
+              <DialogConfirmButton disabled={uploadItems.length === 0 || readyItemsCount === 0 || isImporting || isDetecting} onClick={(_, signal) => handleImport(signal)} />
             </>
           ) : (
             <Button type="button" variant="outline" onClick={handleClose}>

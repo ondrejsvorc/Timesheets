@@ -135,11 +135,7 @@ export const RoleViewSwitcher = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role-view-contract">{Texts.contract}</Label>
-              <Select
-                value={roleView.contractId ?? ""}
-                onValueChange={(contractId) => setRoleView({ ...roleView, contractId })}
-                disabled={!roleView.projectId}
-              >
+              <Select value={roleView.contractId ?? ""} onValueChange={(contractId) => setRoleView({ ...roleView, contractId })} disabled={!roleView.projectId}>
                 <SelectTrigger id="role-view-contract" className="w-full">
                   <SelectValue placeholder={Texts.selectContract} />
                 </SelectTrigger>

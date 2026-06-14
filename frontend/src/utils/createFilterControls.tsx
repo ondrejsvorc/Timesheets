@@ -26,15 +26,7 @@ export const createFilterControls = <TFilter extends { query: string }>() => {
     );
   };
 
-  const FilterCheckbox = ({
-    field,
-    label,
-    exclusiveWith,
-  }: {
-    field: BooleanKeys<TFilter>;
-    label?: string;
-    exclusiveWith?: BooleanKeys<TFilter>[];
-  }) => {
+  const FilterCheckbox = ({ field, label, exclusiveWith }: { field: BooleanKeys<TFilter>; label?: string; exclusiveWith?: BooleanKeys<TFilter>[] }) => {
     const { filter, setFilter } = useFilterContext<TFilter>();
     const id = useId();
     const checked = filter[field] === true;
@@ -65,15 +57,7 @@ export const createFilterControls = <TFilter extends { query: string }>() => {
     );
   };
 
-  const FilterSelect = <TValue extends string>({
-    field,
-    options,
-    className,
-  }: {
-    field: StringKeys<TFilter>;
-    options: ReadonlyArray<{ value: TValue; label: string }>;
-    className?: string;
-  }) => {
+  const FilterSelect = <TValue extends string>({ field, options, className }: { field: StringKeys<TFilter>; options: ReadonlyArray<{ value: TValue; label: string }>; className?: string }) => {
     const { filter, setFilter } = useFilterContext<TFilter>();
 
     return (

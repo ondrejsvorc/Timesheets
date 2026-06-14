@@ -17,5 +17,4 @@ export interface GetEmployeePositionsResponse {
   positions: EmployeePositionItem[];
 }
 
-export const getEmployeePositions = (employeeId: string) =>
-  withDelay("slow", () => customFetch<GetEmployeePositionsResponse>(`${ApiUrl}/employees/${employeeId}/positions`));
+export const getEmployeePositions = (employeeId: string) => withDelay("slow", () => customFetch<GetEmployeePositionsResponse>(`${ApiUrl}/employees/${employeeId}/positions`));

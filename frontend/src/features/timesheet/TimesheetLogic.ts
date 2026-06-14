@@ -1,36 +1,9 @@
 import type { Attendance, ProjectDefinition, TimeRange, Timesheet, TimesheetDay } from "./Timesheet";
 import { generateTimesheetData } from "./TimesheetGenerator";
+import { dayHasBusinessTripInterruption, hasBusinessTripInterruption, hasCoreOnlyInterruption, toMinutes } from "./timesheetUtils";
 
 const HOURS_PRECISION = 2;
 const MAX_WORK_SHIFT_HOURS = 12;
-
-/** Kódy přerušení — služební cesty se nealokují automaticky do kmene/projektů. */
-const BUSINESS_TRIP_INTERRUPTION_CODES = new Set(["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"]);
-const CORE_INTERRUPTION_CODES = new Set(["M"]);
-
-const parseInterruptionCodes = (raw: string): string[] => {
-  if (!raw.trim()) return [];
-  return raw
-    .split(",")
-    .map((c) => c.trim().toUpperCase())
-    .filter(Boolean);
-};
-
-const attendanceHasBusinessTripInterruption = (attendance: Attendance): boolean => {
-  return parseInterruptionCodes(attendance.interruptions).some((code) => BUSINESS_TRIP_INTERRUPTION_CODES.has(code));
-};
-
-const attendanceHasCoreOnlyInterruption = (attendance: Attendance): boolean => {
-  return parseInterruptionCodes(attendance.interruptions).some((code) => CORE_INTERRUPTION_CODES.has(code) || code.startsWith("N"));
-};
-
-/**
- * Konvertuje časový formát "HH:mm" na minuty.
- */
-const toMinutes = (time: string): number => {
-  const [hours, minutes] = (time || "").split(":").map(Number);
-  return (hours || 0) * 60 + (minutes || 0);
-};
 
 const roundHours = (value: number): number => Number(value.toFixed(HOURS_PRECISION));
 const hasAttendanceFilled = (attendance: Attendance): boolean => Boolean(attendance.clockIn || attendance.clockOut);
@@ -47,13 +20,6 @@ const cloneTimesheet = (timesheet: Timesheet): Timesheet => ({
 });
 
 export const TimesheetLogic = {
-  /**
-   * Celkový čas docházky (příchod–odchod mínus přestávka). Zahrnuje i práci v noční době — nesnižuje se o sloupec „Noční práce“.
-   */
-  calculateAttendanceTotalHours: (attendance: Attendance): number => {
-    return TimesheetLogic.calculateWorkedHours(attendance);
-  },
-
   calculateWorkedHours: (attendance: Attendance): number => {
     if (!attendance.clockIn || !attendance.clockOut) {
       return 0;
@@ -160,9 +126,9 @@ export const TimesheetLogic = {
     return roundHours(Math.min(MAX_WORK_SHIFT_HOURS, Math.max(0, standard)));
   },
 
-  hasBusinessTripInterruption: (attendance: Attendance): boolean => attendanceHasBusinessTripInterruption(attendance),
+  hasBusinessTripInterruption,
 
-  hasCoreOnlyInterruption: (attendance: Attendance): boolean => attendanceHasCoreOnlyInterruption(attendance),
+  hasCoreOnlyInterruption,
 
   calculateMonthlyFund: (timesheet: Timesheet): number => {
     const workingDaysCount = timesheet.days.filter((day) => !day.isWeekend && !day.isHoliday).length;
@@ -187,13 +153,8 @@ export const TimesheetLogic = {
     return roundHours(days.reduce((sum, day) => sum + TimesheetLogic.calculateControlTotal(day), 0));
   },
 
-  distributeRemainingHours: (
-    day: TimesheetDay,
-    totalWorkload: number,
-    coreWorkload: number,
-    projects: Pick<ProjectDefinition, "id" | "workload" | "lockedAt">[],
-  ) => {
-    if (attendanceHasBusinessTripInterruption(day.attendance)) {
+  distributeRemainingHours: (day: TimesheetDay, totalWorkload: number, coreWorkload: number, projects: Pick<ProjectDefinition, "id" | "workload" | "lockedAt">[]) => {
+    if (dayHasBusinessTripInterruption(day)) {
       return null;
     }
 
@@ -296,7 +257,7 @@ export const TimesheetLogic = {
   },
 
   getDayTotals: (day: TimesheetDay): { workedHours: number; nightHours: number; stagHours: number; controlTotal: number; balance: number } => {
-    const workedHours = TimesheetLogic.calculateAttendanceTotalHours(day.attendance);
+    const workedHours = TimesheetLogic.calculateWorkedHours(day.attendance);
     const nightRaw = TimesheetLogic.calculateNightHours(day.attendance);
     const nightHours = roundHours(Math.min(nightRaw, workedHours));
     const stagHours = TimesheetLogic.calculateSchedulesTotal(day.attendance.schedules);

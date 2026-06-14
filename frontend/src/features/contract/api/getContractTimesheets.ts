@@ -55,11 +55,7 @@ function buildTimesheetsQuery(request: GetContractTimesheetsRequest): string {
   return params.toString();
 }
 
-export function getContractTimesheets(
-  _projectId: string,
-  contractId: string,
-  request: GetContractTimesheetsRequest,
-): Promise<GetContractTimesheetsResponse> {
+export function getContractTimesheets(_projectId: string, contractId: string, request: GetContractTimesheetsRequest): Promise<GetContractTimesheetsResponse> {
   const query = buildTimesheetsQuery(request);
   const url = `${ApiUrl}/contracts/${contractId}/timesheets${query ? `?${query}` : ""}`;
   return withDelay("slow", () => customFetch<GetContractTimesheetsResponse>(url));
@@ -90,10 +86,7 @@ export function filterToSearchParams(filter: ContractTimesheetsFilterCriteria): 
   return next;
 }
 
-export function normalizeContractTimesheetsFilter(
-  filter: ContractTimesheetsFilterCriteria,
-  options: { years: number[]; months: number[] },
-): ContractTimesheetsFilterCriteria {
+export function normalizeContractTimesheetsFilter(filter: ContractTimesheetsFilterCriteria, options: { years: number[]; months: number[] }): ContractTimesheetsFilterCriteria {
   if (options.years.length === 0 || options.months.length === 0) {
     return filter;
   }
@@ -183,8 +176,7 @@ export function rangeIsSubset(
   cacheToMonth: number,
 ): boolean {
   return (
-    monthInRange(reqFromYear, reqFromMonth, cacheFromYear, cacheFromMonth, cacheToYear, cacheToMonth) &&
-    monthInRange(reqToYear, reqToMonth, cacheFromYear, cacheFromMonth, cacheToYear, cacheToMonth)
+    monthInRange(reqFromYear, reqFromMonth, cacheFromYear, cacheFromMonth, cacheToYear, cacheToMonth) && monthInRange(reqToYear, reqToMonth, cacheFromYear, cacheFromMonth, cacheToYear, cacheToMonth)
   );
 }
 

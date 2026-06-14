@@ -151,18 +151,15 @@ export const Texts = {
   workflowSubmitTitle: "Odeslat výkaz ke schválení",
   workflowSubmitDescription: "Opravdu chcete odeslat kombinovaný výkaz za {period} ke schválení? Nejdříve se uloží aktuální změny.",
   workflowSaveBlockedTitle: "Nelze uložit změny",
-  workflowSaveBlockedDescription:
-    "Výkaz obsahuje chyby (včetně nevyrovnané bilance nebo nedostatečného kmene pro STAG). Opravte je v tabulce a uložte znovu.",
+  workflowSaveBlockedDescription: "Výkaz obsahuje chyby (včetně nevyrovnané bilance nebo nedostatečného kmene pro STAG). Opravte je v tabulce a uložte znovu.",
   workflowSubmitBlockedTitle: "Nelze odeslat ke schválení",
-  workflowSubmitBlockedDescription:
-    "Výkaz obsahuje chyby (včetně nevyrovnané bilance nebo nedostatečného kmene pro STAG). Opravte je v tabulce a zkuste to znovu. Upozornění odeslání neblokují.",
+  workflowSubmitBlockedDescription: "Výkaz obsahuje chyby (včetně nevyrovnané bilance nebo nedostatečného kmene pro STAG). Opravte je v tabulce a zkuste to znovu. Upozornění odeslání neblokují.",
   workflowApproveTitle: "Schválit výkaz",
   workflowApproveDescription: "Opravdu chcete schválit kombinovaný výkaz za {period}?",
   workflowReturnTitle: "Vrátit k přepracování",
   workflowReturnDescription: "Opravdu chcete vrátit kombinovaný výkaz za {period} k přepracování?",
   workflowUnlockTitle: "Odemknout výkaz",
-  workflowUnlockDescription:
-    "Opravdu chcete odemknout schválený výkaz za {period}? Výkaz bude znovu upravitelný bez opakování celého schvalovacího procesu.",
+  workflowUnlockDescription: "Opravdu chcete odemknout schválený výkaz za {period}? Výkaz bude znovu upravitelný bez opakování celého schvalovacího procesu.",
   workflowFinalApproveTitle: "Schválit celý výkaz",
   workflowFinalApproveDescription: "Opravdu chcete finálně schválit kombinovaný výkaz za {period}? Všechny projektové části jsou již schválené.",
   workflowReturnWholeTitle: "Vrátit celý výkaz k přepracování",
@@ -170,8 +167,7 @@ export const Texts = {
   workflowApproveProjectTitle: "Schválit projektovou část",
   workflowApproveProjectDescription: "Opravdu chcete schválit část „{target}“ výkazu za {period}? Sloupec zakázky se uzamkne.",
   workflowReturnProjectTitle: "Vrátit projektovou část",
-  workflowReturnProjectDescription:
-    "Opravdu chcete vrátit část „{target}“ výkazu za {period} k přepracování? Celý výkaz se vrátí do stavu rozpracovaný.",
+  workflowReturnProjectDescription: "Opravdu chcete vrátit část „{target}“ výkazu za {period} k přepracování? Celý výkaz se vrátí do stavu rozpracovaný.",
   approveProjectPart: "Schválit",
   returnProjectPart: "Vrátit",
   timesheetPicker: "Výkaz(y)",

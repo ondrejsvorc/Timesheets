@@ -18,10 +18,7 @@ function getFallbackYear(availableYears: number[], selectedYear: number) {
   return lastAvailableYear ?? null;
 }
 
-export const normalizeEmployeeTimesheetsFilter = (
-  filter: EmployeeTimesheetsFilterCriteria,
-  response: GetEmployeeTimesheetsResponse,
-): EmployeeTimesheetsFilterCriteria => {
+export const normalizeEmployeeTimesheetsFilter = (filter: EmployeeTimesheetsFilterCriteria, response: GetEmployeeTimesheetsResponse): EmployeeTimesheetsFilterCriteria => {
   const fallbackYear = getFallbackYear(response.availableYears, filter.year);
   const year = fallbackYear ?? filter.year;
   const nextAvailableMonthSet = new Set(getAvailableMonthsForYear(response.availableMonths, year));

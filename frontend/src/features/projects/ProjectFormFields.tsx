@@ -77,12 +77,7 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
                   {Texts.startDate} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <DatePicker
-                    value={field.value}
-                    clearable
-                    disabledDate={(date) => (endDate ? date >= parseCalendarDate(endDate) : false)}
-                    onChange={(next) => field.onChange(next ?? "")}
-                  />
+                  <DatePicker value={field.value} clearable disabledDate={(date) => (endDate ? date >= parseCalendarDate(endDate) : false)} onChange={(next) => field.onChange(next ?? "")} />
                 </FormControl>
               </FormItem>
             )}
@@ -95,12 +90,7 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
               <FormItem className="flex flex-col">
                 <FormLabel>{Texts.endDate}</FormLabel>
                 <FormControl>
-                  <DatePicker
-                    value={field.value}
-                    clearable
-                    disabledDate={(date) => (startDate ? date <= parseCalendarDate(startDate) : false)}
-                    onChange={(next) => field.onChange(next)}
-                  />
+                  <DatePicker value={field.value} clearable disabledDate={(date) => (startDate ? date <= parseCalendarDate(startDate) : false)} onChange={(next) => field.onChange(next)} />
                 </FormControl>
               </FormItem>
             )}
@@ -109,10 +99,7 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
 
         <DialogFooter>
           <DialogCancelButton onClick={onCancel} />
-          <DialogConfirmButton
-            disabled={!form.formState.isValid}
-            onClick={(_, signal) => form.handleSubmit((values) => onSubmit(values, signal))()}
-          />
+          <DialogConfirmButton disabled={!form.formState.isValid} onClick={(_, signal) => form.handleSubmit((values) => onSubmit(values, signal))()} />
         </DialogFooter>
       </form>
     </Form>

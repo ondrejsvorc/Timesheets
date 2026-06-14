@@ -1,5 +1,5 @@
-import { startTransition, useCallback, useMemo, useRef, useState } from "react";
-import { useAsyncValue, useLoaderData, useNavigate, useRevalidator, useRouteLoaderData, useSearchParams } from "react-router";
+import { startTransition, useCallback, useState } from "react";
+import { useAsyncValue, useLoaderData, useNavigate, useRouteLoaderData, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
@@ -21,95 +21,62 @@ import type { TimesheetComment } from "./comments/Comment";
 import { TimesheetComments } from "./comments/TimesheetComments";
 import { TimesheetGrid } from "./grid/TimesheetGrid";
 import { TimesheetsOverview } from "./TimesheetsOverview";
-import { TimesheetWorkflowRefreshProvider } from "./TimesheetWorkflowRefreshContext";
 import { TimesheetWorkflowToolbar } from "./TimesheetWorkflowToolbar";
 
-interface TimesheetPageLoaderData {
-  employeePromise: Promise<GetEmployeeResponse>;
-  overviewPromise: Promise<GetCombinedTimesheetOverviewResponse>;
-  timesheetPromise: Promise<Timesheet>;
-  commentsPromise: Promise<TimesheetComment[]>;
+export interface TimesheetPageData {
+  employee: GetEmployeeResponse;
+  overview: GetCombinedTimesheetOverviewResponse;
+  timesheet: Timesheet;
+  comments: TimesheetComment[];
 }
 
 export const TimesheetPage = () => {
-  const loaderData = useLoaderData() as TimesheetPageLoaderData;
-  const revalidator = useRevalidator();
-  const onWorkflowSuccess = useMemo(() => () => revalidator.revalidate(), [revalidator]);
+  const { promise } = useLoaderData() as { promise: Promise<TimesheetPageData> };
+
+  return (
+    <AwaitContent promise={promise}>
+      <TimesheetPageLoaded />
+    </AwaitContent>
+  );
+};
+
+const TimesheetPageLoaded = () => {
+  const { employee, overview, timesheet, comments } = useAsyncValue() as TimesheetPageData;
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const employeeId = searchParams.get("employeeId") ?? "";
-  const year = Number(searchParams.get("year"));
-  const month = Number(searchParams.get("month"));
-  const commentsScope = employeeId && Number.isInteger(year) && Number.isInteger(month) ? { employeeId, year, month } : null;
 
   return (
-    <TimesheetWorkflowRefreshProvider value={onWorkflowSuccess}>
-      <div>
-        <AwaitContent promise={loaderData.employeePromise}>
-          <TimesheetPageHeader />
-        </AwaitContent>
-      </div>
-      <div>
-        <AwaitContent promise={loaderData.overviewPromise}>
-          <TimesheetsOverview />
-        </AwaitContent>
-      </div>
-      <AwaitContent promise={loaderData.timesheetPromise}>
-        <TimesheetPageContent />
-      </AwaitContent>
-      {commentsScope && (
-        <AwaitContent promise={loaderData.commentsPromise}>
-          <TimesheetComments scope={commentsScope} />
-        </AwaitContent>
-      )}
-    </TimesheetWorkflowRefreshProvider>
-  );
-};
+    <>
+      <PageHeader leading={<BackButton onClick={() => navigate(Routes.employee(employee.employee.id))} />}>
+        <PageTitle>{employee.employee.fullName}</PageTitle>
+        <PageSubtitle>
+          {employee.employee.personalNumber} · {employee.employee.email} · {resolveEmployeeTypeName(employee.employee.employeeTypeId)}
+        </PageSubtitle>
+      </PageHeader>
 
-const TimesheetPageHeader = () => {
-  const navigate = useNavigate();
-  const response = useAsyncValue() as GetEmployeeResponse;
-  const employee = response.employee;
+      <TimesheetsOverview overview={overview} />
 
-  return (
-    <PageHeader leading={<BackButton onClick={() => navigate(Routes.employee(employee.id))} />}>
-      <PageTitle>{employee.fullName}</PageTitle>
-      <PageSubtitle>
-        {employee.personalNumber} · {employee.email} · {resolveEmployeeTypeName(employee.employeeTypeId)}
-      </PageSubtitle>
-    </PageHeader>
-  );
-};
+      <SubPageHeader>
+        <div className="flex items-center gap-2">
+          <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
+          <TimesheetStatusBadge status={overview.status} />
+        </div>
+      </SubPageHeader>
 
-const CombinedTimesheetSubHeader = () => {
-  const overview = useAsyncValue() as GetCombinedTimesheetOverviewResponse;
+      <TimesheetEditor key={timesheet.id} initialTimesheet={timesheet} overview={overview} />
 
-  return (
-    <SubPageHeader>
-      <div className="flex items-center gap-2">
-        <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
-        <TimesheetStatusBadge status={overview.status} />
-      </div>
-    </SubPageHeader>
-  );
-};
-
-const TimesheetPageContent = () => {
-  const initialTimesheet = useAsyncValue() as Timesheet;
-  const { overviewPromise } = useLoaderData() as TimesheetPageLoaderData;
-
-  return (
-    <AwaitContent promise={overviewPromise}>
-      <TimesheetEditor key={initialTimesheet.id} initialTimesheet={initialTimesheet} />
-    </AwaitContent>
+      {employeeId && <TimesheetComments scope={{ employeeId, year: overview.year, month: overview.month }} comments={comments} />}
+    </>
   );
 };
 
 interface TimesheetEditorProps {
   initialTimesheet: Timesheet;
+  overview: GetCombinedTimesheetOverviewResponse;
 }
 
-const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
-  const overview = useAsyncValue() as GetCombinedTimesheetOverviewResponse;
+const TimesheetEditor = ({ initialTimesheet, overview }: TimesheetEditorProps) => {
   const [timesheet, setTimesheet] = useImmer<Timesheet>(initialTimesheet);
   const [searchParams] = useSearchParams();
   const rootData = useRouteLoaderData("root") as RootLoaderData | undefined;
@@ -117,14 +84,14 @@ const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
   const lockActorEmployeeId = rootData?.currentUser?.id ?? timesheetEmployeeId;
   const canEditTimesheet = useCan(UiAction.timesheet.edit, { employeeId: timesheetEmployeeId });
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const didMeasureStablePaintRef = useRef(false);
-  const { overviewPromise } = useLoaderData() as TimesheetPageLoaderData;
 
   const isEditable = overview.status === Texts.statusInProgress && canEditTimesheet;
 
   const handleUpdateDay = useCallback(
     (dayIndex: number, updater: (day: TimesheetDay) => void) => {
-      if (!isEditable) return;
+      if (!isEditable) {
+        return;
+      }
 
       setTimesheet((draft) => {
         const day = draft.days[dayIndex];
@@ -139,12 +106,16 @@ const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
 
   const handleToggleProjectLock = useCallback(
     (projectId: string) => {
-      if (!isEditable) return;
+      if (!isEditable) {
+        return;
+      }
 
       startTransition(() => {
         setTimesheet((draft) => {
           const project = draft.projects.find((p) => p.id === projectId);
-          if (!project) return;
+          if (!project) {
+            return;
+          }
           if (project.lockedAt) {
             project.lockedAt = null;
             project.lockedBy = null;
@@ -159,7 +130,9 @@ const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
   );
 
   const handleClearAttendanceFields = useCallback(() => {
-    if (!isEditable) return;
+    if (!isEditable) {
+      return;
+    }
 
     setTimesheet((draft) => {
       draft.days.forEach((day) => {
@@ -178,28 +151,8 @@ const TimesheetEditor = ({ initialTimesheet }: TimesheetEditorProps) => {
     [timesheet],
   );
 
-  if (import.meta.env.DEV && !didMeasureStablePaintRef.current) {
-    didMeasureStablePaintRef.current = true;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        performance.mark("timesheet:first-stable-paint");
-        const dataReadyMark = performance.getEntriesByName("timesheet:data-ready").at(-1);
-        const stablePaintMark = performance.getEntriesByName("timesheet:first-stable-paint").at(-1);
-        if (!dataReadyMark || !stablePaintMark) return;
-
-        const durationMs = stablePaintMark.startTime - dataReadyMark.startTime;
-        console.log(`[Timesheet] first stable paint after data ready: ${durationMs.toFixed(1)}ms`);
-      });
-    });
-  }
-
   return (
     <div className={cn(isFullscreen && "fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background p-4 md:p-6")}>
-      {!isFullscreen && (
-        <AwaitContent promise={overviewPromise}>
-          <CombinedTimesheetSubHeader />
-        </AwaitContent>
-      )}
       <TimesheetWorkflowToolbar
         timesheet={timesheet}
         overview={overview}

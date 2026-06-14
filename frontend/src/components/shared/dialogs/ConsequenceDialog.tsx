@@ -21,18 +21,7 @@ interface ConsequenceDialogProps {
   onConfirm: (event: MouseEvent<HTMLButtonElement>, signal: AbortSignal) => Promise<void>;
 }
 
-export const ConsequenceDialog = ({
-  open,
-  title,
-  description,
-  consequences,
-  confirmLabel,
-  confirmDisabled = false,
-  loading = false,
-  loadingContent,
-  onCancel,
-  onConfirm,
-}: ConsequenceDialogProps) => {
+export const ConsequenceDialog = ({ open, title, description, consequences, confirmLabel, confirmDisabled = false, loading = false, loadingContent, onCancel, onConfirm }: ConsequenceDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <DialogContent>

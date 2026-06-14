@@ -61,10 +61,7 @@ export const ContractForm = ({ initialValues, onSubmit, onCancel }: ContractForm
 
         <DialogFooter>
           <DialogCancelButton onClick={onCancel} />
-          <DialogConfirmButton
-            disabled={!form.formState.isValid}
-            onClick={(_, signal) => form.handleSubmit((values) => onSubmit(values, signal))()}
-          />
+          <DialogConfirmButton disabled={!form.formState.isValid} onClick={(_, signal) => form.handleSubmit((values) => onSubmit(values, signal))()} />
         </DialogFooter>
       </form>
     </Form>

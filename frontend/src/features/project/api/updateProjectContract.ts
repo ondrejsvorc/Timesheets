@@ -10,12 +10,7 @@ export type UpdateProjectContractResponse = {
   projectContract: ProjectContractItem;
 };
 
-export const updateProjectContract = async (
-  projectId: string,
-  contractId: string,
-  request: UpdateProjectContractRequest,
-  signal: AbortSignal,
-): Promise<UpdateProjectContractResponse> => {
+export const updateProjectContract = async (projectId: string, contractId: string, request: UpdateProjectContractRequest, signal: AbortSignal): Promise<UpdateProjectContractResponse> => {
   return withDelay("fast", () =>
     customFetch<UpdateProjectContractResponse>(`${ApiUrl}/projects/${projectId}/contracts/${contractId}`, {
       method: "PUT",

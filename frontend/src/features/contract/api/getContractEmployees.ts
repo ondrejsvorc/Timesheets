@@ -21,5 +21,4 @@ export interface GetContractEmployeesResponse {
   employees: EmployeeItem[];
 }
 
-export const getContractEmployees = (_projectId: string, contractId: string) =>
-  withDelay("slow", () => customFetch<GetContractEmployeesResponse>(`${ApiUrl}/contracts/${contractId}/employees`));
+export const getContractEmployees = (_projectId: string, contractId: string) => withDelay("slow", () => customFetch<GetContractEmployeesResponse>(`${ApiUrl}/contracts/${contractId}/employees`));

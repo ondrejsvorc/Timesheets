@@ -16,13 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
-import type {
-  ContractTimesheetsFilterCriteria,
-  EmployeeGroupView,
-  GetContractTimesheetsResponse,
-  MonthGroupView,
-  TimesheetRowView,
-} from "./api/getContractTimesheets";
+import type { ContractTimesheetsFilterCriteria, EmployeeGroupView, GetContractTimesheetsResponse, MonthGroupView, TimesheetRowView } from "./api/getContractTimesheets";
 import { buildEmployeesView, buildMonthsView, filterToSearchParams } from "./api/getContractTimesheets";
 import type { GetContractTimesheetsFilterOptionsResponse } from "./api/getContractTimesheetsFilterOptions";
 import { CZECH_MONTH_NAMES, formatMonthYear } from "./utils/czechMonths";
@@ -72,11 +66,7 @@ const ContractTimesheetsContent = ({ filter, filterOptions }: ContractTimesheets
       <FilterBar filter={draftFilter} setFilter={setDraftFilter} actions={<Button onClick={handleFilter}>{Texts.filter}</Button>}>
         <ContractTimesheetsFilterControls options={filterOptions} />
       </FilterBar>
-      {draftFilter.groupBy === "Month" ? (
-        <TimesheetsByMonth months={monthsView} isLoading={isLoading} />
-      ) : (
-        <TimesheetsByEmployee employees={employeesView} isLoading={isLoading} />
-      )}
+      {draftFilter.groupBy === "Month" ? <TimesheetsByMonth months={monthsView} isLoading={isLoading} /> : <TimesheetsByEmployee employees={employeesView} isLoading={isLoading} />}
     </>
   );
 };
@@ -274,12 +264,7 @@ const TimesheetsByMonth = ({ months, isLoading }: TimesheetsByMonthProps) => {
             <div key={employee.id} className="rounded-md border p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 font-medium">
                 <EmployeeNameLink employeeId={employee.id}>{employee.fullName}</EmployeeNameLink>
-                <TimesheetMonthLink
-                  employeeId={employee.id}
-                  year={monthGroup.year}
-                  month={monthGroup.month}
-                  className="text-sm text-muted-foreground"
-                >
+                <TimesheetMonthLink employeeId={employee.id} year={monthGroup.year} month={monthGroup.month} className="text-sm text-muted-foreground">
                   {Texts.viewCombinedTimesheet}
                 </TimesheetMonthLink>
               </div>

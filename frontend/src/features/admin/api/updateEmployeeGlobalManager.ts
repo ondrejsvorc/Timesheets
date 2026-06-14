@@ -4,11 +4,7 @@ export type UpdateEmployeeGlobalManagerRequest = {
   isGlobalManager: boolean;
 };
 
-export const updateEmployeeGlobalManager = async (
-  employeeId: string,
-  request: UpdateEmployeeGlobalManagerRequest,
-  signal: AbortSignal,
-): Promise<void> =>
+export const updateEmployeeGlobalManager = async (employeeId: string, request: UpdateEmployeeGlobalManagerRequest, signal: AbortSignal): Promise<void> =>
   withDelay("fast", () =>
     customFetch<void>(`${ApiUrl}/employees/${employeeId}/global-manager`, {
       method: "PATCH",
