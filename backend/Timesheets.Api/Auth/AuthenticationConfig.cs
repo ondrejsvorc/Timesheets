@@ -32,7 +32,7 @@ public static class AuthenticationConfig
 
         List<Claim> claims = new()
         {
-            new("email", email),
+            new("eduPersonPrincipalName", email),
             new("displayName", fullName),
             new("personalNumber", personalNumber)
         };
