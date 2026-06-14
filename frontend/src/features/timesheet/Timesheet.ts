@@ -23,7 +23,6 @@ export interface ProjectDefinition {
   name: string;
   position: string;
   workload: number;
-  /** ISO čas uzamčení sloupce (manažer); null = odemčeno. Uloží se při jednotném save výkazu. */
   lockedAt: string | null;
   lockedBy: string | null;
 }
