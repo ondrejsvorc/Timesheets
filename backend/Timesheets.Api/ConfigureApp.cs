@@ -21,7 +21,6 @@ public static class ConfigureApp
         bool authEnabled = AuthenticationConfig.IsEnabled(app.Configuration);
         if (authEnabled)
         {
-            app.UseMiddleware<OidcCallbackIframeBreakoutMiddleware>();
             app.UseAuthentication();
             app.UseAuthorization();
         }

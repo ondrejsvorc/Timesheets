@@ -18,11 +18,11 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
 
     private async Task SyncUserAsync(SynchronizedUser user, CancellationToken cancellationToken)
     {
-        Employee? existing = await dbContext.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.PersonalNumber == user.PersonalNumber, cancellationToken);
+        Employee? existing = await dbContext.Employees.FirstOrDefaultAsync(e => e.PersonalNumber == user.PersonalNumber, cancellationToken);
 
         if (existing is null)
         {
-            existing = await dbContext.Employees.AsNoTracking().FirstOrDefaultAsync(e => e.Email == user.Email, cancellationToken);
+            existing = await dbContext.Employees.FirstOrDefaultAsync(e => e.Email == user.Email, cancellationToken);
         }
 
         if (existing is null)

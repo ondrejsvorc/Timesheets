@@ -20,13 +20,6 @@ if (typeof window !== "undefined") {
   }
 }
 
-const isOidcCallbackInProgress = (): boolean => {
-  const top = window.top ?? window;
-  const path = top.location.pathname;
-  const search = top.location.search;
-  return path === "/login-oidc" || path === "/logout-oidc" || (search.includes("code=") && search.includes("state="));
-};
-
 export const onSessionExpired = (handler: () => void): (() => void) => {
   sessionExpiredHandlers.add(handler);
   return () => sessionExpiredHandlers.delete(handler);
@@ -44,8 +37,7 @@ export const goToLogin = (returnTo?: string) => {
     return;
   }
 
-  const topWindow = window.top ?? window;
-  const currentPath = topWindow.location.pathname;
+  const currentPath = window.location.pathname;
   if (currentPath.startsWith("/auth/") || currentPath === "/login-oidc" || currentPath === "/logout-oidc") {
     return;
   }
@@ -57,21 +49,17 @@ export const goToLogin = (returnTo?: string) => {
 
   const resolvedReturnTo = returnTo ?? `${window.location.pathname}${window.location.search}`;
   const safeReturnTo = resolvedReturnTo.startsWith("/redirecting") ? "/" : resolvedReturnTo;
-  topWindow.location.replace(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(safeReturnTo)}`);
+  window.location.replace(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(safeReturnTo)}`);
 };
 
-const isAuthFailure = (response: Response): boolean => response.status === 401 || response.type === "opaqueredirect";
+const isAuthFailure = (response: Response): boolean => response.status === 401;
 
 export const fetchWithAuth = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
   const response = await fetch(input, {
     ...init,
     credentials: "include",
-    redirect: "manual",
   });
   if (isAuthFailure(response)) {
-    if (typeof window !== "undefined" && isOidcCallbackInProgress()) {
-      return new Promise(() => {});
-    }
     goToLogin();
     return new Promise(() => {});
   }

@@ -143,7 +143,6 @@ public static class ConfigureServices
                 options.ClientId = auth["ClientId"];
                 options.ClientSecret = auth["ClientSecret"];
                 options.ResponseType = OpenIdConnectResponseType.Code;
-                options.ResponseMode = OpenIdConnectResponseMode.Query;
                 options.CallbackPath = auth["CallbackPath"];
                 options.SignedOutCallbackPath = auth["SignedOutCallbackPath"];
                 options.RemoteSignOutPath = auth["RemoteSignOutPath"];
