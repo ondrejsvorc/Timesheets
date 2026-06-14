@@ -1,29 +1,18 @@
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Timesheets;
+using Xunit;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
 
 public class TimesheetReimportPersistenceTests : BaseIntegrationTest
 {
-    public TimesheetReimportPersistenceTests(CustomWebApplicationFactory factory) : base(factory)
-    {
-    }
+    public TimesheetReimportPersistenceTests(CustomWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
     public async Task PersistAsync_SecondImport_ReplacesDays()
     {
-        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
-            Factory.Services,
-            Client,
-            new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            workload: 0.5m);
-
-        byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(
-            setup.EmployeePersonalNumber,
-            "Test Employee",
-            2024,
-            10,
-            50m);
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
+        byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
 
         using IServiceScope scope = CreateScope();
         IAttendanceTimesheetPersistenceService persistence = scope.ServiceProvider.GetRequiredService<IAttendanceTimesheetPersistenceService>();

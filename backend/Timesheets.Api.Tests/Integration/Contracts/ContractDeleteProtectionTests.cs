@@ -4,24 +4,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Contracts;
 using Timesheets.Api.Data;
+using Xunit;
 
 namespace Timesheets.Api.Tests.Integration.Contracts;
 
 public class ContractDeleteProtectionTests : BaseIntegrationTest
 {
-    public ContractDeleteProtectionTests(CustomWebApplicationFactory factory) : base(factory)
-    {
-    }
+    public ContractDeleteProtectionTests(CustomWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
     public async Task GetContractDeleteImpact_WithDraftTimesheets_AllowsDelete()
     {
-        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
-            Factory.Services,
-            Client,
-            new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2024, 2, 28, 0, 0, 0, DateTimeKind.Utc));
-
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 2, 28, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.GetAsync($"/api/contracts/{setup.ContractId}/delete-impact");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -36,15 +30,9 @@ public class ContractDeleteProtectionTests : BaseIntegrationTest
     [Fact]
     public async Task GetContractDeleteImpact_WithSubmittedTimesheets_ReportsProtectedCounts()
     {
-        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
-            Factory.Services,
-            Client,
-            new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2024, 7, 31, 0, 0, 0, DateTimeKind.Utc));
-
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 7, 31, 0, 0, 0, DateTimeKind.Utc));
         Guid projectTimesheetId = await GetSingleProjectTimesheetIdAsync(setup.ContractEmployeeId);
         await SetProjectTimesheetStatusAsync(projectTimesheetId, TestTimesheetStatusIds.Submitted);
-
         HttpResponseMessage response = await Client.GetAsync($"/api/contracts/{setup.ContractId}/delete-impact");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -59,12 +47,7 @@ public class ContractDeleteProtectionTests : BaseIntegrationTest
     [Fact]
     public async Task GetContractDeleteImpact_DoesNotIncludeContractCount()
     {
-        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
-            Factory.Services,
-            Client,
-            new DateTime(2024, 8, 1, 0, 0, 0, DateTimeKind.Utc),
-            new DateTime(2024, 8, 31, 0, 0, 0, DateTimeKind.Utc));
-
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 8, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 8, 31, 0, 0, 0, DateTimeKind.Utc));
         string json = await Client.GetStringAsync($"/api/contracts/{setup.ContractId}/delete-impact");
         Assert.DoesNotContain("contractCount", json, StringComparison.OrdinalIgnoreCase);
     }
@@ -73,25 +56,14 @@ public class ContractDeleteProtectionTests : BaseIntegrationTest
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        Guid timesheetId = await dbContext.ProjectTimesheets
-            .AsNoTracking()
-            .Where(timesheet => timesheet.ContractEmployeeId == contractEmployeeId)
-            .Select(timesheet => timesheet.Id)
-            .FirstAsync();
-
-        return timesheetId;
+        return await dbContext.ProjectTimesheets.AsNoTracking().Where(timesheet => timesheet.ContractEmployeeId == contractEmployeeId).Select(timesheet => timesheet.Id).FirstAsync();
     }
 
     private async Task SetProjectTimesheetStatusAsync(Guid projectTimesheetId, Guid statusId)
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-        int affected = await dbContext.ProjectTimesheets
-            .Where(timesheet => timesheet.Id == projectTimesheetId)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
-
+        int affected = await dbContext.ProjectTimesheets.Where(timesheet => timesheet.Id == projectTimesheetId).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
         Assert.Equal(1, affected);
     }
 }

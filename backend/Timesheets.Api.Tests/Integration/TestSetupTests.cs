@@ -6,26 +6,17 @@ namespace Timesheets.Api.Tests.Integration;
 
 public class TestSetupTests : BaseIntegrationTest
 {
-    public TestSetupTests(CustomWebApplicationFactory factory) : base(factory)
-    {
-    }
+    public TestSetupTests(CustomWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
     public async Task Database_IsMigrated_And_Accessible()
     {
-        // Arrange & Act
-        using var scope = CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var canConnect = await dbContext.Database.CanConnectAsync();
-
-        // Assert
-        Assert.True(canConnect, "The database should be accessible.");
+        using IServiceScope scope = CreateScope();
+        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        bool canConnect = await dbContext.Database.CanConnectAsync();
+        Assert.True(canConnect);
     }
 
     [Fact]
-    public void AuthMock_ClientIsCreated()
-    {
-        // Assert
-        Assert.NotNull(Client);
-    }
+    public void AuthMock_ClientIsCreated() => Assert.NotNull(Client);
 }

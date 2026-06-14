@@ -12,9 +12,7 @@ public class AttendanceTimesheetMetadataReaderTests
     {
         string filePath = Path.Combine("Unit", "TestData", "valid_attendance.xlsx");
         using FileStream stream = File.OpenRead(filePath);
-
         AttendanceTimesheetMetadata result = _reader.Read(stream);
-
         Assert.Multiple(() =>
         {
             Assert.False(string.IsNullOrWhiteSpace(result.EmployeePersonalNumber));
@@ -30,9 +28,7 @@ public class AttendanceTimesheetMetadataReaderTests
     {
         string filePath = Path.Combine("Unit", "TestData", "invalid_attendance_malformed_metadata.xlsx");
         using FileStream stream = File.OpenRead(filePath);
-
         AttendanceTimesheetMetadata result = _reader.Read(stream);
-
         Assert.Multiple(() =>
         {
             Assert.Equal(string.Empty, result.EmployeePersonalNumber);
