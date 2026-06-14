@@ -49,6 +49,7 @@ export const UiAction = {
     finalApprove: "timesheet.finalApprove",
     returnWhole: "timesheet.returnWhole",
     unlock: "timesheet.unlock",
+    listContract: "timesheet.listContract",
   },
 } as const;
 
@@ -146,6 +147,7 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
 
     case UiAction.timesheet.approveProject:
     case UiAction.timesheet.returnProject:
+    case UiAction.timesheet.listContract:
       return canManageContractScope(permissions, {
         contractId: ctx.timesheetContractId ?? ctx.contractId,
         projectId: ctx.timesheetProjectId ?? ctx.projectId,

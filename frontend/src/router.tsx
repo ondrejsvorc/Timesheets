@@ -2,7 +2,7 @@ import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
 import type { CurrentUserPermissions } from "./auth/api/getCurrentUserPermissions";
 import { denyUnless, loadAuthContext, resolveHomePath } from "./auth/routeGuards";
-import { UiAction } from "./auth/uiPermissions";
+import { can, UiAction } from "./auth/uiPermissions";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { FullscreenLoader } from "./components/shared/layout/FullscreenLoader";
 import { BaseUrl } from "./constants/api";
@@ -174,7 +174,13 @@ export const router = createBrowserRouter([
             element: <ContractTimesheets />,
             loader: async ({ params, request }) => {
               const { projectId, contractId } = requireContractParams(params);
-              await denyUnless(UiAction.contracts.view, { projectId, contractId }, request);
+              const auth = await loadAuthContext();
+              if (!can(auth.permissions, auth.currentUser?.id, UiAction.timesheet.listContract, { contractId, projectId })) {
+                if (can(auth.permissions, auth.currentUser?.id, UiAction.contractEmployees.view, { contractId })) {
+                  throw redirect(Routes.contractEmployees(projectId, contractId));
+                }
+                await denyUnless(UiAction.timesheet.listContract, { contractId, projectId }, request);
+              }
               return loadContractTimesheetsPage(projectId, contractId, request);
             },
           },
