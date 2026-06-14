@@ -1,16 +1,16 @@
 import { type FilterCriteria, useFilter } from "@/hooks/useFilter";
 import type { ProjectItem } from "../api/shared/projectItem";
-import { isProjectActive } from "../utils/isProjectActive";
+import { getProjectStatus } from "../utils/getProjectStatus";
+
+export type ProjectStatusFilter = "active" | "archived" | "all";
 
 export interface ProjectsFilterCriteria extends FilterCriteria {
-  onlyActive: boolean;
-  onlyArchived: boolean;
+  status: ProjectStatusFilter;
 }
 
 const initialFilter: ProjectsFilterCriteria = {
   query: "",
-  onlyActive: true,
-  onlyArchived: false,
+  status: "active",
 };
 
 export const useProjectsFilter = (items: ProjectItem[]) =>
@@ -20,13 +20,10 @@ export const useProjectsFilter = (items: ProjectItem[]) =>
     keys: [(item) => item.name, (item) => item.registrationNumber],
     predicates: [
       (item, filter) => {
-        if (filter.onlyArchived) {
-          return Boolean(item.archivedAt);
+        if (filter.status === "all") {
+          return true;
         }
-        if (filter.onlyActive) {
-          return isProjectActive(item);
-        }
-        return true;
+        return getProjectStatus(item) === filter.status;
       },
     ],
   });

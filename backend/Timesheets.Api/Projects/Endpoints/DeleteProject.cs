@@ -31,7 +31,7 @@ public sealed class DeleteProject : IEndpoint
             .Select(c => c.Id)
             .ToListAsync(cancellationToken);
 
-        if (await ProjectDeleteImpactCalculator.HasProtectedTimesheetsAsync(contractIds, dbContext, cancellationToken))
+        if (await DeleteImpactCore.HasProtectedTimesheetsAsync(contractIds, dbContext, cancellationToken))
         {
             if (!force)
             {

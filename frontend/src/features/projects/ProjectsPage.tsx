@@ -1,9 +1,10 @@
-import { Suspense, startTransition } from "react";
+import { Suspense, useState } from "react";
 import { Await, useAsyncValue, useLoaderData } from "react-router";
-import { useImmer, useImmerReducer } from "use-immer";
+import { useImmerReducer } from "use-immer";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { AddButton } from "@/components/shared/buttons/ActionButtons";
+import { EmptyState } from "@/components/shared/data/EmptyState";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
@@ -11,9 +12,10 @@ import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { AddProjectDialog } from "./AddProjectDialog";
 import type { GetProjectsResponse } from "./api/getProjects";
+import type { ProjectItem } from "./api/shared/projectItem";
 import { type ProjectsFilterCriteria, useProjectsFilter } from "./hooks/useProjectsFilter";
-import { ProjectCards } from "./ProjectCards";
-import { ProjectsContext } from "./utils/projectsContext";
+import { ProjectCard } from "./ProjectCard";
+import { ProjectsStatusFilter } from "./ProjectsStatusFilter";
 import { projectsReducer } from "./utils/projectsReducer";
 
 export const ProjectsPage = () => {
@@ -35,30 +37,40 @@ export const ProjectsPage = () => {
   );
 };
 
-const { FilterSearchInput, FilterCheckbox } = createFilterControls<ProjectsFilterCriteria>();
+const { FilterSearchInput } = createFilterControls<ProjectsFilterCriteria>();
 
 const ProjectsPageContent = () => {
   const response = useAsyncValue() as GetProjectsResponse;
   const [state, dispatch] = useImmerReducer(projectsReducer, response.projects);
   const { filter, setFilter, filtered } = useProjectsFilter(state);
-  const [isAddOpen, setIsAddOpen] = useImmer(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+
+  const handleUpdate = (project: ProjectItem) => dispatch({ type: "update", project });
+  const handleDelete = (projectId: string) => dispatch({ type: "delete", projectId });
 
   return (
-    <ProjectsContext.Provider value={dispatch}>
+    <>
       <FilterBar
         filter={filter}
         setFilter={setFilter}
         actions={
           <Can action={UiAction.projects.add}>
-            <AddButton onClick={() => startTransition(() => setIsAddOpen(true))}>{Texts.addProject}</AddButton>
+            <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addProject}</AddButton>
           </Can>
         }
       >
         <FilterSearchInput placeholder={Texts.search} />
-        <FilterCheckbox field="onlyActive" label={Texts.activeOnly} exclusiveWith={["onlyArchived"]} />
-        <FilterCheckbox field="onlyArchived" label={Texts.archivedOnly} exclusiveWith={["onlyActive"]} />
+        <ProjectsStatusFilter />
       </FilterBar>
-      <ProjectCards projects={filtered} />
+      {filtered.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map((project) => (
+            <ProjectCard key={project.id} project={project} onUpdate={handleUpdate} onDelete={handleDelete} />
+          ))}
+        </div>
+      )}
       <AddProjectDialog
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
@@ -67,6 +79,6 @@ const ProjectsPageContent = () => {
           setIsAddOpen(false);
         }}
       />
-    </ProjectsContext.Provider>
+    </>
   );
 };

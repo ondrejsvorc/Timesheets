@@ -17,6 +17,7 @@ public sealed class UpdateProject : IEndpoint
            .WithRequestValidation<Request>();
 
     public sealed record Request(string Name, string RegistrationNumber, DateTime StartDate, DateTime? EndDate);
+    public sealed record Response(ProjectItem Project);
     public sealed class Validator : AbstractValidator<Request>
     {
         public Validator()
@@ -34,7 +35,7 @@ public sealed class UpdateProject : IEndpoint
         }
     }
 
-    private static async Task<Results<NoContent, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, [FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsGlobalManagerRole())
         {
@@ -56,6 +57,19 @@ public sealed class UpdateProject : IEndpoint
             return TypedResults.NotFound();
         }
 
-        return TypedResults.NoContent();
+        ProjectItem? project = await dbContext.Projects
+            .AsNoTracking()
+            .Where(p => p.Id == id)
+            .Select(p => new ProjectItem(
+                p.Id,
+                p.Name,
+                p.RegistrationNumber,
+                p.StartDate,
+                p.EndDate,
+                p.ArchivedAt,
+                p.Contracts.Count))
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return project is null ? TypedResults.NotFound() : TypedResults.Ok(new Response(project));
     }
 }

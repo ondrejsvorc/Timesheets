@@ -1,8 +1,7 @@
 import { ApiUrl, customFetch, withOptionalDelay } from "@/constants/api";
 import { Texts } from "@/constants/texts";
 
-export interface DeleteProjectImpactResponse {
-  contractCount: number;
+export interface DeleteContractImpactResponse {
   positionCount: number;
   draftProjectTimesheetCount: number;
   submittedProjectTimesheetCount: number;
@@ -14,12 +13,8 @@ export interface DeleteProjectImpactResponse {
 
 const formatCount = (template: string, count: number) => template.replace("{count}", String(count));
 
-export const formatProjectDeleteImpactConsequences = (impact: DeleteProjectImpactResponse): string[] => {
+export const formatContractDeleteImpactConsequences = (impact: DeleteContractImpactResponse): string[] => {
   const consequences: string[] = [];
-
-  if (impact.contractCount > 0) {
-    consequences.push(formatCount(Texts.deleteImpactContracts, impact.contractCount));
-  }
 
   if (impact.positionCount > 0) {
     consequences.push(formatCount(Texts.deleteImpactPositions, impact.positionCount));
@@ -50,5 +45,5 @@ export const formatProjectDeleteImpactConsequences = (impact: DeleteProjectImpac
   return consequences;
 };
 
-export const getProjectDeleteImpact = (projectId: string, signal?: AbortSignal) =>
-  withOptionalDelay("fast", () => customFetch<DeleteProjectImpactResponse>(`${ApiUrl}/projects/${projectId}/delete-impact`, { signal }));
+export const getContractDeleteImpact = (contractId: string, signal?: AbortSignal) =>
+  withOptionalDelay("fast", () => customFetch<DeleteContractImpactResponse>(`${ApiUrl}/contracts/${contractId}/delete-impact`, { signal }));

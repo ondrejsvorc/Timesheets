@@ -15,4 +15,5 @@ export const Routes = {
   resourceContracts: (projectId: string) => `/_resources/contracts?projectId=${encodeURIComponent(projectId)}`,
   resourceEmployees: () => "/_resources/employees",
   resourceProjectContracts: (projectId: string) => `/_resources/project-contracts/${projectId}`,
+  resourceProjectDeleteImpact: (projectId: string) => `/_resources/project-delete-impact/${projectId}`,
 };

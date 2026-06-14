@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
 import { ConsequenceDialog } from "@/components/shared/dialogs/ConsequenceDialog";
 import { Texts } from "@/constants/texts";
-import {
-  formatDeleteImpactConsequences,
-  getProjectContractDeleteImpact,
-  type ProjectDeleteImpactResponse,
-} from "../projects/api/projectDeleteImpact";
+import { type DeleteContractImpactResponse, formatContractDeleteImpactConsequences, getContractDeleteImpact } from "./api/contractDeleteImpact";
 import { deleteProjectContract } from "./api/deleteProjectContract";
 
 interface ContractDeleteDialogProps {
@@ -17,11 +13,11 @@ interface ContractDeleteDialogProps {
 }
 
 export const ContractDeleteDialog = ({ projectId, contractId, contractName, onClose, onDeleted }: ContractDeleteDialogProps) => {
-  const [impact, setImpact] = useState<ProjectDeleteImpactResponse | null>(null);
+  const [impact, setImpact] = useState<DeleteContractImpactResponse | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    getProjectContractDeleteImpact(projectId, contractId, controller.signal)
+    getContractDeleteImpact(contractId, controller.signal)
       .then(setImpact)
       .catch(() => {
         if (!controller.signal.aborted) {
@@ -29,10 +25,10 @@ export const ContractDeleteDialog = ({ projectId, contractId, contractName, onCl
         }
       });
     return () => controller.abort();
-  }, [projectId, contractId]);
+  }, [contractId]);
 
   const title = Texts.deleteTitle.replace("{name}", contractName);
-  const consequences = impact ? formatDeleteImpactConsequences(impact) : [];
+  const consequences = impact ? formatContractDeleteImpactConsequences(impact) : [];
   const confirmDisabled = Boolean(impact?.hasProtectedTimesheets && !impact.canForceDelete);
   const useForce = Boolean(impact?.hasProtectedTimesheets && impact.canForceDelete);
 

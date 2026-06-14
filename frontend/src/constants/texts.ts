@@ -28,6 +28,7 @@ export const Texts = {
   removeFilter: "Vymazat filtr",
   activeOnly: "Pouze aktivní",
   archivedOnly: "Pouze archivované",
+  allProjects: "Všechny",
   copyProjectColumn: "Zkopírovat sloupec hodin",
   copyProjectColumnSuccess: "Sloupec hodin byl zkopírován do schránky",
   newProject: "Nový projekt",

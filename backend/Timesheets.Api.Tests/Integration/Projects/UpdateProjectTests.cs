@@ -82,4 +82,34 @@ public class UpdateProjectTests : BaseIntegrationTest
         var response4 = await Client.PutAsJsonAsync($"/api/projects/{projectId}", invalidDatesRequest);
         Assert.Equal(HttpStatusCode.BadRequest, response4.StatusCode);
     }
+
+    [Fact]
+    public async Task UpdateProject_WithValidData_ReturnsUpdatedProject()
+    {
+        var createRequest = new CreateProject.Request(
+            "Project To Update",
+            "REG-UPD-003",
+            DateTime.UtcNow.Date,
+            DateTime.UtcNow.Date.AddDays(10));
+
+        var postResponse = await Client.PostAsJsonAsync("/api/projects", createRequest);
+        var createdProject = await postResponse.Content.ReadFromJsonAsync<CreateProject.Response>();
+        var projectId = createdProject!.Project.Id;
+
+        var updateRequest = new UpdateProject.Request(
+            "Updated Project Name",
+            "REG-UPD-004",
+            createRequest.StartDate,
+            createRequest.EndDate);
+
+        var response = await Client.PutAsJsonAsync($"/api/projects/{projectId}", updateRequest);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var updated = await response.Content.ReadFromJsonAsync<UpdateProject.Response>();
+        Assert.NotNull(updated);
+        Assert.Equal(updateRequest.Name, updated!.Project.Name);
+        Assert.Equal(updateRequest.RegistrationNumber, updated.Project.RegistrationNumber);
+        Assert.Equal(projectId, updated.Project.Id);
+        Assert.Equal(0, updated.Project.ContractCount);
+    }
 }

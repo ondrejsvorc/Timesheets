@@ -1,6 +1,6 @@
 import { Archive, ArchiveRestore, MoreHorizontal } from "lucide-react";
-import { startTransition } from "react";
-import { useImmer } from "use-immer";
+import { useState } from "react";
+import { useFetcher } from "react-router";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { DeleteIcon, EditIcon } from "@/components/shared/buttons/ActionButtons";
@@ -13,25 +13,26 @@ import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { cn } from "@/utils/cn";
 import { formatDate } from "@/utils/formatDate";
 import { archiveProject, unarchiveProject } from "./api/archiveProject";
+import type { DeleteProjectImpactResponse } from "./api/projectDeleteImpact";
 import type { ProjectItem } from "./api/shared/projectItem";
-import { useProjectsDispatch } from "./hooks/useProjectsDispatch";
 import { ProjectDeleteDialog } from "./ProjectDeleteDialog";
 import { UpdateProjectDialog } from "./UpdateProjectDialog";
-import { isProjectActive } from "./utils/isProjectActive";
+import { getProjectStatus } from "./utils/getProjectStatus";
 
 interface ProjectCardProps {
   project: ProjectItem;
+  onUpdate: (project: ProjectItem) => void;
+  onDelete: (projectId: string) => void;
 }
 
-export const ProjectCard = ({ project }: ProjectCardProps) => {
-  const dispatch = useProjectsDispatch();
-  const [isEditOpen, setIsEditOpen] = useImmer(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useImmer(false);
+export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) => {
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const deleteImpactFetcher = useFetcher<DeleteProjectImpactResponse>();
   const startDate = formatDate(project.startDate);
   const endDate = formatDate(project.endDate);
   const dateRange = project.startDate && project.endDate ? `${startDate} – ${endDate}` : formatDate(project.startDate);
-  const isArchived = Boolean(project.archivedAt);
-  const isActive = isProjectActive(project);
+  const status = getProjectStatus(project);
   const navigate = useNavigateFrom();
 
   return (
@@ -57,7 +58,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
                   <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
-                      startTransition(() => setIsEditOpen(true));
+                      setIsEditOpen(true);
                     }}
                   >
                     <EditIcon />
@@ -66,18 +67,19 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
                   <DropdownMenuItem
                     onClick={async (e) => {
                       e.stopPropagation();
-                      const updated = isArchived ? await unarchiveProject(project.id) : await archiveProject(project.id);
-                      dispatch({ type: "update", project: updated });
+                      const updated = status === "archived" ? await unarchiveProject(project.id) : await archiveProject(project.id);
+                      onUpdate(updated);
                     }}
                   >
-                    {isArchived ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
-                    {isArchived ? Texts.unarchive : Texts.archive}
+                    {status === "archived" ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
+                    {status === "archived" ? Texts.unarchive : Texts.archive}
                   </DropdownMenuItem>
                   <Can action={UiAction.projects.delete}>
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
-                        startTransition(() => setIsConfirmOpen(true));
+                        deleteImpactFetcher.load(Routes.resourceProjectDeleteImpact(project.id));
+                        setIsConfirmOpen(true);
                       }}
                     >
                       <DeleteIcon />
@@ -98,14 +100,14 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
             <span
               className={cn(
                 "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                isArchived
+                status === "archived"
                   ? "bg-muted text-muted-foreground border border-border"
-                  : isActive
+                  : status === "active"
                     ? "bg-primary/10 text-primary border border-primary/20"
                     : "bg-muted text-muted-foreground border border-border",
               )}
             >
-              {isArchived ? Texts.archived : isActive ? Texts.active : Texts.inactive}
+              {status === "archived" ? Texts.archived : status === "active" ? Texts.active : Texts.inactive}
             </span>
           </div>
         </CardContent>
@@ -115,7 +117,7 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
         project={project}
         onClose={() => setIsEditOpen(false)}
         onSaved={(updated) => {
-          dispatch({ type: "update", project: updated });
+          onUpdate(updated);
           setIsEditOpen(false);
         }}
       />
@@ -123,9 +125,10 @@ export const ProjectCard = ({ project }: ProjectCardProps) => {
         <ProjectDeleteDialog
           projectId={project.id}
           projectName={project.name}
+          fetcher={deleteImpactFetcher}
           onClose={() => setIsConfirmOpen(false)}
           onDeleted={() => {
-            dispatch({ type: "delete", projectId: project.id });
+            onDelete(project.id);
             setIsConfirmOpen(false);
           }}
         />

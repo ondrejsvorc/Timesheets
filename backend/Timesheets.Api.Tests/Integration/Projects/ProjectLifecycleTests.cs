@@ -50,7 +50,12 @@ public class ProjectLifecycleTests : BaseIntegrationTest
             createRequest.EndDate
         );
         var putResponse = await Client.PutAsJsonAsync($"/api/projects/{projectId}", updateRequest);
-        Assert.Equal(HttpStatusCode.NoContent, putResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
+
+        var updatedProject = await putResponse.Content.ReadFromJsonAsync<UpdateProject.Response>();
+        Assert.NotNull(updatedProject);
+        Assert.Equal(updateRequest.Name, updatedProject!.Project.Name);
+        Assert.Equal(updateRequest.RegistrationNumber, updatedProject.Project.RegistrationNumber);
 
         // 4. GET /api/projects/{id}
         var getResponse2 = await Client.GetAsync($"/api/projects/{projectId}");

@@ -4,6 +4,7 @@ import { getContractCatalog } from "@/features/employees/api/getContractCatalog"
 import { getEmployees } from "@/features/employees/api/getEmployees";
 import { getProjectCatalog } from "@/features/employees/api/getProjectCatalog";
 import { getProjectContracts } from "@/features/project/api/getProjectContracts";
+import { getProjectDeleteImpact } from "@/features/projects/api/projectDeleteImpact";
 
 export const resourceRoutes = [
   {
@@ -35,6 +36,16 @@ export const resourceRoutes = [
       }
       const [contracts, employees] = await Promise.all([getProjectContracts(params.projectId).promise, getEmployees().promise]);
       return { contracts: contracts.projectContracts, employees: employees.employees };
+    },
+  },
+  {
+    path: "_resources/project-delete-impact/:projectId",
+    loader: async ({ params, request }: { params: { projectId?: string }; request: Request }) => {
+      if (!params.projectId) {
+        throw new Response("projectId is required", { status: 400 });
+      }
+      await denyUnless(UiAction.projects.delete, { projectId: params.projectId }, request);
+      return getProjectDeleteImpact(params.projectId);
     },
   },
 ] as const;

@@ -35,15 +35,9 @@ export const UpdateProjectDialog = ({ open, project, onClose, onSaved }: UpdateP
 
   const handleSubmit = async (values: ProjectFormValues, signal: AbortSignal) => {
     if (!project) return;
-    await updateProject(project.id, values, signal);
-    onSaved({
-      ...project,
-      name: values.name,
-      registrationNumber: values.registrationNumber,
-      startDate: values.startDate,
-      endDate: values.endDate ?? null,
-    });
-    form.reset(values);
+    const response = await updateProject(project.id, values, signal);
+    onSaved(response.project);
+    form.reset(projectToFormValues(response.project));
     onClose();
   };
 

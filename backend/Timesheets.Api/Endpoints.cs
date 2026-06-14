@@ -54,7 +54,6 @@ public static class Endpoints
     private static void MapProjectEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/projects").WithTags("Projects")
         .MapEndpoint<GetProjectDeleteImpact>()
-        .MapEndpoint<GetProjectContractDeleteImpact>()
         .MapEndpoint<GetProject>()
         .MapEndpoint<UpdateProject>()
         .MapEndpoint<ArchiveProject>()
@@ -72,6 +71,7 @@ public static class Endpoints
 
     private static void MapContractEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/contracts").WithTags("Contracts")
+        .MapEndpoint<GetContractDeleteImpact>()
         .MapEndpoint<GetContractCatalog>()
         .MapEndpoint<GetContractTimesheetsFilterOptions>()
         .MapEndpoint<GetContractTimesheets>()

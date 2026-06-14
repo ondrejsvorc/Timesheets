@@ -28,7 +28,7 @@ public sealed class DeleteProjectContract : IEndpoint
             return TypedResults.NotFound();
         }
 
-        if (await ProjectDeleteImpactCalculator.HasProtectedTimesheetsAsync([contractId], dbContext, cancellationToken))
+        if (await DeleteImpactCore.HasProtectedTimesheetsAsync([contractId], dbContext, cancellationToken))
         {
             if (!force)
             {
