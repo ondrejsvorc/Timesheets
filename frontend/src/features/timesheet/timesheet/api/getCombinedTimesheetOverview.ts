@@ -13,12 +13,23 @@ export interface CombinedTimesheetOverviewItem {
   projectId: string | null;
 }
 
+export interface CombinedTimesheetMonthSummary {
+  periodStart: string;
+  periodEnd: string;
+  workdays: number;
+  vacationDays: number;
+  sickDays: number;
+  holidays: number;
+  totalWorkload: number;
+}
+
 export interface GetCombinedTimesheetOverviewResponse {
   employeeId: string;
   year: number;
   month: number;
   status: string;
   items: CombinedTimesheetOverviewItem[];
+  summary: CombinedTimesheetMonthSummary;
 }
 
 export const getCombinedTimesheetOverview = (employeeId: string, year: number, month: number) => {

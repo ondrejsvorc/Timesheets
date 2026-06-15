@@ -26,7 +26,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         string Status,
         Guid? ContractId,
         Guid? ProjectId);
-    public sealed record Response(Guid EmployeeId, int Year, int Month, string Status, IEnumerable<OverviewItem> Items);
+    public sealed record Response(Guid EmployeeId, int Year, int Month, string Status, IEnumerable<OverviewItem> Items, TimesheetMonthSummary Summary);
     private sealed record ProjectRowSource(
         Guid TimesheetId,
         Guid ContractId,
@@ -50,7 +50,10 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             {
                 t.Id,
                 Status = t.TimesheetStatus.Name,
-                Days = t.Days.Select(d => d.Workload).ToList()
+                Days = t.Days
+                    .OrderBy(day => day.Date)
+                    .Select(day => new TimesheetMonthSummaryDay(day.Date, day.IsHoliday, day.Description))
+                    .ToList()
             })
             .SingleOrDefaultAsync(cancellationToken);
 
@@ -86,6 +89,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         decimal totalProjectWorkload = projectRows.Sum(item => item.Workload);
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
+        TimesheetMonthSummary summary = TimesheetMonthSummaryCalculator.Compute(request.Year, request.Month, attendanceInfo.Days, totalWorkload);
 
         List<OverviewItem> items =
         [
@@ -119,7 +123,6 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             ));
         }
 
-        return TypedResults.Ok(new Response(request.EmployeeId, request.Year, request.Month, attendanceInfo.Status, items));
+        return TypedResults.Ok(new Response(request.EmployeeId, request.Year, request.Month, attendanceInfo.Status, items, summary));
     }
-
 }
