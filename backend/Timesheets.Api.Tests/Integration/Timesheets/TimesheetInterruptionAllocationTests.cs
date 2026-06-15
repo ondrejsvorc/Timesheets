@@ -101,12 +101,10 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         EmployeeId = SeededTestData.JanNovakEmployeeId,
         ContractId = SeededTestData.AlphaContractId,
         ContractEmployeeId = assignmentId,
-        TimesheetStatusId = TestTimesheetStatusIds.Approved,
+        TimesheetStatusId = TestTimesheetStatusIds.Draft,
         Year = firstDate.Year,
         Month = firstDate.Month,
         Workload = 0.25m,
-        LockedAt = DateTime.UtcNow,
-        LockedBy = SeededTestData.JanNovakEmployeeId,
         Days =
         [
             ProjectDay(firstDate),

@@ -81,7 +81,7 @@ public sealed class CombinedTimesheetReviewer
     {
         if (!day.SkipAllocationRules && day.CoreWorkload > 0 && day.StagHours > 0 && day.CoreHours + 0.009m < day.StagHours)
         {
-            yield return new DayIssue("ERR-ALL-02", IssueType.Error, $"STAG vyžaduje v kmeni alespoň {day.StagHours:F2} h (aktuálně {day.CoreHours:F2} h).", day.Date.Day, "coreHours");
+            yield return new DayIssue("ERR-ALL-02", IssueType.Error, $"STAG vyžaduje v kmeni alespoň {day.StagHours:F2} h.", day.Date.Day, "coreHours");
         }
     }
 

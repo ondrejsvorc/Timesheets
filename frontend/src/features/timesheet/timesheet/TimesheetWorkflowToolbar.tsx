@@ -28,7 +28,6 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
   const revalidator = useRevalidator();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
   const [submitBlockedOpen, setSubmitBlockedOpen] = useState(false);
-  const [projectLocksBlockedOpen, setProjectLocksBlockedOpen] = useState(false);
 
   const employeeId = searchParams.get("employeeId") ?? "";
   const periodLabel = formatMonthYear(overview.month, overview.year);
@@ -56,11 +55,6 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
   };
 
   const handleSubmitClick = () => {
-    if (!allProjectsApproved) {
-      setProjectLocksBlockedOpen(true);
-      return;
-    }
-
     if (evaluation.hasErrors) {
       setSubmitBlockedOpen(true);
       return;
@@ -148,12 +142,6 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
       </div>
       <TimesheetWorkflowConfirmDialog action={activeWorkflow} periodLabel={periodLabel} onClose={() => setActiveWorkflow(null)} onConfirm={handleWorkflowConfirm} />
       <MessageAlertDialog open={submitBlockedOpen} title={Texts.workflowSubmitBlockedTitle} description={Texts.workflowSubmitBlockedDescription} onClose={() => setSubmitBlockedOpen(false)} />
-      <MessageAlertDialog
-        open={projectLocksBlockedOpen}
-        title={Texts.workflowProjectsUnlockedTitle}
-        description={Texts.workflowProjectsUnlockedDescription}
-        onClose={() => setProjectLocksBlockedOpen(false)}
-      />
     </>
   );
 };

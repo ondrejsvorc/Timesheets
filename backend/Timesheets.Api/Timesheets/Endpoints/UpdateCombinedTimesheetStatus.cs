@@ -52,6 +52,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         }
 
         Data.Models.AttendanceTimesheet? attendanceTimesheet = await dbContext.AttendanceTimesheets
+            .Include(t => t.Employee)
             .Include(t => t.TimesheetStatus)
             .FirstOrDefaultAsync(t => t.Id == scope.AttendanceTimesheetId, cancellationToken);
 
@@ -109,12 +110,6 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         bool statusWillChange = currentStatusId != targetStatus.Id;
         if (targetStatus.Id == TimesheetWorkflow.SubmittedStatusId && statusWillChange)
         {
-            bool allProjectsApproved = await AreAllProjectsApprovedAsync(scope, dbContext, cancellationToken);
-            if (!allProjectsApproved)
-            {
-                return TypedResults.BadRequest("Nejdříve musí manažeři schválit a uzamknout všechny projektové sloupce.");
-            }
-
             TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(attendanceTimesheet.Id, dbContext, cancellationToken);
             if (context is null)
             {
@@ -156,6 +151,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             {
                 attendanceTimesheet.ApprovedBy = null;
                 attendanceTimesheet.ApprovedAt = null;
+                await ResetProjectStatusesAsync(scope, user.EmployeeId, request.Comment, dbContext, cancellationToken);
             }
         }
 
@@ -176,11 +172,15 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        if (statusChanged)
+        if (statusChanged && targetStatus.Id == TimesheetWorkflow.SubmittedStatusId)
         {
-            string notificationMessage = BuildNotificationMessage(request.Year, request.Month, currentStatusName, targetStatus.Name, request.Comment);
+            Guid[] managerIds = await LoadPendingProjectManagerIdsAsync(scope, attendanceTimesheet.EmployeeId, dbContext, cancellationToken);
+            string notificationMessage = BuildApprovalRequestNotificationMessage(attendanceTimesheet.Employee.FullName, request.Year, request.Month);
 
-            await notificationSender.SendAsync(attendanceTimesheet.EmployeeId, notificationMessage, cancellationToken);
+            foreach (Guid managerId in managerIds)
+            {
+                await notificationSender.SendAsync(managerId, notificationMessage, cancellationToken);
+            }
         }
 
         return TypedResults.Ok();
@@ -196,9 +196,9 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return TypedResults.Unauthorized();
         }
 
-        if (attendanceTimesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
+        if (attendanceTimesheet.TimesheetStatusId != TimesheetWorkflow.SubmittedStatusId)
         {
-            return TypedResults.BadRequest("Projektové sloupce lze zamykat nebo odemykat pouze v rozpracovaném výkazu.");
+            return TypedResults.BadRequest("Projektové sloupce lze schvalovat nebo vracet pouze ve výkazu odeslaném ke schválení.");
         }
 
         List<Data.Models.ProjectTimesheet> projectTimesheets = await dbContext.ProjectTimesheets
@@ -266,6 +266,24 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             }
         }
 
+        if (isProjectReturn && anyProjectStatusChanged)
+        {
+            Guid previousAttendanceStatusId = attendanceTimesheet.TimesheetStatusId;
+            attendanceTimesheet.TimesheetStatusId = TimesheetWorkflow.DraftStatusId;
+            attendanceTimesheet.ApprovedBy = null;
+            attendanceTimesheet.ApprovedAt = null;
+            attendanceTimesheet.UpdatedAt = DateTime.UtcNow;
+            dbContext.TimesheetStatusHistories.Add(new TimesheetStatusHistory
+            {
+                Id = Guid.NewGuid(),
+                AttendanceTimesheetId = attendanceTimesheet.Id,
+                FromStatusId = previousAttendanceStatusId,
+                ToStatusId = TimesheetWorkflow.DraftStatusId,
+                ChangedByEmployeeId = user.EmployeeId,
+                Comment = request.Comment,
+            });
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         if (anyProjectStatusChanged)
@@ -309,17 +327,72 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         .Join(dbContext.Contracts.AsNoTracking(), value => value.ContractId, contract => contract.Id, (value, contract) => new ProjectTimesheetPart(value.ContractId, contract.ProjectId))
         .ToListAsync(cancellationToken);
 
-    private static string BuildNotificationMessage(int year, int month, string oldStatus, string newStatus, string? comment)
+    private static async Task<Guid[]> LoadPendingProjectManagerIdsAsync(CombinedTimesheetScope scope, Guid employeeId, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        string monthName = new DateTime(year, month, 1).ToString("MMMM yyyy", CultureInfo.GetCultureInfo("cs-CZ"));
-        string message = $"Stav vašeho výkazu za {monthName} byl změněn z '{oldStatus}' na '{newStatus}'.";
+        Guid[] pendingProjectTimesheetIds = await dbContext.ProjectTimesheets
+            .AsNoTracking()
+            .Where(timesheet => scope.ProjectTimesheetLabels.Keys.Contains(timesheet.Id) && timesheet.TimesheetStatusId != TimesheetWorkflow.ApprovedStatusId)
+            .Select(timesheet => timesheet.Id)
+            .ToArrayAsync(cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(comment))
+        if (pendingProjectTimesheetIds.Length == 0)
         {
-            message += $"\n\nKomentář: {comment}";
+            return [];
         }
 
-        return message;
+        List<ProjectTimesheetPart> projectScopes = await LoadProjectScopesAsync(pendingProjectTimesheetIds, dbContext, cancellationToken);
+        Guid[] contractIds = projectScopes.Select(projectScope => projectScope.ContractId).Distinct().ToArray();
+        Guid[] projectIds = projectScopes.Select(projectScope => projectScope.ProjectId).Distinct().ToArray();
+
+        List<Guid> contractManagerIds = await dbContext.ContractManagers
+            .AsNoTracking()
+            .Where(manager => contractIds.Contains(manager.ContractId) && manager.EmployeeId != employeeId)
+            .Select(manager => manager.EmployeeId)
+            .ToListAsync(cancellationToken);
+
+        List<Guid> projectManagerIds = await dbContext.ProjectManagers
+            .AsNoTracking()
+            .Where(manager => projectIds.Contains(manager.ProjectId) && manager.EmployeeId != employeeId)
+            .Select(manager => manager.EmployeeId)
+            .ToListAsync(cancellationToken);
+
+        return contractManagerIds.Concat(projectManagerIds).Distinct().ToArray();
+    }
+
+    private static async Task ResetProjectStatusesAsync(CombinedTimesheetScope scope, Guid changedByEmployeeId, string? comment, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        List<Data.Models.ProjectTimesheet> projectTimesheets = await dbContext.ProjectTimesheets
+            .Where(timesheet => scope.ProjectTimesheetLabels.Keys.Contains(timesheet.Id))
+            .ToListAsync(cancellationToken);
+
+        foreach (Data.Models.ProjectTimesheet projectTimesheet in projectTimesheets)
+        {
+            if (projectTimesheet.TimesheetStatusId == TimesheetWorkflow.DraftStatusId && projectTimesheet.LockedAt is null)
+            {
+                continue;
+            }
+
+            Guid previousStatusId = projectTimesheet.TimesheetStatusId;
+            projectTimesheet.TimesheetStatusId = TimesheetWorkflow.DraftStatusId;
+            projectTimesheet.LockedAt = null;
+            projectTimesheet.LockedBy = null;
+            projectTimesheet.UpdatedAt = DateTime.UtcNow;
+            dbContext.TimesheetStatusHistories.Add(new TimesheetStatusHistory
+            {
+                Id = Guid.NewGuid(),
+                ProjectTimesheetId = projectTimesheet.Id,
+                FromStatusId = previousStatusId,
+                ToStatusId = TimesheetWorkflow.DraftStatusId,
+                ChangedByEmployeeId = changedByEmployeeId,
+                Comment = comment,
+            });
+        }
+    }
+
+    private static string BuildApprovalRequestNotificationMessage(string employeeName, int year, int month)
+    {
+        string monthName = new DateTime(year, month, 1).ToString("MMMM yyyy", CultureInfo.GetCultureInfo("cs-CZ"));
+        return $"Výkaz zaměstnance {employeeName} za {monthName} čeká na schválení projektové části.";
     }
 
     private static string BuildProjectNotificationMessage(int year, int month, string newStatus, string? comment)

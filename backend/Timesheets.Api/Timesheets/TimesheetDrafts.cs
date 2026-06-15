@@ -162,12 +162,6 @@ internal static class TimesheetDrafts
 
     public static TimesheetEvaluation Evaluate(TimesheetDraftContext context, TimesheetDraft draft) => Evaluate(context, BuildSnapshot(context, draft));
 
-    public static bool ChangesCoreHours(TimesheetDraftContext context, TimesheetDraft draft)
-    {
-        Dictionary<DateOnly, decimal> currentHours = context.Timesheet.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date), day => TimesheetLogic.Normalize(day.CoreHours));
-        return draft.Days.Any(day => currentHours.TryGetValue(DateOnly.FromDateTime(day.Date), out decimal hours) && TimesheetLogic.Normalize(day.CoreHours) != hours);
-    }
-
     public static TimesheetEvaluation Evaluate(TimesheetDraftContext context, TimesheetDraftSnapshot snapshot)
     {
         List<AttendanceDay> attendanceDays = snapshot.Days.Select(day => new AttendanceDay(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, OtherInterruption: day.Description, Schedules: day.Schedules, IsHoliday: day.IsHoliday, Workload: context.TotalWorkload)).ToList();

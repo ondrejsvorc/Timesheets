@@ -37,7 +37,7 @@ public class TimesheetLockTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task UpdateTimesheet_CoreHoursCannotChangeBeforeProjectsAreLocked()
+    public async Task UpdateTimesheet_CoreHoursCanChangeBeforeProjectsAreLocked()
     {
         DateTime date = new(2035, 2, 1, 0, 0, 0, DateTimeKind.Utc);
         Guid attendanceTimesheetId = Guid.NewGuid();
@@ -48,11 +48,11 @@ public class TimesheetLockTests : BaseIntegrationTest
         TimesheetDraft draft = CreateDraft(contractEmployeeId, date, hours: 2m, coreHours: 1m);
         HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}", draft);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         AttendanceTimesheet stored = await assertionContext.AttendanceTimesheets.AsNoTracking().Include(timesheet => timesheet.Days).SingleAsync(timesheet => timesheet.Id == attendanceTimesheetId);
-        Assert.Equal(0m, Assert.Single(stored.Days).CoreHours);
+        Assert.Equal(1m, Assert.Single(stored.Days).CoreHours);
     }
 
     private async Task SeedTimesheetsAsync(Guid attendanceTimesheetId, Guid contractEmployeeId, Guid projectTimesheetId, DateTime date, bool locked = true)

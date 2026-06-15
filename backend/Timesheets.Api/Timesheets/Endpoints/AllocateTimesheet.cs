@@ -13,7 +13,7 @@ public sealed class AllocateTimesheet : IEndpoint
             .WithSummary("Allocate Timesheet Draft")
             .WithRequestValidation<TimesheetDraft>();
 
-    private static async Task<Results<Ok<TimesheetAllocation>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, [FromQuery] int? day, [FromBody] TimesheetDraft draft, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<TimesheetAllocation>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromQuery] int? day, [FromBody] TimesheetDraft draft, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(id, dbContext, cancellationToken);
         if (context is null)
@@ -23,11 +23,6 @@ public sealed class AllocateTimesheet : IEndpoint
         if (user.EmployeeId != context.Timesheet.EmployeeId || context.Timesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
         {
             return TypedResults.Forbid();
-        }
-
-        if (context.Projects.Any(project => project.LockedAt is null))
-        {
-            return TypedResults.BadRequest("Nejdříve musí manažeři uzamknout všechny projektové sloupce.");
         }
 
         return TypedResults.Ok(Allocate(context, draft, day));

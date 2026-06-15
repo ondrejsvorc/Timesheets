@@ -22,10 +22,10 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
 
   const employeeId = searchParams.get("employeeId") ?? "";
   const periodLabel = formatMonthYear(overview.month, overview.year);
-  const isDraft = overview.status === Texts.statusInProgress;
+  const isSubmitted = overview.status === Texts.statusPendingApproval;
 
   const timesheetId = item.timesheetId;
-  const showActions = item.kind === "project" && Boolean(timesheetId) && isDraft;
+  const showActions = item.kind === "project" && Boolean(timesheetId) && isSubmitted;
 
   const canManagePart = useCan(UiAction.timesheet.approveProject, {
     timesheetContractId: item.contractId ?? undefined,

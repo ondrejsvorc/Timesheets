@@ -18,6 +18,7 @@ const numericCellClass = "justify-end text-right tabular-nums";
 const cellFirstClass = "sticky left-0 z-10 border-r border-slate-300 bg-white";
 const cellLastClass = "sticky right-0 z-10 border-l border-slate-300";
 const hoursCellClass = "w-full text-right tabular-nums cursor-help border-b border-dotted border-slate-300";
+const dayLevelFields = new Set(["workedHours", "allocatedHours"]);
 
 interface TimesheetDayProps {
   day: TimesheetDayModel;
@@ -34,7 +35,7 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
     const grouped = new Map<string, TimesheetIssue[]>();
     const row: TimesheetIssue[] = [];
     issues.forEach((issue) => {
-      if (!issue.field) {
+      if (!issue.field || dayLevelFields.has(issue.field)) {
         row.push(issue);
         return;
       }
@@ -51,8 +52,7 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
   const balance = evaluation?.balance ?? 0;
   const isWeekendOrHoliday = day.isWeekend || day.isHoliday;
   const shouldLockByInterruption = Boolean(evaluation?.hasCoreOnlyInterruption || evaluation?.hasProportionalInterruption);
-  const allProjectsLocked = projects.every((project) => project.locked);
-  const coreLocked = shouldLockByInterruption || !allProjectsLocked;
+  const coreLocked = shouldLockByInterruption;
 
   return (
     <div className={cn("grid grid-cols-subgrid col-[1/-1] border-b border-border/50", isWeekendOrHoliday && "bg-slate-100")}>
@@ -198,14 +198,11 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
             <Button
               variant="ghost"
               size="icon"
-              className={cn(
-                "h-7 w-7 shrink-0 transition-opacity",
-                balance <= 0 || !allProjectsLocked ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50",
-              )}
+              className={cn("h-7 w-7 shrink-0 transition-opacity", balance <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50")}
               onClick={() => {
-                if (balance > 0 && allProjectsLocked) void onAllocate(dayIndex + 1);
+                if (balance > 0) void onAllocate(dayIndex + 1);
               }}
-              title={allProjectsLocked ? Texts.fillRemainingHoursEmptyOnly : Texts.lockProjectsBeforeAllocation}
+              title={Texts.fillRemainingHoursEmptyOnly}
             >
               <Sparkles className="h-4 w-4" />
             </Button>

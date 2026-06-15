@@ -154,8 +154,6 @@ export const Texts = {
   workflowSaveBlockedDescription: "Výkaz obsahuje chyby (včetně nevyrovnané bilance nebo nedostatečného kmene pro STAG). Opravte je v tabulce a uložte znovu.",
   workflowSubmitBlockedTitle: "Nelze odeslat ke schválení",
   workflowSubmitBlockedDescription: "Výkaz obsahuje chyby (včetně nevyrovnané bilance nebo nedostatečného kmene pro STAG). Opravte je v tabulce a zkuste to znovu. Upozornění odeslání neblokují.",
-  workflowProjectsUnlockedTitle: "Projektové sloupce nejsou uzamčené",
-  workflowProjectsUnlockedDescription: "Nejdříve musí manažeři schválit a uzamknout všechny projektové sloupce.",
   workflowApproveTitle: "Schválit výkaz",
   workflowApproveDescription: "Opravdu chcete schválit kombinovaný výkaz za {period}?",
   workflowReturnTitle: "Vrátit k přepracování",
@@ -177,7 +175,7 @@ export const Texts = {
   enterFullscreen: "Zvětšit",
   exitFullscreen: "Zmenšit",
   saveChanges: "Uložit změny",
-  clearAttendanceEntryAndBreak: "Vymazat příchody, odchody a přestávku",
+  clearAttendanceEntryAndBreak: "Vymazat příchody, odchody a přestávky",
   addEmployeePositionToEmployeeTitle: "Přidat zaměstnanci pozici",
   loading: "Načítání",
   redirectingToLogin: "Přesměrování na přihlášení…",
@@ -251,5 +249,4 @@ export const Texts = {
   noContractNumber: "Bez čísla zakázky",
   fillMissingHoursInTimesheet: "Doplnit chybějící hodiny v celém výkazu",
   fillRemainingHoursEmptyOnly: "Doplnit zbývající hodiny jen do prázdných polí",
-  lockProjectsBeforeAllocation: "Nejdříve musí manažeři uzamknout všechny projektové sloupce",
 };
