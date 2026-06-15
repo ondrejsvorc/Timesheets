@@ -44,11 +44,11 @@ export interface Timesheet {
   days: TimesheetDay[];
 }
 
-export type ValidationType = "error" | "warning";
+export type IssueType = "error" | "warning";
 
 export interface TimesheetIssue {
   code: string;
-  type: ValidationType;
+  type: IssueType;
   message: string;
   day?: number;
   field?: string;
