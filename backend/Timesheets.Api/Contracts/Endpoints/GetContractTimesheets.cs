@@ -81,7 +81,13 @@ public sealed class GetContractTimesheets : IEndpoint
         IQueryable<AttendanceTimesheet> query = dbContext.AttendanceTimesheets
             .AsNoTracking()
             .Where(timesheet => timesheet.Year > request.FromYear || (timesheet.Year == request.FromYear && timesheet.Month >= request.FromMonth))
-            .Where(timesheet => timesheet.Year < request.ToYear || (timesheet.Year == request.ToYear && timesheet.Month <= request.ToMonth));
+            .Where(timesheet => timesheet.Year < request.ToYear || (timesheet.Year == request.ToYear && timesheet.Month <= request.ToMonth))
+            .Where(timesheet => dbContext.ContractEmployees
+                .Any(contractEmployee =>
+                    contractEmployee.ContractId == id
+                    && contractEmployee.EmployeeId == timesheet.EmployeeId
+                    && contractEmployee.StartDate <= new DateTime(timesheet.Year, timesheet.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddDays(-1)
+                    && (contractEmployee.EndDate == null || contractEmployee.EndDate >= new DateTime(timesheet.Year, timesheet.Month, 1, 0, 0, 0, DateTimeKind.Utc))));
 
         if (!canViewAllTimesheets)
         {
@@ -122,15 +128,7 @@ public sealed class GetContractTimesheets : IEndpoint
             return TypedResults.Ok(new Response(Employees: [], Timesheets: []));
         }
 
-        var relevant = items.Where(item => item.ContractEmployee is not null).ToList();
-
-        if (relevant.Count == 0)
-        {
-            // No contract-employee assignment for any attendance timesheet in the period.
-            return TypedResults.Ok(new Response(Employees: [], Timesheets: []));
-        }
-
-        List<TimesheetItem> timesheets = relevant
+        List<TimesheetItem> timesheets = items
             .Select(item => new TimesheetItem(
                 item.Id,
                 item.EmployeeId,
@@ -144,7 +142,7 @@ public sealed class GetContractTimesheets : IEndpoint
             ))
             .ToList();
 
-        List<EmployeeItem> employees = relevant
+        List<EmployeeItem> employees = items
             .Select(item => new EmployeeItem(
                 item.EmployeeId,
                 item.PersonalNumber,

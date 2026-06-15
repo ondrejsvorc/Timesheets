@@ -4,6 +4,8 @@ export interface GetProjectContractResponse {
   id: string;
   name: string;
   registrationNumber: string;
+  projectStartDate: string;
+  projectEndDate: string | null;
 }
 
 export const getProjectContract = (projectId: string, contractId: string) =>

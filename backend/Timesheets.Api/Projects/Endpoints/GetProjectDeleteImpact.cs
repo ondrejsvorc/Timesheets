@@ -19,7 +19,6 @@ public sealed class GetProjectDeleteImpact : IEndpoint
 
         ProjectDeleteImpact? impact = await ProjectDeleteImpactCalculator.ForProjectAsync(
             id,
-            user.IsGlobalManagerRole(),
             dbContext,
             cancellationToken);
 

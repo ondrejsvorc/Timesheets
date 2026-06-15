@@ -4,6 +4,7 @@ export interface ContractCatalogItem {
   id: string;
   projectId: string;
   name: string;
+  registrationNumber: string;
 }
 
 export interface GetContractCatalogResponse {

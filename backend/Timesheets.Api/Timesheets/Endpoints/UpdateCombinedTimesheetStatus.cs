@@ -14,13 +14,18 @@ namespace Timesheets.Api.Timesheets.Endpoints;
 
 public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 {
+    private const string SubmitAction = "submit";
+    private const string ApproveAction = "approve";
+    private const string ReturnAction = "return";
+
     public static void Map(IEndpointRouteBuilder app) =>
         app.MapPut("/combined/status", Handle)
            .WithSummary("Update Combined Timesheet Status")
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(Guid EmployeeId, int Year, int Month, Guid StatusId, string? Comment, IReadOnlyList<Guid> TimesheetIds);
+    public sealed record Request(Guid EmployeeId, int Year, int Month, string Action, string? Comment, IReadOnlyList<Guid> TimesheetIds);
+    private sealed record TargetStatus(Guid Id, string Name);
 
     public sealed class Validator : AbstractValidator<Request>
     {
@@ -29,10 +34,12 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             RuleFor(x => x.EmployeeId).NotEmpty();
             RuleFor(x => x.Year).GreaterThan(0);
             RuleFor(x => x.Month).InclusiveBetween(1, 12);
-            RuleFor(x => x.StatusId).NotEmpty();
+            RuleFor(x => x.Action).Must(IsSupportedAction);
             RuleFor(x => x.TimesheetIds).NotEmpty();
             RuleFor(x => x.Comment).MaximumLength(500).When(x => x.Comment is not null);
         }
+
+        private static bool IsSupportedAction(string action) => action is SubmitAction or ApproveAction or ReturnAction;
     }
 
     private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> Handle([FromBody] Request request, AppDbContext dbContext, NotificationSender notificationSender, ICurrentUser user, CancellationToken cancellationToken)
@@ -53,14 +60,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return TypedResults.NotFound();
         }
 
-        TimesheetStatus? newStatus = await dbContext.TimesheetStatuses
-            .AsNoTracking()
-            .FirstOrDefaultAsync(s => s.Id == request.StatusId, cancellationToken);
-
-        if (newStatus is null)
-        {
-            return TypedResults.BadRequest($"Status with ID '{request.StatusId}' not found in database.");
-        }
+        TargetStatus targetStatus = ResolveTargetStatus(request.Action);
 
         HashSet<Guid> selectedIds = request.TimesheetIds.ToHashSet();
         bool includesAttendance = selectedIds.Contains(scope.AttendanceTimesheetId);
@@ -85,36 +85,36 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
         if (includesAttendance)
         {
-            return await UpdateAttendanceStatusAsync(request, scope, attendanceTimesheet, newStatus, user, dbContext, notificationSender, cancellationToken);
+            return await UpdateAttendanceStatusAsync(request, scope, attendanceTimesheet, targetStatus, user, dbContext, notificationSender, cancellationToken);
         }
 
-        return await UpdateProjectStatusesAsync(request, scope, attendanceTimesheet, selectedProjectIds, newStatus, user, dbContext, notificationSender, cancellationToken);
+        return await UpdateProjectStatusesAsync(request, attendanceTimesheet, selectedProjectIds, targetStatus, user, dbContext, notificationSender, cancellationToken);
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateAttendanceStatusAsync(Request request, CombinedTimesheetScope scope, Data.Models.AttendanceTimesheet attendanceTimesheet, TimesheetStatus newStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
+    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateAttendanceStatusAsync(Request request, CombinedTimesheetScope scope, Data.Models.AttendanceTimesheet attendanceTimesheet, TargetStatus targetStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
     {
         Guid currentStatusId = attendanceTimesheet.TimesheetStatusId;
         string currentStatusName = attendanceTimesheet.TimesheetStatus.Name;
 
-        if (!TimesheetWorkflow.IsValidAttendanceTransition(currentStatusId, request.StatusId))
+        if (!TimesheetWorkflow.IsValidAttendanceTransition(currentStatusId, targetStatus.Id))
         {
-            return TypedResults.BadRequest($"Invalid status transition from '{currentStatusName}' (ID: {currentStatusId}) to '{newStatus.Name}' (ID: {request.StatusId}).");
+            return TypedResults.BadRequest($"Akci '{request.Action}' nelze provést ze stavu '{currentStatusName}'.");
         }
 
-        bool statusWillChange = currentStatusId != request.StatusId;
-        if (statusWillChange)
+        if (user.EmployeeId != attendanceTimesheet.EmployeeId)
         {
-            bool isSubmit = request.StatusId == TimesheetWorkflow.SubmittedStatusId;
-            bool authorized = isSubmit ? user.EmployeeId == attendanceTimesheet.EmployeeId : user.IsGlobalManagerRole();
+            return TypedResults.Unauthorized();
+        }
 
-            if (!authorized)
+        bool statusWillChange = currentStatusId != targetStatus.Id;
+        if (targetStatus.Id == TimesheetWorkflow.SubmittedStatusId && statusWillChange)
+        {
+            bool allProjectsApproved = await AreAllProjectsApprovedAsync(scope, dbContext, cancellationToken);
+            if (!allProjectsApproved)
             {
-                return TypedResults.Unauthorized();
+                return TypedResults.BadRequest("Nejdříve musí manažeři schválit a uzamknout všechny projektové sloupce.");
             }
-        }
 
-        if (request.StatusId == TimesheetWorkflow.SubmittedStatusId && statusWillChange)
-        {
             TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(attendanceTimesheet.Id, dbContext, cancellationToken);
             if (context is null)
             {
@@ -128,7 +128,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             }
         }
 
-        if (request.StatusId == TimesheetWorkflow.ApprovedStatusId)
+        if (targetStatus.Id == TimesheetWorkflow.ApprovedStatusId)
         {
             bool allProjectsApproved = await AreAllProjectsApprovedAsync(scope, dbContext, cancellationToken);
             if (!allProjectsApproved)
@@ -137,26 +137,25 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             }
         }
 
-        bool statusChanged = currentStatusId != request.StatusId;
+        bool statusChanged = currentStatusId != targetStatus.Id;
         if (statusChanged)
         {
-            attendanceTimesheet.TimesheetStatusId = request.StatusId;
+            attendanceTimesheet.TimesheetStatusId = targetStatus.Id;
             attendanceTimesheet.UpdatedAt = DateTime.UtcNow;
 
-            if (request.StatusId == TimesheetWorkflow.SubmittedStatusId && attendanceTimesheet.SubmittedAt is null)
+            if (targetStatus.Id == TimesheetWorkflow.SubmittedStatusId && attendanceTimesheet.SubmittedAt is null)
             {
                 attendanceTimesheet.SubmittedAt = DateTime.UtcNow;
             }
-            else if (request.StatusId == TimesheetWorkflow.ApprovedStatusId)
+            else if (targetStatus.Id == TimesheetWorkflow.ApprovedStatusId)
             {
                 attendanceTimesheet.ApprovedBy = user.EmployeeId;
                 attendanceTimesheet.ApprovedAt = DateTime.UtcNow;
             }
-            else if (request.StatusId == TimesheetWorkflow.DraftStatusId)
+            else if (targetStatus.Id == TimesheetWorkflow.DraftStatusId)
             {
                 attendanceTimesheet.ApprovedBy = null;
                 attendanceTimesheet.ApprovedAt = null;
-                await ResetAllProjectsToDraftAsync(scope, dbContext, cancellationToken);
             }
         }
 
@@ -166,8 +165,8 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             {
                 Id = Guid.NewGuid(),
                 AttendanceTimesheetId = attendanceTimesheet.Id,
-                FromStatusId = statusChanged ? currentStatusId : request.StatusId,
-                ToStatusId = request.StatusId,
+                FromStatusId = statusChanged ? currentStatusId : targetStatus.Id,
+                ToStatusId = targetStatus.Id,
                 ChangedByEmployeeId = user.EmployeeId,
                 Comment = request.Comment,
             };
@@ -179,7 +178,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
         if (statusChanged)
         {
-            string notificationMessage = BuildNotificationMessage(request.Year, request.Month, currentStatusName, newStatus.Name, request.Comment);
+            string notificationMessage = BuildNotificationMessage(request.Year, request.Month, currentStatusName, targetStatus.Name, request.Comment);
 
             await notificationSender.SendAsync(attendanceTimesheet.EmployeeId, notificationMessage, cancellationToken);
         }
@@ -187,7 +186,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         return TypedResults.Ok();
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateProjectStatusesAsync(Request request, CombinedTimesheetScope scope, Data.Models.AttendanceTimesheet attendanceTimesheet, HashSet<Guid> selectedProjectIds, TimesheetStatus newStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
+    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateProjectStatusesAsync(Request request, Data.Models.AttendanceTimesheet attendanceTimesheet, HashSet<Guid> selectedProjectIds, TargetStatus targetStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
     {
         List<ProjectTimesheetPart> projectScopes = await LoadProjectScopesAsync(selectedProjectIds, dbContext, cancellationToken);
 
@@ -197,16 +196,9 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return TypedResults.Unauthorized();
         }
 
-        if (request.StatusId == TimesheetWorkflow.ApprovedStatusId
-            && attendanceTimesheet.TimesheetStatusId != TimesheetWorkflow.SubmittedStatusId)
+        if (attendanceTimesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
         {
-            return TypedResults.BadRequest("Projektovou část lze schválit až po odeslání celého výkazu ke schválení.");
-        }
-
-        if (request.StatusId == TimesheetWorkflow.DraftStatusId
-            && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId)
-        {
-            return TypedResults.BadRequest("Schválený výkaz nelze částečně vrátit. Použijte odemčení celého výkazu.");
+            return TypedResults.BadRequest("Projektové sloupce lze zamykat nebo odemykat pouze v rozpracovaném výkazu.");
         }
 
         List<Data.Models.ProjectTimesheet> projectTimesheets = await dbContext.ProjectTimesheets
@@ -219,33 +211,29 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return TypedResults.NotFound();
         }
 
-        bool isProjectReturn = request.StatusId == TimesheetWorkflow.DraftStatusId;
+        bool isProjectReturn = targetStatus.Id == TimesheetWorkflow.DraftStatusId;
         bool anyProjectStatusChanged = false;
-        bool anyProjectReturnRecorded = false;
-        Guid attendanceStatusBefore = attendanceTimesheet.TimesheetStatusId;
-        string attendanceStatusNameBefore = attendanceTimesheet.TimesheetStatus.Name;
 
         foreach (Data.Models.ProjectTimesheet projectTimesheet in projectTimesheets)
         {
             Guid currentStatusId = projectTimesheet.TimesheetStatusId;
             string currentStatusName = projectTimesheet.TimesheetStatus.Name;
 
-            if (!TimesheetWorkflow.IsValidProjectTransition(currentStatusId, request.StatusId))
+            if (!TimesheetWorkflow.IsValidProjectTransition(currentStatusId, targetStatus.Id))
             {
-                return TypedResults.BadRequest($"Invalid status transition from '{currentStatusName}' (ID: {currentStatusId}) to '{newStatus.Name}' (ID: {request.StatusId}).");
+                return TypedResults.BadRequest($"Akci '{request.Action}' nelze provést ze stavu '{currentStatusName}'.");
             }
 
-            bool statusChanged = currentStatusId != request.StatusId;
-            bool isReturnWhilePendingReview = isProjectReturn && !statusChanged && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId;
+            bool statusChanged = currentStatusId != targetStatus.Id;
 
-            if (!statusChanged && !isReturnWhilePendingReview && string.IsNullOrWhiteSpace(request.Comment))
+            if (!statusChanged && string.IsNullOrWhiteSpace(request.Comment))
             {
                 continue;
             }
 
             if (statusChanged)
             {
-                projectTimesheet.TimesheetStatusId = request.StatusId;
+                projectTimesheet.TimesheetStatusId = targetStatus.Id;
                 anyProjectStatusChanged = true;
             }
 
@@ -253,15 +241,14 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             {
                 projectTimesheet.LockedAt = null;
                 projectTimesheet.LockedBy = null;
-                anyProjectReturnRecorded = true;
             }
-            else if (request.StatusId == TimesheetWorkflow.ApprovedStatusId)
+            else if (targetStatus.Id == TimesheetWorkflow.ApprovedStatusId)
             {
                 projectTimesheet.LockedAt = DateTime.UtcNow;
                 projectTimesheet.LockedBy = user.EmployeeId;
             }
 
-            if (statusChanged || isReturnWhilePendingReview || !string.IsNullOrWhiteSpace(request.Comment))
+            if (statusChanged || !string.IsNullOrWhiteSpace(request.Comment))
             {
                 projectTimesheet.UpdatedAt = DateTime.UtcNow;
 
@@ -269,8 +256,8 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
                 {
                     Id = Guid.NewGuid(),
                     ProjectTimesheetId = projectTimesheet.Id,
-                    FromStatusId = statusChanged || isReturnWhilePendingReview ? TimesheetWorkflow.SubmittedStatusId : currentStatusId,
-                    ToStatusId = request.StatusId,
+                    FromStatusId = currentStatusId,
+                    ToStatusId = targetStatus.Id,
                     ChangedByEmployeeId = user.EmployeeId,
                     Comment = request.Comment,
                 };
@@ -279,41 +266,24 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             }
         }
 
-        bool attendanceReopened = false;
-        if (isProjectReturn
-            && anyProjectReturnRecorded
-            && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId)
-        {
-            attendanceTimesheet.TimesheetStatusId = TimesheetWorkflow.DraftStatusId;
-            attendanceTimesheet.UpdatedAt = DateTime.UtcNow;
-            attendanceReopened = true;
-
-            await ResetAllProjectsToDraftAsync(scope, dbContext, cancellationToken);
-
-            TimesheetStatusHistory attendanceHistory = new()
-            {
-                Id = Guid.NewGuid(),
-                AttendanceTimesheetId = attendanceTimesheet.Id,
-                FromStatusId = attendanceStatusBefore,
-                ToStatusId = TimesheetWorkflow.DraftStatusId,
-                ChangedByEmployeeId = user.EmployeeId,
-                Comment = request.Comment,
-            };
-
-            dbContext.TimesheetStatusHistories.Add(attendanceHistory);
-        }
-
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        if (anyProjectStatusChanged || attendanceReopened)
+        if (anyProjectStatusChanged)
         {
-            string notificationMessage = attendanceReopened ? BuildNotificationMessage(request.Year, request.Month, attendanceStatusNameBefore, TimesheetWorkflow.DraftStatusName, request.Comment) : BuildProjectNotificationMessage(request.Year, request.Month, newStatus.Name, request.Comment);
-
+            string notificationMessage = BuildProjectNotificationMessage(request.Year, request.Month, targetStatus.Name, request.Comment);
             await notificationSender.SendAsync(attendanceTimesheet.EmployeeId, notificationMessage, cancellationToken);
         }
 
         return TypedResults.Ok();
     }
+
+    private static TargetStatus ResolveTargetStatus(string action) => action switch
+    {
+        SubmitAction => new TargetStatus(TimesheetWorkflow.SubmittedStatusId, TimesheetWorkflow.SubmittedStatusName),
+        ApproveAction => new TargetStatus(TimesheetWorkflow.ApprovedStatusId, TimesheetWorkflow.ApprovedStatusName),
+        ReturnAction => new TargetStatus(TimesheetWorkflow.DraftStatusId, TimesheetWorkflow.DraftStatusName),
+        _ => throw new InvalidOperationException($"Unsupported timesheet action '{action}'.")
+    };
 
     private static async Task<bool> AreAllProjectsApprovedAsync(CombinedTimesheetScope scope, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -338,26 +308,6 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { contractEmployee.ContractId })
         .Join(dbContext.Contracts.AsNoTracking(), value => value.ContractId, contract => contract.Id, (value, contract) => new ProjectTimesheetPart(value.ContractId, contract.ProjectId))
         .ToListAsync(cancellationToken);
-
-    private static async Task ResetAllProjectsToDraftAsync(CombinedTimesheetScope scope, AppDbContext dbContext, CancellationToken cancellationToken)
-    {
-        if (scope.ProjectTimesheetLabels.Count == 0)
-        {
-            return;
-        }
-
-        List<Data.Models.ProjectTimesheet> projectTimesheets = await dbContext.ProjectTimesheets
-            .Where(t => scope.ProjectTimesheetLabels.Keys.Contains(t.Id))
-            .ToListAsync(cancellationToken);
-
-        foreach (Data.Models.ProjectTimesheet projectTimesheet in projectTimesheets)
-        {
-            projectTimesheet.TimesheetStatusId = TimesheetWorkflow.DraftStatusId;
-            projectTimesheet.LockedAt = null;
-            projectTimesheet.LockedBy = null;
-            projectTimesheet.UpdatedAt = DateTime.UtcNow;
-        }
-    }
 
     private static string BuildNotificationMessage(int year, int month, string oldStatus, string newStatus, string? comment)
     {

@@ -31,7 +31,6 @@ public sealed class GetContractDeleteImpact : IEndpoint
 
         ContractDeleteImpact? impact = await ContractDeleteImpactCalculator.ForContractAsync(
             id,
-            user.IsGlobalManagerRole(),
             dbContext,
             cancellationToken);
 

@@ -46,13 +46,13 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task DeleteProject_WithSubmittedTimesheetsAndForce_ReturnsNoContent()
+    public async Task DeleteProject_WithSubmittedTimesheetsAndForceQuery_ReturnsConflict()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 4, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 5, 31, 0, 0, 0, DateTimeKind.Utc));
         Guid projectTimesheetId = await GetSingleProjectTimesheetIdAsync(setup.ContractEmployeeId);
         await SetProjectTimesheetStatusAsync(projectTimesheetId, TestTimesheetStatusIds.Submitted);
         HttpResponseMessage response = await Client.DeleteAsync($"/api/projects/{setup.ProjectId}?force=true");
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
@@ -69,7 +69,6 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
         Assert.False(impact!.CanDelete);
         Assert.True(impact.HasProtectedTimesheets);
         Assert.Equal(1, impact.SubmittedProjectTimesheetCount);
-        Assert.True(impact.CanForceDelete);
     }
 
     [Fact]

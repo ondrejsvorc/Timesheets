@@ -43,12 +43,19 @@ public sealed class CreateProjectContract : IEndpoint
             return TypedResults.NotFound();
         }
 
+        string name = request.Name.Trim();
+        string registrationNumber = request.RegistrationNumber.Trim();
+        if (await ProjectContractValidation.HasDuplicateAsync(id, excludedContractId: null, name, registrationNumber, dbContext, cancellationToken))
+        {
+            return TypedResults.BadRequest(ProjectContractValidation.DuplicateError);
+        }
+
         Contract contract = new()
         {
             Id = Guid.NewGuid(),
             ProjectId = id,
-            Name = request.Name.Trim(),
-            RegistrationNumber = request.RegistrationNumber.Trim(),
+            Name = name,
+            RegistrationNumber = registrationNumber,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null
         };
@@ -60,7 +67,7 @@ public sealed class CreateProjectContract : IEndpoint
         }
         catch (DbUpdateException)
         {
-            return TypedResults.BadRequest("Zakázka s tímto Id nebo názvem už v projektu existuje.");
+            return TypedResults.BadRequest(ProjectContractValidation.DuplicateError);
         }
 
         ProjectContractItem projectContract = new(

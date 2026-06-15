@@ -8,8 +8,7 @@ interface CompactProjectDefinition {
   name: string;
   position: string;
   workload: number;
-  lockedAt: string | null;
-  lockedBy: string | null;
+  locked: boolean;
 }
 
 interface CompactDayItem {
@@ -58,8 +57,7 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
     name: project.name,
     position: project.position,
     workload: project.workload,
-    lockedAt: project.lockedAt,
-    lockedBy: project.lockedBy,
+    locked: project.locked,
   }));
 
   const days = response.days.map((day) => {

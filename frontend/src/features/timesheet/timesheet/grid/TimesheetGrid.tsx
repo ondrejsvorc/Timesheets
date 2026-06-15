@@ -32,12 +32,11 @@ interface TimesheetGridProps {
   evaluation: TimesheetEvaluation;
   readOnly?: boolean;
   onUpdateDay: (index: number, updater: (day: TimesheetDay) => void) => void;
-  onToggleProjectLock: (projectId: string) => void;
   onAllocate: (day?: number) => Promise<void>;
   className?: string;
 }
 
-export const TimesheetGrid = ({ timesheet, evaluation, readOnly = false, onUpdateDay, onToggleProjectLock, onAllocate, className }: TimesheetGridProps) => {
+export const TimesheetGrid = ({ timesheet, evaluation, readOnly = false, onUpdateDay, onAllocate, className }: TimesheetGridProps) => {
   const projectCount = timesheet.projects.length;
   const template = useMemo(() => createGridTemplate(projectCount), [projectCount]);
 
@@ -59,14 +58,7 @@ export const TimesheetGrid = ({ timesheet, evaluation, readOnly = false, onUpdat
     <div className={cn("rounded-md border border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full shadow-sm", readOnly && "bg-muted/40", className)}>
       <div className="relative grid w-full min-w-max" style={{ gridTemplateColumns: template }}>
         {readOnly && <div className="pointer-events-none absolute inset-0 z-[5] bg-muted/20" aria-hidden />}
-        <TimesheetHeader
-          readOnly={readOnly}
-          projects={timesheet.projects}
-          core={timesheet.core}
-          onToggleProjectLock={onToggleProjectLock}
-          onCopyProjectColumn={copyProjectColumn}
-          onGenerateMonthly={() => onAllocate()}
-        />
+        <TimesheetHeader readOnly={readOnly} projects={timesheet.projects} core={timesheet.core} onCopyProjectColumn={copyProjectColumn} onGenerateMonthly={() => onAllocate()} />
         <TimesheetBody readOnly={readOnly} days={timesheet.days} projects={timesheet.projects} evaluation={evaluation} onUpdateDay={onUpdateDay} onAllocate={onAllocate} />
         <TimesheetFooter readOnly={readOnly} projects={timesheet.projects} totals={evaluation.totals} />
       </div>

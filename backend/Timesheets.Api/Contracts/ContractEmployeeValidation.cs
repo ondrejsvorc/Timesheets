@@ -5,6 +5,26 @@ namespace Timesheets.Api.Contracts;
 
 internal static class ContractEmployeeValidation
 {
+    public static string? ValidateProjectRange(DateTime projectStartDate, DateTime? projectEndDate, DateTime startDate, DateTime? endDate)
+    {
+        DateTime projectStart = ToUtcDate(projectStartDate);
+        DateTime start = ToUtcDate(startDate);
+        DateTime? projectEnd = projectEndDate.HasValue ? ToUtcDate(projectEndDate.Value) : null;
+        DateTime? end = endDate.HasValue ? ToUtcDate(endDate.Value) : null;
+
+        if (start < projectStart)
+        {
+            return "Začátek úvazku nesmí být před začátkem projektu.";
+        }
+
+        if (projectEnd.HasValue && (!end.HasValue || end.Value > projectEnd.Value))
+        {
+            return "Konec úvazku musí být nejpozději v den ukončení projektu.";
+        }
+
+        return null;
+    }
+
     public static async Task<bool> HasOverlappingSamePositionAsync(Guid contractId, Guid employeeId, string position, DateTime startDate, DateTime? endDate, Guid? excludeContractEmployeeId, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         return await dbContext.ContractEmployees

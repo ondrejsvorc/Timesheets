@@ -7,11 +7,10 @@ import { FullscreenButton, SaveButton, UnlockIcon } from "@/components/shared/bu
 import { MessageAlertDialog } from "@/components/shared/dialogs/MessageAlertDialog";
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
-import { TimesheetStatusIds } from "@/constants/timesheetStatuses";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { Timesheet, TimesheetEvaluation } from "../Timesheet";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
-import { updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
+import { type TimesheetStatusAction, updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
 
 interface TimesheetWorkflowToolbarProps {
@@ -29,6 +28,7 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
   const revalidator = useRevalidator();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
   const [submitBlockedOpen, setSubmitBlockedOpen] = useState(false);
+  const [projectLocksBlockedOpen, setProjectLocksBlockedOpen] = useState(false);
 
   const employeeId = searchParams.get("employeeId") ?? "";
   const periodLabel = formatMonthYear(overview.month, overview.year);
@@ -38,15 +38,15 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
   const projectItems = overview.items.filter((item) => item.kind === "project");
   const allProjectsApproved = projectItems.length === 0 || projectItems.every((item) => item.status === Texts.statusApproved);
   const canSubmit = useCan(UiAction.timesheet.submit, { employeeId });
-  const canManageWhole = useCan(UiAction.timesheet.finalApprove);
+  const canManageWhole = useCan(UiAction.timesheet.finalApprove, { employeeId });
 
-  const changeAttendanceStatus = async (statusId: string, comment: string, signal: AbortSignal) => {
+  const changeAttendanceStatus = async (action: TimesheetStatusAction, comment: string, signal: AbortSignal) => {
     await updateCombinedTimesheetStatus(
       {
         employeeId,
         year: overview.year,
         month: overview.month,
-        statusId,
+        action,
         comment,
         timesheetIds: [timesheet.id],
       },
@@ -56,6 +56,11 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
   };
 
   const handleSubmitClick = () => {
+    if (!allProjectsApproved) {
+      setProjectLocksBlockedOpen(true);
+      return;
+    }
+
     if (evaluation.hasErrors) {
       setSubmitBlockedOpen(true);
       return;
@@ -75,17 +80,17 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
           setSubmitBlockedOpen(true);
           throw new Error(Texts.workflowSubmitBlockedDescription);
         }
-        await changeAttendanceStatus(TimesheetStatusIds.submitted, comment, signal);
+        await changeAttendanceStatus("submit", comment, signal);
         break;
       }
       case "finalApprove":
-        await changeAttendanceStatus(TimesheetStatusIds.approved, comment, signal);
+        await changeAttendanceStatus("approve", comment, signal);
         break;
       case "returnWhole":
-        await changeAttendanceStatus(TimesheetStatusIds.draft, comment, signal);
+        await changeAttendanceStatus("return", comment, signal);
         break;
       case "unlock":
-        await changeAttendanceStatus(TimesheetStatusIds.draft, comment, signal);
+        await changeAttendanceStatus("return", comment, signal);
         break;
       default:
         break;
@@ -143,6 +148,12 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
       </div>
       <TimesheetWorkflowConfirmDialog action={activeWorkflow} periodLabel={periodLabel} onClose={() => setActiveWorkflow(null)} onConfirm={handleWorkflowConfirm} />
       <MessageAlertDialog open={submitBlockedOpen} title={Texts.workflowSubmitBlockedTitle} description={Texts.workflowSubmitBlockedDescription} onClose={() => setSubmitBlockedOpen(false)} />
+      <MessageAlertDialog
+        open={projectLocksBlockedOpen}
+        title={Texts.workflowProjectsUnlockedTitle}
+        description={Texts.workflowProjectsUnlockedDescription}
+        onClose={() => setProjectLocksBlockedOpen(false)}
+      />
     </>
   );
 };

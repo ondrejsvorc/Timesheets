@@ -14,6 +14,35 @@ public class TimesheetReimportTests : BaseIntegrationTest
     public TimesheetReimportTests(CustomWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
+    public async Task DetectTimesheetImport_WithEmptyFile_ReturnsBadRequest()
+    {
+        using MultipartFormDataContent form = TimesheetImportFormFactory.Create(SeededTestData.JanNovakEmployeeId, [], "attendance.xlsx");
+        HttpResponseMessage response = await Client.PostAsync("/api/timesheets/detect", form);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DetectTimesheetImport_WithOversizedFile_ReturnsBadRequest()
+    {
+        using MultipartFormDataContent form = TimesheetImportFormFactory.Create(SeededTestData.JanNovakEmployeeId, new byte[10 * 1024 * 1024 + 1], "attendance.xlsx");
+        HttpResponseMessage response = await Client.PostAsync("/api/timesheets/detect", form);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DetectTimesheetImport_WithMalformedFile_ReturnsGenericError()
+    {
+        using MultipartFormDataContent form = TimesheetImportFormFactory.Create(SeededTestData.JanNovakEmployeeId, [1, 2, 3], "attendance.xlsx");
+        HttpResponseMessage response = await Client.PostAsync("/api/timesheets/detect", form);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        DetectTimesheetImport.Response? payload = await response.Content.ReadFromJsonAsync<DetectTimesheetImport.Response>();
+        Assert.Equal("Soubor se nepodařilo přečíst.", payload!.Result.ErrorMessage);
+    }
+
+    [Fact]
     public async Task DetectTimesheetImport_ForNewMonth_ReturnsCanImportWithoutReimport()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);

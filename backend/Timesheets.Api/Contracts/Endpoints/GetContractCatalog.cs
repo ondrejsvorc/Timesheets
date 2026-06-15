@@ -12,7 +12,7 @@ public sealed class GetContractCatalog : IEndpoint
         app.MapGet("/catalog", Handle)
            .WithSummary("Get Contract Catalog");
 
-    public sealed record ContractItem(Guid Id, Guid ProjectId, string Name);
+    public sealed record ContractItem(Guid Id, Guid ProjectId, string Name, string RegistrationNumber);
     public sealed record Response(IEnumerable<ContractItem> Contracts);
 
     private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(Guid? projectId, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
@@ -35,7 +35,7 @@ public sealed class GetContractCatalog : IEndpoint
         }
 
         List<ContractItem> contracts = await query
-            .Select(c => new ContractItem(c.Id, c.ProjectId, c.Name))
+            .Select(c => new ContractItem(c.Id, c.ProjectId, c.Name, c.RegistrationNumber))
             .ToListAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(contracts));

@@ -10,8 +10,7 @@ internal sealed record DeleteImpactCounts(
     int SubmittedProjectTimesheetCount,
     int ApprovedProjectTimesheetCount,
     bool HasProtectedTimesheets,
-    bool CanDelete,
-    bool CanForceDelete);
+    bool CanDelete);
 
 internal static class DeleteImpactCore
 {
@@ -30,11 +29,7 @@ internal static class DeleteImpactCore
             .AnyAsync(cancellationToken);
     }
 
-    public static async Task<DeleteImpactCounts> CountAsync(
-        IReadOnlyList<Guid> contractIds,
-        bool canForceDelete,
-        AppDbContext dbContext,
-        CancellationToken cancellationToken)
+    public static async Task<DeleteImpactCounts> CountAsync(IReadOnlyList<Guid> contractIds, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         int positionCount = contractIds.Count == 0
             ? 0
@@ -75,7 +70,6 @@ internal static class DeleteImpactCore
             SubmittedProjectTimesheetCount: submittedCount,
             ApprovedProjectTimesheetCount: approvedCount,
             HasProtectedTimesheets: hasProtected,
-            CanDelete: !hasProtected,
-            CanForceDelete: hasProtected && canForceDelete);
+            CanDelete: !hasProtected);
     }
 }

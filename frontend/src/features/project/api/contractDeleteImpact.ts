@@ -8,7 +8,6 @@ export interface DeleteContractImpactResponse {
   approvedProjectTimesheetCount: number;
   hasProtectedTimesheets: boolean;
   canDelete: boolean;
-  canForceDelete: boolean;
 }
 
 export const formatContractDeleteImpactConsequences = (impact: DeleteContractImpactResponse): string[] => {

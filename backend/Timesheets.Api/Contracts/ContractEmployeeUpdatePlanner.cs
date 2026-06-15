@@ -42,6 +42,18 @@ internal static class ContractEmployeeUpdatePlanner
 
     public static async Task<ContractEmployeeUpdateImpact> PlanAsync(ContractEmployee existing, ContractEmployeeUpdateRequest request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
+        var projectRange = await dbContext.Contracts
+            .AsNoTracking()
+            .Where(contract => contract.Id == existing.ContractId)
+            .Select(contract => new { contract.Project.StartDate, contract.Project.EndDate })
+            .SingleAsync(cancellationToken);
+
+        string? projectRangeError = ContractEmployeeValidation.ValidateProjectRange(projectRange.StartDate, projectRange.EndDate, request.StartDate, request.EndDate);
+        if (projectRangeError is not null)
+        {
+            return Blocked(projectRangeError);
+        }
+
         if (IsUnchanged(existing, request))
         {
             return Blocked("Nebyla zadána žádná změna.");

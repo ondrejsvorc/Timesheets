@@ -11,7 +11,7 @@ public sealed class GetProjectContract : IEndpoint
         app.MapGet("/{projectId}/contracts/{contractId}", Handle)
            .WithSummary("Get Project Contract");
 
-    public sealed record Response(Guid Id, string Name, string RegistrationNumber);
+    public sealed record Response(Guid Id, string Name, string RegistrationNumber, DateTime ProjectStartDate, DateTime? ProjectEndDate);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid projectId, Guid contractId, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
@@ -26,7 +26,9 @@ public sealed class GetProjectContract : IEndpoint
             .Select(c => new Response(
                 c.Id,
                 c.Name,
-                c.RegistrationNumber
+                c.RegistrationNumber,
+                c.Project.StartDate,
+                c.Project.EndDate
             ))
             .FirstOrDefaultAsync(cancellationToken);
 

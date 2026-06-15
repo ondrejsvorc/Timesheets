@@ -13,6 +13,7 @@ public sealed class DetectTimesheetImport : IEndpoint
         .MapPost("/detect", Handle)
         .WithSummary("Detect Attendance Timesheet Metadata")
         .DisableAntiforgery()
+        .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = AttendanceImport.MaxMultipartBodySizeBytes })
         .WithRequestValidation<Request>();
 
     public sealed record Request(Guid EmployeeId, IFormFile File);
@@ -27,8 +28,13 @@ public sealed class DetectTimesheetImport : IEndpoint
 
             RuleFor(x => x.File)
                 .NotNull().WithMessage("Soubor je povinný.")
-                .Must(file => Path.GetExtension(file.FileName).ToLowerInvariant() is ".xls" or ".xlsx")
-                .WithMessage("Soubor musí být ve formátu .xls nebo .xlsx.");
+                .Custom((file, context) =>
+                {
+                    if (file is not null && AttendanceImport.GetFileValidationError(file) is string error)
+                    {
+                        context.AddFailure(error);
+                    }
+                });
         }
     }
 

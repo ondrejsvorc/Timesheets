@@ -16,12 +16,12 @@ public sealed class GetCombinedTimesheet : IEndpoint
            .WithSummary("Get Combined Timesheet");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
-    public sealed record ProjectDefinition(string Id, string RegistrationNumber, string Name, string Position, decimal Workload, DateTime? LockedAt, Guid? LockedBy);
+    public sealed record ProjectDefinition(string Id, string RegistrationNumber, string Name, string Position, decimal Workload, bool Locked);
     public sealed record DayItem(int Day, int?[] Work, int?[] Break, decimal CoreHours, decimal[] ProjectHours, bool IsHoliday, bool IsWeekend, string? Note, IReadOnlyList<int[]>? Schedules);
     public sealed record Response(Guid Id, int Year, int Month, decimal TotalWorkload, decimal CoreWorkload, IEnumerable<ProjectDefinition> Projects, IEnumerable<DayItem> Days);
     private sealed record AttendanceDaySource(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal Workload, decimal HoursWithoutBreak, decimal CoreHours, bool IsHoliday, string? Description, string Schedules);
     private sealed record ProjectDaySource(DateTime Date, decimal Hours, bool IsHoliday);
-    private sealed record ProjectTimesheetSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, Guid? LockedBy, List<ProjectDaySource> Days);
+    private sealed record ProjectTimesheetSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, List<ProjectDaySource> Days);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle([AsParameters] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ICurrentUser user, CancellationToken cancellationToken)
     {
@@ -56,12 +56,11 @@ public sealed class GetCombinedTimesheet : IEndpoint
             select new ProjectTimesheetSource(
                 contractEmployee.Id,
                 project.Id,
-                project.RegistrationNumber,
+                contract.RegistrationNumber,
                 project.Name,
                 contractEmployee.Position,
                 timesheet.Workload,
                 timesheet.LockedAt,
-                timesheet.LockedBy,
                 timesheet.Days.Select(d => new ProjectDaySource(d.Date, d.Hours, d.IsHoliday)).ToList()
             )
         ).ToListAsync(cancellationToken);
@@ -76,8 +75,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
                 t.ProjectName,
                 t.Position,
                 t.Workload,
-                t.LockedAt,
-                t.LockedBy
+                t.LockedAt is not null
             ))
             .OrderBy(p => p.Name)
             .ToList();

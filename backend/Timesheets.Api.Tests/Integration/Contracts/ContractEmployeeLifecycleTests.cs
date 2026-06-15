@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Contracts.Endpoints;
+using Timesheets.Api.Data;
 using Timesheets.Api.Projects.Endpoints;
 using Xunit;
 
@@ -38,5 +41,37 @@ public class ContractEmployeeLifecycleTests : BaseIntegrationTest
 
         GetContractEmployees.Response? employeesAfterDelete = await (await Client.GetAsync($"/api/contracts/{contractId}/employees")).Content.ReadFromJsonAsync<GetContractEmployees.Response>();
         Assert.DoesNotContain(employeesAfterDelete!.Employees, employee => employee.Id == employeeId && employee.Positions.Any(position => position.Id == contractEmployeeId));
+    }
+
+    [Fact]
+    public async Task RemoveContractEmployee_WithSubmittedTimesheet_ReturnsConflict()
+    {
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 1, 31, 0, 0, 0, DateTimeKind.Utc));
+
+        using (IServiceScope scope = CreateScope())
+        {
+            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await dbContext.ProjectTimesheets.Where(timesheet => timesheet.ContractEmployeeId == setup.ContractEmployeeId).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, TestTimesheetStatusIds.Submitted));
+        }
+
+        HttpResponseMessage response = await Client.DeleteAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}");
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+        using IServiceScope assertionScope = CreateScope();
+        AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.True(await assertionContext.ContractEmployees.AnyAsync(position => position.Id == setup.ContractEmployeeId));
+    }
+
+    [Fact]
+    public async Task GetContractEmployees_PositionEndingToday_IsActive()
+    {
+        DateTime czechToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Europe/Prague")).Date;
+        DateTime today = new(czechToday.Year, czechToday.Month, czechToday.Day, 0, 0, 0, DateTimeKind.Utc);
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, today.AddDays(-1), today);
+
+        GetContractEmployees.Response? response = await (await Client.GetAsync($"/api/contracts/{setup.ContractId}/employees")).Content.ReadFromJsonAsync<GetContractEmployees.Response>();
+        GetContractEmployees.PositionItem position = Assert.Single(response!.Employees.Single(employee => employee.Id == setup.EmployeeId).Positions);
+
+        Assert.True(position.IsActive);
     }
 }

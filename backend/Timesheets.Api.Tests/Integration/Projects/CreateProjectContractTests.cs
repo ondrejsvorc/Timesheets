@@ -1,5 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Timesheets.Api.Data;
+using Timesheets.Api.Data.Models;
 using Timesheets.Api.Projects.Endpoints;
 using Xunit;
 
@@ -62,7 +66,7 @@ public class CreateProjectContractTests : BaseIntegrationTest
         HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", first);
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
 
-        CreateProjectContract.Request duplicate = new("Second Contract", "CONT-DUP-001");
+        CreateProjectContract.Request duplicate = new("Second Contract", "  cont-dup-001  ");
         HttpResponseMessage duplicateResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", duplicate);
         Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
         Assert.Contains("existuje", await duplicateResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
@@ -76,7 +80,7 @@ public class CreateProjectContractTests : BaseIntegrationTest
         HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", first);
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
 
-        CreateProjectContract.Request duplicate = new("Duplicate Contract", "CONT-DUP-003");
+        CreateProjectContract.Request duplicate = new("  duplicate contract  ", "CONT-DUP-003");
         HttpResponseMessage duplicateResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", duplicate);
         Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
         Assert.Contains("existuje", await duplicateResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
@@ -94,5 +98,19 @@ public class CreateProjectContractTests : BaseIntegrationTest
         CreateProjectContract.Request second = new("Other Contract", "CONT-SHARED-001");
         HttpResponseMessage secondResponse = await Client.PostAsJsonAsync($"/api/projects/{secondProjectId}/contracts", second);
         Assert.Equal(HttpStatusCode.Created, secondResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task DatabaseRejectsNormalizedDuplicateContract()
+    {
+        Guid projectId = await CreateProjectAsync();
+        HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", new CreateProjectContract.Request("Database Contract", "DB-001"));
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+
+        using IServiceScope scope = CreateScope();
+        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        dbContext.Contracts.Add(new Contract { Id = Guid.NewGuid(), ProjectId = projectId, Name = "  database contract  ", RegistrationNumber = "DB-002" });
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
     }
 }

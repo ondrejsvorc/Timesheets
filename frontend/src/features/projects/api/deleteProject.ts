@@ -1,9 +1,8 @@
 import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
-export const deleteProject = async (id: string, options: { force?: boolean }, signal: AbortSignal): Promise<void> => {
-  const query = options.force ? "?force=true" : "";
+export const deleteProject = async (id: string, signal: AbortSignal): Promise<void> => {
   return withDelay("fast", () =>
-    customFetch<void>(`${ApiUrl}/projects/${id}${query}`, {
+    customFetch<void>(`${ApiUrl}/projects/${id}`, {
       method: "DELETE",
       signal,
     }),

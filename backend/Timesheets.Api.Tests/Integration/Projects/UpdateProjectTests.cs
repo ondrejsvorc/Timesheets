@@ -58,4 +58,17 @@ public class UpdateProjectTests : BaseIntegrationTest
         Assert.Equal(projectId, updated.Project.Id);
         Assert.Equal(0, updated.Project.ContractCount);
     }
+
+    [Fact]
+    public async Task UpdateProject_OutsideExistingAssignment_ReturnsBadRequest()
+    {
+        DateTime start = new(2032, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime assignmentEnd = start.AddMonths(2);
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, start, assignmentEnd);
+        UpdateProject.Request request = new("Shortened Project", $"REG-SHORT-{Guid.NewGuid():N}", start, assignmentEnd.AddDays(-1));
+
+        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/projects/{setup.ProjectId}", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }

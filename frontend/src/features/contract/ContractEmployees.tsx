@@ -1,4 +1,3 @@
-import { isBefore, parseISO, startOfDay } from "date-fns";
 import { useState } from "react";
 import { useAsyncValue, useLoaderData, useParams, useRevalidator } from "react-router";
 import { UiAction } from "@/auth/uiPermissions";
@@ -66,6 +65,8 @@ const ContractEmployeesContent = () => {
         <AddEmployeeDialog
           open={isAddOpen}
           contractId={contractId}
+          projectStartDate={response.projectStartDate}
+          projectEndDate={response.projectEndDate}
           existingContractEmployees={response.employees}
           onClose={() => setIsAddOpen(false)}
           onSaved={() => {
@@ -79,6 +80,8 @@ const ContractEmployeesContent = () => {
         <EditContractEmployeePositionDialog
           open
           position={positionToEdit.position}
+          projectStartDate={response.projectStartDate}
+          projectEndDate={response.projectEndDate}
           onClose={() => setPositionToEdit(null)}
           onContinue={(request) => {
             setPendingUpdate({
@@ -186,7 +189,6 @@ interface PositionRowProps {
 
 const PositionRow = ({ contractId, position, onDeleteRequested, onEditRequested }: PositionRowProps) => {
   const { id: projectId } = useParams();
-  const active = isPositionActive(position);
   const permissionContext = { contractId: contractId ?? undefined, projectId: projectId ?? undefined };
   const canRemove = useCan(UiAction.contractEmployees.remove, permissionContext);
   const canUpdate = useCan(UiAction.contractEmployees.update, permissionContext);
@@ -197,7 +199,7 @@ const PositionRow = ({ contractId, position, onDeleteRequested, onEditRequested 
       <TableCell>{formatWorkloadPercent(position.workload)}</TableCell>
       <TableCell>{formatDate(position.startDate)}</TableCell>
       <TableCell>{formatDate(position.endDate) ?? Texts.dash}</TableCell>
-      <TableCell>{active ? Texts.active : Texts.inactive}</TableCell>
+      <TableCell>{position.isActive ? Texts.active : Texts.inactive}</TableCell>
       <TableCell className="space-x-1">
         {canUpdate && (
           <EditButton
@@ -220,12 +222,3 @@ const PositionRow = ({ contractId, position, onDeleteRequested, onEditRequested 
     </TableRow>
   );
 };
-
-/** Aktivní, pokud není endDate nebo endDate je dnes či v budoucnu. */
-/** TODO: Posílat příznak z backendu, protože zde může být chyba kvůli časové zóně klienta. */
-function isPositionActive(position: PositionItem): boolean {
-  if (!position.endDate) return true;
-  const today = startOfDay(new Date());
-  const end = parseISO(position.endDate);
-  return !isBefore(end, today);
-}

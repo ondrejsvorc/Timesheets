@@ -14,7 +14,7 @@ public sealed class GetTimesheetCatalog : IEndpoint
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
     public sealed record ProjectTimesheetItem(Guid Id, string Label);
     public sealed record Response(Guid AttendanceTimesheetId, Guid CurrentStatusId, IEnumerable<ProjectTimesheetItem> ProjectTimesheets);
-    private sealed record ProjectTimesheetRow(Guid Id, string ContractName);
+    private sealed record ProjectTimesheetRow(Guid Id, string ContractRegistrationNumber);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle([AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -34,13 +34,11 @@ public sealed class GetTimesheetCatalog : IEndpoint
             .Where(timesheet => timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month)
             .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { timesheet, contractEmployee })
             .Join(dbContext.Contracts.AsNoTracking(), x => x.contractEmployee.ContractId, contract => contract.Id, (x, contract) => new { x.timesheet, contract })
-            .OrderBy(x => x.contract.Name)
-            .Select(x => new ProjectTimesheetRow(x.timesheet.Id, x.contract.Name))
+            .OrderBy(x => x.contract.RegistrationNumber)
+            .Select(x => new ProjectTimesheetRow(x.timesheet.Id, x.contract.RegistrationNumber))
             .ToListAsync(cancellationToken);
 
-        List<ProjectTimesheetItem> projectTimesheets = projectRows
-            .Select((row, index) => new ProjectTimesheetItem(row.Id, $"Projektová činnost {index + 1}"))
-            .ToList();
+        List<ProjectTimesheetItem> projectTimesheets = projectRows.Select(row => new ProjectTimesheetItem(row.Id, row.ContractRegistrationNumber)).ToList();
 
         return TypedResults.Ok(new Response(attendanceTimesheet.Id, attendanceTimesheet.TimesheetStatusId, projectTimesheets));
     }

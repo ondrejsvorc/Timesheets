@@ -109,9 +109,6 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
     case UiAction.projects.add:
     case UiAction.projects.delete:
     case UiAction.employees.editType:
-    case UiAction.timesheet.finalApprove:
-    case UiAction.timesheet.returnWhole:
-    case UiAction.timesheet.unlock:
       return isGlobalManager(permissions);
 
     case UiAction.timesheet.import:
@@ -151,6 +148,9 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
 
     case UiAction.timesheet.edit:
     case UiAction.timesheet.submit:
+    case UiAction.timesheet.finalApprove:
+    case UiAction.timesheet.returnWhole:
+    case UiAction.timesheet.unlock:
       return isOwnEmployee(currentUserId, ctx.employeeId);
 
     case UiAction.timesheet.approveProject:

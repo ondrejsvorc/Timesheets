@@ -41,13 +41,21 @@ public sealed class AddContractEmployee : IEndpoint
             return TypedResults.Forbid();
         }
 
-        bool contractExists = await dbContext.Contracts
+        var contract = await dbContext.Contracts
             .AsNoTracking()
-            .AnyAsync(c => c.Id == id, cancellationToken);
+            .Where(c => c.Id == id)
+            .Select(c => new { c.Project.StartDate, c.Project.EndDate })
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (!contractExists)
+        if (contract is null)
         {
             return TypedResults.NotFound();
+        }
+
+        string? projectRangeError = ContractEmployeeValidation.ValidateProjectRange(contract.StartDate, contract.EndDate, request.StartDate, request.EndDate);
+        if (projectRangeError is not null)
+        {
+            return TypedResults.BadRequest(projectRangeError);
         }
 
         bool employeeExists = await dbContext.Employees

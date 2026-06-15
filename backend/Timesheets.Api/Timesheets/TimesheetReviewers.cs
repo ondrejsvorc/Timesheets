@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace Timesheets.Api.Timesheets;
 
 public enum IssueType { Warning = 0, Error = 1 }
@@ -36,12 +34,6 @@ file static class TimesheetLimits
     public const decimal MinRestBetweenShiftsHours = 11m;
 
     /// <summary>
-    /// Zákon č. 262/2006 Sb., zákoník práce - § 83 odst. 1
-    /// Stanovená týdenní pracovní doba je 40 hodin (při plném úvazku).
-    /// </summary>
-    public const decimal StandardWeeklyWorkHours = 40m;
-
-    /// <summary>
     /// Zákon č. 262/2006 Sb., zákoník práce — § 88 odst. 1
     /// Minimální délka přestávky na jídlo a oddech činí 30 minut.
     /// </summary>
@@ -61,11 +53,7 @@ public sealed class CombinedTimesheetReviewer
         };
     }
 
-    private static IEnumerable<TimesheetIssue> ReviewTimesheet(CombinedTimesheet timesheet) =>
-    [
-        .. ReviewMonthlyHours(timesheet),
-        .. ReviewWeeklyHours(timesheet)
-    ];
+    private static IEnumerable<TimesheetIssue> ReviewTimesheet(CombinedTimesheet timesheet) => ReviewMonthlyHours(timesheet);
 
     private static IEnumerable<DayIssue> ReviewDay(CombinedDay day) =>
     [
@@ -109,19 +97,6 @@ public sealed class CombinedTimesheetReviewer
         }
     }
 
-    private static IEnumerable<TimesheetIssue> ReviewWeeklyHours(CombinedTimesheet timesheet)
-    {
-        decimal weeklyLimit = TimesheetLimits.StandardWeeklyWorkHours * timesheet.TotalWorkload;
-        foreach (IGrouping<int, CombinedDay> week in timesheet.Days.Where(day => day.IsWorkday).GroupBy(day => ISOWeek.GetWeekOfYear(day.Date)))
-        {
-            decimal hours = week.Sum(day => day.TotalHours);
-            if (hours > weeklyLimit)
-            {
-                yield return new TimesheetIssue("ERR-COM-04", IssueType.Error, $"V týdnu {week.Key} bylo odpracováno {hours:F1} h, limit je {weeklyLimit:F1} h.");
-            }
-        }
-    }
-
     private static IEnumerable<DayIssue> ReviewDailyObligation(CombinedDay day)
     {
         if (day.IsWorkday && day.TotalHours > day.TotalHoursObligation)
@@ -140,7 +115,7 @@ public sealed class CombinedTimesheetReviewer
         {
             yield return new DayIssue("WAR-COM-01", IssueType.Warning, "Práce evidovaná o víkendu. Očekává se kompenzace v jiném pracovním dni.", day.Date.Day, "workedHours");
         }
-        else if (day.IsHoliday && day.TotalHours > 0)
+        else if (day.IsHoliday && day.HasAttendanceFilled && day.WorkedHours > 0)
         {
             yield return new DayIssue("WAR-COM-02", IssueType.Warning, "Práce evidovaná ve státním svátku. Očekává se kompenzace v jiném pracovním dni.", day.Date.Day, "workedHours");
         }

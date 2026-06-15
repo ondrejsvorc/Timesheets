@@ -13,8 +13,6 @@ type DraftDay = {
 
 type DraftProject = {
   contractEmployeeId: string;
-  lockedAt: string | null;
-  lockedBy: string | null;
   days: Array<{ date: string; hours: number }>;
 };
 
@@ -71,8 +69,6 @@ export const buildTimesheetDraft = (timesheet: Timesheet): TimesheetDraft => ({
   })),
   projects: timesheet.projects.map((project) => ({
     contractEmployeeId: project.id,
-    lockedAt: project.lockedAt,
-    lockedBy: project.lockedBy,
     days: timesheet.days.map((day, index) => ({
       date: dayDate(timesheet.year, timesheet.month, index + 1),
       hours: day.projectHours[project.id] ?? 0,

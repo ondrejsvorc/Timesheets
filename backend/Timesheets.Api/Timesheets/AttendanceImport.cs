@@ -12,8 +12,13 @@ public sealed record AttendanceTimesheetDetectionResult(string FileName, bool Ca
 internal sealed record AttendanceTimesheetImportTarget(Guid Id, string PersonalNumber);
 internal sealed record DetectionAttempt(AttendanceTimesheetMetadata? Metadata, AttendanceTimesheetDetectionResult Result);
 
-public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory)
+public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ILogger<AttendanceImport> logger)
 {
+    private sealed class AttendanceImportException(string message) : Exception(message);
+
+    internal const long MaxFileSizeBytes = 10 * 1024 * 1024;
+    internal const long MaxMultipartBodySizeBytes = MaxFileSizeBytes + 1024 * 1024;
+
     public async Task<AttendanceTimesheetDetectionResult> DetectAsync(Guid employeeId, IFormFile file, CancellationToken cancellationToken)
     {
         AttendanceTimesheetImportTarget? employee = await GetImportTargetAsync(employeeId, cancellationToken);
@@ -29,16 +34,31 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             return ToImportResult(detection.Result);
         }
 
+        AttendanceTimesheet timesheet;
         try
         {
             await using Stream stream = file.OpenReadStream();
-            AttendanceTimesheet timesheet = Read(stream);
-            Guid timesheetId = await PersistAsync(employeeId, timesheet, cancellationToken);
-            return new AttendanceTimesheetImportResult(FileName: file.FileName, Success: true, ErrorMessage: null, TimesheetId: timesheetId, Year: timesheet.Year, Month: timesheet.Month);
+            timesheet = Read(stream);
         }
         catch (Exception ex)
         {
-            return new AttendanceTimesheetImportResult(FileName: file.FileName, Success: false, ErrorMessage: $"Chyba při importu: {ex.Message}", TimesheetId: null, Year: detection.Metadata?.Year, Month: detection.Metadata?.Month);
+            logger.LogWarning(ex, "Failed to read attendance file {FileName}.", file.FileName);
+            return new AttendanceTimesheetImportResult(FileName: file.FileName, Success: false, ErrorMessage: "Soubor se nepodařilo přečíst.", TimesheetId: null, Year: detection.Metadata?.Year, Month: detection.Metadata?.Month);
+        }
+
+        try
+        {
+            Guid timesheetId = await PersistAsync(employeeId, timesheet, cancellationToken);
+            return new AttendanceTimesheetImportResult(FileName: file.FileName, Success: true, ErrorMessage: null, TimesheetId: timesheetId, Year: timesheet.Year, Month: timesheet.Month);
+        }
+        catch (AttendanceImportException ex)
+        {
+            return new AttendanceTimesheetImportResult(FileName: file.FileName, Success: false, ErrorMessage: ex.Message, TimesheetId: null, Year: timesheet.Year, Month: timesheet.Month);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to import attendance file {FileName}.", file.FileName);
+            return new AttendanceTimesheetImportResult(FileName: file.FileName, Success: false, ErrorMessage: "Import se nepodařilo dokončit.", TimesheetId: null, Year: timesheet.Year, Month: timesheet.Month);
         }
     }
 
@@ -51,9 +71,10 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
     private async Task<DetectionAttempt> DetectFileAsync(IFormFile file, AttendanceTimesheetImportTarget? employee, CancellationToken cancellationToken)
     {
-        if (!HasSupportedExtension(file.FileName))
+        string? fileValidationError = GetFileValidationError(file);
+        if (fileValidationError is not null)
         {
-            return CreateDetection(file, metadata: null, canImport: false, isReimport: false, errorMessage: "Soubor musí být ve formátu .xls nebo .xlsx.");
+            return CreateDetection(file, metadata: null, canImport: false, isReimport: false, errorMessage: fileValidationError);
         }
 
         AttendanceTimesheetMetadata metadata;
@@ -64,7 +85,8 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         }
         catch (Exception ex)
         {
-            return CreateDetection(file, metadata: null, canImport: false, isReimport: false, errorMessage: $"Chyba při čtení souboru: {ex.Message}");
+            logger.LogWarning(ex, "Failed to detect attendance file {FileName}.", file.FileName);
+            return CreateDetection(file, metadata: null, canImport: false, isReimport: false, errorMessage: "Soubor se nepodařilo přečíst.");
         }
 
         if (employee is null)
@@ -113,7 +135,20 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
     private static AttendanceTimesheetImportResult ToImportResult(AttendanceTimesheetDetectionResult result) => new(FileName: result.FileName, Success: false, ErrorMessage: result.ErrorMessage, TimesheetId: null, Year: result.Year, Month: result.Month);
 
-    private static bool HasSupportedExtension(string fileName) => Path.GetExtension(fileName).ToLowerInvariant() is ".xls" or ".xlsx";
+    internal static string? GetFileValidationError(IFormFile file)
+    {
+        if (file.Length == 0)
+        {
+            return "Soubor je prázdný.";
+        }
+
+        if (file.Length > MaxFileSizeBytes)
+        {
+            return "Soubor může mít maximálně 10 MB.";
+        }
+
+        return Path.GetExtension(file.FileName).ToLowerInvariant() is ".xls" or ".xlsx" ? null : "Soubor musí být ve formátu .xls nebo .xlsx.";
+    }
 
     public AttendanceTimesheet Read(Stream stream)
     {
@@ -138,7 +173,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
         if (projectWorkload > importedTimesheet.Workload)
         {
-            throw new InvalidOperationException($"Nelze importovat. Projektové úvazky pro {importedTimesheet.Month:00}/{importedTimesheet.Year} jsou {projectWorkload:0.##}, ale importovaný celkový úvazek je {importedTimesheet.Workload:0.##}. Nejdřív upravte přiřazení na zakázky.");
+            throw new AttendanceImportException($"Nelze importovat. Projektové úvazky pro {importedTimesheet.Month:00}/{importedTimesheet.Year} jsou {projectWorkload:0.##}, ale importovaný celkový úvazek je {importedTimesheet.Workload:0.##}. Nejdřív upravte přiřazení na zakázky.");
         }
 
         Data.Models.AttendanceTimesheet? existingTimesheet = await dbContext.AttendanceTimesheets
@@ -148,7 +183,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         {
             if (existingTimesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
             {
-                throw new InvalidOperationException("Docházku lze znovu naimportovat jen ve stavu Rozpracovaný.");
+                throw new AttendanceImportException("Docházku lze znovu naimportovat jen ve stavu Rozpracovaný.");
             }
 
             return await ReimportAsync(existingTimesheet, employeeId, importedTimesheet, validInterruptionCodes, cancellationToken);
@@ -251,7 +286,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
                 }
 
                 projectDay.IsHoliday = attendanceDay.IsHoliday;
-                projectDay.HoursObligation = decimal.Round(attendanceDay.HoursObligation * projectTimesheet.Workload, 2, MidpointRounding.AwayFromZero);
+                projectDay.HoursObligation = TimesheetLogic.CalculateTotalHoursObligation(projectDay.Date, attendanceDay.IsHoliday, projectTimesheet.Workload);
             }
 
             projectTimesheet.UpdatedAt = DateTime.UtcNow;

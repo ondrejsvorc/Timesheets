@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ConsequenceDialog } from "@/components/shared/dialogs/ConsequenceDialog";
 import { Texts } from "@/constants/texts";
-import { canConfirmProtectedDelete, forceProtectedDelete } from "@/utils/deleteImpactConsequences";
+import { canConfirmDelete } from "@/utils/deleteImpactConsequences";
 import { type DeleteContractImpactResponse, formatContractDeleteImpactConsequences, getContractDeleteImpact } from "./api/contractDeleteImpact";
 import { deleteProjectContract } from "./api/deleteProjectContract";
 
@@ -33,15 +33,15 @@ export const ContractDeleteDialog = ({ projectId, contractId, contractName, onCl
       description={Texts.deleteDescription}
       consequences={impact ? formatContractDeleteImpactConsequences(impact) : []}
       confirmLabel={Texts.delete}
-      confirmDisabled={!impact || !canConfirmProtectedDelete(impact)}
+      confirmDisabled={!impact || !canConfirmDelete(impact)}
       loading={loading}
       loadingContent={<p className="text-sm text-muted-foreground">{Texts.deleteImpactLoading}</p>}
       onCancel={onClose}
       onConfirm={async (_event, signal) => {
-        if (!impact || !canConfirmProtectedDelete(impact)) {
+        if (!impact || !canConfirmDelete(impact)) {
           return;
         }
-        await deleteProjectContract(projectId, contractId, { force: forceProtectedDelete(impact) }, signal);
+        await deleteProjectContract(projectId, contractId, signal);
         if (!signal.aborted) {
           onDeleted();
         }

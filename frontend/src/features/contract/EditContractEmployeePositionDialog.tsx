@@ -19,7 +19,7 @@ type EditPositionFormValues = z.infer<ReturnType<typeof createSchema>>;
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
 
-const createSchema = (position: PositionItem) =>
+const createSchema = (position: PositionItem, projectStartDate: string, projectEndDate: string | null) =>
   z
     .object({
       positionCode: z.string().nonempty(),
@@ -32,6 +32,19 @@ const createSchema = (position: PositionItem) =>
       endDate: z.string().optional(),
     })
     .superRefine((values, ctx) => {
+      const start = parseCalendarDate(values.startDate);
+      const end = values.endDate ? parseCalendarDate(values.endDate) : null;
+      const projectStart = parseCalendarDate(projectStartDate);
+      const projectEnd = projectEndDate ? parseCalendarDate(projectEndDate) : null;
+
+      if (start < projectStart || (projectEnd && (!end || end > projectEnd))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [projectEnd && !end ? "endDate" : "startDate"],
+          message: Texts.positionOutsideProjectRange,
+        });
+      }
+
       const metadataChanged =
         values.positionCode.trim() !== position.positionCode || values.positionName.trim() !== position.position || workloadPercentToFraction(values.workload) !== position.workload;
 
@@ -59,12 +72,14 @@ const createSchema = (position: PositionItem) =>
 interface EditContractEmployeePositionDialogProps {
   open: boolean;
   position: PositionItem;
+  projectStartDate: string;
+  projectEndDate: string | null;
   onClose: () => void;
   onContinue: (request: UpdateContractEmployeeRequest) => void;
 }
 
-export const EditContractEmployeePositionDialog = ({ open, position, onClose, onContinue }: EditContractEmployeePositionDialogProps) => {
-  const resolver = useMemo(() => zodResolver(createSchema(position)), [position]);
+export const EditContractEmployeePositionDialog = ({ open, position, projectStartDate, projectEndDate, onClose, onContinue }: EditContractEmployeePositionDialogProps) => {
+  const resolver = useMemo(() => zodResolver(createSchema(position, projectStartDate, projectEndDate)), [position, projectEndDate, projectStartDate]);
 
   const form = useForm<EditPositionFormValues>({
     resolver,
@@ -159,8 +174,13 @@ export const EditContractEmployeePositionDialog = ({ open, position, onClose, on
                       <FormControl>
                         <DatePicker
                           value={field.value}
-                          clearable={name !== "startDate"}
-                          disabledDate={(date) => (name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false)}
+                          clearable={name !== "startDate" && !projectEndDate}
+                          disabledDate={(date) => {
+                            const beforeProject = date < parseCalendarDate(projectStartDate);
+                            const afterProject = projectEndDate ? date > parseCalendarDate(projectEndDate) : false;
+                            const outsideSelectedRange = name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false;
+                            return beforeProject || afterProject || outsideSelectedRange;
+                          }}
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />
                       </FormControl>

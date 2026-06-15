@@ -41,7 +41,18 @@ public class ContractDeleteProtectionTests : BaseIntegrationTest
         Assert.False(impact!.CanDelete);
         Assert.True(impact.HasProtectedTimesheets);
         Assert.Equal(1, impact.SubmittedProjectTimesheetCount);
-        Assert.True(impact.CanForceDelete);
+    }
+
+    [Fact]
+    public async Task DeleteContract_WithSubmittedTimesheetsAndForceQuery_ReturnsConflict()
+    {
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 10, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 10, 31, 0, 0, 0, DateTimeKind.Utc));
+        Guid projectTimesheetId = await GetSingleProjectTimesheetIdAsync(setup.ContractEmployeeId);
+        await SetProjectTimesheetStatusAsync(projectTimesheetId, TestTimesheetStatusIds.Submitted);
+
+        HttpResponseMessage response = await Client.DeleteAsync($"/api/projects/{setup.ProjectId}/contracts/{setup.ContractId}?force=true");
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]

@@ -42,4 +42,13 @@ public sealed class CombinedTimesheetReviewerTests
         TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6));
         Assert.DoesNotContain(review.DayIssues, issue => issue.Code is "ERR-ALL-01" or "ERR-ALL-02");
     }
+
+    [Fact]
+    public void Review_does_not_treat_weekly_hours_as_overtime()
+    {
+        CombinedTimesheet combined = new(2026, 6, 1, [Day(1, 10, 10, 0), Day(2, 10, 10, 0), Day(3, 10, 10, 0), Day(4, 10, 10, 0), Day(5, 10, 10, 0)]);
+        TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6));
+
+        Assert.DoesNotContain(review.Issues, issue => issue.Code == "ERR-COM-04");
+    }
 }

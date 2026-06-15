@@ -83,7 +83,6 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
           <TableHeader>
             <TableRow>
               <TableHead>{Texts.contractId}</TableHead>
-              <TableHead>{Texts.contractName}</TableHead>
               <TableHead>{Texts.actions}</TableHead>
             </TableRow>
           </TableHeader>
@@ -138,7 +137,6 @@ export const ContractRow = ({ contract, onEdit, onDelete }: ContractRowProps) =>
   return (
     <TableRow className="cursor-pointer" onClick={() => projectId && navigate(Routes.contract(projectId, contract.id))}>
       <TableCell>{contract.registrationNumber}</TableCell>
-      <TableCell>{contract.name}</TableCell>
       <TableCell>
         {(canEdit || canDelete) && (
           <ActionButtons>

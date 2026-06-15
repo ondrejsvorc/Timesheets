@@ -9,7 +9,7 @@ export interface TimesheetDeleteImpactCounts {
   submittedProjectTimesheetCount: number;
   approvedProjectTimesheetCount: number;
   hasProtectedTimesheets: boolean;
-  canForceDelete: boolean;
+  canDelete: boolean;
 }
 
 /** Builds the standard delete-impact consequence lines; callers add entity-specific lines first. */
@@ -37,14 +37,8 @@ export const appendTimesheetDeleteImpactConsequences = (consequences: string[], 
   consequences.push(Texts.deleteImpactAttendancePreserved);
 
   if (impact.hasProtectedTimesheets) {
-    if (impact.canForceDelete) {
-      consequences.push(Texts.deleteImpactForceDelete);
-    } else {
-      consequences.push(Texts.deleteImpactProtectedBlocked);
-    }
+    consequences.push(Texts.deleteImpactProtectedBlocked);
   }
 };
 
-export const canConfirmProtectedDelete = (impact: { hasProtectedTimesheets: boolean; canForceDelete: boolean }) => !impact.hasProtectedTimesheets || impact.canForceDelete;
-
-export const forceProtectedDelete = (impact: { hasProtectedTimesheets: boolean; canForceDelete: boolean }) => impact.hasProtectedTimesheets && impact.canForceDelete;
+export const canConfirmDelete = (impact: { canDelete: boolean }) => impact.canDelete;

@@ -12,7 +12,7 @@ public sealed class GetProjectCatalog : IEndpoint
         app.MapGet("/catalog", Handle)
            .WithSummary("Get Project Catalog");
 
-    public sealed record ProjectItem(Guid Id, string Name);
+    public sealed record ProjectItem(Guid Id, string Name, string RegistrationNumber, DateTime StartDate, DateTime? EndDate);
     public sealed record Response(IEnumerable<ProjectItem> Projects);
 
     private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
@@ -30,7 +30,7 @@ public sealed class GetProjectCatalog : IEndpoint
         }
 
         List<ProjectItem> projects = await query
-            .Select(p => new ProjectItem(p.Id, p.Name))
+            .Select(p => new ProjectItem(p.Id, p.Name, p.RegistrationNumber, p.StartDate, p.EndDate))
             .ToListAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(projects));

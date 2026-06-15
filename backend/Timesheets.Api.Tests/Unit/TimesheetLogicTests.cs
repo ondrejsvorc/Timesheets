@@ -17,9 +17,17 @@ public sealed class TimesheetLogicTests
     }
 
     [Fact]
-    public void Holiday_has_no_hours_obligation()
+    public void Weekday_holiday_remains_in_hours_obligation()
     {
         AttendanceDay day = Day(new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc), isHoliday: true);
+
+        Assert.Equal(8m, day.TotalHoursObligation);
+    }
+
+    [Fact]
+    public void Weekend_has_no_hours_obligation()
+    {
+        AttendanceDay day = Day(new DateTime(2026, 6, 6, 0, 0, 0, DateTimeKind.Utc), isHoliday: true);
 
         Assert.Equal(0m, day.TotalHoursObligation);
     }

@@ -10,23 +10,28 @@ public class AddContractEmployeeValidationTests : BaseIntegrationTest
 {
     public AddContractEmployeeValidationTests(CustomWebApplicationFactory factory) : base(factory) { }
 
-    private async Task<(Guid ContractId, Guid EmployeeId)> SetupContractAndEmployeeAsync()
+    private async Task<(Guid ContractId, Guid EmployeeId, DateTime ProjectStart, DateTime ProjectEnd)> SetupContractAndEmployeeAsync()
     {
-        CreateProject.Request projectRequest = new("AddEmp Proj", "P-1", DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        DateTime projectStart = DateTime.UtcNow.Date;
+        DateTime projectEnd = projectStart.AddDays(30);
+        CreateProject.Request projectRequest = new($"AddEmp Proj {suffix}", $"P-{suffix}", projectStart, projectEnd);
         HttpResponseMessage projResp = await Client.PostAsJsonAsync("/api/projects", projectRequest);
+        projResp.EnsureSuccessStatusCode();
         Guid projectId = (await projResp.Content.ReadFromJsonAsync<CreateProject.Response>())!.Project.Id;
 
-        CreateProjectContract.Request contractRequest = new("AddEmp Cont", "C-1");
+        CreateProjectContract.Request contractRequest = new($"AddEmp Cont {suffix}", $"C-{suffix}");
         HttpResponseMessage contResp = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", contractRequest);
+        contResp.EnsureSuccessStatusCode();
         Guid contractId = (await contResp.Content.ReadFromJsonAsync<CreateProjectContract.Response>())!.ProjectContract.Id;
-        Guid employeeId = await SeedEmployeeAsync("9998", "Jane AddContract", "jane@add.com");
-        return (contractId, employeeId);
+        Guid employeeId = await SeedEmployeeAsync($"A{suffix}", $"Jane AddContract {suffix}", $"jane.{suffix}@add.com");
+        return (contractId, employeeId, projectStart, projectEnd);
     }
 
     [Fact]
     public async Task AddContractEmployee_WithInvalidData_ReturnsBadRequest()
     {
-        (Guid contractId, Guid employeeId) = await SetupContractAndEmployeeAsync();
+        (Guid contractId, Guid employeeId, _, _) = await SetupContractAndEmployeeAsync();
         DateTime startDate = DateTime.UtcNow.Date;
 
         HttpResponseMessage emptyCodeResponse = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", new AddContractEmployee.Request(employeeId, "", "Dev", 1m, startDate, null));
@@ -46,5 +51,17 @@ public class AddContractEmployeeValidationTests : BaseIntegrationTest
 
         HttpResponseMessage invalidDatesResponse = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", new AddContractEmployee.Request(employeeId, "P1", "Dev", 1m, startDate.AddDays(1), startDate));
         Assert.Equal(HttpStatusCode.BadRequest, invalidDatesResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddContractEmployee_OutsideProjectRange_ReturnsBadRequest()
+    {
+        (Guid contractId, Guid employeeId, DateTime projectStart, DateTime projectEnd) = await SetupContractAndEmployeeAsync();
+
+        HttpResponseMessage beforeProject = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", new AddContractEmployee.Request(employeeId, "P1", "Dev", 1m, projectStart.AddDays(-1), projectEnd));
+        HttpResponseMessage openAssignment = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", new AddContractEmployee.Request(employeeId, "P1", "Dev", 1m, projectStart, null));
+
+        Assert.Equal(HttpStatusCode.BadRequest, beforeProject.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, openAssignment.StatusCode);
     }
 }

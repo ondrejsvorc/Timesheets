@@ -7,6 +7,7 @@ export interface PositionItem {
   workload: number;
   startDate: string;
   endDate: string | null;
+  isActive: boolean;
 }
 
 export interface EmployeeItem {
@@ -18,6 +19,8 @@ export interface EmployeeItem {
 }
 
 export interface GetContractEmployeesResponse {
+  projectStartDate: string;
+  projectEndDate: string | null;
   employees: EmployeeItem[];
 }
 

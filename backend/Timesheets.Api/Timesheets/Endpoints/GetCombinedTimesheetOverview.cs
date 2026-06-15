@@ -19,7 +19,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         Guid? TimesheetId,
         string Kind,
         string Label,
-        string? ContractName,
+        string? ContractRegistrationNumber,
         string? Position,
         decimal Workload,
         IEnumerable<string> Managers,
@@ -31,10 +31,11 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         Guid TimesheetId,
         Guid ContractId,
         Guid ProjectId,
-        string ContractName,
+        string ContractRegistrationNumber,
         string Position,
         decimal Workload,
         Guid TimesheetStatusId);
+    private sealed record ManagerRowSource(Guid ContractId, string FullName);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle([AsParameters] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ICurrentUser user, CancellationToken cancellationToken)
     {
@@ -80,7 +81,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
                     x.timesheet.Id,
                     contract.Id,
                     contract.ProjectId,
-                    contract.Name,
+                    contract.RegistrationNumber,
                     x.contractEmployee.Position,
                     x.timesheet.Workload,
                     x.timesheet.TimesheetStatusId))
@@ -96,27 +97,28 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             new(attendanceInfo.Id, "core", "Kmen", null, null, coreWorkload, [], attendanceInfo.Status, null, null),
         ];
 
+        Guid[] contractIds = projectRows.Select(row => row.ContractId).Distinct().ToArray();
+        List<ManagerRowSource> managerRows = await dbContext.ContractManagers
+            .AsNoTracking()
+            .Where(manager => contractIds.Contains(manager.ContractId))
+            .OrderBy(manager => manager.Employee.FullName)
+            .Select(manager => new ManagerRowSource(manager.ContractId, manager.Employee.FullName))
+            .ToListAsync(cancellationToken);
+        ILookup<Guid, string> managersByContract = managerRows.ToLookup(manager => manager.ContractId, manager => manager.FullName);
+
         for (int index = 0; index < projectRows.Count; index++)
         {
             ProjectRowSource row = projectRows[index];
-
-            List<string> managers = await dbContext.ContractManagers
-                .AsNoTracking()
-                .Where(manager => manager.ContractId == row.ContractId)
-                .OrderBy(manager => manager.Employee.FullName)
-                .Select(manager => manager.Employee.FullName)
-                .ToListAsync(cancellationToken);
-
-            string projectStatus = TimesheetWorkflow.ResolveProjectDisplayStatus(row.TimesheetStatusId, attendanceInfo.Status);
+            string projectStatus = TimesheetWorkflow.ResolveProjectDisplayStatus(row.TimesheetStatusId);
 
             items.Add(new OverviewItem(
                 row.TimesheetId,
                 "project",
                 $"Projektová činnost {index + 1}",
-                row.ContractName,
+                row.ContractRegistrationNumber,
                 row.Position,
                 row.Workload,
-                managers,
+                managersByContract[row.ContractId],
                 projectStatus,
                 row.ContractId,
                 row.ProjectId

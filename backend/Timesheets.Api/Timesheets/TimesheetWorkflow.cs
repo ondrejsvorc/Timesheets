@@ -28,18 +28,5 @@ internal static class TimesheetWorkflow
         _ => false
     };
 
-    public static string ResolveProjectDisplayStatus(Guid projectStatusId, string attendanceStatusName)
-    {
-        if (projectStatusId == ApprovedStatusId)
-        {
-            return ApprovedStatusName;
-        }
-
-        if (attendanceStatusName == SubmittedStatusName && projectStatusId == DraftStatusId)
-        {
-            return SubmittedStatusName;
-        }
-
-        return DraftStatusName;
-    }
+    public static string ResolveProjectDisplayStatus(Guid projectStatusId) => projectStatusId == ApprovedStatusId ? ApprovedStatusName : DraftStatusName;
 }

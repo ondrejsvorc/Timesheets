@@ -13,7 +13,7 @@ public sealed class AllocateTimesheet : IEndpoint
             .WithSummary("Allocate Timesheet Draft")
             .WithRequestValidation<TimesheetDraft>();
 
-    private static async Task<Results<Ok<TimesheetAllocation>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromQuery] int? day, [FromBody] TimesheetDraft draft, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<TimesheetAllocation>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, [FromQuery] int? day, [FromBody] TimesheetDraft draft, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(id, dbContext, cancellationToken);
         if (context is null)
@@ -23,6 +23,11 @@ public sealed class AllocateTimesheet : IEndpoint
         if (user.EmployeeId != context.Timesheet.EmployeeId || context.Timesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
         {
             return TypedResults.Forbid();
+        }
+
+        if (context.Projects.Any(project => project.LockedAt is null))
+        {
+            return TypedResults.BadRequest("Nejdříve musí manažeři uzamknout všechny projektové sloupce.");
         }
 
         return TypedResults.Ok(Allocate(context, draft, day));
@@ -51,17 +56,30 @@ public sealed class AllocateTimesheet : IEndpoint
             return;
         }
 
-        decimal free = TimesheetLogic.Normalize(DayCapacity(day, totalWorkload) - day.CoreHours - day.ProjectHours.Values.Sum());
-        if (free <= 0)
-        {
-            return;
-        }
+        decimal capacity = DayCapacity(day, totalWorkload);
 
         if (TimesheetInterruptions.HasCoreOnlyInterruption(day.Description))
         {
-            decimal core = Math.Min(free, coreTarget);
-            day.CoreHours += core;
-            coreTarget -= core;
+            decimal previousCoreHours = day.CoreHours;
+            day.CoreHours = capacity;
+            foreach (TimesheetDraftProjectState project in projects)
+            {
+                projectTargets[project.Id] += day.ProjectHours.GetValueOrDefault(project.Id);
+                day.ProjectHours[project.Id] = 0m;
+            }
+            coreTarget = Math.Max(0m, coreTarget - (capacity - previousCoreHours));
+            return;
+        }
+
+        if (TimesheetInterruptions.HasProportionalInterruption(day.Description))
+        {
+            AllocateProportionally(day, projects, totalWorkload, capacity, ref coreTarget, projectTargets);
+            return;
+        }
+
+        decimal free = TimesheetLogic.Normalize(capacity - day.CoreHours - day.ProjectHours.Values.Sum());
+        if (free <= 0)
+        {
             return;
         }
 
@@ -82,7 +100,7 @@ public sealed class AllocateTimesheet : IEndpoint
 
         foreach (TimesheetDraftProjectState project in projects)
         {
-            if (project.LockedAt is null && day.ProjectHours.GetValueOrDefault(project.Id) == 0 && projectTargets[project.Id] > 0)
+            if (!project.Locked && day.ProjectHours.GetValueOrDefault(project.Id) == 0 && projectTargets[project.Id] > 0)
             {
                 remaining.Add((project.Id, projectTargets[project.Id]));
             }
@@ -112,6 +130,32 @@ public sealed class AllocateTimesheet : IEndpoint
         }
     }
 
+    private static void AllocateProportionally(TimesheetDraftDayState day, IReadOnlyList<TimesheetDraftProjectState> projects, decimal totalWorkload, decimal capacity, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
+    {
+        if (totalWorkload <= 0m)
+        {
+            return;
+        }
+
+        decimal projectWorkload = projects.Sum(project => project.Workload);
+        decimal coreWorkload = Math.Max(0m, totalWorkload - projectWorkload);
+        decimal allocated = 0m;
+        decimal previousCoreHours = day.CoreHours;
+        day.CoreHours = TimesheetLogic.Normalize(capacity * coreWorkload / totalWorkload);
+        coreTarget = Math.Max(0m, coreTarget - (day.CoreHours - previousCoreHours));
+        allocated += day.CoreHours;
+
+        for (int index = 0; index < projects.Count; index++)
+        {
+            TimesheetDraftProjectState project = projects[index];
+            decimal previousHours = day.ProjectHours.GetValueOrDefault(project.Id);
+            decimal hours = index == projects.Count - 1 ? TimesheetLogic.Normalize(capacity - allocated) : TimesheetLogic.Normalize(capacity * project.Workload / totalWorkload);
+            day.ProjectHours[project.Id] = hours;
+            projectTargets[project.Id] = Math.Max(0m, projectTargets[project.Id] - (hours - previousHours));
+            allocated += hours;
+        }
+    }
+
     private static decimal DayCapacity(TimesheetDraftDayState day, decimal totalWorkload)
     {
         bool hasAttendance = day.ClockIn is not null || day.ClockOut is not null;
@@ -120,13 +164,13 @@ public sealed class AllocateTimesheet : IEndpoint
             return Math.Min(12m, TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd));
         }
 
-        return TimesheetLogic.IsWorkday(day.Date, day.IsHoliday) || !string.IsNullOrWhiteSpace(day.Description) ? TimesheetLogic.Normalize(8m * totalWorkload) : 0m;
+        return TimesheetLogic.IsWeekday(day.Date) || !string.IsNullOrWhiteSpace(day.Description) ? TimesheetLogic.Normalize(8m * totalWorkload) : 0m;
     }
 
     private static decimal MonthlyTarget(TimesheetDraftSnapshot snapshot, decimal workload)
     {
-        int workdays = snapshot.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday));
-        return TimesheetLogic.Normalize(workdays * 8m * workload);
+        int fundedDays = snapshot.Days.Count(day => TimesheetLogic.IsWeekday(day.Date));
+        return TimesheetLogic.Normalize(fundedDays * 8m * workload);
     }
 
     private static IReadOnlyList<TimesheetDraftDayState> OrderDays(IReadOnlyList<TimesheetDraftDayState> days) => days

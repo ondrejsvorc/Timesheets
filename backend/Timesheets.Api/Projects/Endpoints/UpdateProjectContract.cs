@@ -33,24 +33,32 @@ public sealed class UpdateProjectContract : IEndpoint
             return TypedResults.Forbid();
         }
 
+        bool contractExists = await dbContext.Contracts.AsNoTracking().AnyAsync(contract => contract.ProjectId == projectId && contract.Id == contractId, cancellationToken);
+        if (!contractExists)
+        {
+            return TypedResults.NotFound();
+        }
+
+        string name = request.Name.Trim();
+        string registrationNumber = request.RegistrationNumber.Trim();
+        if (await ProjectContractValidation.HasDuplicateAsync(projectId, contractId, name, registrationNumber, dbContext, cancellationToken))
+        {
+            return TypedResults.BadRequest(ProjectContractValidation.DuplicateError);
+        }
+
         try
         {
-            int affected = await dbContext.Contracts
+            await dbContext.Contracts
                 .Where(c => c.ProjectId == projectId && c.Id == contractId)
                 .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(c => c.Name, request.Name.Trim())
-                    .SetProperty(c => c.RegistrationNumber, request.RegistrationNumber.Trim())
+                    .SetProperty(c => c.Name, name)
+                    .SetProperty(c => c.RegistrationNumber, registrationNumber)
                     .SetProperty(c => c.UpdatedAt, DateTime.UtcNow),
                     cancellationToken);
-
-            if (affected == 0)
-            {
-                return TypedResults.NotFound();
-            }
         }
         catch (DbUpdateException)
         {
-            return TypedResults.BadRequest("Zakázka s tímto Id nebo názvem už v projektu existuje.");
+            return TypedResults.BadRequest(ProjectContractValidation.DuplicateError);
         }
 
         ProjectContractItem? contract = await dbContext.Contracts

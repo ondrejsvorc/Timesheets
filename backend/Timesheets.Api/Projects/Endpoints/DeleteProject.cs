@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
@@ -12,7 +11,7 @@ public sealed class DeleteProject : IEndpoint
         app.MapDelete("/{id}", Handle)
            .WithSummary("Delete Project");
 
-    private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken, [FromQuery] bool force = false)
+    private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsGlobalManagerRole())
         {
@@ -33,15 +32,7 @@ public sealed class DeleteProject : IEndpoint
 
         if (await DeleteImpactCore.HasProtectedTimesheetsAsync(contractIds, dbContext, cancellationToken))
         {
-            if (!force)
-            {
-                return TypedResults.Conflict("Projekt nelze smazat ? jsou zde v?kazy ke schv?len? nebo schv?len?.");
-            }
-
-            if (!user.IsGlobalManagerRole())
-            {
-                return TypedResults.Forbid();
-            }
+            return TypedResults.Conflict("Projekt nelze smazat, protože obsahuje výkazy ke schválení nebo schválené.");
         }
 
         await dbContext.Projects

@@ -9,13 +9,15 @@ namespace Timesheets.Api.Contracts.Endpoints;
 
 public sealed class GetContractEmployees : IEndpoint
 {
+    private static readonly TimeZoneInfo CzechTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Europe/Prague");
+
     public static void Map(IEndpointRouteBuilder app) =>
         app.MapGet("/{id}/employees", Handle)
            .WithSummary("Get Contract Employees");
 
-    public sealed record PositionItem(Guid Id, string PositionCode, string Position, decimal Workload, DateTime StartDate, DateTime? EndDate);
+    public sealed record PositionItem(Guid Id, string PositionCode, string Position, decimal Workload, DateTime StartDate, DateTime? EndDate, bool IsActive);
     public sealed record EmployeeItem(Guid Id, string PersonalNumber, string FullName, string EmployeeType, IReadOnlyList<PositionItem> Positions);
-    public sealed record Response(IEnumerable<EmployeeItem> Employees);
+    public sealed record Response(DateTime ProjectStartDate, DateTime? ProjectEndDate, IEnumerable<EmployeeItem> Employees);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
@@ -24,25 +26,29 @@ public sealed class GetContractEmployees : IEndpoint
             return TypedResults.Forbid();
         }
 
-        bool contractExists = await dbContext.Contracts
+        var projectRange = await dbContext.Contracts
             .AsNoTracking()
-            .AnyAsync(contract => contract.Id == id, cancellationToken);
+            .Where(contract => contract.Id == id)
+            .Select(contract => new { contract.Project.StartDate, contract.Project.EndDate })
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (!contractExists)
+        if (projectRange is null)
         {
             return TypedResults.NotFound();
         }
 
+        DateTime localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, CzechTimeZone).Date;
+        DateTime today = new(localToday.Year, localToday.Month, localToday.Day, 0, 0, 0, DateTimeKind.Utc);
         List<EmployeeItem> employees = await dbContext.ContractEmployees
             .AsNoTracking()
             .Where(ce => ce.ContractId == id)
             .Include(ce => ce.Employee)
                 .ThenInclude(e => e.EmployeeType)
             .GroupBy(ce => ce.Employee)
-            .Select(g => new EmployeeItem(g.Key.Id, g.Key.PersonalNumber, EmployeeNameFormatter.Format(g.Key.TitleBefore, g.Key.FullName, g.Key.TitleAfter), g.Key.EmployeeTypeId != null ? g.Key.EmployeeType.Name : string.Empty, g.Select(ce => new PositionItem(ce.Id, ce.PositionCode, ce.Position, ce.Workload, ce.StartDate, ce.EndDate)).ToList()
+            .Select(g => new EmployeeItem(g.Key.Id, g.Key.PersonalNumber, EmployeeNameFormatter.Format(g.Key.TitleBefore, g.Key.FullName, g.Key.TitleAfter), g.Key.EmployeeTypeId != null ? g.Key.EmployeeType.Name : string.Empty, g.Select(ce => new PositionItem(ce.Id, ce.PositionCode, ce.Position, ce.Workload, ce.StartDate, ce.EndDate, ce.EndDate == null || ce.EndDate >= today)).ToList()
             ))
             .ToListAsync(cancellationToken);
 
-        return TypedResults.Ok(new Response(employees));
+        return TypedResults.Ok(new Response(projectRange.StartDate, projectRange.EndDate, employees));
     }
 }

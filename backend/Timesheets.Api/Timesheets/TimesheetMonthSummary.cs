@@ -13,7 +13,7 @@ public static class TimesheetMonthSummaryCalculator
         DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);
 
-        int workdays = days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday));
+        int workdays = days.Count(day => TimesheetLogic.IsWeekday(day.Date));
         int vacationDays = days.Count(day => HasInterruptionCode(day.Description, VacationCodes));
         int sickDays = days.Count(day => HasInterruptionCode(day.Description, SickCodes));
         int holidays = days.Count(day => day.IsHoliday);

@@ -51,6 +51,8 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
   const balance = evaluation?.balance ?? 0;
   const isWeekendOrHoliday = day.isWeekend || day.isHoliday;
   const shouldLockByInterruption = Boolean(evaluation?.hasCoreOnlyInterruption || evaluation?.hasProportionalInterruption);
+  const allProjectsLocked = projects.every((project) => project.locked);
+  const coreLocked = shouldLockByInterruption || !allProjectsLocked;
 
   return (
     <div className={cn("grid grid-cols-subgrid col-[1/-1] border-b border-border/50", isWeekendOrHoliday && "bg-slate-100")}>
@@ -139,7 +141,7 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
       </div>
       <div className={cellClass}>
         <ValidationField validations={fieldIssues("coreHours")}>
-          <LockableField locked={shouldLockByInterruption}>
+          <LockableField locked={coreLocked}>
             <HoursToHumanTooltip hours={day.coreHours ?? 0}>
               <SmartDecimalInput
                 value={day.coreHours}
@@ -150,7 +152,7 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
                 }
                 commitOnChange
                 precision={2}
-                disabled={shouldLockByInterruption}
+                disabled={coreLocked}
                 className="h-8 w-20 max-w-full text-right tabular-nums"
               />
             </HoursToHumanTooltip>
@@ -158,7 +160,7 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
         </ValidationField>
       </div>
       {projects.map((project) => {
-        const locked = project.lockedAt != null || shouldLockByInterruption;
+        const locked = project.locked || shouldLockByInterruption;
         return (
           <div key={project.id} className={cellClass}>
             <ValidationField validations={fieldIssues(`project:${project.id}`)}>
@@ -196,11 +198,14 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
             <Button
               variant="ghost"
               size="icon"
-              className={cn("h-7 w-7 shrink-0 transition-opacity", balance <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50")}
+              className={cn(
+                "h-7 w-7 shrink-0 transition-opacity",
+                balance <= 0 || !allProjectsLocked ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50",
+              )}
               onClick={() => {
-                if (balance > 0) void onAllocate(dayIndex + 1);
+                if (balance > 0 && allProjectsLocked) void onAllocate(dayIndex + 1);
               }}
-              title={Texts.fillRemainingHoursEmptyOnly}
+              title={allProjectsLocked ? Texts.fillRemainingHoursEmptyOnly : Texts.lockProjectsBeforeAllocation}
             >
               <Sparkles className="h-4 w-4" />
             </Button>

@@ -1,5 +1,5 @@
-import { startTransition, useCallback, useEffect, useState } from "react";
-import { useAsyncValue, useLoaderData, useNavigate, useRouteLoaderData, useSearchParams } from "react-router";
+import { useCallback, useEffect, useState } from "react";
+import { useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
@@ -12,7 +12,6 @@ import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { GetEmployeeResponse } from "@/features/employee/api/getEmployee";
-import type { RootLoaderData } from "@/router";
 import { cn } from "@/utils/cn";
 import type { Timesheet, TimesheetData, TimesheetDay, TimesheetEvaluation } from "../Timesheet";
 import { formatWorkload } from "../timesheetFormat";
@@ -79,9 +78,7 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
   const [timesheet, setTimesheet] = useImmer<Timesheet>(initialData.timesheet);
   const [evaluation, setEvaluation] = useState<TimesheetEvaluation>(initialData.evaluation);
   const [searchParams] = useSearchParams();
-  const rootData = useRouteLoaderData("root") as RootLoaderData | undefined;
   const timesheetEmployeeId = searchParams.get("employeeId") ?? "";
-  const lockActorEmployeeId = rootData?.currentUser?.id ?? timesheetEmployeeId;
   const canEditTimesheet = useCan(UiAction.timesheet.edit, { employeeId: timesheetEmployeeId });
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -115,31 +112,6 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
       });
     },
     [isEditable, setTimesheet],
-  );
-
-  const handleToggleProjectLock = useCallback(
-    (projectId: string) => {
-      if (!isEditable) {
-        return;
-      }
-
-      startTransition(() => {
-        setTimesheet((draft) => {
-          const project = draft.projects.find((p) => p.id === projectId);
-          if (!project) {
-            return;
-          }
-          if (project.lockedAt) {
-            project.lockedAt = null;
-            project.lockedBy = null;
-          } else {
-            project.lockedAt = new Date().toISOString();
-            project.lockedBy = lockActorEmployeeId || null;
-          }
-        });
-      });
-    },
-    [isEditable, setTimesheet, lockActorEmployeeId],
   );
 
   const handleClearAttendanceFields = useCallback(() => {
@@ -198,7 +170,6 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
         evaluation={evaluation}
         readOnly={!isEditable}
         onUpdateDay={handleUpdateDay}
-        onToggleProjectLock={handleToggleProjectLock}
         onAllocate={handleAllocate}
         className={isFullscreen ? "min-h-0 flex-1 max-h-none" : undefined}
       />

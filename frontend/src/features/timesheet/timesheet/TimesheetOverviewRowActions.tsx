@@ -5,10 +5,9 @@ import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
-import { TimesheetStatusIds } from "@/constants/timesheetStatuses";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { CombinedTimesheetOverviewItem, GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
-import { updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
+import { type TimesheetStatusAction, updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
 
 interface TimesheetOverviewRowActionsProps {
@@ -23,19 +22,19 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
 
   const employeeId = searchParams.get("employeeId") ?? "";
   const periodLabel = formatMonthYear(overview.month, overview.year);
-  const isSubmitted = overview.status === Texts.statusPendingApproval;
+  const isDraft = overview.status === Texts.statusInProgress;
 
   const timesheetId = item.timesheetId;
-  const showActions = item.kind === "project" && Boolean(timesheetId) && isSubmitted;
+  const showActions = item.kind === "project" && Boolean(timesheetId) && isDraft;
 
   const canManagePart = useCan(UiAction.timesheet.approveProject, {
     timesheetContractId: item.contractId ?? undefined,
     timesheetProjectId: item.projectId ?? undefined,
   });
-  const canApprove = showActions && canManagePart && item.status === Texts.statusPendingApproval;
-  const canReturn = showActions && canManagePart && item.status === Texts.statusPendingApproval;
+  const canApprove = showActions && canManagePart && item.status === Texts.statusInProgress;
+  const canReturn = showActions && canManagePart && item.status === Texts.statusApproved;
 
-  const changeProjectStatus = async (statusId: string, comment: string, signal: AbortSignal) => {
+  const changeProjectStatus = async (action: TimesheetStatusAction, comment: string, signal: AbortSignal) => {
     if (!timesheetId) return;
 
     await updateCombinedTimesheetStatus(
@@ -43,7 +42,7 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
         employeeId,
         year: overview.year,
         month: overview.month,
-        statusId,
+        action,
         comment,
         timesheetIds: [timesheetId],
       },
@@ -54,9 +53,9 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
 
   const handleWorkflowConfirm = async (comment: string, signal: AbortSignal) => {
     if (activeWorkflow === "approveProject") {
-      await changeProjectStatus(TimesheetStatusIds.approved, comment, signal);
+      await changeProjectStatus("approve", comment, signal);
     } else if (activeWorkflow === "returnProject") {
-      await changeProjectStatus(TimesheetStatusIds.draft, comment, signal);
+      await changeProjectStatus("return", comment, signal);
     }
   };
 

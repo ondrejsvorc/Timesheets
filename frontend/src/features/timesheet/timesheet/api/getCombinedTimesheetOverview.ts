@@ -4,7 +4,7 @@ export interface CombinedTimesheetOverviewItem {
   timesheetId: string | null;
   kind: "core" | "project";
   label: string;
-  contractName: string | null;
+  contractRegistrationNumber: string | null;
   position: string | null;
   workload: number;
   managers: string[];

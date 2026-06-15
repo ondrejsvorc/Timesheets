@@ -30,7 +30,7 @@ const intervalsOverlapInclusive = (aStart: string, aEnd: string | null | undefin
   return aS <= bE && bS <= aE;
 };
 
-const createSchema = (existing: ContractEmployeeItem[]) =>
+const createSchema = (existing: ContractEmployeeItem[], projectStartDate: string, projectEndDate: string | null) =>
   z
     .object({
       employeeId: z.string().nonempty(),
@@ -44,6 +44,19 @@ const createSchema = (existing: ContractEmployeeItem[]) =>
       endDate: z.string().optional(),
     })
     .superRefine((values, ctx) => {
+      const start = parseCalendarDate(values.startDate);
+      const end = values.endDate ? parseCalendarDate(values.endDate) : null;
+      const projectStart = parseCalendarDate(projectStartDate);
+      const projectEnd = projectEndDate ? parseCalendarDate(projectEndDate) : null;
+
+      if (start < projectStart || (projectEnd && (!end || end > projectEnd))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [projectEnd && !end ? "endDate" : "startDate"],
+          message: Texts.positionOutsideProjectRange,
+        });
+      }
+
       const employee = existing.find((e) => e.id === values.employeeId);
       if (!employee) return;
 
@@ -69,15 +82,17 @@ const createSchema = (existing: ContractEmployeeItem[]) =>
 interface AddEmployeeDialogProps {
   open: boolean;
   contractId: string;
+  projectStartDate: string;
+  projectEndDate: string | null;
   existingContractEmployees: ContractEmployeeItem[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees, onClose, onSaved }: AddEmployeeDialogProps) => {
+export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectEndDate, existingContractEmployees, onClose, onSaved }: AddEmployeeDialogProps) => {
   const [employees, setEmployees] = useState<ComboBoxItem[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(false);
-  const resolver = useMemo(() => zodResolver(createSchema(existingContractEmployees)), [existingContractEmployees]);
+  const resolver = useMemo(() => zodResolver(createSchema(existingContractEmployees, projectStartDate, projectEndDate)), [existingContractEmployees, projectEndDate, projectStartDate]);
 
   const form = useForm<AddEmployeeToContractFormValues>({
     resolver,
@@ -213,8 +228,13 @@ export const AddEmployeeDialog = ({ open, contractId, existingContractEmployees,
                       <FormControl>
                         <DatePicker
                           value={field.value}
-                          clearable={name !== "startDate"}
-                          disabledDate={(date) => (name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false)}
+                          clearable={name !== "startDate" && !projectEndDate}
+                          disabledDate={(date) => {
+                            const beforeProject = date < parseCalendarDate(projectStartDate);
+                            const afterProject = projectEndDate ? date > parseCalendarDate(projectEndDate) : false;
+                            const outsideSelectedRange = name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false;
+                            return beforeProject || afterProject || outsideSelectedRange;
+                          }}
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />
                       </FormControl>

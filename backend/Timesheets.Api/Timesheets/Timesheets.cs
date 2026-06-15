@@ -95,8 +95,9 @@ public static class TimesheetLogic
     private const decimal StandardWorkdayHours = 8m;
 
     public static bool IsWeekend(DateTime date) => date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+    public static bool IsWeekday(DateTime date) => !IsWeekend(date);
     public static bool IsWorkday(DateTime date, bool isHoliday) => date.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday && !isHoliday;
-    public static decimal CalculateTotalHoursObligation(DateTime date, bool isHoliday, decimal workload) => IsWorkday(date, isHoliday) ? Normalize(StandardWorkdayHours * workload) : 0m;
+    public static decimal CalculateTotalHoursObligation(DateTime date, bool isHoliday, decimal workload) => IsWeekday(date) ? Normalize(StandardWorkdayHours * workload) : 0m;
 
     public static decimal CalculateWorkedHoursFromAttendance(TimeSpan? clockIn, TimeSpan? clockOut, TimeSpan? breakStart, TimeSpan? breakEnd)
     {
@@ -257,6 +258,7 @@ public static class TimesheetLogic
 internal static class TimesheetInterruptions
 {
     private static readonly HashSet<string> BusinessTripCodes = ["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"];
+    private static readonly HashSet<string> CoreOnlyCodes = ["M", "NK", "NL"];
 
     private static string[] ParseCodes(string? raw)
     {
@@ -270,12 +272,12 @@ internal static class TimesheetInterruptions
 
     public static bool HasBusinessTripInterruption(string? raw) => ParseCodes(raw).Any(BusinessTripCodes.Contains);
 
-    public static bool HasCoreOnlyInterruption(string? raw) => ParseCodes(raw).Any(code => code is "M" || code.StartsWith('N'));
+    public static bool HasCoreOnlyInterruption(string? raw) => ParseCodes(raw).Any(CoreOnlyCodes.Contains);
 
     public static bool HasProportionalInterruption(string? raw)
     {
         string[] codes = ParseCodes(raw);
-        return codes.Length > 0 && !codes.Any(BusinessTripCodes.Contains) && !codes.Any(code => code is "M" || code.StartsWith('N'));
+        return codes.Length > 0 && !codes.Any(BusinessTripCodes.Contains) && !codes.Any(CoreOnlyCodes.Contains);
     }
 
     public static bool SkipAllocationRules(string? raw) => HasBusinessTripInterruption(raw) || HasProportionalInterruption(raw);

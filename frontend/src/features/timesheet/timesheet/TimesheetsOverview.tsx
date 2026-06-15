@@ -42,7 +42,7 @@ export const TimesheetsOverview = ({ overview }: TimesheetsOverviewProps) => {
                   <TableCell>
                     <TimesheetStatusBadge status={item.status} />
                   </TableCell>
-                  <TableCell>{item.contractName ?? Texts.dash}</TableCell>
+                  <TableCell>{item.contractRegistrationNumber ?? Texts.dash}</TableCell>
                   <TableCell>{item.position ?? Texts.dash}</TableCell>
                   <TableCell>{formatWorkload(item.workload)}</TableCell>
                   <TableCell className="max-w-[20rem] whitespace-normal break-words">{item.managers.length > 0 ? item.managers.join(", ") : Texts.dash}</TableCell>

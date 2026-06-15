@@ -23,7 +23,7 @@ public sealed class TimesheetMonthSummaryTests
 
         Assert.Equal(new DateTime(2025, 10, 1, 0, 0, 0, DateTimeKind.Utc), summary.PeriodStart);
         Assert.Equal(new DateTime(2025, 10, 31, 0, 0, 0, DateTimeKind.Utc), summary.PeriodEnd);
-        Assert.Equal(4, summary.Workdays);
+        Assert.Equal(5, summary.Workdays);
         Assert.Equal(1, summary.VacationDays);
         Assert.Equal(1, summary.SickDays);
         Assert.Equal(1, summary.Holidays);

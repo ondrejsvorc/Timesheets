@@ -56,7 +56,7 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
 
   const contractItems: ComboBoxItem[] = contracts.map((contract) => ({
     value: contract.id,
-    label: contract.name,
+    label: contract.registrationNumber,
   }));
 
   const employeeItems = useMemo(() => {

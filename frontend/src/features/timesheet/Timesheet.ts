@@ -22,8 +22,7 @@ export interface ProjectDefinition {
   name: string;
   position: string;
   workload: number;
-  lockedAt: string | null;
-  lockedBy: string | null;
+  locked: boolean;
 }
 
 export interface TimesheetDay {

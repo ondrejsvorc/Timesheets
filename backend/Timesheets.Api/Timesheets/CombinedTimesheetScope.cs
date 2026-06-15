@@ -20,18 +20,16 @@ internal static class CombinedTimesheetScopeLoader
             return null;
         }
 
-        List<(Guid Id, string ContractName)> projectRows = await dbContext.ProjectTimesheets
+        List<(Guid Id, string ContractRegistrationNumber)> projectRows = await dbContext.ProjectTimesheets
             .AsNoTracking()
             .Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month)
             .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { timesheet, contractEmployee })
-            .Join(dbContext.Contracts.AsNoTracking(), x => x.contractEmployee.ContractId, contract => contract.Id, (x, contract) => new { x.timesheet.Id, contract.Name })
-            .OrderBy(x => x.Name)
-            .Select(x => new ValueTuple<Guid, string>(x.Id, x.Name))
+            .Join(dbContext.Contracts.AsNoTracking(), x => x.contractEmployee.ContractId, contract => contract.Id, (x, contract) => new { x.timesheet.Id, contract.RegistrationNumber })
+            .OrderBy(x => x.RegistrationNumber)
+            .Select(x => new ValueTuple<Guid, string>(x.Id, x.RegistrationNumber))
             .ToListAsync(cancellationToken);
 
-        Dictionary<Guid, string> labels = projectRows
-            .Select((row, index) => new KeyValuePair<Guid, string>(row.Id, $"Projektová činnost {index + 1}"))
-            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        Dictionary<Guid, string> labels = projectRows.ToDictionary(row => row.Id, row => row.ContractRegistrationNumber);
 
         return new CombinedTimesheetScope(attendanceTimesheetId.Value, labels);
     }

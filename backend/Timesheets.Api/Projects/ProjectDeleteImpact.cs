@@ -10,12 +10,11 @@ public sealed record ProjectDeleteImpact(
     int SubmittedProjectTimesheetCount,
     int ApprovedProjectTimesheetCount,
     bool HasProtectedTimesheets,
-    bool CanDelete,
-    bool CanForceDelete);
+    bool CanDelete);
 
 internal static class ProjectDeleteImpactCalculator
 {
-    public static async Task<ProjectDeleteImpact?> ForProjectAsync(Guid projectId, bool canForceDelete, AppDbContext dbContext, CancellationToken cancellationToken)
+    public static async Task<ProjectDeleteImpact?> ForProjectAsync(Guid projectId, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         bool exists = await dbContext.Projects.AsNoTracking().AnyAsync(p => p.Id == projectId, cancellationToken);
         if (!exists)
@@ -29,7 +28,7 @@ internal static class ProjectDeleteImpactCalculator
             .Select(c => c.Id)
             .ToListAsync(cancellationToken);
 
-        DeleteImpactCounts counts = await DeleteImpactCore.CountAsync(contractIds, canForceDelete, dbContext, cancellationToken);
+        DeleteImpactCounts counts = await DeleteImpactCore.CountAsync(contractIds, dbContext, cancellationToken);
 
         return new ProjectDeleteImpact(
             ContractCount: contractIds.Count,
@@ -38,7 +37,6 @@ internal static class ProjectDeleteImpactCalculator
             SubmittedProjectTimesheetCount: counts.SubmittedProjectTimesheetCount,
             ApprovedProjectTimesheetCount: counts.ApprovedProjectTimesheetCount,
             HasProtectedTimesheets: counts.HasProtectedTimesheets,
-            CanDelete: counts.CanDelete,
-            CanForceDelete: counts.CanForceDelete);
+            CanDelete: counts.CanDelete);
     }
 }

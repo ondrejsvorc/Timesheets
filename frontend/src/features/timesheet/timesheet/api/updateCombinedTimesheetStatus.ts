@@ -1,10 +1,12 @@
 import { ApiUrl, customFetch } from "@/constants/api";
 
+export type TimesheetStatusAction = "submit" | "approve" | "return";
+
 export interface UpdateCombinedTimesheetStatusRequest {
   employeeId: string;
   year: number;
   month: number;
-  statusId: string;
+  action: TimesheetStatusAction;
   comment?: string | null;
   timesheetIds: string[];
 }
@@ -19,7 +21,7 @@ export const updateCombinedTimesheetStatus = async (request: UpdateCombinedTimes
       employeeId: request.employeeId,
       year: request.year,
       month: request.month,
-      statusId: request.statusId,
+      action: request.action,
       comment: request.comment?.trim() ? request.comment.trim() : null,
       timesheetIds: request.timesheetIds,
     }),

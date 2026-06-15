@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
@@ -11,26 +11,45 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
 import { getContractCatalog } from "@/features/employees/api/getContractCatalog";
-import { getProjectCatalog } from "@/features/employees/api/getProjectCatalog";
+import { getProjectCatalog, type ProjectCatalogItem } from "@/features/employees/api/getProjectCatalog";
 import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 import { addContractEmployee } from "../contract/api/addContractEmployee";
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
 
-type AddEmployeePositionFormValues = z.infer<typeof addEmployeePositionSchema>;
-const addEmployeePositionSchema = z.object({
-  projectId: z.string().nonempty(),
-  contractId: z.string().nonempty(),
-  positionCode: z.string().nonempty(),
-  positionName: z.string().nonempty(),
-  workload: z
-    .string()
-    .nonempty()
-    .refine((v) => isWholeWorkloadPercentInRange(v, 0, 100), Texts.enterWholeNumberRange0to100),
-  startDate: z.string().nonempty(),
-  endDate: z.string().optional(),
-});
+type AddEmployeePositionFormValues = z.infer<ReturnType<typeof createSchema>>;
+const createSchema = (projects: ProjectCatalogItem[]) =>
+  z
+    .object({
+      projectId: z.string().nonempty(),
+      contractId: z.string().nonempty(),
+      positionCode: z.string().nonempty(),
+      positionName: z.string().nonempty(),
+      workload: z
+        .string()
+        .nonempty()
+        .refine((v) => isWholeWorkloadPercentInRange(v, 0, 100), Texts.enterWholeNumberRange0to100),
+      startDate: z.string().nonempty(),
+      endDate: z.string().optional(),
+    })
+    .superRefine((values, ctx) => {
+      const project = projects.find((item) => item.id === values.projectId);
+      if (!project) return;
+
+      const start = parseCalendarDate(values.startDate);
+      const end = values.endDate ? parseCalendarDate(values.endDate) : null;
+      const projectStart = parseCalendarDate(project.startDate);
+      const projectEnd = project.endDate ? parseCalendarDate(project.endDate) : null;
+
+      if (start < projectStart || (projectEnd && (!end || end > projectEnd))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [projectEnd && !end ? "endDate" : "startDate"],
+          message: Texts.positionOutsideProjectRange,
+        });
+      }
+    });
 
 interface AddEmployeePositionDialogProps {
   open: boolean;
@@ -40,17 +59,19 @@ interface AddEmployeePositionDialogProps {
 }
 
 export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }: AddEmployeePositionDialogProps) => {
-  const [projects, setProjects] = useState<ComboBoxItem[]>([]);
+  const [projectCatalog, setProjectCatalog] = useState<ProjectCatalogItem[]>([]);
   const [contracts, setContracts] = useState<ComboBoxItem[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [contractsLoading, setContractsLoading] = useState(false);
 
+  const resolver = useMemo(() => zodResolver(createSchema(projectCatalog)), [projectCatalog]);
   const form = useForm<AddEmployeePositionFormValues>({
-    resolver: zodResolver(addEmployeePositionSchema),
+    resolver,
     mode: "onChange",
   });
 
   const projectId = form.watch("projectId");
+  const selectedProject = projectCatalog.find((project) => project.id === projectId);
   const startDate = form.watch("startDate");
   const endDate = form.watch("endDate");
 
@@ -62,14 +83,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
     const controller = new AbortController();
     setProjectsLoading(true);
     getProjectCatalog()
-      .then((response) =>
-        setProjects(
-          response.projects.map((project) => ({
-            value: project.id,
-            label: project.name,
-          })),
-        ),
-      )
+      .then((response) => setProjectCatalog(response.projects))
       .finally(() => setProjectsLoading(false));
 
     return () => controller.abort();
@@ -88,7 +102,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
         setContracts(
           response.contracts.map((contract) => ({
             value: contract.id,
-            label: contract.name,
+            label: contract.registrationNumber,
           })),
         ),
       )
@@ -107,6 +121,8 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
     form.setValue("projectId", nextProjectId);
     form.setValue("contractId", "");
   };
+
+  const projectItems = projectCatalog.map((project) => ({ value: project.id, label: project.name }));
 
   const handleClose = () => {
     form.reset();
@@ -147,7 +163,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                 <FormItem>
                   <FormLabel>Projekt *</FormLabel>
                   <FormControl>
-                    <ComboBox value={field.value} items={projects} placeholder={Texts.selectProject} loading={projectsLoading} onChange={handleProjectChange} />
+                    <ComboBox value={field.value} items={projectItems} placeholder={Texts.selectProject} loading={projectsLoading} onChange={handleProjectChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -219,8 +235,13 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                       <FormControl>
                         <DatePicker
                           value={field.value}
-                          clearable={name !== "startDate"}
-                          disabledDate={(date) => (name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false)}
+                          clearable={name !== "startDate" && !selectedProject?.endDate}
+                          disabledDate={(date) => {
+                            const beforeProject = selectedProject ? date < parseCalendarDate(selectedProject.startDate) : false;
+                            const afterProject = selectedProject?.endDate ? date > parseCalendarDate(selectedProject.endDate) : false;
+                            const outsideSelectedRange = name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false;
+                            return beforeProject || afterProject || outsideSelectedRange;
+                          }}
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />
                       </FormControl>
