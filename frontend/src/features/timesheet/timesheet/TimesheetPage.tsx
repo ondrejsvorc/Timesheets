@@ -10,11 +10,12 @@ import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
+import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { GetEmployeeResponse } from "@/features/employee/api/getEmployee";
 import type { RootLoaderData } from "@/router";
 import { cn } from "@/utils/cn";
-import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
 import type { Timesheet, TimesheetData, TimesheetDay, TimesheetEvaluation } from "../Timesheet";
+import { formatWorkload } from "../timesheetFormat";
 import { allocateTimesheet } from "./api/allocateTimesheet";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
 import { reviewTimesheet } from "./api/reviewTimesheet";
@@ -53,7 +54,7 @@ const TimesheetPageLoaded = () => {
       <PageHeader leading={<BackButton onClick={() => navigate(Routes.employee(employee.employee.id))} />}>
         <PageTitle>{employee.employee.fullName}</PageTitle>
         <PageSubtitle>
-          {employee.employee.personalNumber} · {employee.employee.email} · {resolveEmployeeTypeName(employee.employee.employeeTypeId)}
+          {formatMonthYear(overview.month, overview.year)} ({formatWorkload(overview.summary.totalWorkload)})
         </PageSubtitle>
       </PageHeader>
       <TimesheetsOverview overview={overview} />
