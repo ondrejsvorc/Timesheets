@@ -108,7 +108,9 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
         </ValidationField>
       </div>
       <div className={cellClass}>
-        <Interruption value={day.attendance.interruptions} />
+        <ValidationField validations={fieldIssues("interruptions")}>
+          <Interruption value={day.attendance.interruptions} />
+        </ValidationField>
       </div>
       <div className={cn(cellClass, numericCellClass)}>
         <ValidationField validations={fieldIssues("workedHours")}>
@@ -123,15 +125,17 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
         </HoursToHumanTooltip>
       </div>
       <div className={cellClass}>
-        <StagSchedule
-          schedules={day.attendance.schedules}
-          onSchedulesChange={(schedules) =>
-            update((draft) => {
-              draft.attendance.schedules = schedules;
-            })
-          }
-          disabled={evaluation?.hasProportionalInterruption}
-        />
+        <ValidationField validations={fieldIssues("schedules")}>
+          <StagSchedule
+            schedules={day.attendance.schedules}
+            onSchedulesChange={(schedules) =>
+              update((draft) => {
+                draft.attendance.schedules = schedules;
+              })
+            }
+            disabled={evaluation?.hasProportionalInterruption}
+          />
+        </ValidationField>
       </div>
       <div className={cellClass}>
         <ValidationField validations={fieldIssues("coreHours")}>
@@ -157,45 +161,51 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
         const locked = project.lockedAt != null || shouldLockByInterruption;
         return (
           <div key={project.id} className={cellClass}>
-            <LockableField locked={locked}>
-              <HoursToHumanTooltip hours={day.projectHours[project.id] ?? 0}>
-                <SmartDecimalInput
-                  value={Number(day.projectHours[project.id] ?? 0)}
-                  onChange={(value) =>
-                    update((draft) => {
-                      draft.projectHours[project.id] = value ?? 0;
-                    })
-                  }
-                  commitOnChange
-                  precision={2}
-                  disabled={locked}
-                  className="h-8 w-20 max-w-full text-right tabular-nums"
-                />
-              </HoursToHumanTooltip>
-            </LockableField>
+            <ValidationField validations={fieldIssues(`project:${project.id}`)}>
+              <LockableField locked={locked}>
+                <HoursToHumanTooltip hours={day.projectHours[project.id] ?? 0}>
+                  <SmartDecimalInput
+                    value={Number(day.projectHours[project.id] ?? 0)}
+                    onChange={(value) =>
+                      update((draft) => {
+                        draft.projectHours[project.id] = value ?? 0;
+                      })
+                    }
+                    commitOnChange
+                    precision={2}
+                    disabled={locked}
+                    className="h-8 w-20 max-w-full text-right tabular-nums"
+                  />
+                </HoursToHumanTooltip>
+              </LockableField>
+            </ValidationField>
           </div>
         );
       })}
       <div className={cn(cellClass, numericCellClass)}>
-        <HoursToHumanTooltip hours={allocatedHours}>
-          <div className={cn(hoursCellClass, "text-slate-700 font-semibold")}>{formatHours(allocatedHours)}</div>
-        </HoursToHumanTooltip>
+        <ValidationField validations={fieldIssues("allocatedHours")}>
+          <HoursToHumanTooltip hours={allocatedHours}>
+            <div className={cn(hoursCellClass, "text-slate-700 font-semibold")}>{formatHours(allocatedHours)}</div>
+          </HoursToHumanTooltip>
+        </ValidationField>
       </div>
       <div className={cn(cellClass, numericCellClass, cellLastClass, balance === 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500")}>
-        <div className="w-full flex items-center justify-end gap-2">
-          <div className="w-full text-right font-bold tabular-nums">{formatHours(balance)}</div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn("h-7 w-7 shrink-0 transition-opacity", balance <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50")}
-            onClick={() => {
-              if (balance > 0) void onAllocate(dayIndex + 1);
-            }}
-            title={Texts.fillRemainingHoursEmptyOnly}
-          >
-            <Sparkles className="h-4 w-4" />
-          </Button>
-        </div>
+        <ValidationField validations={fieldIssues("balance")}>
+          <div className="w-full flex items-center justify-end gap-2">
+            <div className="w-full text-right font-bold tabular-nums">{formatHours(balance)}</div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-7 w-7 shrink-0 transition-opacity", balance <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50")}
+              onClick={() => {
+                if (balance > 0) void onAllocate(dayIndex + 1);
+              }}
+              title={Texts.fillRemainingHoursEmptyOnly}
+            >
+              <Sparkles className="h-4 w-4" />
+            </Button>
+          </div>
+        </ValidationField>
       </div>
     </div>
   );

@@ -10,6 +10,7 @@ import type { RootLoaderData } from "@/router";
 import { addTimesheetComment } from "../api/addTimesheetComment";
 import { deleteTimesheetComment } from "../api/deleteTimesheetComment";
 import type { TimesheetComment } from "./Comment";
+import { formatCommentDateTime } from "./commentActivity";
 import { StatusChangeCommentEntry } from "./StatusChangeCommentEntry";
 
 export interface TimesheetCommentsScope {
@@ -79,7 +80,7 @@ export const TimesheetComments = ({ scope, comments }: TimesheetCommentsProps) =
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                   <div className="text-sm font-medium text-foreground">{comment.author.name}</div>
                   <div className="flex items-center gap-1">
-                    <div className="text-xs text-muted-foreground tabular-nums">{new Date(comment.createdAt).toLocaleString("cs-CZ")}</div>
+                    <div className="text-xs text-muted-foreground tabular-nums">{formatCommentDateTime(comment.createdAt)}</div>
                     {currentUserId === comment.author.id && (
                       <Button
                         type="button"

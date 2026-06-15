@@ -86,7 +86,7 @@ public sealed class CombinedTimesheetReviewer
         string description = balance > 0
             ? $"Nerozdělené hodiny: docházka {day.WorkedHours:F2} h, kmen + projekty {day.AllocatedHours:F2} h."
             : $"Překročení docházky: kmen + projekty {day.AllocatedHours:F2} h, docházka {day.WorkedHours:F2} h.";
-        yield return new DayIssue("ERR-ALL-01", IssueType.Error, description, day.Date.Day, "coreHours");
+        yield return new DayIssue("ERR-ALL-01", IssueType.Error, description, day.Date.Day, "balance");
     }
 
     private static IEnumerable<DayIssue> ReviewStag(CombinedDay day)

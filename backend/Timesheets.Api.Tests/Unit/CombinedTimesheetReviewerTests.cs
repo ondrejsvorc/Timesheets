@@ -16,7 +16,7 @@ public sealed class CombinedTimesheetReviewerTests
         CombinedTimesheet combined = new(2026, 6, 1, [Day(2, worked: 8, core: 4, projects: 2)]);
         TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6));
         Assert.True(review.HasErrors);
-        Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ALL-01");
+        Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ALL-01" && issue.Field == "balance");
     }
 
     [Fact]
