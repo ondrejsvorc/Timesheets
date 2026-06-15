@@ -216,9 +216,10 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
     {
         Guid timesheetId = existingTimesheet.Id;
 
-        await dbContext.AttendanceDays
+        List<Data.Models.AttendanceDay> existingDays = await dbContext.AttendanceDays
             .Where(day => day.AttendanceTimesheetId == timesheetId)
-            .ExecuteDeleteAsync(cancellationToken);
+            .ToListAsync(cancellationToken);
+        dbContext.AttendanceDays.RemoveRange(existingDays);
 
         AddImportedDays(timesheetId, importedTimesheet, validInterruptionCodes);
         await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
