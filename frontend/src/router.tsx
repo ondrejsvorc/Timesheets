@@ -4,7 +4,7 @@ import type { CurrentUserPermissions } from "./auth/api/getCurrentUserPermission
 import { denyUnless, loadAuthContext, resolveHomePath } from "./auth/routeGuards";
 import { can, UiAction } from "./auth/uiPermissions";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
-import { FullscreenLoader } from "./components/shared/layout/FullscreenLoader";
+import { LoadingScreen } from "./components/shared/layout/LoadingScreen";
 import { goToLogin } from "./constants/api";
 import { Routes } from "./constants/routes";
 import { Texts } from "./constants/texts";
@@ -109,14 +109,14 @@ export const router = createBrowserRouter([
   },
   {
     path: "/redirecting",
-    element: <FullscreenLoader ariaLabel={Texts.redirectingToLogin} />,
+    element: <LoadingScreen message={Texts.redirectingToLogin} />,
     loader: redirectToLogin,
   },
   {
     id: "root",
     path: "/",
     element: <App />,
-    hydrateFallbackElement: <FullscreenLoader ariaLabel={Texts.redirectingToLogin} />,
+    hydrateFallbackElement: <LoadingScreen message={Texts.redirectingToLogin} />,
     loader: requireAuth,
     children: [
       {
