@@ -1,9 +1,9 @@
 import { ApiUrl, customFetch, withDelay } from "@/constants/api";
-import type { TimesheetComment, TimesheetCommentAuthorRole } from "../comments/Comment";
+import type { TimesheetComment } from "../comments/Comment";
 
 export interface TimesheetCommentAuthor {
+  id: string;
   name: string;
-  role: TimesheetCommentAuthorRole;
 }
 
 export interface TimesheetStatusChangeDetails {
@@ -47,8 +47,8 @@ const mapComment = (item: TimesheetCommentItem): TimesheetComment => {
     createdAt: item.createdAt,
     text: item.text,
     author: {
+      id: item.author.id,
       name: item.author.name,
-      role: item.author.role,
     },
   };
 };

@@ -94,6 +94,7 @@ public static class Endpoints
         .MapEndpoint<UpdateCombinedTimesheetStatus>()
         .MapEndpoint<GetTimesheetComments>()
         .MapEndpoint<AddTimesheetComment>()
+        .MapEndpoint<DeleteTimesheetComment>()
         .MapEndpoint<ReviewTimesheet>()
         .MapEndpoint<DetectTimesheetImport>()
         .MapEndpoint<ImportTimesheet>();

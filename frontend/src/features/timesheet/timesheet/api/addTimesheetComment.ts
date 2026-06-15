@@ -29,8 +29,8 @@ export const addTimesheetComment = async (request: AddTimesheetCommentRequest, s
     createdAt: response.createdAt,
     text: response.text,
     author: {
+      id: response.author.id,
       name: response.author.name,
-      role: response.author.role,
     },
   };
 };

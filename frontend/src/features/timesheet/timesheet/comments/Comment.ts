@@ -1,8 +1,6 @@
-export type TimesheetCommentAuthorRole = "Employee" | "Manager" | "Controller";
-
 export interface TimesheetCommentAuthor {
+  id: string;
   name: string;
-  role: TimesheetCommentAuthorRole;
 }
 
 export interface TimesheetStatusChangeDetails {

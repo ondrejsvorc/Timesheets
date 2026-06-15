@@ -61,7 +61,7 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
   };
 
   if (!showActions || (!canApprove && !canReturn)) {
-    return null;
+    return Texts.dash;
   }
 
   return (

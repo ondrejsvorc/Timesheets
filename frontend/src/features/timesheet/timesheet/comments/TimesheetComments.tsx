@@ -1,10 +1,14 @@
+import { Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
-import { useRevalidator } from "react-router";
+import { useRevalidator, useRouteLoaderData } from "react-router";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Texts } from "@/constants/texts";
+import type { RootLoaderData } from "@/router";
 import { addTimesheetComment } from "../api/addTimesheetComment";
+import { deleteTimesheetComment } from "../api/deleteTimesheetComment";
 import type { TimesheetComment } from "./Comment";
 import { StatusChangeCommentEntry } from "./StatusChangeCommentEntry";
 
@@ -21,24 +25,14 @@ interface TimesheetCommentsProps {
 
 export const TimesheetComments = ({ scope, comments }: TimesheetCommentsProps) => {
   const revalidator = useRevalidator();
+  const rootData = useRouteLoaderData("root") as RootLoaderData | undefined;
+  const currentUserId = rootData?.currentUser?.id;
   const MAX_COMMENT_LENGTH = 500;
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  const roleLabel = (role: string) => {
-    switch (role) {
-      case "Employee":
-        return Texts.roleEmployee;
-      case "Manager":
-        return Texts.roleManager;
-      case "Controller":
-        return Texts.roleController;
-      default:
-        return role;
-    }
-  };
 
   const onSend = async () => {
     if (isSending) {
@@ -74,28 +68,37 @@ export const TimesheetComments = ({ scope, comments }: TimesheetCommentsProps) =
         <SubPageTitle>{Texts.comments}</SubPageTitle>
       </SubPageHeader>
       <div className="pb-8 space-y-4">
-        <div className="rounded-md border bg-card p-4 md:p-5 space-y-5">
-          {comments.length === 0 ? (
-            <div className="text-sm text-muted-foreground">{Texts.noCommentsYet}</div>
-          ) : (
-            comments.map((comment) =>
-              comment.type === "statusChange" ? (
-                <StatusChangeCommentEntry key={comment.id} createdAt={comment.createdAt} statusChange={comment.statusChange} />
-              ) : (
-                <div key={comment.id} className="rounded-md border bg-background px-3 py-3 md:px-4 md:py-3.5">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                    <div className="text-sm font-medium text-foreground">
-                      {comment.author.name}
-                      <span className="ml-2 text-xs font-normal text-muted-foreground">({roleLabel(comment.author.role)})</span>
-                    </div>
+        {comments.length === 0 ? (
+          <div className="text-sm text-muted-foreground">{Texts.noCommentsYet}</div>
+        ) : (
+          comments.map((comment) =>
+            comment.type === "statusChange" ? (
+              <StatusChangeCommentEntry key={comment.id} createdAt={comment.createdAt} statusChange={comment.statusChange} />
+            ) : (
+              <div key={comment.id} className="rounded-md border bg-background px-3 py-3 md:px-4 md:py-3.5">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <div className="text-sm font-medium text-foreground">{comment.author.name}</div>
+                  <div className="flex items-center gap-1">
                     <div className="text-xs text-muted-foreground tabular-nums">{new Date(comment.createdAt).toLocaleString("cs-CZ")}</div>
+                    {currentUserId === comment.author.id && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        aria-label={Texts.delete}
+                        onClick={() => setCommentToDelete(comment.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
+                    )}
                   </div>
-                  <div className="mt-2 text-sm leading-6 text-foreground/90 whitespace-pre-wrap">{comment.text}</div>
                 </div>
-              ),
-            )
-          )}
-        </div>
+                <div className="mt-2 text-sm leading-6 text-foreground/90 whitespace-pre-wrap">{comment.text}</div>
+              </div>
+            ),
+          )
+        )}
 
         <div className="space-y-2">
           <Textarea
@@ -127,6 +130,35 @@ export const TimesheetComments = ({ scope, comments }: TimesheetCommentsProps) =
           </div>
         </div>
       </div>
+
+      <ConfirmationDialog
+        open={commentToDelete !== null}
+        onCancel={() => setCommentToDelete(null)}
+        onConfirm={async (_event, signal) => {
+          if (!commentToDelete) {
+            return;
+          }
+
+          try {
+            await deleteTimesheetComment(
+              {
+                commentId: commentToDelete,
+                employeeId: scope.employeeId,
+                year: scope.year,
+                month: scope.month,
+              },
+              signal,
+            );
+            if (!signal.aborted) {
+              setCommentToDelete(null);
+              revalidator.revalidate();
+            }
+          } catch (error) {
+            setCommentToDelete(null);
+            setSendError(error instanceof Error ? error.message : Texts.deleteCommentFailed);
+          }
+        }}
+      />
     </>
   );
 };

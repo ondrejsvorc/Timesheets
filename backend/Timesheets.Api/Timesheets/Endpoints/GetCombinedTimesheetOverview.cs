@@ -93,7 +93,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
 
         List<OverviewItem> items =
         [
-            new(attendanceInfo.Id, "core", "Kmenový úvazek", null, null, coreWorkload, [], attendanceInfo.Status, null, null),
+            new(attendanceInfo.Id, "core", "Kmen", null, null, coreWorkload, [], attendanceInfo.Status, null, null),
         ];
 
         for (int index = 0; index < projectRows.Count; index++)

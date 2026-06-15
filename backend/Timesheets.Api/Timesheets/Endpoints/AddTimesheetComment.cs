@@ -19,7 +19,7 @@ public sealed class AddTimesheetComment : IEndpoint
            .WithRequestValidation<Request>();
 
     public sealed record Request(Guid EmployeeId, int Year, int Month, string Text);
-    public sealed record CommentAuthor(string Name, string Role);
+    public sealed record CommentAuthor(Guid Id, string Name);
     public sealed record Response(Guid Id, string Type, DateTime CreatedAt, string Text, CommentAuthor Author);
 
     public sealed class Validator : AbstractValidator<Request>
@@ -40,13 +40,7 @@ public sealed class AddTimesheetComment : IEndpoint
             return TypedResults.Forbid();
         }
 
-        CombinedTimesheetScope? timesheetScope = await CombinedTimesheetScopeLoader.LoadAsync(
-            request.EmployeeId,
-            request.Year,
-            request.Month,
-            dbContext,
-            cancellationToken);
-
+        CombinedTimesheetScope? timesheetScope = await CombinedTimesheetScopeLoader.LoadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         if (timesheetScope is null)
         {
             return TypedResults.NotFound();
@@ -67,14 +61,8 @@ public sealed class AddTimesheetComment : IEndpoint
         dbContext.TimesheetComments.Add(comment);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        Response response = new(
-            comment.Id,
-            "message",
-            comment.CreatedAt,
-            comment.Text,
-            new CommentAuthor(
-                EmployeeNameFormatter.Format(author.TitleBefore, author.FullName, author.TitleAfter),
-                EmployeeRoleFormatter.FormatApiRole(author)));
+        CommentAuthor commentAuthor = new(author.Id, EmployeeNameFormatter.Format(author.TitleBefore, author.FullName, author.TitleAfter));
+        Response response = new(comment.Id, Type: "message", comment.CreatedAt, comment.Text, commentAuthor);
 
         return TypedResults.Created($"/api/timesheets/combined/comments/{comment.Id}", response);
     }

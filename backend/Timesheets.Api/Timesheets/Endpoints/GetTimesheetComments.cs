@@ -15,7 +15,7 @@ public sealed class GetTimesheetComments : IEndpoint
            .WithSummary("Get Combined Timesheet Comments");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
-    public sealed record CommentAuthor(string Name, string Role);
+    public sealed record CommentAuthor(Guid Id, string Name);
     public sealed record StatusChangeDetails(
         CommentAuthor ChangedBy,
         string TimesheetLabel,
@@ -76,11 +76,11 @@ public sealed class GetTimesheetComments : IEndpoint
                 comment.CreatedAt,
                 comment.Text,
                 new CommentAuthor(
+                    comment.AuthorEmployeeId,
                     EmployeeNameFormatter.Format(
                         comment.AuthorEmployee.TitleBefore,
                         comment.AuthorEmployee.FullName,
-                        comment.AuthorEmployee.TitleAfter),
-                    EmployeeRoleFormatter.FormatApiRole(comment.AuthorEmployee)),
+                        comment.AuthorEmployee.TitleAfter)),
                 null))
             .Concat(history.Select(entry => new CommentItem(
                 entry.Id,
@@ -90,11 +90,11 @@ public sealed class GetTimesheetComments : IEndpoint
                 null,
                 new StatusChangeDetails(
                     new CommentAuthor(
+                        entry.ChangedByEmployeeId,
                         EmployeeNameFormatter.Format(
                             entry.ChangedByEmployee.TitleBefore,
                             entry.ChangedByEmployee.FullName,
-                            entry.ChangedByEmployee.TitleAfter),
-                        EmployeeRoleFormatter.FormatApiRole(entry.ChangedByEmployee)),
+                            entry.ChangedByEmployee.TitleAfter)),
                     scope.ResolveTimesheetLabel(entry.AttendanceTimesheetId, entry.ProjectTimesheetId),
                     entry.FromStatus?.Name,
                     entry.ToStatus.Name,

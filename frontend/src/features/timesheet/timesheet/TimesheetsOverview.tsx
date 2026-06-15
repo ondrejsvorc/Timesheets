@@ -1,6 +1,6 @@
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
-import { SubPageHeader, SubPageSubtitle, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
+import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
@@ -27,7 +27,7 @@ export const TimesheetsOverview = ({ overview }: TimesheetsOverviewProps) => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{Texts.timesheet}</TableHead>
+              <TableHead>{Texts.timesheetPart}</TableHead>
               <TableHead>{Texts.timesheetStatus}</TableHead>
               <TableHead>{Texts.contract}</TableHead>
               <TableHead>{Texts.position}</TableHead>
@@ -39,7 +39,7 @@ export const TimesheetsOverview = ({ overview }: TimesheetsOverviewProps) => {
           <TableBody>
             {overview.items.map((item) => (
               <TableRow key={`${item.kind}-${item.timesheetId ?? item.label}`}>
-                <TableCell className="font-medium">{item.label}</TableCell>
+                <TableCell>{item.label}</TableCell>
                 <TableCell>
                   <TimesheetStatusBadge status={item.status} />
                 </TableCell>
@@ -54,37 +54,35 @@ export const TimesheetsOverview = ({ overview }: TimesheetsOverviewProps) => {
             ))}
           </TableBody>
         </Table>
+        <TimesheetMonthSummary year={overview.year} month={overview.month} summary={overview.summary} />
       </div>
-      <TimesheetMonthSummary year={overview.year} month={overview.month} summary={overview.summary} />
     </div>
   );
 };
 
 const TimesheetMonthSummary = ({ year, month, summary }: { year: number; month: number; summary: CombinedTimesheetMonthSummary }) => (
-  <div className="mb-6">
-    <SubPageHeader>
-      <SubPageTitle>{Texts.timesheetMonthSummary}</SubPageTitle>
-      <SubPageSubtitle>
+  <div className="border-t mt-4 pt-4">
+    <div className="mb-3 space-y-1">
+      <h3 className="text-sm font-semibold">{Texts.timesheetMonthSummary}</h3>
+      <p className="text-sm text-muted-foreground">
         {formatMonthYear(month, year)} · {formatDate(summary.periodStart)} – {formatDate(summary.periodEnd)}
-      </SubPageSubtitle>
-    </SubPageHeader>
-    <div className="rounded-md border p-4 max-w-md">
-      <Table>
-        <TableBody>
-          <SummaryRow label={Texts.summaryWorkdays} value={summary.workdays} />
-          <SummaryRow label={Texts.summaryVacation} value={summary.vacationDays} />
-          <SummaryRow label={Texts.summarySickDays} value={summary.sickDays} />
-          <SummaryRow label={Texts.summaryHolidays} value={summary.holidays} />
-          <SummaryRow label={Texts.summaryTotalWorkload} value={formatWorkload(summary.totalWorkload)} />
-        </TableBody>
-      </Table>
+      </p>
     </div>
+    <Table>
+      <TableBody>
+        <SummaryRow label={Texts.summaryWorkdays} value={summary.workdays} />
+        <SummaryRow label={Texts.summaryVacation} value={summary.vacationDays} />
+        <SummaryRow label={Texts.summarySickDays} value={summary.sickDays} />
+        <SummaryRow label={Texts.summaryHolidays} value={summary.holidays} />
+        <SummaryRow label={Texts.summaryTotalWorkload} value={formatWorkload(summary.totalWorkload)} />
+      </TableBody>
+    </Table>
   </div>
 );
 
 const SummaryRow = ({ label, value }: { label: string; value: string | number }) => (
   <TableRow>
-    <TableCell className="text-muted-foreground">{label}</TableCell>
-    <TableCell className="text-right font-medium tabular-nums">{value}</TableCell>
+    <TableCell>{label}</TableCell>
+    <TableCell>{value}</TableCell>
   </TableRow>
 );
