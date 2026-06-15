@@ -5,27 +5,13 @@ using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Timesheets;
 
-public sealed record TimesheetDraftDay(
-    DateTime Date,
-    TimeSpan? ClockIn,
-    TimeSpan? ClockOut,
-    TimeSpan? BreakStart,
-    TimeSpan? BreakEnd,
-    decimal CoreHours,
-    string? Description,
-    IReadOnlyList<TimeRange>? Schedules);
+public sealed record TimesheetDraftDay(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal CoreHours, string? Description, IReadOnlyList<TimeRange>? Schedules);
 
 public sealed record TimesheetDraftProjectDay(DateTime Date, decimal Hours);
 
-public sealed record TimesheetDraftProject(
-    Guid ContractEmployeeId,
-    DateTime? LockedAt,
-    Guid? LockedBy,
-    IReadOnlyList<TimesheetDraftProjectDay> Days);
+public sealed record TimesheetDraftProject(Guid ContractEmployeeId, DateTime? LockedAt, Guid? LockedBy, IReadOnlyList<TimesheetDraftProjectDay> Days);
 
-public sealed record TimesheetDraft(
-    IReadOnlyList<TimesheetDraftDay> Days,
-    IReadOnlyList<TimesheetDraftProject>? Projects);
+public sealed record TimesheetDraft(IReadOnlyList<TimesheetDraftDay> Days, IReadOnlyList<TimesheetDraftProject>? Projects);
 
 public sealed class TimesheetDraftValidator : AbstractValidator<TimesheetDraft>
 {
@@ -55,41 +41,18 @@ public sealed class TimesheetDraftValidator : AbstractValidator<TimesheetDraft>
     private static bool HaveUniqueProjects(IEnumerable<TimesheetDraftProject>? projects) => projects is null || projects.Select(project => project.ContractEmployeeId).Distinct().Count() == projects.Count();
 }
 
-public sealed record TimesheetDayEvaluation(
-    int Day,
-    decimal WorkedHours,
-    decimal NightHours,
-    decimal AllocatedHours,
-    decimal Balance,
-    bool HasBusinessTrip,
-    bool HasCoreOnlyInterruption,
-    bool HasProportionalInterruption);
+public sealed record TimesheetDayEvaluation(int Day, decimal WorkedHours, decimal NightHours, decimal AllocatedHours, decimal Balance, bool HasBusinessTrip, bool HasCoreOnlyInterruption, bool HasProportionalInterruption);
 
 public sealed record TimesheetProjectTotal(Guid ProjectId, decimal Hours, decimal Obligation);
 
-public sealed record TimesheetTotals(
-    decimal WorkedHours,
-    decimal HoursObligation,
-    decimal AllocatedHours,
-    decimal CoreHours,
-    decimal CoreHoursObligation,
-    IReadOnlyList<TimesheetProjectTotal> Projects);
+public sealed record TimesheetTotals(decimal WorkedHours, decimal HoursObligation, decimal AllocatedHours, decimal CoreHours, decimal CoreHoursObligation, IReadOnlyList<TimesheetProjectTotal> Projects);
 
-public sealed record TimesheetEvaluation(
-    bool HasErrors,
-    IReadOnlyList<TimesheetIssue> Issues,
-    IReadOnlyList<DayIssue> DayIssues,
-    IReadOnlyList<TimesheetDayEvaluation> Days,
-    TimesheetTotals Totals);
+public sealed record TimesheetEvaluation(bool HasErrors, IReadOnlyList<TimesheetIssue> Issues, IReadOnlyList<DayIssue> DayIssues, IReadOnlyList<TimesheetDayEvaluation> Days, TimesheetTotals Totals);
 
 public sealed record TimesheetAllocationDay(DateTime Date, decimal CoreHours, IReadOnlyDictionary<Guid, decimal> ProjectHours);
 public sealed record TimesheetAllocation(IReadOnlyList<TimesheetAllocationDay> Days, TimesheetEvaluation Evaluation);
 
-internal sealed record TimesheetDraftContext(
-    Data.Models.AttendanceTimesheet Timesheet,
-    IReadOnlyList<Data.Models.ProjectTimesheet> Projects,
-    decimal TotalWorkload,
-    decimal CoreWorkload);
+internal sealed record TimesheetDraftContext(Data.Models.AttendanceTimesheet Timesheet, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, decimal TotalWorkload, decimal CoreWorkload);
 
 internal sealed record TimesheetDraftProjectState(Guid Id, decimal Workload, DateTime? LockedAt, Guid? LockedBy);
 
@@ -107,9 +70,7 @@ internal sealed class TimesheetDraftDayState
     public required Dictionary<Guid, decimal> ProjectHours { get; init; }
 }
 
-internal sealed record TimesheetDraftSnapshot(
-    IReadOnlyList<TimesheetDraftDayState> Days,
-    IReadOnlyList<TimesheetDraftProjectState> Projects);
+internal sealed record TimesheetDraftSnapshot(IReadOnlyList<TimesheetDraftDayState> Days, IReadOnlyList<TimesheetDraftProjectState> Projects);
 
 internal static class TimesheetDrafts
 {
@@ -133,7 +94,7 @@ internal static class TimesheetDrafts
 
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(timesheet.EmployeeId, timesheet.Year, timesheet.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - projects.Sum(project => project.Workload));
-        return new TimesheetDraftContext(timesheet, projects, totalWorkload, coreWorkload);
+        return new TimesheetDraftContext(Timesheet: timesheet, Projects: projects, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
     }
 
     public static TimesheetDraftSnapshot BuildSnapshot(TimesheetDraftContext context, TimesheetDraft draft)
@@ -144,11 +105,7 @@ internal static class TimesheetDrafts
             .Select(project =>
             {
                 TimesheetDraftProject? update = projects.GetValueOrDefault(project.ContractEmployeeId);
-                return new TimesheetDraftProjectState(
-                    project.ContractEmployeeId,
-                    project.Workload,
-                    update is null ? project.LockedAt : update.LockedAt,
-                    update is null ? project.LockedBy : update.LockedBy);
+                return new TimesheetDraftProjectState(Id: project.ContractEmployeeId, Workload: project.Workload, LockedAt: update is null ? project.LockedAt : update.LockedAt, LockedBy: update is null ? project.LockedBy : update.LockedBy);
             })
             .ToList();
 
@@ -184,66 +141,38 @@ internal static class TimesheetDrafts
             })
             .ToList();
 
-        return new TimesheetDraftSnapshot(dayStates, projectStates);
+        return new TimesheetDraftSnapshot(Days: dayStates, Projects: projectStates);
     }
 
-    public static TimesheetDraft Current(TimesheetDraftContext context) => new(
-        context.Timesheet.Days.Select(day => new TimesheetDraftDay(
-            day.Date,
-            day.ClockIn,
-            day.ClockOut,
-            day.BreakStart,
-            day.BreakEnd,
-            day.CoreHours,
-            day.Description,
-            ParseSchedules(day.Schedules))).ToArray(),
-        context.Projects.Select(project => new TimesheetDraftProject(
-            project.ContractEmployeeId,
-            project.LockedAt,
-            project.LockedBy,
-            project.Days.Select(day => new TimesheetDraftProjectDay(day.Date, day.Hours)).ToArray())).ToArray());
+    public static TimesheetDraft Current(TimesheetDraftContext context)
+    {
+        TimesheetDraftDay[] days = context.Timesheet.Days.Select(day => new TimesheetDraftDay(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, CoreHours: day.CoreHours, Description: day.Description, Schedules: ParseSchedules(day.Schedules))).ToArray();
+        TimesheetDraftProject[] projects = context.Projects.Select(project =>
+        {
+            TimesheetDraftProjectDay[] projectDays = project.Days.Select(day => new TimesheetDraftProjectDay(Date: day.Date, Hours: day.Hours)).ToArray();
+            return new TimesheetDraftProject(ContractEmployeeId: project.ContractEmployeeId, LockedAt: project.LockedAt, LockedBy: project.LockedBy, Days: projectDays);
+        }).ToArray();
+        return new TimesheetDraft(Days: days, Projects: projects);
+    }
 
-    public static TimesheetEvaluation Evaluate(TimesheetDraftContext context, TimesheetDraft draft) =>
-        Evaluate(context, BuildSnapshot(context, draft));
+    public static TimesheetEvaluation Evaluate(TimesheetDraftContext context, TimesheetDraft draft) => Evaluate(context, BuildSnapshot(context, draft));
 
     public static TimesheetEvaluation Evaluate(TimesheetDraftContext context, TimesheetDraftSnapshot snapshot)
     {
-        List<AttendanceDay> attendanceDays = snapshot.Days.Select(day => new AttendanceDay(
-            day.Date,
-            day.ClockIn,
-            day.ClockOut,
-            day.BreakStart,
-            day.BreakEnd,
-            day.Description,
-            day.Schedules,
-            day.IsHoliday,
-            context.TotalWorkload)).ToList();
-
-        AttendanceTimesheet attendance = new(
-            context.Timesheet.Employee.PersonalNumber,
-            context.Timesheet.Employee.FullName,
-            context.TotalWorkload,
-            context.Timesheet.Year,
-            context.Timesheet.Month,
-            attendanceDays);
+        List<AttendanceDay> attendanceDays = snapshot.Days.Select(day => new AttendanceDay(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, OtherInterruption: day.Description, Schedules: day.Schedules, IsHoliday: day.IsHoliday, Workload: context.TotalWorkload)).ToList();
+        AttendanceTimesheet attendance = new(EmployeePersonalNumber: context.Timesheet.Employee.PersonalNumber, EmployeeName: context.Timesheet.Employee.FullName, Workload: context.TotalWorkload, Year: context.Timesheet.Year, Month: context.Timesheet.Month, Days: attendanceDays);
 
         List<CombinedDay> combinedDays = snapshot.Days.Select(day =>
         {
             decimal worked = TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
-            return new CombinedDay(
-                day.Date,
-                day.IsHoliday,
-                context.TotalWorkload,
-                context.CoreWorkload,
-                worked,
-                day.CoreHours,
-                day.ProjectHours.Values.Sum(),
-                TimesheetLogic.CalculateStagHours(day.Schedules),
-                day.ClockIn is not null || day.ClockOut is not null,
-                TimesheetInterruptions.SkipAllocationRules(day.Description));
+            decimal projectHours = day.ProjectHours.Values.Sum();
+            decimal stagHours = TimesheetLogic.CalculateStagHours(day.Schedules);
+            bool hasAttendance = day.ClockIn is not null || day.ClockOut is not null;
+            bool skipAllocationRules = TimesheetInterruptions.SkipAllocationRules(day.Description);
+            return new CombinedDay(Date: day.Date, IsHoliday: day.IsHoliday, Workload: context.TotalWorkload, CoreWorkload: context.CoreWorkload, WorkedHours: worked, CoreHours: day.CoreHours, ProjectHours: projectHours, StagHours: stagHours, HasAttendanceFilled: hasAttendance, SkipAllocationRules: skipAllocationRules);
         }).ToList();
 
-        CombinedTimesheet combined = new(context.Timesheet.Year, context.Timesheet.Month, context.CoreWorkload, combinedDays);
+        CombinedTimesheet combined = new(Year: context.Timesheet.Year, Month: context.Timesheet.Month, CoreWorkload: context.CoreWorkload, Days: combinedDays);
         TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, attendance);
         IReadOnlyList<TimesheetIssue> issues = review.Issues.ToArray();
         IReadOnlyList<DayIssue> dayIssues = review.DayIssues.ToArray();
@@ -254,36 +183,22 @@ internal static class TimesheetDrafts
             bool businessTrip = TimesheetInterruptions.HasBusinessTripInterruption(day.Description);
             bool coreOnly = TimesheetInterruptions.HasCoreOnlyInterruption(day.Description);
             bool proportional = TimesheetInterruptions.HasProportionalInterruption(day.Description);
-            decimal balance = combinedDay.SkipAllocationRules || !combinedDay.HasAttendanceFilled
-                ? 0m
-                : TimesheetLogic.Round(combinedDay.WorkedHours - combinedDay.AllocatedHours);
-
-            return new TimesheetDayEvaluation(
-                day.Date.Day,
-                combinedDay.WorkedHours,
-                TimesheetLogic.CalculateNightHours(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd),
-                combinedDay.AllocatedHours,
-                balance,
-                businessTrip,
-                coreOnly,
-                proportional);
+            decimal balance = combinedDay.SkipAllocationRules || !combinedDay.HasAttendanceFilled ? 0m : TimesheetLogic.Round(combinedDay.WorkedHours - combinedDay.AllocatedHours);
+            decimal nightHours = TimesheetLogic.CalculateNightHours(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
+            return new TimesheetDayEvaluation(Day: day.Date.Day, WorkedHours: combinedDay.WorkedHours, NightHours: nightHours, AllocatedHours: combinedDay.AllocatedHours, Balance: balance, HasBusinessTrip: businessTrip, HasCoreOnlyInterruption: coreOnly, HasProportionalInterruption: proportional);
         }).ToList();
 
         int workdays = snapshot.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday));
-        List<TimesheetProjectTotal> projectTotals = snapshot.Projects.Select(project => new TimesheetProjectTotal(
-            project.Id,
-            TimesheetLogic.Normalize(snapshot.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))),
-            TimesheetLogic.Normalize(workdays * 8m * project.Workload))).ToList();
+        List<TimesheetProjectTotal> projectTotals = snapshot.Projects.Select(project =>
+        {
+            decimal hours = TimesheetLogic.Normalize(snapshot.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id)));
+            decimal obligation = TimesheetLogic.Normalize(workdays * 8m * project.Workload);
+            return new TimesheetProjectTotal(ProjectId: project.Id, Hours: hours, Obligation: obligation);
+        }).ToList();
 
-        TimesheetTotals totals = new(
-            TimesheetLogic.Normalize(combinedDays.Sum(day => day.WorkedHours)),
-            TimesheetLogic.Normalize(workdays * 8m * context.TotalWorkload),
-            TimesheetLogic.Normalize(combinedDays.Sum(day => day.AllocatedHours)),
-            TimesheetLogic.Normalize(snapshot.Days.Sum(day => day.CoreHours)),
-            TimesheetLogic.Normalize(workdays * 8m * context.CoreWorkload),
-            projectTotals);
+        TimesheetTotals totals = new(WorkedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.WorkedHours)), HoursObligation: TimesheetLogic.Normalize(workdays * 8m * context.TotalWorkload), AllocatedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.AllocatedHours)), CoreHours: TimesheetLogic.Normalize(snapshot.Days.Sum(day => day.CoreHours)), CoreHoursObligation: TimesheetLogic.Normalize(workdays * 8m * context.CoreWorkload), Projects: projectTotals);
 
-        return new TimesheetEvaluation(review.HasErrors, issues, dayIssues, days, totals);
+        return new TimesheetEvaluation(HasErrors: review.HasErrors, Issues: issues, DayIssues: dayIssues, Days: days, Totals: totals);
     }
 
     public static void Apply(TimesheetDraftContext context, TimesheetDraft draft)

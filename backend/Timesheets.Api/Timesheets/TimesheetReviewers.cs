@@ -49,11 +49,6 @@ file static class TimesheetLimits
     public const decimal MinHoursBeforeBreak = 4m;
 }
 
-public interface ITimesheetReviewer<T> where T : ITimesheet
-{
-    TimesheetReview Review(T timesheet);
-}
-
 public sealed class CombinedTimesheetReviewer
 {
     public TimesheetReview Review(CombinedTimesheet timesheet, AttendanceTimesheet attendance)
@@ -152,7 +147,7 @@ public sealed class CombinedTimesheetReviewer
     }
 }
 
-public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceTimesheet>
+public sealed class AttendanceTimesheetReviewer
 {
     public TimesheetReview Review(AttendanceTimesheet timesheet) => new()
     {
@@ -335,36 +330,5 @@ public sealed class AttendanceTimesheetReviewer : ITimesheetReviewer<AttendanceT
         }
 
         return breakStart >= shiftStart && breakEnd <= shiftEnd;
-    }
-}
-
-public sealed class ImportTimesheetReviewer : ITimesheetReviewer<ITimesheet<IDay>>
-{
-    public TimesheetReview Review(ITimesheet<IDay> timesheet) => new()
-    {
-        Issues = ReviewTimesheet(timesheet)
-    };
-
-    private static IEnumerable<TimesheetIssue> ReviewTimesheet(ITimesheet<IDay> timesheet) =>
-    [
-        .. ReviewDaysCount(timesheet),
-        .. ReviewWorkload(timesheet)
-    ];
-
-    private static IEnumerable<TimesheetIssue> ReviewDaysCount(ITimesheet<IDay> timesheet)
-    {
-        int expected = DateTime.DaysInMonth(timesheet.Year, timesheet.Month);
-        if (timesheet.Days.Count != expected)
-        {
-            yield return new TimesheetIssue("", IssueType.Error, $"Výkaz obsahuje {timesheet.Days.Count} z očekávaných {expected} dnů.");
-        }
-    }
-
-    private static IEnumerable<TimesheetIssue> ReviewWorkload(ITimesheet<IDay> timesheet)
-    {
-        if (timesheet.TotalWorkload is < 0m or > 1m)
-        {
-            yield return new TimesheetIssue("", IssueType.Error, $"Úvazek {timesheet.TotalWorkload:P0} je mimo povolený rozsah 0–100 %.");
-        }
     }
 }

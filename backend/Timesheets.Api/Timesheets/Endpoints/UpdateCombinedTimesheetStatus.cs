@@ -20,13 +20,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(
-        Guid EmployeeId,
-        int Year,
-        int Month,
-        Guid StatusId,
-        string? Comment,
-        IReadOnlyList<Guid> TimesheetIds);
+    public sealed record Request(Guid EmployeeId, int Year, int Month, Guid StatusId, string? Comment, IReadOnlyList<Guid> TimesheetIds);
 
     public sealed class Validator : AbstractValidator<Request>
     {
@@ -43,12 +37,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
     private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> Handle([FromBody] Request request, AppDbContext dbContext, NotificationSender notificationSender, ICurrentUser user, CancellationToken cancellationToken)
     {
-        CombinedTimesheetScope? scope = await CombinedTimesheetScopeLoader.LoadAsync(
-            request.EmployeeId,
-            request.Year,
-            request.Month,
-            dbContext,
-            cancellationToken);
+        CombinedTimesheetScope? scope = await CombinedTimesheetScopeLoader.LoadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
 
         if (scope is null)
         {
@@ -96,27 +85,10 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
         if (includesAttendance)
         {
-            return await UpdateAttendanceStatusAsync(
-                request,
-                scope,
-                attendanceTimesheet,
-                newStatus,
-                user,
-                dbContext,
-                notificationSender,
-                cancellationToken);
+            return await UpdateAttendanceStatusAsync(request, scope, attendanceTimesheet, newStatus, user, dbContext, notificationSender, cancellationToken);
         }
 
-        return await UpdateProjectStatusesAsync(
-            request,
-            scope,
-            attendanceTimesheet,
-            selectedProjectIds,
-            newStatus,
-            user,
-            dbContext,
-            notificationSender,
-            cancellationToken);
+        return await UpdateProjectStatusesAsync(request, scope, attendanceTimesheet, selectedProjectIds, newStatus, user, dbContext, notificationSender, cancellationToken);
     }
 
     private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateAttendanceStatusAsync(Request request, CombinedTimesheetScope scope, Data.Models.AttendanceTimesheet attendanceTimesheet, TimesheetStatus newStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
@@ -124,19 +96,16 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         Guid currentStatusId = attendanceTimesheet.TimesheetStatusId;
         string currentStatusName = attendanceTimesheet.TimesheetStatus.Name;
 
-        if (!TimesheetWorkflowConstants.IsValidAttendanceTransition(currentStatusId, request.StatusId))
+        if (!TimesheetWorkflow.IsValidAttendanceTransition(currentStatusId, request.StatusId))
         {
-            return TypedResults.BadRequest(
-                $"Invalid status transition from '{currentStatusName}' (ID: {currentStatusId}) to '{newStatus.Name}' (ID: {request.StatusId}).");
+            return TypedResults.BadRequest($"Invalid status transition from '{currentStatusName}' (ID: {currentStatusId}) to '{newStatus.Name}' (ID: {request.StatusId}).");
         }
 
         bool statusWillChange = currentStatusId != request.StatusId;
         if (statusWillChange)
         {
-            bool isSubmit = request.StatusId == TimesheetWorkflowConstants.SubmittedStatusId;
-            bool authorized = isSubmit
-                ? user.EmployeeId == attendanceTimesheet.EmployeeId
-                : user.IsGlobalManagerRole();
+            bool isSubmit = request.StatusId == TimesheetWorkflow.SubmittedStatusId;
+            bool authorized = isSubmit ? user.EmployeeId == attendanceTimesheet.EmployeeId : user.IsGlobalManagerRole();
 
             if (!authorized)
             {
@@ -144,7 +113,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             }
         }
 
-        if (request.StatusId == TimesheetWorkflowConstants.SubmittedStatusId && statusWillChange)
+        if (request.StatusId == TimesheetWorkflow.SubmittedStatusId && statusWillChange)
         {
             TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(attendanceTimesheet.Id, dbContext, cancellationToken);
             if (context is null)
@@ -159,7 +128,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             }
         }
 
-        if (request.StatusId == TimesheetWorkflowConstants.ApprovedStatusId)
+        if (request.StatusId == TimesheetWorkflow.ApprovedStatusId)
         {
             bool allProjectsApproved = await AreAllProjectsApprovedAsync(scope, dbContext, cancellationToken);
             if (!allProjectsApproved)
@@ -174,16 +143,16 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             attendanceTimesheet.TimesheetStatusId = request.StatusId;
             attendanceTimesheet.UpdatedAt = DateTime.UtcNow;
 
-            if (request.StatusId == TimesheetWorkflowConstants.SubmittedStatusId && attendanceTimesheet.SubmittedAt is null)
+            if (request.StatusId == TimesheetWorkflow.SubmittedStatusId && attendanceTimesheet.SubmittedAt is null)
             {
                 attendanceTimesheet.SubmittedAt = DateTime.UtcNow;
             }
-            else if (request.StatusId == TimesheetWorkflowConstants.ApprovedStatusId)
+            else if (request.StatusId == TimesheetWorkflow.ApprovedStatusId)
             {
                 attendanceTimesheet.ApprovedBy = user.EmployeeId;
                 attendanceTimesheet.ApprovedAt = DateTime.UtcNow;
             }
-            else if (request.StatusId == TimesheetWorkflowConstants.DraftStatusId)
+            else if (request.StatusId == TimesheetWorkflow.DraftStatusId)
             {
                 attendanceTimesheet.ApprovedBy = null;
                 attendanceTimesheet.ApprovedAt = null;
@@ -210,12 +179,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
         if (statusChanged)
         {
-            string notificationMessage = BuildNotificationMessage(
-                request.Year,
-                request.Month,
-                currentStatusName,
-                newStatus.Name,
-                request.Comment);
+            string notificationMessage = BuildNotificationMessage(request.Year, request.Month, currentStatusName, newStatus.Name, request.Comment);
 
             await notificationSender.SendAsync(attendanceTimesheet.EmployeeId, notificationMessage, cancellationToken);
         }
@@ -225,10 +189,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
     private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateProjectStatusesAsync(Request request, CombinedTimesheetScope scope, Data.Models.AttendanceTimesheet attendanceTimesheet, HashSet<Guid> selectedProjectIds, TimesheetStatus newStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
     {
-        List<ProjectTimesheetPart> projectScopes = await ProjectTimesheetScopeLoader.LoadAsync(
-            selectedProjectIds,
-            dbContext,
-            cancellationToken);
+        List<ProjectTimesheetPart> projectScopes = await LoadProjectScopesAsync(selectedProjectIds, dbContext, cancellationToken);
 
         if (projectScopes.Count != selectedProjectIds.Count
             || !user.CanManageProjectTimesheetParts(projectScopes))
@@ -236,14 +197,14 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return TypedResults.Unauthorized();
         }
 
-        if (request.StatusId == TimesheetWorkflowConstants.ApprovedStatusId
-            && attendanceTimesheet.TimesheetStatusId != TimesheetWorkflowConstants.SubmittedStatusId)
+        if (request.StatusId == TimesheetWorkflow.ApprovedStatusId
+            && attendanceTimesheet.TimesheetStatusId != TimesheetWorkflow.SubmittedStatusId)
         {
             return TypedResults.BadRequest("Projektovou část lze schválit až po odeslání celého výkazu ke schválení.");
         }
 
-        if (request.StatusId == TimesheetWorkflowConstants.DraftStatusId
-            && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflowConstants.ApprovedStatusId)
+        if (request.StatusId == TimesheetWorkflow.DraftStatusId
+            && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId)
         {
             return TypedResults.BadRequest("Schválený výkaz nelze částečně vrátit. Použijte odemčení celého výkazu.");
         }
@@ -258,7 +219,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return TypedResults.NotFound();
         }
 
-        bool isProjectReturn = request.StatusId == TimesheetWorkflowConstants.DraftStatusId;
+        bool isProjectReturn = request.StatusId == TimesheetWorkflow.DraftStatusId;
         bool anyProjectStatusChanged = false;
         bool anyProjectReturnRecorded = false;
         Guid attendanceStatusBefore = attendanceTimesheet.TimesheetStatusId;
@@ -269,16 +230,13 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             Guid currentStatusId = projectTimesheet.TimesheetStatusId;
             string currentStatusName = projectTimesheet.TimesheetStatus.Name;
 
-            if (!TimesheetWorkflowConstants.IsValidProjectTransition(currentStatusId, request.StatusId))
+            if (!TimesheetWorkflow.IsValidProjectTransition(currentStatusId, request.StatusId))
             {
-                return TypedResults.BadRequest(
-                    $"Invalid status transition from '{currentStatusName}' (ID: {currentStatusId}) to '{newStatus.Name}' (ID: {request.StatusId}).");
+                return TypedResults.BadRequest($"Invalid status transition from '{currentStatusName}' (ID: {currentStatusId}) to '{newStatus.Name}' (ID: {request.StatusId}).");
             }
 
             bool statusChanged = currentStatusId != request.StatusId;
-            bool isReturnWhilePendingReview = isProjectReturn
-                && !statusChanged
-                && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflowConstants.SubmittedStatusId;
+            bool isReturnWhilePendingReview = isProjectReturn && !statusChanged && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId;
 
             if (!statusChanged && !isReturnWhilePendingReview && string.IsNullOrWhiteSpace(request.Comment))
             {
@@ -297,7 +255,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
                 projectTimesheet.LockedBy = null;
                 anyProjectReturnRecorded = true;
             }
-            else if (request.StatusId == TimesheetWorkflowConstants.ApprovedStatusId)
+            else if (request.StatusId == TimesheetWorkflow.ApprovedStatusId)
             {
                 projectTimesheet.LockedAt = DateTime.UtcNow;
                 projectTimesheet.LockedBy = user.EmployeeId;
@@ -311,9 +269,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
                 {
                     Id = Guid.NewGuid(),
                     ProjectTimesheetId = projectTimesheet.Id,
-                    FromStatusId = statusChanged || isReturnWhilePendingReview
-                        ? TimesheetWorkflowConstants.SubmittedStatusId
-                        : currentStatusId,
+                    FromStatusId = statusChanged || isReturnWhilePendingReview ? TimesheetWorkflow.SubmittedStatusId : currentStatusId,
                     ToStatusId = request.StatusId,
                     ChangedByEmployeeId = user.EmployeeId,
                     Comment = request.Comment,
@@ -326,9 +282,9 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         bool attendanceReopened = false;
         if (isProjectReturn
             && anyProjectReturnRecorded
-            && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflowConstants.SubmittedStatusId)
+            && attendanceTimesheet.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId)
         {
-            attendanceTimesheet.TimesheetStatusId = TimesheetWorkflowConstants.DraftStatusId;
+            attendanceTimesheet.TimesheetStatusId = TimesheetWorkflow.DraftStatusId;
             attendanceTimesheet.UpdatedAt = DateTime.UtcNow;
             attendanceReopened = true;
 
@@ -339,7 +295,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
                 Id = Guid.NewGuid(),
                 AttendanceTimesheetId = attendanceTimesheet.Id,
                 FromStatusId = attendanceStatusBefore,
-                ToStatusId = TimesheetWorkflowConstants.DraftStatusId,
+                ToStatusId = TimesheetWorkflow.DraftStatusId,
                 ChangedByEmployeeId = user.EmployeeId,
                 Comment = request.Comment,
             };
@@ -351,9 +307,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
         if (anyProjectStatusChanged || attendanceReopened)
         {
-            string notificationMessage = attendanceReopened
-                ? BuildNotificationMessage(request.Year, request.Month, attendanceStatusNameBefore, TimesheetWorkflowConstants.DraftStatusName, request.Comment)
-                : BuildProjectNotificationMessage(request.Year, request.Month, newStatus.Name, request.Comment);
+            string notificationMessage = attendanceReopened ? BuildNotificationMessage(request.Year, request.Month, attendanceStatusNameBefore, TimesheetWorkflow.DraftStatusName, request.Comment) : BuildProjectNotificationMessage(request.Year, request.Month, newStatus.Name, request.Comment);
 
             await notificationSender.SendAsync(attendanceTimesheet.EmployeeId, notificationMessage, cancellationToken);
         }
@@ -375,8 +329,15 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             .ToListAsync(cancellationToken);
 
         return projectStatusIds.Count == scope.ProjectTimesheetLabels.Count
-            && projectStatusIds.All(id => id == TimesheetWorkflowConstants.ApprovedStatusId);
+            && projectStatusIds.All(id => id == TimesheetWorkflow.ApprovedStatusId);
     }
+
+    private static Task<List<ProjectTimesheetPart>> LoadProjectScopesAsync(IEnumerable<Guid> projectTimesheetIds, AppDbContext dbContext, CancellationToken cancellationToken) => dbContext.ProjectTimesheets
+        .AsNoTracking()
+        .Where(timesheet => projectTimesheetIds.Contains(timesheet.Id))
+        .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { contractEmployee.ContractId })
+        .Join(dbContext.Contracts.AsNoTracking(), value => value.ContractId, contract => contract.Id, (value, contract) => new ProjectTimesheetPart(value.ContractId, contract.ProjectId))
+        .ToListAsync(cancellationToken);
 
     private static async Task ResetAllProjectsToDraftAsync(CombinedTimesheetScope scope, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -391,7 +352,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
         foreach (Data.Models.ProjectTimesheet projectTimesheet in projectTimesheets)
         {
-            projectTimesheet.TimesheetStatusId = TimesheetWorkflowConstants.DraftStatusId;
+            projectTimesheet.TimesheetStatusId = TimesheetWorkflow.DraftStatusId;
             projectTimesheet.LockedAt = null;
             projectTimesheet.LockedBy = null;
             projectTimesheet.UpdatedAt = DateTime.UtcNow;

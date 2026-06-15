@@ -15,16 +15,15 @@ public class TimesheetReimportPersistenceTests : BaseIntegrationTest
         byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
 
         using IServiceScope scope = CreateScope();
-        IAttendanceTimesheetPersistenceService persistence = scope.ServiceProvider.GetRequiredService<IAttendanceTimesheetPersistenceService>();
-        ITimesheetImporter<AttendanceTimesheet> importer = scope.ServiceProvider.GetRequiredService<ITimesheetImporter<AttendanceTimesheet>>();
+        AttendanceImport import = scope.ServiceProvider.GetRequiredService<AttendanceImport>();
 
         await using MemoryStream firstStream = new(fileBytes);
-        AttendanceTimesheet firstImport = await importer.ImportAsync(firstStream);
-        Guid firstTimesheetId = await persistence.PersistAsync(setup.EmployeeId, firstImport, CancellationToken.None);
+        AttendanceTimesheet firstImport = import.Read(firstStream);
+        Guid firstTimesheetId = await import.PersistAsync(setup.EmployeeId, firstImport, CancellationToken.None);
 
         await using MemoryStream secondStream = new(fileBytes);
-        AttendanceTimesheet secondImport = await importer.ImportAsync(secondStream);
-        Guid secondTimesheetId = await persistence.PersistAsync(setup.EmployeeId, secondImport, CancellationToken.None);
+        AttendanceTimesheet secondImport = import.Read(secondStream);
+        Guid secondTimesheetId = await import.PersistAsync(setup.EmployeeId, secondImport, CancellationToken.None);
 
         Assert.Equal(firstTimesheetId, secondTimesheetId);
     }

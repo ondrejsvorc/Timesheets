@@ -2,60 +2,21 @@
 
 public sealed record TimeRange(TimeSpan Start, TimeSpan End);
 
-public interface ISummarizable
-{
-    decimal TotalWorkload { get; }
-    decimal TotalHours { get; }
-    decimal TotalHoursObligation { get; }
-}
-public interface ITimesheet : ISummarizable
-{
-    public int Year { get; }
-    public int Month { get; }
-}
-public interface ITimesheet<T> : ITimesheet where T : IDay
-{
-    public IReadOnlyList<T> Days { get; }
-}
-public interface IDay : ISummarizable
-{
-    public DateTime Date { get; init; }
-    bool IsHoliday { get; init; }
-    bool IsWeekend { get; }
-    bool IsWorkday { get; }
-}
-
-public sealed record CombinedTimesheet(
-    int Year,
-    int Month,
-    decimal CoreWorkload,
-    IReadOnlyList<CombinedDay> Days
-) : ITimesheet<CombinedDay>
+public sealed record CombinedTimesheet(int Year, int Month, decimal CoreWorkload, IReadOnlyList<CombinedDay> Days)
 {
     public decimal TotalHours => Days.Sum(d => d.TotalHours);
     public decimal TotalWorkload => Days.FirstOrDefault()?.TotalWorkload ?? 0m;
-    public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(Days);
+    public decimal TotalHoursObligation => Days.Sum(day => day.TotalHoursObligation);
 }
 
-public sealed record CombinedDay(
-    DateTime Date,
-    bool IsHoliday,
-    decimal Workload,
-    decimal CoreWorkload,
-    decimal WorkedHours,
-    decimal CoreHours,
-    decimal ProjectHours,
-    decimal StagHours,
-    bool HasAttendanceFilled,
-    bool SkipAllocationRules
-) : IDay
+public sealed record CombinedDay(DateTime Date, bool IsHoliday, decimal Workload, decimal CoreWorkload, decimal WorkedHours, decimal CoreHours, decimal ProjectHours, decimal StagHours, bool HasAttendanceFilled, bool SkipAllocationRules)
 {
-    public bool IsWeekend => TimesheetLogic.IsWeekend(this);
-    public bool IsWorkday => TimesheetLogic.IsWorkday(this);
+    public bool IsWeekend => TimesheetLogic.IsWeekend(Date);
+    public bool IsWorkday => TimesheetLogic.IsWorkday(Date, IsHoliday);
     public decimal TotalWorkload => Workload;
     public decimal AllocatedHours => TimesheetLogic.Normalize(CoreHours + ProjectHours);
     public decimal TotalHours => HasAttendanceFilled ? WorkedHours : AllocatedHours;
-    public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(this);
+    public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(Date, IsHoliday, Workload);
 }
 
 /// <summary>
@@ -67,18 +28,11 @@ public sealed record CombinedDay(
 /// <param name="Year">Rok vykazovaného období.</param>
 /// <param name="Month">Měsíc vykazovaného období.</param>
 /// <param name="Days">Dny měsíčního výkazu pracovní doby.</param>
-public sealed record AttendanceTimesheet(
-    string EmployeePersonalNumber,
-    string? EmployeeName,
-    decimal Workload,
-    int Year,
-    int Month,
-    IReadOnlyList<AttendanceDay> Days
-) : ITimesheet<AttendanceDay>
+public sealed record AttendanceTimesheet(string EmployeePersonalNumber, string? EmployeeName, decimal Workload, int Year, int Month, IReadOnlyList<AttendanceDay> Days)
 {
     public decimal TotalWorkload => Workload;
-    public decimal TotalHours => TimesheetLogic.CalculateTotalHours(Days);
-    public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(Days);
+    public decimal TotalHours => Days.Sum(day => day.TotalHours);
+    public decimal TotalHoursObligation => Days.Sum(day => day.TotalHoursObligation);
 }
 
 /// <summary>
@@ -92,24 +46,14 @@ public sealed record AttendanceTimesheet(
 /// <param name="OtherInterruption">Jiné přerušení (úvazek).</param>
 /// <param name="IsHoliday">Určuje, zda se jedná o státní svátek.</param>
 /// <param name="Workload">Úvazek.</param>
-public sealed record AttendanceDay(
-    DateTime Date,
-    TimeSpan? ClockIn,
-    TimeSpan? ClockOut,
-    TimeSpan? BreakStart,
-    TimeSpan? BreakEnd,
-    string? OtherInterruption,
-    IReadOnlyList<TimeRange> Schedules,
-    bool IsHoliday,
-    decimal Workload
-) : IDay
+public sealed record AttendanceDay(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, string? OtherInterruption, IReadOnlyList<TimeRange> Schedules, bool IsHoliday, decimal Workload)
 {
-    public bool IsWeekend => TimesheetLogic.IsWeekend(this);
-    public bool IsWorkday => TimesheetLogic.IsWorkday(this);
+    public bool IsWeekend => TimesheetLogic.IsWeekend(Date);
+    public bool IsWorkday => TimesheetLogic.IsWorkday(Date, IsHoliday);
 
     public decimal TotalWorkload => Workload;
-    public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(this);
-    public decimal TotalHours => TimesheetLogic.CalculateTotalHours(this);
+    public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(Date, IsHoliday, Workload);
+    public decimal TotalHours => TimesheetLogic.CalculateWorkedHoursFromAttendance(ClockIn, ClockOut, BreakStart, BreakEnd);
 }
 
 /// <summary>
@@ -119,16 +63,11 @@ public sealed record AttendanceDay(
 /// <param name="Month">Měsíc vykazovaného období.</param>
 /// <param name="Workload">Úvazek.</param>
 /// <param name="Days">Dny měsíčního výkazu projektové činnosti.</param>
-public sealed record ProjectTimesheet(
-    int Year,
-    int Month,
-    decimal Workload,
-    IReadOnlyList<ProjectDay> Days
-) : ITimesheet<ProjectDay>
+public sealed record ProjectTimesheet(int Year, int Month, decimal Workload, IReadOnlyList<ProjectDay> Days)
 {
     public decimal TotalWorkload => Workload;
-    public decimal TotalHours => TimesheetLogic.CalculateTotalHours(Days);
-    public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(Days);
+    public decimal TotalHours => Days.Sum(day => day.TotalHours);
+    public decimal TotalHoursObligation => Days.Sum(day => day.TotalHoursObligation);
 }
 
 /// <summary>
@@ -137,18 +76,13 @@ public sealed record ProjectTimesheet(
 /// <param name="Date">Datum.</param>
 /// <param name="Hours">Počet hodin.</param>
 /// <param name="IsHoliday">Určuje, zda se jedná o státní svátek.</param>
-public sealed record ProjectDay(
-    DateTime Date,
-    decimal Hours,
-    bool IsHoliday,
-    decimal Workload
-) : IDay
+public sealed record ProjectDay(DateTime Date, decimal Hours, bool IsHoliday, decimal Workload)
 {
-    public bool IsWeekend => TimesheetLogic.IsWeekend(this);
-    public bool IsWorkday => TimesheetLogic.IsWorkday(this);
+    public bool IsWeekend => TimesheetLogic.IsWeekend(Date);
+    public bool IsWorkday => TimesheetLogic.IsWorkday(Date, IsHoliday);
 
     public decimal TotalWorkload => Workload;
-    public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(this);
+    public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(Date, IsHoliday, Workload);
     public decimal TotalHours => Hours;
 }
 
@@ -160,17 +94,9 @@ public static class TimesheetLogic
     /// </summary>
     private const decimal StandardWorkdayHours = 8m;
 
-    public static bool IsWeekend(IDay day) => day.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-    public static bool IsWorkday(IDay day) => !IsWeekend(day) && !day.IsHoliday;
+    public static bool IsWeekend(DateTime date) => date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
     public static bool IsWorkday(DateTime date, bool isHoliday) => date.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday && !isHoliday;
-    public static bool HasObligation(IDay day) => IsWorkday(day);
-
-    public static decimal CalculateTotalHoursObligation(IDay day) => HasObligation(day) ? Normalize(StandardWorkdayHours * day.TotalWorkload) : 0m;
-    public static decimal CalculateTotalHoursObligation(IEnumerable<IDay> days) => days.Sum(day => day.TotalHoursObligation);
-
-    public static decimal CalculateTotalHours(IEnumerable<IDay> days) => days.Sum(day => day.TotalHours);
-    public static decimal CalculateTotalHours(AttendanceDay day) =>
-        CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
+    public static decimal CalculateTotalHoursObligation(DateTime date, bool isHoliday, decimal workload) => IsWorkday(date, isHoliday) ? Normalize(StandardWorkdayHours * workload) : 0m;
 
     public static decimal CalculateWorkedHoursFromAttendance(TimeSpan? clockIn, TimeSpan? clockOut, TimeSpan? breakStart, TimeSpan? breakEnd)
     {
@@ -304,11 +230,9 @@ public static class TimesheetLogic
         return Normalize(Math.Max(0, nightMinutes) / 60m);
     }
 
-    public static bool HasUnequalHours(decimal left, decimal right) =>
-        Math.Abs(Normalize(left) - Normalize(right)) >= 0.01m;
+    public static bool HasUnequalHours(decimal left, decimal right) => Math.Abs(Normalize(left) - Normalize(right)) >= 0.01m;
 
-    public static decimal Round(decimal hours) =>
-        Math.Round(hours, decimals: 2, MidpointRounding.AwayFromZero);
+    public static decimal Round(decimal hours) => Math.Round(hours, decimals: 2, MidpointRounding.AwayFromZero);
 
     public static decimal Normalize(decimal hours)
     {
@@ -328,4 +252,31 @@ public static class TimesheetLogic
 
         return intervals.Sum(interval => Math.Max(0, Math.Min(end, interval.End) - Math.Max(start, interval.Start)));
     }
+}
+
+internal static class TimesheetInterruptions
+{
+    private static readonly HashSet<string> BusinessTripCodes = ["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"];
+
+    private static string[] ParseCodes(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return [];
+        }
+
+        return raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(code => code.ToUpperInvariant()).ToArray();
+    }
+
+    public static bool HasBusinessTripInterruption(string? raw) => ParseCodes(raw).Any(BusinessTripCodes.Contains);
+
+    public static bool HasCoreOnlyInterruption(string? raw) => ParseCodes(raw).Any(code => code is "M" || code.StartsWith('N'));
+
+    public static bool HasProportionalInterruption(string? raw)
+    {
+        string[] codes = ParseCodes(raw);
+        return codes.Length > 0 && !codes.Any(BusinessTripCodes.Contains) && !codes.Any(code => code is "M" || code.StartsWith('N'));
+    }
+
+    public static bool SkipAllocationRules(string? raw) => HasBusinessTripInterruption(raw) || HasProportionalInterruption(raw);
 }

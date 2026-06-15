@@ -13,12 +13,7 @@ public sealed class ReviewTimesheet : IEndpoint
             .WithSummary("Review Timesheet Draft")
             .WithRequestValidation<TimesheetDraft>();
 
-    private static async Task<Results<Ok<TimesheetEvaluation>, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        [FromBody] TimesheetDraft draft,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<TimesheetEvaluation>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromBody] TimesheetDraft draft, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(id, dbContext, cancellationToken);
         if (context is null)

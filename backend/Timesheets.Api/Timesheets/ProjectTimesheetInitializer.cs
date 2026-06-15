@@ -5,7 +5,7 @@ using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Timesheets;
 
-internal static class ProjectTimesheetProvisioner
+internal static class ProjectTimesheetInitializer
 {
     public static bool IsAssignmentActiveForMonth(ContractEmployee assignment, int year, int month)
     {
@@ -53,10 +53,7 @@ internal static class ProjectTimesheetProvisioner
             return false;
         }
 
-        bool exists = await dbContext.ProjectTimesheets
-            .AnyAsync(
-                t => t.ContractEmployeeId == assignment.Id && t.Year == year && t.Month == month,
-                cancellationToken);
+        bool exists = await dbContext.ProjectTimesheets.AnyAsync(t => t.ContractEmployeeId == assignment.Id && t.Year == year && t.Month == month, cancellationToken);
 
         if (exists)
         {
@@ -70,7 +67,7 @@ internal static class ProjectTimesheetProvisioner
             EmployeeId = assignment.EmployeeId,
             ContractId = assignment.ContractId,
             ContractEmployeeId = assignment.Id,
-            TimesheetStatusId = TimesheetWorkflowConstants.DraftStatusId,
+            TimesheetStatusId = TimesheetWorkflow.DraftStatusId,
             Year = year,
             Month = month,
             Workload = assignment.Workload,
@@ -96,6 +93,5 @@ internal static class ProjectTimesheetProvisioner
         return true;
     }
 
-    private static DateTime ToUtcDate(DateTime value) =>
-        value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+    private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);
 }

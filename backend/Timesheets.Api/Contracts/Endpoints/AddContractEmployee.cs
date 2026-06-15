@@ -163,13 +163,7 @@ public sealed class AddContractEmployee : IEndpoint
 
             if (existing is null)
             {
-                await ProjectTimesheetProvisioner.EnsureForAssignmentMonthAsync(
-                    contractEmployee,
-                    cursor.Year,
-                    cursor.Month,
-                    dbContext,
-                    holidaysFactory,
-                    cancellationToken);
+                await ProjectTimesheetInitializer.EnsureForAssignmentMonthAsync(contractEmployee, cursor.Year, cursor.Month, dbContext, holidaysFactory, cancellationToken);
             }
             else
             {

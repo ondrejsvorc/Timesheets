@@ -161,7 +161,7 @@ public sealed class UpdateContractEmployee : IEndpoint
     {
         List<Guid> dayIds = await dbContext.ProjectTimesheets
             .Where(t => t.ContractEmployeeId == contractEmployeeId)
-            .Where(t => t.TimesheetStatusId == TimesheetWorkflowConstants.DraftStatusId)
+            .Where(t => t.TimesheetStatusId == TimesheetWorkflow.DraftStatusId)
             .SelectMany(t => t.Days)
             .Where(day => day.Date > newEnd)
             .Select(day => day.Id)
@@ -189,13 +189,7 @@ public sealed class UpdateContractEmployee : IEndpoint
 
         while (cursor <= last)
         {
-            await ProjectTimesheetProvisioner.EnsureForAssignmentMonthAsync(
-                contractEmployee,
-                cursor.Year,
-                cursor.Month,
-                dbContext,
-                holidaysFactory,
-                cancellationToken);
+            await ProjectTimesheetInitializer.EnsureForAssignmentMonthAsync(contractEmployee, cursor.Year, cursor.Month, dbContext, holidaysFactory, cancellationToken);
             cursor = cursor.AddMonths(1);
         }
     }

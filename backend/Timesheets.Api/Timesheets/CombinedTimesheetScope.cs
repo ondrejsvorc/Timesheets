@@ -3,9 +3,7 @@ using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Timesheets;
 
-internal sealed record CombinedTimesheetScope(
-    Guid AttendanceTimesheetId,
-    IReadOnlyDictionary<Guid, string> ProjectTimesheetLabels);
+internal sealed record CombinedTimesheetScope(Guid AttendanceTimesheetId, IReadOnlyDictionary<Guid, string> ProjectTimesheetLabels);
 
 internal static class CombinedTimesheetScopeLoader
 {

@@ -45,13 +45,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
             return TypedResults.NotFound();
         }
 
-        await ProjectTimesheetProvisioner.EnsureForEmployeeMonthAsync(
-            request.EmployeeId,
-            request.Year,
-            request.Month,
-            dbContext,
-            holidaysFactory,
-            cancellationToken);
+        await ProjectTimesheetInitializer.EnsureForEmployeeMonthAsync(request.EmployeeId, request.Year, request.Month, dbContext, holidaysFactory, cancellationToken);
 
         List<ProjectTimesheetSource> projectTimesheets = await (
             from timesheet in dbContext.ProjectTimesheets.AsNoTracking()

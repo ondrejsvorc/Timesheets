@@ -262,13 +262,8 @@ public static class ConfigureServices
         builder.Services.AddScoped<UserSynchronizer>();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ICurrentUser, CurrentUser>();
-        builder.Services.AddSingleton<ICellParser, CellParser>();
-        builder.Services.AddSingleton<IAttendanceTimesheetMetadataReader, AttendanceTimesheetMetadataReader>();
-        builder.Services.AddSingleton<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();
         builder.Services.AddSingleton<ICzechHolidaysFactory, CzechHolidaysFactory>();
-        builder.Services.AddTransient<ITimesheetImporter<AttendanceTimesheet>, AttendanceTimesheetImporter>();
-        builder.Services.AddScoped<IAttendanceTimesheetPersistenceService, AttendanceTimesheetPersistenceService>();
-        builder.Services.AddScoped<IAttendanceTimesheetImportService, AttendanceTimesheetImportService>();
+        builder.Services.AddScoped<AttendanceImport>();
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
         builder.Services.AddSignalR();
         builder.Services.AddScoped<NotificationSender>();

@@ -1,6 +1,6 @@
 namespace Timesheets.Api.Timesheets;
 
-internal static class TimesheetWorkflowConstants
+internal static class TimesheetWorkflow
 {
     public static readonly Guid DraftStatusId = Guid.Parse("00000000-0000-0000-0000-000000000020");
     public static readonly Guid SubmittedStatusId = Guid.Parse("00000000-0000-0000-0000-000000000021");

@@ -25,8 +25,8 @@ internal static class DeleteImpactCore
         return await dbContext.ProjectTimesheets
             .AsNoTracking()
             .Where(t => contractIds.Contains(t.ContractId)
-                && (t.TimesheetStatusId == TimesheetWorkflowConstants.SubmittedStatusId
-                    || t.TimesheetStatusId == TimesheetWorkflowConstants.ApprovedStatusId))
+                && (t.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId
+                    || t.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId))
             .AnyAsync(cancellationToken);
     }
 
@@ -51,19 +51,19 @@ internal static class DeleteImpactCore
             draftCount = await dbContext.ProjectTimesheets
                 .AsNoTracking()
                 .CountAsync(
-                    t => contractIds.Contains(t.ContractId) && t.TimesheetStatusId == TimesheetWorkflowConstants.DraftStatusId,
+                    t => contractIds.Contains(t.ContractId) && t.TimesheetStatusId == TimesheetWorkflow.DraftStatusId,
                     cancellationToken);
 
             submittedCount = await dbContext.ProjectTimesheets
                 .AsNoTracking()
                 .CountAsync(
-                    t => contractIds.Contains(t.ContractId) && t.TimesheetStatusId == TimesheetWorkflowConstants.SubmittedStatusId,
+                    t => contractIds.Contains(t.ContractId) && t.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId,
                     cancellationToken);
 
             approvedCount = await dbContext.ProjectTimesheets
                 .AsNoTracking()
                 .CountAsync(
-                    t => contractIds.Contains(t.ContractId) && t.TimesheetStatusId == TimesheetWorkflowConstants.ApprovedStatusId,
+                    t => contractIds.Contains(t.ContractId) && t.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId,
                     cancellationToken);
         }
 

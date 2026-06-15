@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
-using Timesheets.Api.Data;
 using Timesheets.Api.Timesheets;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
@@ -33,14 +32,14 @@ public sealed class DetectTimesheetImport : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, BadRequest<string>, ForbidHttpResult>> Handle([FromForm] Request request, AppDbContext dbContext, [FromServices] IAttendanceTimesheetImportService importService, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, BadRequest<string>, ForbidHttpResult>> Handle([FromForm] Request request, AttendanceImport import, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!user.IsGlobalManagerRole() && user.EmployeeId != request.EmployeeId)
         {
             return TypedResults.Forbid();
         }
 
-        AttendanceTimesheetDetectionResult result = await importService.DetectAsync(request.EmployeeId, request.File, cancellationToken);
+        AttendanceTimesheetDetectionResult result = await import.DetectAsync(request.EmployeeId, request.File, cancellationToken);
         return TypedResults.Ok(new Response(result));
     }
 }

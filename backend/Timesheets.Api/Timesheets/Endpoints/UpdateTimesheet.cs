@@ -15,19 +15,14 @@ public sealed class UpdateTimesheet : IEndpoint
 
     public sealed record Response(Guid Id, TimesheetEvaluation Evaluation);
 
-    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(
-        Guid id,
-        [FromBody] TimesheetDraft draft,
-        AppDbContext dbContext,
-        ICurrentUser user,
-        CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromBody] TimesheetDraft draft, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
         TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(id, dbContext, cancellationToken);
         if (context is null)
         {
             return TypedResults.NotFound();
         }
-        if (user.EmployeeId != context.Timesheet.EmployeeId || context.Timesheet.TimesheetStatusId != TimesheetWorkflowConstants.DraftStatusId)
+        if (user.EmployeeId != context.Timesheet.EmployeeId || context.Timesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
         {
             return TypedResults.Forbid();
         }

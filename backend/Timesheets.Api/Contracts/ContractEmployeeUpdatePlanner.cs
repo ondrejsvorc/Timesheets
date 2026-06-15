@@ -213,9 +213,9 @@ internal static class ContractEmployeeUpdatePlanner
 
         foreach (Data.Models.ProjectTimesheet timesheet in timesheets)
         {
-            bool isSubmitted = timesheet.TimesheetStatusId == TimesheetWorkflowConstants.SubmittedStatusId;
-            bool isApproved = timesheet.TimesheetStatusId == TimesheetWorkflowConstants.ApprovedStatusId;
-            bool isDraft = timesheet.TimesheetStatusId == TimesheetWorkflowConstants.DraftStatusId;
+            bool isSubmitted = timesheet.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId;
+            bool isApproved = timesheet.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId;
+            bool isDraft = timesheet.TimesheetStatusId == TimesheetWorkflow.DraftStatusId;
 
             foreach (Data.Models.ProjectDay day in timesheet.Days)
             {
@@ -293,8 +293,8 @@ internal static class ContractEmployeeUpdatePlanner
             .ToListAsync(cancellationToken);
 
         return (
-            statusIds.Count(id => id == TimesheetWorkflowConstants.DraftStatusId),
-            statusIds.Count(id => id == TimesheetWorkflowConstants.SubmittedStatusId),
-            statusIds.Count(id => id == TimesheetWorkflowConstants.ApprovedStatusId));
+            statusIds.Count(id => id == TimesheetWorkflow.DraftStatusId),
+            statusIds.Count(id => id == TimesheetWorkflow.SubmittedStatusId),
+            statusIds.Count(id => id == TimesheetWorkflow.ApprovedStatusId));
     }
 }

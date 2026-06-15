@@ -59,13 +59,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             return TypedResults.NotFound();
         }
 
-        await ProjectTimesheetProvisioner.EnsureForEmployeeMonthAsync(
-            request.EmployeeId,
-            request.Year,
-            request.Month,
-            dbContext,
-            holidaysFactory,
-            cancellationToken);
+        await ProjectTimesheetInitializer.EnsureForEmployeeMonthAsync(request.EmployeeId, request.Year, request.Month, dbContext, holidaysFactory, cancellationToken);
 
         List<ProjectRowSource> projectRows = await dbContext.ProjectTimesheets
             .AsNoTracking()
@@ -109,7 +103,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
                 .Select(manager => manager.Employee.FullName)
                 .ToListAsync(cancellationToken);
 
-            string projectStatus = TimesheetWorkflowConstants.ResolveProjectDisplayStatus(row.TimesheetStatusId, attendanceInfo.Status);
+            string projectStatus = TimesheetWorkflow.ResolveProjectDisplayStatus(row.TimesheetStatusId, attendanceInfo.Status);
 
             items.Add(new OverviewItem(
                 row.TimesheetId,
