@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { toast } from "sonner";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
-import type { Timesheet, TimesheetDay } from "../../Timesheet";
-import { TimesheetLogic } from "../../TimesheetLogic";
+import type { Timesheet, TimesheetDay, TimesheetEvaluation } from "../../Timesheet";
+import { formatHours } from "../../timesheetFormat";
 import { TimesheetBody } from "./TimesheetBody";
 import { TimesheetFooter } from "./TimesheetFooter";
 import { TimesheetHeader } from "./TimesheetHeader";
@@ -29,20 +29,22 @@ const createGridTemplate = (projectCount: number) => {
 
 interface TimesheetGridProps {
   timesheet: Timesheet;
+  evaluation: TimesheetEvaluation;
   readOnly?: boolean;
   onUpdateDay: (index: number, updater: (day: TimesheetDay) => void) => void;
   onToggleProjectLock: (projectId: string) => void;
+  onAllocate: (day?: number) => Promise<void>;
   className?: string;
 }
 
-export const TimesheetGrid = ({ timesheet, readOnly = false, onUpdateDay, onToggleProjectLock, className }: TimesheetGridProps) => {
+export const TimesheetGrid = ({ timesheet, evaluation, readOnly = false, onUpdateDay, onToggleProjectLock, onAllocate, className }: TimesheetGridProps) => {
   const projectCount = timesheet.projects.length;
   const template = useMemo(() => createGridTemplate(projectCount), [projectCount]);
 
   const copyProjectColumn = async (projectId: string) => {
     const lines = timesheet.days.map((day) => {
       const hours = day.projectHours[projectId] ?? 0;
-      return TimesheetLogic.formatHours(hours).replace(".", ",");
+      return formatHours(hours);
     });
 
     try {
@@ -63,24 +65,10 @@ export const TimesheetGrid = ({ timesheet, readOnly = false, onUpdateDay, onTogg
           core={timesheet.core}
           onToggleProjectLock={onToggleProjectLock}
           onCopyProjectColumn={copyProjectColumn}
-          onGenerateMonthly={() => {
-            const onUpdateByDate = (date: string, updater: (draftDay: TimesheetDay) => void) => {
-              const dayIndex = timesheet.days.findIndex((d) => d.date === date);
-              if (dayIndex < 0) return;
-              onUpdateDay(dayIndex, updater);
-            };
-            TimesheetLogic.distributeMonthlyHours(timesheet, onUpdateByDate);
-          }}
+          onGenerateMonthly={() => onAllocate()}
         />
-        <TimesheetBody
-          readOnly={readOnly}
-          days={timesheet.days}
-          projects={timesheet.projects}
-          totalWorkload={timesheet.totalWorkload}
-          coreWorkload={timesheet.core.workload}
-          onUpdateDay={onUpdateDay}
-        />
-        <TimesheetFooter readOnly={readOnly} timesheet={timesheet} />
+        <TimesheetBody readOnly={readOnly} days={timesheet.days} projects={timesheet.projects} evaluation={evaluation} onUpdateDay={onUpdateDay} onAllocate={onAllocate} />
+        <TimesheetFooter readOnly={readOnly} projects={timesheet.projects} totals={evaluation.totals} />
       </div>
     </div>
   );

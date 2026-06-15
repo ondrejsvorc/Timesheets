@@ -89,12 +89,10 @@ export const TimesheetWorkflowConfirmDialog = ({ action, periodLabel, targetLabe
           <DialogTitle>{config.title}</DialogTitle>
           <DialogDescription>{config.description}</DialogDescription>
         </DialogHeader>
-
         <div className="space-y-2">
           <Label htmlFor="workflow-comment">{Texts.comment}</Label>
           <Textarea id="workflow-comment" value={comment} onChange={(event) => setComment(event.target.value)} rows={4} placeholder={Texts.writeCommentPlaceholder} />
         </div>
-
         <DialogFooter>
           <DialogCancelButton onClick={handleClose} />
           <BusyButton

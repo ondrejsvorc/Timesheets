@@ -265,7 +265,7 @@ export const router = createBrowserRouter([
               getCombinedTimesheetOverview(employeeId, year, month),
               getCombinedTimesheet(employeeId, year, month),
               getTimesheetComments(employeeId, year, month),
-            ]).then(([employee, overview, timesheet, comments]) => ({ employee, overview, timesheet, comments }) satisfies TimesheetPageData),
+            ]).then(([employee, overview, timesheetData, comments]) => ({ employee, overview, timesheetData, comments }) satisfies TimesheetPageData),
           };
         },
       },

@@ -146,11 +146,14 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
         if (request.StatusId == TimesheetWorkflowConstants.SubmittedStatusId && statusWillChange)
         {
-            await dbContext.Entry(attendanceTimesheet).Reference(t => t.Employee).LoadAsync(cancellationToken);
-            await dbContext.Entry(attendanceTimesheet).Collection(t => t.Days).LoadAsync(cancellationToken);
+            TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(attendanceTimesheet.Id, dbContext, cancellationToken);
+            if (context is null)
+            {
+                return TypedResults.NotFound();
+            }
 
-            TimesheetReview review = await CombinedTimesheetReviewMapper.ReviewAsync(attendanceTimesheet, dbContext, cancellationToken);
-            if (review.HasErrors)
+            TimesheetEvaluation evaluation = TimesheetDrafts.Evaluate(context, TimesheetDrafts.Current(context));
+            if (evaluation.HasErrors)
             {
                 return TypedResults.BadRequest("Výkaz obsahuje chyby a nelze ho odeslat ke schválení.");
             }

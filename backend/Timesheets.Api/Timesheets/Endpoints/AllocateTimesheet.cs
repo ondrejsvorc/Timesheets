@@ -6,15 +6,16 @@ using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
 
-public sealed class ReviewTimesheet : IEndpoint
+public sealed class AllocateTimesheet : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapPost("/{id}/review", Handle)
-            .WithSummary("Review Timesheet Draft")
+        app.MapPost("/{id}/allocate", Handle)
+            .WithSummary("Allocate Timesheet Draft")
             .WithRequestValidation<TimesheetDraft>();
 
-    private static async Task<Results<Ok<TimesheetEvaluation>, NotFound, ForbidHttpResult>> Handle(
+    private static async Task<Results<Ok<TimesheetAllocation>, NotFound, ForbidHttpResult>> Handle(
         Guid id,
+        [FromQuery] int? day,
         [FromBody] TimesheetDraft draft,
         AppDbContext dbContext,
         ICurrentUser user,
@@ -25,11 +26,11 @@ public sealed class ReviewTimesheet : IEndpoint
         {
             return TypedResults.NotFound();
         }
-        if (!await user.CanAccessEmployeeAsync(context.Timesheet.EmployeeId, cancellationToken))
+        if (user.EmployeeId != context.Timesheet.EmployeeId || context.Timesheet.TimesheetStatusId != TimesheetWorkflowConstants.DraftStatusId)
         {
             return TypedResults.Forbid();
         }
 
-        return TypedResults.Ok(TimesheetDrafts.Evaluate(context, draft));
+        return TypedResults.Ok(TimesheetAllocator.Allocate(context, draft, day));
     }
 }

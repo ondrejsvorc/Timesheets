@@ -9,7 +9,7 @@ interface TimesheetHeaderProps {
   readOnly?: boolean;
   projects: ProjectDefinition[];
   core: CoreDefinition;
-  onGenerateMonthly: () => void;
+  onGenerateMonthly: () => void | Promise<void>;
   onToggleProjectLock: (projectId: string) => void;
   onCopyProjectColumn: (projectId: string) => void | Promise<void>;
 }
@@ -62,7 +62,7 @@ export const TimesheetHeader = ({ readOnly = false, projects, core, onGenerateMo
               variant="ghost"
               size="icon"
               className="h-6 w-6 text-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-90"
-              onClick={onGenerateMonthly}
+              onClick={() => void onGenerateMonthly()}
               title={Texts.fillMissingHoursInTimesheet}
             >
               <Sparkles className="h-3.5 w-3.5 fill-blue-100" />

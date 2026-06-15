@@ -1,9 +1,12 @@
 import { ApiUrl, customFetch, withDelay } from "@/constants/api";
-import type { TimeRange, Timesheet } from "../../Timesheet";
+import type { TimeRange, Timesheet, TimesheetData } from "../../Timesheet";
+import { reviewTimesheet } from "./reviewTimesheet";
 
 interface CompactProjectDefinition {
   id: string;
+  registrationNumber: string;
   name: string;
+  position: string;
   workload: number;
   lockedAt: string | null;
   lockedBy: string | null;
@@ -25,7 +28,6 @@ interface GetCombinedTimesheetResponse {
   id: string;
   year: number;
   month: number;
-  totalWorkload: number;
   coreWorkload: number;
   projects: CompactProjectDefinition[];
   days: CompactDayItem[];
@@ -52,9 +54,9 @@ const mapSchedules = (schedules: Array<[number, number]> | null | undefined): Ti
 const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
   const projects = response.projects.map((project) => ({
     id: project.id,
-    registrationNumber: "",
+    registrationNumber: project.registrationNumber,
     name: project.name,
-    position: "",
+    position: project.position,
     workload: project.workload,
     lockedAt: project.lockedAt,
     lockedBy: project.lockedBy,
@@ -74,7 +76,6 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
         breakStart: minutesToTime(day.break?.[0]),
         breakEnd: minutesToTime(day.break?.[1]),
         interruptions: day.note ?? "",
-        nightHours: 0,
         schedules: mapSchedules(day.schedules),
       },
       coreHours: day.coreHours > 0 ? day.coreHours : null,
@@ -88,15 +89,13 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
     id: response.id,
     year: response.year,
     month: response.month,
-    totalWorkload: response.totalWorkload,
-    hasBaseWorkload: true,
     core: { workload: response.coreWorkload },
     projects,
     days,
   };
 };
 
-export const getCombinedTimesheet = (employeeId: string, year: number, month: number) => {
+export const getCombinedTimesheet = (employeeId: string, year: number, month: number): Promise<TimesheetData> => {
   const params = new URLSearchParams({
     employeeId,
     year: String(year),
@@ -105,6 +104,7 @@ export const getCombinedTimesheet = (employeeId: string, year: number, month: nu
 
   return withDelay("slowest", async () => {
     const response = await customFetch<GetCombinedTimesheetResponse>(`${ApiUrl}/timesheets/combined?${params.toString()}`);
-    return mapToTimesheet(response);
+    const timesheet = mapToTimesheet(response);
+    return { timesheet, evaluation: await reviewTimesheet(timesheet) };
   });
 };

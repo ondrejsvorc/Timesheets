@@ -1,14 +1,13 @@
 import { Sparkles } from "lucide-react";
-import React from "react";
+import { useCallback, useMemo } from "react";
 import { SmartDecimalInput } from "@/components/shared/inputs/SmartDecimalInput";
 import { SmartTimeInput } from "@/components/shared/inputs/SmartTimeInput";
 import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
-import type { ProjectDefinition as Project, TimesheetDay as TimesheetDayModel } from "../../Timesheet";
-import { TimesheetLogic } from "../../TimesheetLogic";
-import { type DayValidation, TimesheetValidations } from "../../TimesheetValidations";
+import type { ProjectDefinition as Project, TimesheetDayEvaluation, TimesheetDay as TimesheetDayModel, TimesheetIssue } from "../../Timesheet";
+import { formatHours } from "../../timesheetFormat";
 import { Interruption } from "./Interruption";
 import { LockableField } from "./LockableField";
 import { StagSchedule } from "./StagSchedule";
@@ -22,158 +21,87 @@ const hoursCellClass = "w-full text-right tabular-nums cursor-help border-b bord
 
 interface TimesheetDayProps {
   day: TimesheetDayModel;
-  previousDay?: TimesheetDayModel;
   dayIndex: number;
   projects: Project[];
-  totalWorkload: number;
-  coreWorkload: number;
+  evaluation?: TimesheetDayEvaluation;
+  issues: TimesheetIssue[];
   onUpdateDay: (index: number, updater: (day: TimesheetDayModel) => void) => void;
+  onAllocate: (day?: number) => Promise<void>;
 }
 
-const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWorkload, coreWorkload, onUpdateDay }: TimesheetDayProps) => {
-  const { workedHours, nightHours, controlTotal, balance } = React.useMemo(() => TimesheetLogic.getDayTotals(day), [day]);
-  const validations = React.useMemo(() => TimesheetValidations.validateDay(day, previousDay, { coreWorkload }), [day, previousDay, coreWorkload]);
-  const validationsByField = React.useMemo(() => {
-    const grouped = new Map<string, DayValidation[]>();
-    const rowLevel: DayValidation[] = [];
-    validations.forEach((validation) => {
-      if (!validation.field) {
-        rowLevel.push(validation);
+const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, onUpdateDay, onAllocate }: TimesheetDayProps) => {
+  const issuesByField = useMemo(() => {
+    const grouped = new Map<string, TimesheetIssue[]>();
+    const row: TimesheetIssue[] = [];
+    issues.forEach((issue) => {
+      if (!issue.field) {
+        row.push(issue);
         return;
       }
-      const current = grouped.get(validation.field);
-      if (current) {
-        current.push(validation);
-      } else {
-        grouped.set(validation.field, [validation]);
-      }
+      grouped.set(issue.field, [...(grouped.get(issue.field) ?? []), issue]);
     });
-    return { grouped, rowLevel };
-  }, [validations]);
-  const getFieldValidations = React.useCallback((field: string) => validationsByField.grouped.get(field) ?? [], [validationsByField]);
+    return { grouped, row };
+  }, [issues]);
 
-  const handleUpdateDay = (updater: (day: TimesheetDayModel) => void) => {
-    onUpdateDay(dayIndex, updater);
-  };
-
+  const fieldIssues = useCallback((field: string) => issuesByField.grouped.get(field) ?? [], [issuesByField]);
+  const update = (updater: (day: TimesheetDayModel) => void) => onUpdateDay(dayIndex, updater);
+  const workedHours = evaluation?.workedHours ?? 0;
+  const nightHours = evaluation?.nightHours ?? 0;
+  const allocatedHours = evaluation?.allocatedHours ?? 0;
+  const balance = evaluation?.balance ?? 0;
   const isWeekendOrHoliday = day.isWeekend || day.isHoliday;
-  const hasInterruption = Boolean(day.attendance.interruptions?.trim());
-  const hasBusinessTripInterruption = TimesheetLogic.hasBusinessTripInterruption(day.attendance);
-  const hasProportionalInterruption = hasInterruption && !hasBusinessTripInterruption && !TimesheetLogic.hasCoreOnlyInterruption(day.attendance);
-  const shouldLockByInterruption = hasInterruption && !hasBusinessTripInterruption;
-
-  const applyInterruptionAutofill = (draft: TimesheetDayModel) => {
-    if (!draft.attendance.interruptions?.trim()) {
-      return;
-    }
-
-    if (TimesheetLogic.hasBusinessTripInterruption(draft.attendance)) {
-      return;
-    }
-
-    const isProportionalInterruption = !TimesheetLogic.hasCoreOnlyInterruption(draft.attendance);
-    if (isProportionalInterruption) {
-      draft.attendance.clockIn = "";
-      draft.attendance.clockOut = "";
-      draft.attendance.breakStart = "";
-      draft.attendance.breakEnd = "";
-      draft.attendance.schedules = [];
-    }
-
-    const interruptionHours = TimesheetLogic.calculateInterruptionCoreHours(draft, totalWorkload);
-    const projectsTotalWorkload = projects.reduce((sum, p) => sum + p.workload, 0);
-    const workloadSum = Math.max(0, coreWorkload + projectsTotalWorkload);
-
-    if (workloadSum <= 0) {
-      draft.coreHours = 0;
-      Object.keys(draft.projectHours).forEach((projectId) => {
-        draft.projectHours[projectId] = 0;
-      });
-      return;
-    }
-
-    if (TimesheetLogic.hasCoreOnlyInterruption(draft.attendance)) {
-      draft.coreHours = interruptionHours;
-      Object.keys(draft.projectHours).forEach((projectId) => {
-        draft.projectHours[projectId] = 0;
-      });
-      return;
-    }
-
-    const toCents = (value: number): number => Math.max(0, Math.round(value * 100));
-    const fromCents = (value: number): number => Number((Math.max(0, value) / 100).toFixed(2));
-    const totalCents = toCents(interruptionHours);
-    const projectIds = projects.map((p) => p.id);
-    const nextProjectCents: Record<string, number> = {};
-
-    let allocatedProjectCents = 0;
-    projects.forEach((project) => {
-      const cents = Math.round((totalCents * project.workload) / workloadSum);
-      nextProjectCents[project.id] = Math.max(0, cents);
-      allocatedProjectCents += Math.max(0, cents);
-    });
-
-    const coreCents = Math.max(0, totalCents - allocatedProjectCents);
-    draft.coreHours = fromCents(coreCents);
-    projectIds.forEach((projectId) => {
-      draft.projectHours[projectId] = fromCents(nextProjectCents[projectId] ?? 0);
-    });
-  };
+  const shouldLockByInterruption = Boolean(evaluation?.hasCoreOnlyInterruption || evaluation?.hasProportionalInterruption);
 
   return (
     <div className={cn("grid grid-cols-subgrid col-[1/-1] border-b border-border/50", isWeekendOrHoliday && "bg-slate-100")}>
       <div className={cn(cellClass, cellFirstClass, isWeekendOrHoliday && "!bg-slate-200")}>
-        <ValidationField validations={validationsByField.rowLevel}>
+        <ValidationField validations={issuesByField.row}>
           <div className="text-center font-medium">{day.date}</div>
         </ValidationField>
       </div>
       <div className={cellClass}>
-        <ValidationField validations={getFieldValidations("clockIn")}>
+        <ValidationField validations={fieldIssues("clockIn")}>
           <SmartTimeInput
             value={day.attendance.clockIn}
             onChange={(value) =>
-              handleUpdateDay((draft) => {
+              update((draft) => {
                 draft.attendance.clockIn = value;
-                applyInterruptionAutofill(draft);
               })
             }
           />
         </ValidationField>
       </div>
       <div className={cellClass}>
-        <ValidationField validations={getFieldValidations("clockOut")}>
+        <ValidationField validations={fieldIssues("clockOut")}>
           <SmartTimeInput
             value={day.attendance.clockOut}
             onChange={(value) =>
-              handleUpdateDay((draft) => {
+              update((draft) => {
                 draft.attendance.clockOut = value;
-                applyInterruptionAutofill(draft);
               })
             }
           />
         </ValidationField>
       </div>
       <div className={cellClass}>
-        <ValidationField validations={getFieldValidations("breakStart")}>
+        <ValidationField validations={fieldIssues("breakStart")}>
           <SmartTimeInput
             value={day.attendance.breakStart}
             onChange={(value) =>
-              handleUpdateDay((draft) => {
+              update((draft) => {
                 draft.attendance.breakStart = value;
-                applyInterruptionAutofill(draft);
               })
             }
           />
         </ValidationField>
       </div>
       <div className={cellClass}>
-        <ValidationField validations={getFieldValidations("breakEnd")}>
+        <ValidationField validations={fieldIssues("breakEnd")}>
           <SmartTimeInput
             value={day.attendance.breakEnd}
             onChange={(value) =>
-              handleUpdateDay((draft) => {
+              update((draft) => {
                 draft.attendance.breakEnd = value;
-                applyInterruptionAutofill(draft);
               })
             }
           />
@@ -183,44 +111,47 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
         <Interruption value={day.attendance.interruptions} />
       </div>
       <div className={cn(cellClass, numericCellClass)}>
-        <HoursToHumanTooltip hours={workedHours}>
-          <div className={cn(hoursCellClass, "font-bold")}>{TimesheetLogic.formatHours(workedHours)}</div>
-        </HoursToHumanTooltip>
+        <ValidationField validations={fieldIssues("workedHours")}>
+          <HoursToHumanTooltip hours={workedHours}>
+            <div className={cn(hoursCellClass, "font-bold")}>{formatHours(workedHours)}</div>
+          </HoursToHumanTooltip>
+        </ValidationField>
       </div>
       <div className={cn(cellClass, numericCellClass)}>
         <HoursToHumanTooltip hours={nightHours}>
-          <div className={cn(hoursCellClass, "text-slate-600")}>{TimesheetLogic.formatHours(nightHours)}</div>
+          <div className={cn(hoursCellClass, "text-slate-600")}>{formatHours(nightHours)}</div>
         </HoursToHumanTooltip>
       </div>
       <div className={cellClass}>
         <StagSchedule
           schedules={day.attendance.schedules}
-          onSchedulesChange={(newSchedules) =>
-            handleUpdateDay((draft) => {
-              draft.attendance.schedules = newSchedules;
-              applyInterruptionAutofill(draft);
+          onSchedulesChange={(schedules) =>
+            update((draft) => {
+              draft.attendance.schedules = schedules;
             })
           }
-          disabled={hasProportionalInterruption}
+          disabled={evaluation?.hasProportionalInterruption}
         />
       </div>
       <div className={cellClass}>
-        <LockableField locked={shouldLockByInterruption}>
-          <HoursToHumanTooltip hours={day.coreHours ?? 0}>
-            <SmartDecimalInput
-              value={day.coreHours}
-              onChange={(value) =>
-                handleUpdateDay((draft) => {
-                  draft.coreHours = value;
-                })
-              }
-              commitOnChange
-              precision={2}
-              disabled={shouldLockByInterruption}
-              className="h-8 w-20 max-w-full text-right tabular-nums"
-            />
-          </HoursToHumanTooltip>
-        </LockableField>
+        <ValidationField validations={fieldIssues("coreHours")}>
+          <LockableField locked={shouldLockByInterruption}>
+            <HoursToHumanTooltip hours={day.coreHours ?? 0}>
+              <SmartDecimalInput
+                value={day.coreHours}
+                onChange={(value) =>
+                  update((draft) => {
+                    draft.coreHours = value;
+                  })
+                }
+                commitOnChange
+                precision={2}
+                disabled={shouldLockByInterruption}
+                className="h-8 w-20 max-w-full text-right tabular-nums"
+              />
+            </HoursToHumanTooltip>
+          </LockableField>
+        </ValidationField>
       </div>
       {projects.map((project) => {
         const locked = project.lockedAt != null || shouldLockByInterruption;
@@ -231,7 +162,7 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
                 <SmartDecimalInput
                   value={Number(day.projectHours[project.id] ?? 0)}
                   onChange={(value) =>
-                    handleUpdateDay((draft) => {
+                    update((draft) => {
                       draft.projectHours[project.id] = value ?? 0;
                     })
                   }
@@ -246,24 +177,19 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
         );
       })}
       <div className={cn(cellClass, numericCellClass)}>
-        <HoursToHumanTooltip hours={controlTotal}>
-          <div className={cn(hoursCellClass, "text-slate-700 font-semibold")}>{TimesheetLogic.formatHours(controlTotal)}</div>
+        <HoursToHumanTooltip hours={allocatedHours}>
+          <div className={cn(hoursCellClass, "text-slate-700 font-semibold")}>{formatHours(allocatedHours)}</div>
         </HoursToHumanTooltip>
       </div>
       <div className={cn(cellClass, numericCellClass, cellLastClass, balance === 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500")}>
         <div className="w-full flex items-center justify-end gap-2">
-          <div className={cn("w-full text-right font-bold tabular-nums", balance === 0 ? "text-green-600" : "text-red-500")}>{balance === 0 ? "0" : TimesheetLogic.formatHours(balance)}</div>
+          <div className="w-full text-right font-bold tabular-nums">{formatHours(balance)}</div>
           <Button
             variant="ghost"
             size="icon"
             className={cn("h-7 w-7 shrink-0 transition-opacity", balance <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50")}
             onClick={() => {
-              if (balance > 0) {
-                const magicFn = TimesheetLogic.distributeRemainingHours(day, totalWorkload, coreWorkload, projects);
-                if (magicFn) {
-                  magicFn(handleUpdateDay);
-                }
-              }
+              if (balance > 0) void onAllocate(dayIndex + 1);
             }}
             title={Texts.fillRemainingHoursEmptyOnly}
           >
@@ -275,14 +201,4 @@ const TimesheetDayComponent = ({ day, previousDay, dayIndex, projects, totalWork
   );
 };
 
-export const TimesheetDay = React.memo(
-  TimesheetDayComponent,
-  (prev, next) =>
-    prev.day === next.day &&
-    prev.previousDay === next.previousDay &&
-    prev.dayIndex === next.dayIndex &&
-    prev.projects === next.projects &&
-    prev.totalWorkload === next.totalWorkload &&
-    prev.coreWorkload === next.coreWorkload &&
-    prev.onUpdateDay === next.onUpdateDay,
-);
+export const TimesheetDay = TimesheetDayComponent;

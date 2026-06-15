@@ -9,7 +9,6 @@ export interface Attendance {
   breakStart: string;
   breakEnd: string;
   interruptions: string;
-  nightHours: number;
   schedules: TimeRange[];
 }
 
@@ -40,9 +39,55 @@ export interface Timesheet {
   id: string;
   year: number;
   month: number;
-  totalWorkload: number;
-  hasBaseWorkload: boolean;
   core: CoreDefinition;
   projects: ProjectDefinition[];
   days: TimesheetDay[];
+}
+
+export type ValidationType = "error" | "warning";
+
+export interface TimesheetIssue {
+  code: string;
+  type: ValidationType;
+  message: string;
+  day?: number;
+  field?: string;
+}
+
+export interface TimesheetDayEvaluation {
+  day: number;
+  workedHours: number;
+  nightHours: number;
+  allocatedHours: number;
+  balance: number;
+  hasBusinessTrip: boolean;
+  hasCoreOnlyInterruption: boolean;
+  hasProportionalInterruption: boolean;
+}
+
+export interface TimesheetProjectTotal {
+  projectId: string;
+  hours: number;
+  obligation: number;
+}
+
+export interface TimesheetTotals {
+  workedHours: number;
+  hoursObligation: number;
+  allocatedHours: number;
+  coreHours: number;
+  coreHoursObligation: number;
+  projects: TimesheetProjectTotal[];
+}
+
+export interface TimesheetEvaluation {
+  hasErrors: boolean;
+  issues: TimesheetIssue[];
+  days: TimesheetDayEvaluation[];
+  totals: TimesheetTotals;
+}
+
+export interface TimesheetData {
+  timesheet: Timesheet;
+  evaluation: TimesheetEvaluation;
 }

@@ -90,12 +90,8 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             .ToListAsync(cancellationToken);
 
         decimal totalProjectWorkload = projectRows.Sum(item => item.Workload);
-        decimal? baseWorkload = await GetBaseWorkloadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
-        decimal totalWorkload = baseWorkload ?? 0m;
+        decimal totalWorkload = await TimesheetWorkloads.GetAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
-
-        DateTime periodStart = new(request.Year, request.Month, 1, 0, 0, 0, DateTimeKind.Utc);
-        DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);
 
         List<OverviewItem> items =
         [
@@ -132,29 +128,4 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         return TypedResults.Ok(new Response(request.EmployeeId, request.Year, request.Month, attendanceInfo.Status, items));
     }
 
-    private static async Task<decimal?> GetBaseWorkloadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
-    {
-        DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-        DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);
-
-        decimal? monthly = await dbContext.EmployeeWorkloads
-            .AsNoTracking()
-            .Where(w => w.EmployeeId == employeeId && w.Year == year && w.Month == month)
-            .Select(w => (decimal?)w.Workload)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (monthly.HasValue)
-        {
-            return monthly.Value;
-        }
-
-        decimal? workload = await dbContext.CoreEmployments
-            .AsNoTracking()
-            .Where(e => e.EmployeeId == employeeId)
-            .Where(e => e.StartDate <= periodEnd && (e.EndDate == null || e.EndDate >= periodStart))
-            .OrderByDescending(e => e.StartDate)
-            .Select(e => (decimal?)e.Workload)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return workload;
-    }
 }

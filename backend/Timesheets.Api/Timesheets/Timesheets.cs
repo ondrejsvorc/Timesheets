@@ -33,7 +33,7 @@ public sealed record CombinedTimesheet(
 ) : ITimesheet<CombinedDay>
 {
     public decimal TotalHours => Days.Sum(d => d.TotalHours);
-    public decimal TotalWorkload => Days.Sum(d => d.TotalWorkload);
+    public decimal TotalWorkload => Days.FirstOrDefault()?.TotalWorkload ?? 0m;
     public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(Days);
 }
 
@@ -53,8 +53,8 @@ public sealed record CombinedDay(
     public bool IsWeekend => TimesheetLogic.IsWeekend(this);
     public bool IsWorkday => TimesheetLogic.IsWorkday(this);
     public decimal TotalWorkload => Workload;
-    public decimal TotalHours => WorkedHours;
     public decimal AllocatedHours => TimesheetLogic.Normalize(CoreHours + ProjectHours);
+    public decimal TotalHours => HasAttendanceFilled ? WorkedHours : AllocatedHours;
     public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(this);
 }
 
@@ -154,11 +154,16 @@ public sealed record ProjectDay(
 
 public static class TimesheetLogic
 {
+    /// <summary>
+    /// Zákon č. 262/2006 Sb., zákoník práce — § 79 odst. 1
+    /// Standardní denní pracovní doba činí 8 hodin (při úvazku 1,0).
+    /// </summary>
     private const decimal StandardWorkdayHours = 8m;
 
     public static bool IsWeekend(IDay day) => day.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
     public static bool IsWorkday(IDay day) => !IsWeekend(day) && !day.IsHoliday;
-    public static bool HasObligation(IDay day) => !IsWeekend(day);
+    public static bool IsWorkday(DateTime date, bool isHoliday) => date.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday && !isHoliday;
+    public static bool HasObligation(IDay day) => IsWorkday(day);
 
     public static decimal CalculateTotalHoursObligation(IDay day) => HasObligation(day) ? Normalize(StandardWorkdayHours * day.TotalWorkload) : 0m;
     public static decimal CalculateTotalHoursObligation(IEnumerable<IDay> days) => days.Sum(day => day.TotalHoursObligation);
@@ -201,6 +206,19 @@ public static class TimesheetLogic
         }
 
         return 0;
+    }
+
+    public static decimal CalculateElapsedHours(TimeSpan? start, TimeSpan? end)
+    {
+        if (start is null || end is null)
+        {
+            return 0m;
+        }
+
+        int startMinutes = (int)Math.Round(start.Value.TotalMinutes);
+        int endMinutes = (int)Math.Round(end.Value.TotalMinutes);
+        int elapsed = endMinutes >= startMinutes ? endMinutes - startMinutes : endMinutes + 24 * 60 - startMinutes;
+        return Normalize(elapsed / 60m);
     }
 
     public static decimal CalculateBreakHours(TimeSpan? breakStart, TimeSpan? breakEnd, TimeSpan? clockIn, TimeSpan? clockOut)
@@ -252,12 +270,62 @@ public static class TimesheetLogic
         return Normalize(Math.Min(12m, hours));
     }
 
+    public static decimal CalculateNightHours(TimeSpan? clockIn, TimeSpan? clockOut, TimeSpan? breakStart, TimeSpan? breakEnd)
+    {
+        if (clockIn is null || clockOut is null)
+        {
+            return 0m;
+        }
+
+        int shiftStart = (int)Math.Round(clockIn.Value.TotalMinutes);
+        int shiftEnd = (int)Math.Round(clockOut.Value.TotalMinutes);
+        if (shiftEnd < shiftStart)
+        {
+            shiftEnd += 24 * 60;
+        }
+
+        int nightMinutes = NightOverlap(shiftStart, shiftEnd);
+        if (breakStart is not null && breakEnd is not null)
+        {
+            int pauseStart = (int)Math.Round(breakStart.Value.TotalMinutes);
+            int pauseEnd = (int)Math.Round(breakEnd.Value.TotalMinutes);
+            if (pauseEnd < pauseStart)
+            {
+                pauseEnd += 24 * 60;
+            }
+            if (pauseStart < shiftStart)
+            {
+                pauseStart += 24 * 60;
+                pauseEnd += 24 * 60;
+            }
+            nightMinutes -= NightOverlap(pauseStart, pauseEnd);
+        }
+
+        return Normalize(Math.Max(0, nightMinutes) / 60m);
+    }
+
     public static bool HasUnequalHours(decimal left, decimal right) =>
         Math.Abs(Normalize(left) - Normalize(right)) >= 0.01m;
+
+    public static decimal Round(decimal hours) =>
+        Math.Round(hours, decimals: 2, MidpointRounding.AwayFromZero);
 
     public static decimal Normalize(decimal hours)
     {
         decimal clamped = Math.Max(hours, 0);
-        return Math.Round(clamped, decimals: 2, MidpointRounding.AwayFromZero);
+        return Round(clamped);
+    }
+
+    private static int NightOverlap(int start, int end)
+    {
+        (int Start, int End)[] intervals =
+        [
+            (0, 6 * 60),
+            (22 * 60, 24 * 60),
+            (24 * 60, 30 * 60),
+            (46 * 60, 48 * 60)
+        ];
+
+        return intervals.Sum(interval => Math.Max(0, Math.Min(end, interval.End) - Math.Max(start, interval.Start)));
     }
 }

@@ -16,7 +16,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
            .WithSummary("Get Combined Timesheet");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
-    public sealed record ProjectDefinition(string Id, string Name, decimal Workload, DateTime? LockedAt, Guid? LockedBy);
+    public sealed record ProjectDefinition(string Id, string RegistrationNumber, string Name, string Position, decimal Workload, DateTime? LockedAt, Guid? LockedBy);
     public sealed record DayItem(int Day, int?[] Work, int?[] Break, decimal CoreHours, decimal[] ProjectHours, bool IsHoliday, bool IsWeekend, string? Note, IReadOnlyList<int[]>? Schedules);
     public sealed record Response(Guid Id, int Year, int Month, decimal TotalWorkload, decimal CoreWorkload, IEnumerable<ProjectDefinition> Projects, IEnumerable<DayItem> Days);
     private sealed record AttendanceDaySource(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal Workload, decimal HoursWithoutBreak, decimal CoreHours, bool IsHoliday, string? Description, string Schedules);
@@ -73,13 +73,14 @@ public sealed class GetCombinedTimesheet : IEndpoint
         ).ToListAsync(cancellationToken);
 
         decimal totalProjectWorkload = projectTimesheets.Sum(t => t.Workload);
-        decimal? baseWorkload = await GetBaseWorkloadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
-        decimal totalWorkload = baseWorkload ?? 0m;
+        decimal totalWorkload = await TimesheetWorkloads.GetAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
         List<ProjectDefinition> projects = projectTimesheets
             .Select(t => new ProjectDefinition(
                 t.ActivityId.ToString(),
+                t.RegistrationNumber,
                 t.ProjectName,
+                t.Position,
                 t.Workload,
                 t.LockedAt,
                 t.LockedBy
@@ -152,34 +153,6 @@ public sealed class GetCombinedTimesheet : IEndpoint
             .ToList();
 
         return TypedResults.Ok(new Response(attendanceTimesheet.Id, request.Year, request.Month, totalWorkload, coreWorkload, projects, days));
-    }
-
-    private static async Task<decimal?> GetBaseWorkloadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
-    {
-        DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-        DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);
-
-        // 1) monthly override (EmployeeWorkload)
-        decimal? monthly = await dbContext.EmployeeWorkloads
-            .AsNoTracking()
-            .Where(w => w.EmployeeId == employeeId && w.Year == year && w.Month == month)
-            .Select(w => (decimal?)w.Workload)
-            .FirstOrDefaultAsync(cancellationToken);
-        if (monthly.HasValue)
-        {
-            return monthly.Value;
-        }
-
-        // 2) core employment (time ranged)
-        decimal? workload = await dbContext.CoreEmployments
-            .AsNoTracking()
-            .Where(e => e.EmployeeId == employeeId)
-            .Where(e => e.StartDate <= periodEnd && (e.EndDate == null || e.EndDate >= periodStart))
-            .OrderByDescending(e => e.StartDate)
-            .Select(e => (decimal?)e.Workload)
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return workload;
     }
 
     private static int? ToMinutes(TimeSpan? value)

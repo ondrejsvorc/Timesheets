@@ -1,7 +1,6 @@
 import { Check, RotateCcw, Send } from "lucide-react";
 import { useState } from "react";
 import { useRevalidator, useSearchParams } from "react-router";
-import { toast } from "sonner";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { FullscreenButton, SaveButton, UnlockIcon } from "@/components/shared/buttons/ActionButtons";
@@ -10,22 +9,22 @@ import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { TimesheetStatusIds } from "@/constants/timesheetStatuses";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
-import type { Timesheet } from "../Timesheet";
-import { TimesheetValidations } from "../TimesheetValidations";
+import type { Timesheet, TimesheetEvaluation } from "../Timesheet";
 import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
 import { updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
 
 interface TimesheetWorkflowToolbarProps {
   timesheet: Timesheet;
+  evaluation: TimesheetEvaluation;
   overview: GetCombinedTimesheetOverviewResponse;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
-  onSave: (signal: AbortSignal) => Promise<void>;
+  onSave: (signal: AbortSignal) => Promise<TimesheetEvaluation>;
   onClearAttendanceFields: () => void;
 }
 
-export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, onToggleFullscreen, onSave, onClearAttendanceFields }: TimesheetWorkflowToolbarProps) => {
+export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFullscreen, onToggleFullscreen, onSave, onClearAttendanceFields }: TimesheetWorkflowToolbarProps) => {
   const [searchParams] = useSearchParams();
   const revalidator = useRevalidator();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
@@ -56,10 +55,8 @@ export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, on
     revalidator.revalidate();
   };
 
-  const hasValidationErrors = (): boolean => TimesheetValidations.hasErrors(TimesheetValidations.validateForSubmit(timesheet));
-
   const handleSubmitClick = () => {
-    if (hasValidationErrors()) {
+    if (evaluation.hasErrors) {
       setSubmitBlockedOpen(true);
       return;
     }
@@ -67,19 +64,14 @@ export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, on
   };
 
   const handleSaveClick = async (signal: AbortSignal) => {
-    if (hasValidationErrors()) {
-      toast.error(Texts.workflowSaveBlockedTitle, { description: Texts.workflowSaveBlockedDescription });
-      return;
-    }
     await onSave(signal);
   };
 
   const handleWorkflowConfirm = async (comment: string, signal: AbortSignal) => {
     switch (activeWorkflow) {
       case "submit": {
-        await onSave(signal);
-        const validations = TimesheetValidations.validateForSubmit(timesheet);
-        if (TimesheetValidations.hasErrors(validations)) {
+        const saved = await onSave(signal);
+        if (saved.hasErrors) {
           setSubmitBlockedOpen(true);
           throw new Error(Texts.workflowSubmitBlockedDescription);
         }
@@ -149,7 +141,6 @@ export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, on
           {isDraft && canSubmit && <SaveButton onClick={(_, signal) => handleSaveClick(signal)}>{Texts.saveChanges}</SaveButton>}
         </div>
       </div>
-
       <TimesheetWorkflowConfirmDialog action={activeWorkflow} periodLabel={periodLabel} onClose={() => setActiveWorkflow(null)} onConfirm={handleWorkflowConfirm} />
       <MessageAlertDialog open={submitBlockedOpen} title={Texts.workflowSubmitBlockedTitle} description={Texts.workflowSubmitBlockedDescription} onClose={() => setSubmitBlockedOpen(false)} />
     </>
