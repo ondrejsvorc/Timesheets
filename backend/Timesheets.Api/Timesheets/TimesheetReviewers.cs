@@ -59,7 +59,6 @@ public sealed class CombinedTimesheetReviewer
     [
         .. ReviewBalance(day),
         .. ReviewStag(day),
-        .. ReviewDailyObligation(day),
         .. ReviewWeekendAndHoliday(day)
     ];
 
@@ -94,18 +93,6 @@ public sealed class CombinedTimesheetReviewer
         else if (timesheet.TotalHours < timesheet.TotalHoursObligation)
         {
             yield return new TimesheetIssue("ERR-COM-03", IssueType.Error, "Celková pracovní doba za měsíc je nižší než pracovní povinnost.");
-        }
-    }
-
-    private static IEnumerable<DayIssue> ReviewDailyObligation(CombinedDay day)
-    {
-        if (day.IsWorkday && day.TotalHours > day.TotalHoursObligation)
-        {
-            yield return new DayIssue("WAR-ATT-02A", IssueType.Warning, "Odpracovaný čas za den je vyšší než denní pracovní povinnost.", day.Date.Day, "workedHours");
-        }
-        else if (day.IsWorkday && day.TotalHours < day.TotalHoursObligation)
-        {
-            yield return new DayIssue("WAR-ATT-02B", IssueType.Warning, "Odpracovaný čas za den je nižší než denní pracovní povinnost.", day.Date.Day, "workedHours");
         }
     }
 
