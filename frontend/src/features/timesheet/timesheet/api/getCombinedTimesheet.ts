@@ -28,6 +28,7 @@ interface GetCombinedTimesheetResponse {
   year: number;
   month: number;
   coreWorkload: number;
+  tracksAttendance: boolean;
   projects: CompactProjectDefinition[];
   days: CompactDayItem[];
 }
@@ -87,6 +88,7 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
     id: response.id,
     year: response.year,
     month: response.month,
+    tracksAttendance: response.tracksAttendance,
     core: { workload: response.coreWorkload },
     projects,
     days,

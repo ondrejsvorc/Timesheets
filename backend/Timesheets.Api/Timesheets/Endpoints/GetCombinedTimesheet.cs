@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
+using Timesheets.Api.Employees;
 using Timesheets.Api.Timesheets;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
@@ -18,7 +19,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
     public sealed record ProjectDefinition(string Id, string RegistrationNumber, string Name, string Position, decimal Workload, bool Locked);
     public sealed record DayItem(int Day, int?[] Work, int?[] Break, decimal CoreHours, decimal[] ProjectHours, bool IsHoliday, bool IsWeekend, string? Note, IReadOnlyList<int[]>? Schedules);
-    public sealed record Response(Guid Id, int Year, int Month, decimal TotalWorkload, decimal CoreWorkload, IEnumerable<ProjectDefinition> Projects, IEnumerable<DayItem> Days);
+    public sealed record Response(Guid Id, int Year, int Month, decimal TotalWorkload, decimal CoreWorkload, bool TracksAttendance, IEnumerable<ProjectDefinition> Projects, IEnumerable<DayItem> Days);
     private sealed record AttendanceDaySource(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal Workload, decimal HoursWithoutBreak, decimal CoreHours, bool IsHoliday, string? Description, string Schedules);
     private sealed record ProjectDaySource(DateTime Date, decimal Hours, bool IsHoliday);
     private sealed record ProjectTimesheetSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, List<ProjectDaySource> Days);
@@ -36,6 +37,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
             .Select(t => new
             {
                 t.Id,
+                EmployeeTypeId = t.Employee.EmployeeTypeId,
                 Days = t.Days.Select(d => new AttendanceDaySource(d.Date, d.ClockIn, d.ClockOut, d.BreakStart, d.BreakEnd, d.Workload, d.HoursWithoutBreak, d.CoreHours, d.IsHoliday, d.Description, d.Schedules)).ToList()
             })
             .SingleOrDefaultAsync(cancellationToken);
@@ -68,6 +70,10 @@ public sealed class GetCombinedTimesheet : IEndpoint
         decimal totalProjectWorkload = projectTimesheets.Sum(t => t.Workload);
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(attendanceTimesheet.EmployeeTypeId);
+        List<TimesheetDraftProjectState> projectStates = projectTimesheets
+            .Select(t => new TimesheetDraftProjectState(t.ActivityId, t.Workload, t.LockedAt is not null))
+            .ToList();
         List<ProjectDefinition> projects = projectTimesheets
             .Select(t => new ProjectDefinition(
                 t.ActivityId.ToString(),
@@ -130,11 +136,35 @@ public sealed class GetCombinedTimesheet : IEndpoint
                     }
                 }
 
+                decimal coreHours = attendanceDay?.CoreHours ?? 0m;
+                if (attendanceDay is not null && !string.IsNullOrWhiteSpace(attendanceDay.Description))
+                {
+                    TimesheetDraftDayState dayState = new()
+                    {
+                        Date = date,
+                        ClockIn = attendanceDay.ClockIn,
+                        ClockOut = attendanceDay.ClockOut,
+                        BreakStart = attendanceDay.BreakStart,
+                        BreakEnd = attendanceDay.BreakEnd,
+                        Description = attendanceDay.Description,
+                        Schedules = [],
+                        IsHoliday = holidayByDate.GetValueOrDefault(dateOnly),
+                        CoreHours = coreHours,
+                        ProjectHours = projects.ToDictionary(project => Guid.Parse(project.Id), project => projectHoursArray[projectIndexById[project.Id]])
+                    };
+                    TimesheetInterruptionHours.ApplyToDayState(dayState, projectStates, totalWorkload, tracksAttendance);
+                    coreHours = dayState.CoreHours;
+                    foreach (ProjectDefinition project in projects)
+                    {
+                        projectHoursArray[projectIndexById[project.Id]] = dayState.ProjectHours[Guid.Parse(project.Id)];
+                    }
+                }
+
                 return new DayItem(
                     dayNumber,
                     [ToMinutes(attendanceDay?.ClockIn), ToMinutes(attendanceDay?.ClockOut)],
                     [ToMinutes(attendanceDay?.BreakStart), ToMinutes(attendanceDay?.BreakEnd)],
-                    attendanceDay?.CoreHours ?? 0m,
+                    coreHours,
                     projectHoursArray,
                     holidayByDate.GetValueOrDefault(dateOnly),
                     date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday,
@@ -144,7 +174,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
             })
             .ToList();
 
-        return TypedResults.Ok(new Response(attendanceTimesheet.Id, request.Year, request.Month, totalWorkload, coreWorkload, projects, days));
+        return TypedResults.Ok(new Response(attendanceTimesheet.Id, request.Year, request.Month, totalWorkload, coreWorkload, tracksAttendance, projects, days));
     }
 
     private static int? ToMinutes(TimeSpan? value)

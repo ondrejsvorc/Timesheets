@@ -258,7 +258,7 @@ public static class TimesheetLogic
 internal static class TimesheetInterruptions
 {
     private static readonly HashSet<string> BusinessTripCodes = ["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"];
-    private static readonly HashSet<string> CoreOnlyCodes = ["M", "NK", "NL"];
+    private static readonly HashSet<string> CoreOnlyCodes = ["M", "N", "NK", "NL"];
 
     private static string[] ParseCodes(string? raw)
     {

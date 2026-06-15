@@ -21,6 +21,7 @@ const hoursCellClass = "w-full text-right tabular-nums cursor-help border-b bord
 const dayLevelFields = new Set(["workedHours", "allocatedHours"]);
 
 interface TimesheetDayProps {
+  tracksAttendance: boolean;
   day: TimesheetDayModel;
   dayIndex: number;
   projects: Project[];
@@ -30,7 +31,7 @@ interface TimesheetDayProps {
   onAllocate: (day?: number) => Promise<void>;
 }
 
-const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, onUpdateDay, onAllocate }: TimesheetDayProps) => {
+const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, evaluation, issues, onUpdateDay, onAllocate }: TimesheetDayProps) => {
   const issuesByField = useMemo(() => {
     const grouped = new Map<string, TimesheetIssue[]>();
     const row: TimesheetIssue[] = [];
@@ -61,71 +62,79 @@ const TimesheetDayComponent = ({ day, dayIndex, projects, evaluation, issues, on
           <div className="text-center font-medium">{day.date}</div>
         </ValidationField>
       </div>
-      <div className={cellClass}>
-        <ValidationField validations={fieldIssues("clockIn")}>
-          <SmartTimeInput
-            value={day.attendance.clockIn}
-            onChange={(value) =>
-              update((draft) => {
-                draft.attendance.clockIn = value;
-              })
-            }
-          />
-        </ValidationField>
-      </div>
-      <div className={cellClass}>
-        <ValidationField validations={fieldIssues("clockOut")}>
-          <SmartTimeInput
-            value={day.attendance.clockOut}
-            onChange={(value) =>
-              update((draft) => {
-                draft.attendance.clockOut = value;
-              })
-            }
-          />
-        </ValidationField>
-      </div>
-      <div className={cellClass}>
-        <ValidationField validations={fieldIssues("breakStart")}>
-          <SmartTimeInput
-            value={day.attendance.breakStart}
-            onChange={(value) =>
-              update((draft) => {
-                draft.attendance.breakStart = value;
-              })
-            }
-          />
-        </ValidationField>
-      </div>
-      <div className={cellClass}>
-        <ValidationField validations={fieldIssues("breakEnd")}>
-          <SmartTimeInput
-            value={day.attendance.breakEnd}
-            onChange={(value) =>
-              update((draft) => {
-                draft.attendance.breakEnd = value;
-              })
-            }
-          />
-        </ValidationField>
-      </div>
+      {tracksAttendance && (
+        <>
+          <div className={cellClass}>
+            <ValidationField validations={fieldIssues("clockIn")}>
+              <SmartTimeInput
+                value={day.attendance.clockIn}
+                onChange={(value) =>
+                  update((draft) => {
+                    draft.attendance.clockIn = value;
+                  })
+                }
+              />
+            </ValidationField>
+          </div>
+          <div className={cellClass}>
+            <ValidationField validations={fieldIssues("clockOut")}>
+              <SmartTimeInput
+                value={day.attendance.clockOut}
+                onChange={(value) =>
+                  update((draft) => {
+                    draft.attendance.clockOut = value;
+                  })
+                }
+              />
+            </ValidationField>
+          </div>
+          <div className={cellClass}>
+            <ValidationField validations={fieldIssues("breakStart")}>
+              <SmartTimeInput
+                value={day.attendance.breakStart}
+                onChange={(value) =>
+                  update((draft) => {
+                    draft.attendance.breakStart = value;
+                  })
+                }
+              />
+            </ValidationField>
+          </div>
+          <div className={cellClass}>
+            <ValidationField validations={fieldIssues("breakEnd")}>
+              <SmartTimeInput
+                value={day.attendance.breakEnd}
+                onChange={(value) =>
+                  update((draft) => {
+                    draft.attendance.breakEnd = value;
+                  })
+                }
+              />
+            </ValidationField>
+          </div>
+        </>
+      )}
       <div className={cellClass}>
         <ValidationField validations={fieldIssues("interruptions")}>
           <Interruption value={day.attendance.interruptions} />
         </ValidationField>
       </div>
-      <div className={cn(cellClass, numericCellClass)}>
-        <ValidationField validations={fieldIssues("workedHours")}>
-          <HoursToHumanTooltip hours={workedHours}>
-            <div className={cn(hoursCellClass, "font-bold")}>{formatHours(workedHours)}</div>
-          </HoursToHumanTooltip>
-        </ValidationField>
-      </div>
-      <div className={cn(cellClass, numericCellClass)}>
-        <HoursToHumanTooltip hours={nightHours}>
-          <div className={cn(hoursCellClass, "text-slate-600")}>{formatHours(nightHours)}</div>
-        </HoursToHumanTooltip>
-      </div>
+      {tracksAttendance && (
+        <>
+          <div className={cn(cellClass, numericCellClass)}>
+            <ValidationField validations={fieldIssues("workedHours")}>
+              <HoursToHumanTooltip hours={workedHours}>
+                <div className={cn(hoursCellClass, "font-bold")}>{formatHours(workedHours)}</div>
+              </HoursToHumanTooltip>
+            </ValidationField>
+          </div>
+          <div className={cn(cellClass, numericCellClass)}>
+            <HoursToHumanTooltip hours={nightHours}>
+              <div className={cn(hoursCellClass, "text-slate-600")}>{formatHours(nightHours)}</div>
+            </HoursToHumanTooltip>
+          </div>
+        </>
+      )}
       <div className={cellClass}>
         <ValidationField validations={fieldIssues("schedules")}>
           <StagSchedule

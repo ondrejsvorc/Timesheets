@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
+using Timesheets.Api.Employees;
+using Timesheets.Api.Timesheets;
 
 namespace Timesheets.Api.Timesheets.Endpoints;
 
@@ -31,47 +33,44 @@ public sealed class AllocateTimesheet : IEndpoint
     private static TimesheetAllocation Allocate(TimesheetDraftContext context, TimesheetDraft draft, int? dayNumber)
     {
         TimesheetDraftSnapshot snapshot = TimesheetDrafts.BuildSnapshot(context, draft);
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(context.Timesheet.Employee.EmployeeTypeId);
         IReadOnlyList<TimesheetDraftDayState> days = dayNumber.HasValue ? snapshot.Days.Where(day => day.Date.Day == dayNumber.Value).ToArray() : OrderDays(snapshot.Days);
         Dictionary<Guid, decimal> targets = snapshot.Projects.ToDictionary(project => project.Id, project => Math.Max(0m, MonthlyTarget(snapshot, project.Workload) - snapshot.Days.Sum(value => value.ProjectHours.GetValueOrDefault(project.Id))));
         decimal coreTarget = Math.Max(0m, MonthlyTarget(snapshot, context.CoreWorkload) - snapshot.Days.Sum(value => value.CoreHours));
 
         foreach (TimesheetDraftDayState day in days)
         {
-            AllocateDay(day, snapshot.Projects, context.TotalWorkload, ref coreTarget, targets);
+            AllocateDay(day, snapshot.Projects, context.TotalWorkload, tracksAttendance, ref coreTarget, targets);
         }
 
         List<TimesheetAllocationDay> allocation = snapshot.Days.Select(day => new TimesheetAllocationDay(Date: day.Date, CoreHours: day.CoreHours, ProjectHours: day.ProjectHours)).ToList();
         return new TimesheetAllocation(Days: allocation, Evaluation: TimesheetDrafts.Evaluate(context, snapshot));
     }
 
-    private static void AllocateDay(TimesheetDraftDayState day, IReadOnlyList<TimesheetDraftProjectState> projects, decimal totalWorkload, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
+    private static void AllocateDay(TimesheetDraftDayState day, IReadOnlyList<TimesheetDraftProjectState> projects, decimal totalWorkload, bool tracksAttendance, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
     {
         if (TimesheetInterruptions.HasBusinessTripInterruption(day.Description))
         {
             return;
         }
 
-        decimal capacity = DayCapacity(day, totalWorkload);
-
-        if (TimesheetInterruptions.HasCoreOnlyInterruption(day.Description))
+        if (TimesheetInterruptions.HasCoreOnlyInterruption(day.Description) || TimesheetInterruptions.HasProportionalInterruption(day.Description))
         {
-            decimal previousCoreHours = day.CoreHours;
-            day.CoreHours = capacity;
-            foreach (TimesheetDraftProjectState project in projects)
+            if (TimesheetInterruptions.HasCoreOnlyInterruption(day.Description))
             {
-                projectTargets[project.Id] += day.ProjectHours.GetValueOrDefault(project.Id);
-                day.ProjectHours[project.Id] = 0m;
+                foreach (TimesheetDraftProjectState project in projects)
+                {
+                    projectTargets[project.Id] += day.ProjectHours.GetValueOrDefault(project.Id);
+                }
             }
-            coreTarget = Math.Max(0m, coreTarget - (capacity - previousCoreHours));
+
+            decimal previousCoreHours = day.CoreHours;
+            TimesheetInterruptionHours.ApplyToDayState(day, projects, totalWorkload, tracksAttendance);
+            coreTarget = Math.Max(0m, coreTarget - (day.CoreHours - previousCoreHours));
             return;
         }
 
-        if (TimesheetInterruptions.HasProportionalInterruption(day.Description))
-        {
-            AllocateProportionally(day, projects, totalWorkload, capacity, ref coreTarget, projectTargets);
-            return;
-        }
-
+        decimal capacity = TimesheetInterruptionHours.DayCapacity(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.Description, totalWorkload, tracksAttendance);
         decimal free = TimesheetLogic.Normalize(capacity - day.CoreHours - day.ProjectHours.Values.Sum());
         if (free <= 0)
         {
@@ -123,43 +122,6 @@ public sealed class AllocateTimesheet : IEndpoint
                 coreTarget -= value;
             }
         }
-    }
-
-    private static void AllocateProportionally(TimesheetDraftDayState day, IReadOnlyList<TimesheetDraftProjectState> projects, decimal totalWorkload, decimal capacity, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
-    {
-        if (totalWorkload <= 0m)
-        {
-            return;
-        }
-
-        decimal projectWorkload = projects.Sum(project => project.Workload);
-        decimal coreWorkload = Math.Max(0m, totalWorkload - projectWorkload);
-        decimal allocated = 0m;
-        decimal previousCoreHours = day.CoreHours;
-        day.CoreHours = TimesheetLogic.Normalize(capacity * coreWorkload / totalWorkload);
-        coreTarget = Math.Max(0m, coreTarget - (day.CoreHours - previousCoreHours));
-        allocated += day.CoreHours;
-
-        for (int index = 0; index < projects.Count; index++)
-        {
-            TimesheetDraftProjectState project = projects[index];
-            decimal previousHours = day.ProjectHours.GetValueOrDefault(project.Id);
-            decimal hours = index == projects.Count - 1 ? TimesheetLogic.Normalize(capacity - allocated) : TimesheetLogic.Normalize(capacity * project.Workload / totalWorkload);
-            day.ProjectHours[project.Id] = hours;
-            projectTargets[project.Id] = Math.Max(0m, projectTargets[project.Id] - (hours - previousHours));
-            allocated += hours;
-        }
-    }
-
-    private static decimal DayCapacity(TimesheetDraftDayState day, decimal totalWorkload)
-    {
-        bool hasAttendance = day.ClockIn is not null || day.ClockOut is not null;
-        if (hasAttendance)
-        {
-            return Math.Min(12m, TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd));
-        }
-
-        return TimesheetLogic.IsWeekday(day.Date) || !string.IsNullOrWhiteSpace(day.Description) ? TimesheetLogic.Normalize(8m * totalWorkload) : 0m;
     }
 
     private static decimal MonthlyTarget(TimesheetDraftSnapshot snapshot, decimal workload)

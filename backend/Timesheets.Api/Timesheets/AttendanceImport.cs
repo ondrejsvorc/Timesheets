@@ -208,6 +208,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
         await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await TimesheetDrafts.ApplyInterruptionHoursAsync(timesheet.Id, dbContext, cancellationToken);
         return timesheet.Id;
     }
 
@@ -229,6 +230,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
         await RecalculateDraftProjectColumnsAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await TimesheetDrafts.ApplyInterruptionHoursAsync(timesheetId, dbContext, cancellationToken);
         return timesheetId;
     }
 

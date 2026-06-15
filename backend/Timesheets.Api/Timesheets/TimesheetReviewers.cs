@@ -43,9 +43,9 @@ file static class TimesheetLimits
 
 public sealed class CombinedTimesheetReviewer
 {
-    public TimesheetReview Review(CombinedTimesheet timesheet, AttendanceTimesheet attendance)
+    public TimesheetReview Review(CombinedTimesheet timesheet, AttendanceTimesheet attendance, bool tracksAttendance)
     {
-        TimesheetReview attendanceReview = new AttendanceTimesheetReviewer().Review(attendance);
+        TimesheetReview attendanceReview = tracksAttendance ? new AttendanceTimesheetReviewer().Review(attendance) : new TimesheetReview();
         return new TimesheetReview
         {
             Issues = ReviewTimesheet(timesheet).Concat(attendanceReview.Issues),

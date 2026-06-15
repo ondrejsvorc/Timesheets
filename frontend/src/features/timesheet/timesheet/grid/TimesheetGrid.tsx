@@ -8,16 +8,16 @@ import { TimesheetBody } from "./TimesheetBody";
 import { TimesheetFooter } from "./TimesheetFooter";
 import { TimesheetHeader } from "./TimesheetHeader";
 
-const createGridTemplate = (projectCount: number) => {
+const createGridTemplate = (projectCount: number, tracksAttendance: boolean) => {
+  const attendanceTimes = tracksAttendance
+    ? ["minmax(6rem, max-content)" /* Příchod */, "minmax(6rem, max-content)" /* Odchod */, "minmax(6rem, max-content)" /* Pauza od */, "minmax(6rem, max-content)" /* Pauza do */]
+    : [];
+  const attendanceTotals = tracksAttendance ? ["minmax(4rem, max-content)" /* Docházka */, "minmax(4rem, max-content)" /* Noční */] : [];
   const base = [
     "minmax(8rem, max-content)" /* Den */,
-    "minmax(6rem, max-content)" /* Příchod */,
-    "minmax(6rem, max-content)" /* Odchod */,
-    "minmax(6rem, max-content)" /* Pauza od */,
-    "minmax(6rem, max-content)" /* Pauza do */,
+    ...attendanceTimes,
     "minmax(max-content, max-content)" /* Přerušení */,
-    "minmax(4rem, max-content)" /* Docházka */,
-    "minmax(4rem, max-content)" /* Noční */,
+    ...attendanceTotals,
     "minmax(7rem, max-content)" /* STAG */,
     "minmax(5rem, 1fr)" /* Kmen */,
   ];
@@ -38,7 +38,7 @@ interface TimesheetGridProps {
 
 export const TimesheetGrid = ({ timesheet, evaluation, readOnly = false, onUpdateDay, onAllocate, className }: TimesheetGridProps) => {
   const projectCount = timesheet.projects.length;
-  const template = useMemo(() => createGridTemplate(projectCount), [projectCount]);
+  const template = useMemo(() => createGridTemplate(projectCount, timesheet.tracksAttendance), [projectCount, timesheet.tracksAttendance]);
 
   const copyProjectColumn = async (projectId: string) => {
     const lines = timesheet.days.map((day) => {
@@ -58,9 +58,24 @@ export const TimesheetGrid = ({ timesheet, evaluation, readOnly = false, onUpdat
     <div className={cn("rounded-md border border-slate-300 overflow-auto max-h-[calc(100vh-100px)] w-full shadow-sm", readOnly && "bg-muted/40", className)}>
       <div className="relative grid w-full min-w-max" style={{ gridTemplateColumns: template }}>
         {readOnly && <div className="pointer-events-none absolute inset-0 z-[5] bg-muted/20" aria-hidden />}
-        <TimesheetHeader readOnly={readOnly} projects={timesheet.projects} core={timesheet.core} onCopyProjectColumn={copyProjectColumn} onGenerateMonthly={() => onAllocate()} />
-        <TimesheetBody readOnly={readOnly} days={timesheet.days} projects={timesheet.projects} evaluation={evaluation} onUpdateDay={onUpdateDay} onAllocate={onAllocate} />
-        <TimesheetFooter readOnly={readOnly} projects={timesheet.projects} totals={evaluation.totals} />
+        <TimesheetHeader
+          readOnly={readOnly}
+          tracksAttendance={timesheet.tracksAttendance}
+          projects={timesheet.projects}
+          core={timesheet.core}
+          onCopyProjectColumn={copyProjectColumn}
+          onGenerateMonthly={() => onAllocate()}
+        />
+        <TimesheetBody
+          readOnly={readOnly}
+          tracksAttendance={timesheet.tracksAttendance}
+          days={timesheet.days}
+          projects={timesheet.projects}
+          evaluation={evaluation}
+          onUpdateDay={onUpdateDay}
+          onAllocate={onAllocate}
+        />
+        <TimesheetFooter readOnly={readOnly} tracksAttendance={timesheet.tracksAttendance} projects={timesheet.projects} totals={evaluation.totals} />
       </div>
     </div>
   );

@@ -2,6 +2,7 @@ using System.Text.Json;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
+using Timesheets.Api.Employees;
 
 namespace Timesheets.Api.Timesheets;
 
@@ -164,6 +165,12 @@ internal static class TimesheetDrafts
 
     public static TimesheetEvaluation Evaluate(TimesheetDraftContext context, TimesheetDraftSnapshot snapshot)
     {
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(context.Timesheet.Employee.EmployeeTypeId);
+        foreach (TimesheetDraftDayState day in snapshot.Days)
+        {
+            TimesheetInterruptionHours.ApplyToDayState(day, snapshot.Projects, context.TotalWorkload, tracksAttendance);
+        }
+
         List<AttendanceDay> attendanceDays = snapshot.Days.Select(day => new AttendanceDay(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, OtherInterruption: day.Description, Schedules: day.Schedules, IsHoliday: day.IsHoliday, Workload: context.TotalWorkload)).ToList();
         AttendanceTimesheet attendance = new(EmployeePersonalNumber: context.Timesheet.Employee.PersonalNumber, EmployeeName: context.Timesheet.Employee.FullName, Workload: context.TotalWorkload, Year: context.Timesheet.Year, Month: context.Timesheet.Month, Days: attendanceDays);
 
@@ -172,13 +179,13 @@ internal static class TimesheetDrafts
             decimal worked = TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
             decimal projectHours = day.ProjectHours.Values.Sum();
             decimal stagHours = TimesheetLogic.CalculateStagHours(day.Schedules);
-            bool hasAttendance = day.ClockIn is not null || day.ClockOut is not null;
+            bool hasAttendance = tracksAttendance && (day.ClockIn is not null || day.ClockOut is not null);
             bool skipAllocationRules = TimesheetInterruptions.SkipAllocationRules(day.Description);
             return new CombinedDay(Date: day.Date, IsHoliday: day.IsHoliday, Workload: context.TotalWorkload, CoreWorkload: context.CoreWorkload, WorkedHours: worked, CoreHours: day.CoreHours, ProjectHours: projectHours, StagHours: stagHours, HasAttendanceFilled: hasAttendance, SkipAllocationRules: skipAllocationRules);
         }).ToList();
 
         CombinedTimesheet combined = new(Year: context.Timesheet.Year, Month: context.Timesheet.Month, CoreWorkload: context.CoreWorkload, Days: combinedDays);
-        TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, attendance);
+        TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, attendance, tracksAttendance);
         IReadOnlyList<TimesheetIssue> issues = review.Issues.ToArray();
         IReadOnlyList<DayIssue> dayIssues = review.DayIssues.ToArray();
 
@@ -252,6 +259,30 @@ internal static class TimesheetDrafts
         }
 
         context.Timesheet.UpdatedAt = DateTime.UtcNow;
+    }
+
+    public static async Task ApplyInterruptionHoursAsync(Guid timesheetId, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        TimesheetDraftContext? context = await LoadAsync(timesheetId, dbContext, cancellationToken);
+        if (context is null)
+        {
+            return;
+        }
+
+        TimesheetDraftSnapshot snapshot = BuildSnapshot(context, Current(context));
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(context.Timesheet.Employee.EmployeeTypeId);
+        foreach (TimesheetDraftDayState day in snapshot.Days)
+        {
+            TimesheetInterruptionHours.ApplyToDayState(day, snapshot.Projects, context.TotalWorkload, tracksAttendance);
+        }
+
+        TimesheetDraft draft = new(
+            Days: snapshot.Days.Select(day => new TimesheetDraftDay(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.CoreHours, day.Description, day.Schedules)).ToList(),
+            Projects: snapshot.Projects.Select(project => new TimesheetDraftProject(
+                project.Id,
+                snapshot.Days.Select(day => new TimesheetDraftProjectDay(day.Date, day.ProjectHours.GetValueOrDefault(project.Id))).ToList())).ToList());
+        Apply(context, draft);
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static IReadOnlyList<TimeRange> ParseSchedules(string? value)

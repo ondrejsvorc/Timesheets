@@ -38,6 +38,7 @@ export interface Timesheet {
   id: string;
   year: number;
   month: number;
+  tracksAttendance: boolean;
   core: CoreDefinition;
   projects: ProjectDefinition[];
   days: TimesheetDay[];
