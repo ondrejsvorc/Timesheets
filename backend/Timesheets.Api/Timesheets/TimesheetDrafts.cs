@@ -6,9 +6,9 @@ using Timesheets.Api.Employees;
 
 namespace Timesheets.Api.Timesheets;
 
-public sealed record TimesheetDraftDay(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal CoreHours, string? Description, IReadOnlyList<TimeRange>? Schedules);
+public sealed record TimesheetDraftDay(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal CoreHours, string? Description, IReadOnlyList<TimeRange>? Schedules, bool CoreHoursFixed = false);
 
-public sealed record TimesheetDraftProjectDay(DateTime Date, decimal Hours);
+public sealed record TimesheetDraftProjectDay(DateTime Date, decimal Hours, bool HoursFixed = false);
 
 public sealed record TimesheetDraftProject(Guid ContractEmployeeId, IReadOnlyList<TimesheetDraftProjectDay> Days);
 
@@ -50,7 +50,7 @@ public sealed record TimesheetTotals(decimal WorkedHours, decimal HoursObligatio
 
 public sealed record TimesheetEvaluation(bool HasErrors, IReadOnlyList<TimesheetIssue> Issues, IReadOnlyList<DayIssue> DayIssues, IReadOnlyList<TimesheetDayEvaluation> Days, TimesheetTotals Totals);
 
-public sealed record TimesheetAllocationDay(DateTime Date, decimal CoreHours, IReadOnlyDictionary<Guid, decimal> ProjectHours);
+public sealed record TimesheetAllocationDay(DateTime Date, int?[] Work, int?[] Break, decimal CoreHours, IReadOnlyDictionary<Guid, decimal> ProjectHours);
 public sealed record TimesheetAllocation(IReadOnlyList<TimesheetAllocationDay> Days, TimesheetEvaluation Evaluation);
 
 internal sealed record TimesheetDraftContext(Data.Models.AttendanceTimesheet Timesheet, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, decimal TotalWorkload, decimal CoreWorkload);
@@ -60,15 +60,17 @@ internal sealed record TimesheetDraftProjectState(Guid Id, decimal Workload, boo
 internal sealed class TimesheetDraftDayState
 {
     public required DateTime Date { get; init; }
-    public required TimeSpan? ClockIn { get; init; }
-    public required TimeSpan? ClockOut { get; init; }
-    public required TimeSpan? BreakStart { get; init; }
-    public required TimeSpan? BreakEnd { get; init; }
+    public required TimeSpan? ClockIn { get; set; }
+    public required TimeSpan? ClockOut { get; set; }
+    public required TimeSpan? BreakStart { get; set; }
+    public required TimeSpan? BreakEnd { get; set; }
     public required string? Description { get; init; }
     public required IReadOnlyList<TimeRange> Schedules { get; init; }
     public required bool IsHoliday { get; init; }
     public required decimal CoreHours { get; set; }
+    public required bool CoreHoursFixed { get; init; }
     public required Dictionary<Guid, decimal> ProjectHours { get; init; }
+    public required Dictionary<Guid, bool> ProjectHoursFixed { get; init; }
 }
 
 internal sealed record TimesheetDraftSnapshot(IReadOnlyList<TimesheetDraftDayState> Days, IReadOnlyList<TimesheetDraftProjectState> Projects);
@@ -117,6 +119,7 @@ internal static class TimesheetDrafts
                 DateOnly date = DateOnly.FromDateTime(day.Date);
                 TimesheetDraftDay? update = days.GetValueOrDefault(date);
                 Dictionary<Guid, decimal> projectHours = [];
+                Dictionary<Guid, bool> projectHoursFixed = [];
 
                 foreach (Data.Models.ProjectTimesheet project in context.Projects)
                 {
@@ -127,8 +130,10 @@ internal static class TimesheetDrafts
                     }
 
                     decimal persisted = project.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date)?.Hours ?? 0m;
-                    decimal hours = projectUpdate?.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date)?.Hours ?? persisted;
+                    TimesheetDraftProjectDay? projectDayUpdate = projectUpdate?.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date);
+                    decimal hours = projectDayUpdate?.Hours ?? persisted;
                     projectHours[project.ContractEmployeeId] = TimesheetLogic.Normalize(hours);
+                    projectHoursFixed[project.ContractEmployeeId] = projectDayUpdate?.HoursFixed ?? false;
                 }
 
                 return new TimesheetDraftDayState
@@ -142,7 +147,9 @@ internal static class TimesheetDrafts
                     Schedules = update is null ? ParseSchedules(day.Schedules) : update.Schedules ?? [],
                     IsHoliday = day.IsHoliday,
                     CoreHours = TimesheetLogic.Normalize(update is null ? day.CoreHours : update.CoreHours),
-                    ProjectHours = projectHours
+                    CoreHoursFixed = update?.CoreHoursFixed ?? false,
+                    ProjectHours = projectHours,
+                    ProjectHoursFixed = projectHoursFixed
                 };
             })
             .ToList();

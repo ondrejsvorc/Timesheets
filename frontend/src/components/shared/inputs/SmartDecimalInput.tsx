@@ -61,7 +61,7 @@ export const SmartDecimalInput = ({ value, onChange, precision = 3, commitOnChan
 
     if (normalizedValue === "") {
       startTransition(() => {
-        onChange(0);
+        onChange(null);
       });
       return;
     }
@@ -88,7 +88,7 @@ export const SmartDecimalInput = ({ value, onChange, precision = 3, commitOnChan
   const commit = () => {
     if (displayValue === "") {
       startTransition(() => {
-        onChange(0);
+        onChange(null);
       });
       return;
     }
@@ -99,7 +99,7 @@ export const SmartDecimalInput = ({ value, onChange, precision = 3, commitOnChan
       const revert = valueBeforeEditRef.current;
       setDisplayValue(formatDecimalForDisplay(revert, precision));
       startTransition(() => {
-        onChange(revert ?? 0);
+        onChange(revert);
       });
       return;
     }
@@ -110,7 +110,7 @@ export const SmartDecimalInput = ({ value, onChange, precision = 3, commitOnChan
       const revert = valueBeforeEditRef.current;
       setDisplayValue(formatDecimalForDisplay(revert, precision));
       startTransition(() => {
-        onChange(revert ?? 0);
+        onChange(revert);
       });
       return;
     }

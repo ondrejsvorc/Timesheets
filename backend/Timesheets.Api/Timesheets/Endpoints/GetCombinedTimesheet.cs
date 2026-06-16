@@ -150,7 +150,9 @@ public sealed class GetCombinedTimesheet : IEndpoint
                         Schedules = [],
                         IsHoliday = holidayByDate.GetValueOrDefault(dateOnly),
                         CoreHours = coreHours,
-                        ProjectHours = projects.ToDictionary(project => Guid.Parse(project.Id), project => projectHoursArray[projectIndexById[project.Id]])
+                        CoreHoursFixed = false,
+                        ProjectHours = projects.ToDictionary(project => Guid.Parse(project.Id), project => projectHoursArray[projectIndexById[project.Id]]),
+                        ProjectHoursFixed = projects.ToDictionary(project => Guid.Parse(project.Id), _ => false)
                     };
                     TimesheetInterruptionHours.ApplyToDayState(dayState, projectStates, totalWorkload, tracksAttendance);
                     coreHours = dayState.CoreHours;

@@ -40,10 +40,11 @@ public sealed class AllocateTimesheet : IEndpoint
 
         foreach (TimesheetDraftDayState day in days)
         {
+            GenerateAttendanceIfMissing(day, tracksAttendance);
             AllocateDay(day, snapshot.Projects, context.TotalWorkload, tracksAttendance, ref coreTarget, targets);
         }
 
-        List<TimesheetAllocationDay> allocation = snapshot.Days.Select(day => new TimesheetAllocationDay(Date: day.Date, CoreHours: day.CoreHours, ProjectHours: day.ProjectHours)).ToList();
+        List<TimesheetAllocationDay> allocation = snapshot.Days.Select(day => new TimesheetAllocationDay(Date: day.Date, Work: [ToMinutes(day.ClockIn), ToMinutes(day.ClockOut)], Break: [ToMinutes(day.BreakStart), ToMinutes(day.BreakEnd)], CoreHours: day.CoreHours, ProjectHours: day.ProjectHours)).ToList();
         return new TimesheetAllocation(Days: allocation, Evaluation: TimesheetDrafts.Evaluate(context, snapshot));
     }
 
@@ -79,8 +80,8 @@ public sealed class AllocateTimesheet : IEndpoint
 
         decimal stagHours = TimesheetLogic.CalculateStagHours(day.Schedules);
         decimal stagMissing = Math.Max(0m, stagHours - day.CoreHours);
-        bool coreCanReceiveRemainder = coreTarget > 0m;
-        if (stagMissing > 0)
+        bool coreCanReceiveRemainder = !day.CoreHoursFixed && coreTarget > 0m;
+        if (!day.CoreHoursFixed && stagMissing > 0)
         {
             decimal core = PreferQuarterStagTopUp(day.CoreHours, stagHours, free, coreTarget);
             day.CoreHours += core;
@@ -91,7 +92,8 @@ public sealed class AllocateTimesheet : IEndpoint
         List<(Guid ProjectId, decimal Remaining)> projectRemaining = [];
         foreach (TimesheetDraftProjectState project in projects)
         {
-            if (!project.Locked && day.ProjectHours.GetValueOrDefault(project.Id) == 0 && projectTargets[project.Id] > 0)
+            bool fixedHours = day.ProjectHoursFixed.GetValueOrDefault(project.Id);
+            if (!project.Locked && !fixedHours && day.ProjectHours.GetValueOrDefault(project.Id) == 0 && projectTargets[project.Id] > 0)
             {
                 projectRemaining.Add((project.Id, projectTargets[project.Id]));
             }
@@ -131,6 +133,47 @@ public sealed class AllocateTimesheet : IEndpoint
             left -= value;
         }
     }
+
+    private static void GenerateAttendanceIfMissing(TimesheetDraftDayState day, bool tracksAttendance)
+    {
+        if (!tracksAttendance
+            || TimesheetInterruptions.SkipAllocationRules(day.Description)
+            || day.ClockIn is not null
+            || day.ClockOut is not null
+            || day.BreakStart is not null
+            || day.BreakEnd is not null)
+        {
+            return;
+        }
+
+        decimal allocated = TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
+        decimal stag = TimesheetLogic.CalculateStagHours(day.Schedules);
+        decimal work = Math.Max(allocated, stag);
+        if (work <= 0m)
+        {
+            return;
+        }
+
+        TimeSpan start = day.Schedules.Count > 0 ? day.Schedules.Min(schedule => schedule.Start) : new TimeSpan(7, 0, 0);
+        int workMinutes = (int)Math.Round(work * 60m, MidpointRounding.AwayFromZero);
+        bool needsBreak = work > 6m;
+        int breakMinutes = needsBreak ? 30 : 0;
+        TimeSpan end = start.Add(TimeSpan.FromMinutes(workMinutes + breakMinutes));
+        if (end >= TimeSpan.FromDays(1))
+        {
+            return;
+        }
+
+        day.ClockIn = start;
+        day.ClockOut = end;
+        if (needsBreak)
+        {
+            day.BreakStart = start.Add(TimeSpan.FromHours(4));
+            day.BreakEnd = day.BreakStart.Value.Add(TimeSpan.FromMinutes(30));
+        }
+    }
+
+    private static int? ToMinutes(TimeSpan? value) => value.HasValue ? (int)Math.Round(value.Value.TotalMinutes) : null;
 
     private static decimal MonthlyTarget(TimesheetDraftSnapshot snapshot, decimal workload)
     {

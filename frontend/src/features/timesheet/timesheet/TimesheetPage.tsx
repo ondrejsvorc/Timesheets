@@ -145,6 +145,10 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
         allocation.days.forEach((allocated, index) => {
           const target = draft.days[index];
           if (!target) return;
+          target.attendance.clockIn = allocated.clockIn;
+          target.attendance.clockOut = allocated.clockOut;
+          target.attendance.breakStart = allocated.breakStart;
+          target.attendance.breakEnd = allocated.breakEnd;
           target.coreHours = allocated.coreHours || null;
           target.projectHours = allocated.projectHours;
         });

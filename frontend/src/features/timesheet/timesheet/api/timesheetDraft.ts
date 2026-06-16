@@ -7,13 +7,14 @@ type DraftDay = {
   breakStart: string | null;
   breakEnd: string | null;
   coreHours: number;
+  coreHoursFixed?: boolean;
   description: string | null;
   schedules: Array<{ start: string; end: string }> | null;
 };
 
 type DraftProject = {
   contractEmployeeId: string;
-  days: Array<{ date: string; hours: number }>;
+  days: Array<{ date: string; hours: number; hoursFixed?: boolean }>;
 };
 
 export type TimesheetDraft = {
@@ -64,6 +65,7 @@ export const buildTimesheetDraft = (timesheet: Timesheet): TimesheetDraft => ({
     breakStart: toApiTime(day.attendance.breakStart),
     breakEnd: toApiTime(day.attendance.breakEnd),
     coreHours: day.coreHours ?? 0,
+    coreHoursFixed: day.coreHours !== null,
     description: day.attendance.interruptions.trim() || null,
     schedules: mapSchedules(day.attendance.schedules),
   })),
@@ -72,6 +74,7 @@ export const buildTimesheetDraft = (timesheet: Timesheet): TimesheetDraft => ({
     days: timesheet.days.map((day, index) => ({
       date: dayDate(timesheet.year, timesheet.month, index + 1),
       hours: day.projectHours[project.id] ?? 0,
+      hoursFixed: (day.projectHours[project.id] ?? 0) > 0,
     })),
   })),
 });
