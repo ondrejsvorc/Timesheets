@@ -72,8 +72,8 @@ public sealed class CombinedTimesheetReviewer
 
         decimal balance = TimesheetLogic.Round(day.WorkedHours - day.AllocatedHours);
         string description = balance > 0
-            ? $"Nerozdělené hodiny: docházka {day.WorkedHours:F2} h, kmen + projekty {day.AllocatedHours:F2} h."
-            : $"Překročení docházky: kmen + projekty {day.AllocatedHours:F2} h, docházka {day.WorkedHours:F2} h.";
+            ? $"Chybí rozdělení: docházka {day.WorkedHours:F2} h, kmen+projekty {day.AllocatedHours:F2} h."
+            : $"Přesah rozdělení: kmen+projekty {day.AllocatedHours:F2} h, docházka {day.WorkedHours:F2} h.";
         yield return new DayIssue("ERR-ALL-01", IssueType.Error, description, day.Date.Day, "balance");
     }
 
@@ -81,7 +81,7 @@ public sealed class CombinedTimesheetReviewer
     {
         if (!day.SkipAllocationRules && day.CoreWorkload > 0 && day.StagHours > 0 && day.CoreHours + 0.009m < day.StagHours)
         {
-            yield return new DayIssue("ERR-ALL-02", IssueType.Error, $"STAG vyžaduje v kmeni alespoň {day.StagHours:F2} h.", day.Date.Day, "coreHours");
+            yield return new DayIssue("ERR-ALL-02", IssueType.Error, $"STAG: v kmeni musí být alespoň {day.StagHours:F2} h.", day.Date.Day, "coreHours");
         }
     }
 
@@ -97,7 +97,7 @@ public sealed class CombinedTimesheetReviewer
             yield break;
         }
 
-        const string message = "Chybí docházka.";
+        const string message = "Doplňte docházku.";
         yield return new DayIssue("ERR-ATT-13", IssueType.Error, message, day.Date.Day, "clockIn");
         yield return new DayIssue("ERR-ATT-13", IssueType.Error, message, day.Date.Day, "clockOut");
         yield return new DayIssue("ERR-ATT-13", IssueType.Error, message, day.Date.Day, "breakStart");
@@ -120,11 +120,11 @@ public sealed class CombinedTimesheetReviewer
     {
         if (day.IsWeekend && day.TotalHours > 0)
         {
-            yield return new DayIssue("WAR-COM-01", IssueType.Warning, "Práce evidovaná o víkendu. Očekává se kompenzace v jiném pracovním dni.", day.Date.Day, "workedHours");
+            yield return new DayIssue("WAR-COM-01", IssueType.Warning, "Práce o víkendu (očekává se kompenzace v jiném pracovním dni).", day.Date.Day, "workedHours");
         }
         else if (day.IsHoliday && day.HasAttendanceFilled && day.WorkedHours > 0)
         {
-            yield return new DayIssue("WAR-COM-02", IssueType.Warning, "Práce evidovaná ve státním svátku. Očekává se kompenzace v jiném pracovním dni.", day.Date.Day, "workedHours");
+            yield return new DayIssue("WAR-COM-02", IssueType.Warning, "Práce ve svátek (očekává se kompenzace v jiném pracovním dni).", day.Date.Day, "workedHours");
         }
     }
 }
@@ -147,7 +147,7 @@ public sealed class AttendanceTimesheetReviewer
     {
         if (timesheet.Days.Count != DateTime.DaysInMonth(timesheet.Year, timesheet.Month))
         {
-            yield return new TimesheetIssue("ERR-COM-01", IssueType.Error, "Počet záznamů neodpovídá počtu dnů v měsíci.");
+            yield return new TimesheetIssue("ERR-COM-01", IssueType.Error, "Chybí některé dny v měsíci.");
         }
     }
 
@@ -177,7 +177,7 @@ public sealed class AttendanceTimesheetReviewer
             decimal rest = (decimal)(currentStart - previousEnd).TotalHours;
             if (rest < TimesheetLimits.MinRestBetweenShiftsHours)
             {
-                yield return new TimesheetIssue("ERR-COM-05", IssueType.Error, $"Mezi dny {previous.Date:dd.MM.} a {current.Date:dd.MM.} je odpočinek pouze {rest:F1} h.");
+                yield return new TimesheetIssue("ERR-COM-05", IssueType.Error, $"Odpočinek mezi {previous.Date:dd.MM.} a {current.Date:dd.MM.} je jen {rest:F1} h (min. 11 h).");
             }
         }
     }
@@ -194,11 +194,11 @@ public sealed class AttendanceTimesheetReviewer
         }
         if (day.ClockIn is null && (day.ClockOut is not null || hasBreak))
         {
-            yield return Issue(day, "ERR-ATT-03", IssueType.Error, "Chybí příchod.", "clockIn");
+            yield return Issue(day, "ERR-ATT-03", IssueType.Error, "Doplňte příchod.", "clockIn");
         }
         if (day.ClockOut is null && (day.ClockIn is not null || hasBreak))
         {
-            yield return Issue(day, "ERR-ATT-04", IssueType.Error, "Chybí odchod.", "clockOut");
+            yield return Issue(day, "ERR-ATT-04", IssueType.Error, "Doplňte odchod.", "clockOut");
         }
 
         if (day.ClockIn is not null && day.ClockOut is not null)
@@ -206,29 +206,29 @@ public sealed class AttendanceTimesheetReviewer
             bool invalidOrder = day.ClockOut == day.ClockIn || day.ClockOut < day.ClockIn && shiftHours > TimesheetLimits.MaxWorkShiftHours;
             if (invalidOrder)
             {
-                yield return Issue(day, "ERR-ATT-02", IssueType.Error, "Odchod je dříve nebo ve stejný čas jako příchod.", "clockOut");
+                yield return Issue(day, "ERR-ATT-02", IssueType.Error, "Odchod musí být po příchodu.", "clockOut");
             }
             if (shiftHours > TimesheetLimits.MaxWorkShiftHours)
             {
-                yield return Issue(day, "ERR-ATT-05", IssueType.Error, "Odpracováno více než 12 hodin.", "clockOut");
+                yield return Issue(day, "ERR-ATT-05", IssueType.Error, "Práce v jednom dni přesahuje 12 h.", "clockOut");
             }
             if (TimesheetLogic.CalculateNightHours(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd) > TimesheetLimits.MaxNightWorkHours)
             {
-                yield return Issue(day, "ERR-ATT-10", IssueType.Error, "Noční práce přesahuje 8 hodin.", "clockOut");
+                yield return Issue(day, "ERR-ATT-10", IssueType.Error, "Noční práce přesahuje 8 h.", "clockOut");
             }
         }
 
         if (day.BreakStart is not null && day.BreakEnd is null)
         {
-            yield return Issue(day, "ERR-ATT-08B", IssueType.Error, "Chybí konec přestávky.", "breakEnd");
+            yield return Issue(day, "ERR-ATT-08B", IssueType.Error, "Doplňte konec přestávky.", "breakEnd");
         }
         if (day.BreakStart is null && day.BreakEnd is not null)
         {
-            yield return Issue(day, "ERR-ATT-08C", IssueType.Error, "Chybí začátek přestávky.", "breakStart");
+            yield return Issue(day, "ERR-ATT-08C", IssueType.Error, "Doplňte začátek přestávky.", "breakStart");
         }
         if (hasBreak && (day.ClockIn is null || day.ClockOut is null))
         {
-            yield return Issue(day, "ERR-ATT-12", IssueType.Error, "Přestávka vyžaduje vyplněný příchod i odchod.", "breakStart");
+            yield return Issue(day, "ERR-ATT-12", IssueType.Error, "Přestávka vyžaduje příchod i odchod.", "breakStart");
         }
 
         if (day.ClockIn is not null && day.ClockOut is not null && day.BreakStart is not null && day.BreakEnd is not null)
@@ -244,7 +244,7 @@ public sealed class AttendanceTimesheetReviewer
                 decimal beforeBreak = HoursBetween(day.ClockIn.Value, day.BreakStart.Value);
                 if (beforeBreak < TimesheetLimits.MinHoursBeforeBreak)
                 {
-                    yield return Issue(day, "ERR-ATT-11", IssueType.Error, "Přestávku lze čerpat až po 4 odpracovaných hodinách.", "breakStart");
+                    yield return Issue(day, "ERR-ATT-11", IssueType.Error, "Přestávka nejdřív po 4 h práce.", "breakStart");
                 }
                 if (!BreakIsInsideShift(day))
                 {
@@ -252,24 +252,24 @@ public sealed class AttendanceTimesheetReviewer
                 }
                 if (day.IsWorkday && breakHours < TimesheetLimits.MinBreakDurationHours)
                 {
-                    yield return Issue(day, "ERR-ATT-08", IssueType.Error, "Délka přestávky musí být alespoň 30 minut.", "breakEnd");
+                    yield return Issue(day, "ERR-ATT-08", IssueType.Error, "Přestávka musí mít alespoň 30 min.", "breakEnd");
                 }
                 if (shiftHours > TimesheetLimits.MaxContinuousWorkBeforeBreakHours && shiftHours <= TimesheetLimits.MaxWorkShiftHours)
                 {
                     if (breakHours < TimesheetLimits.MinBreakDurationHours)
                     {
-                        yield return Issue(day, "ERR-ATT-06", IssueType.Error, "Po 6 hodinách práce je nutná přestávka alespoň 30 minut.", "breakEnd");
+                        yield return Issue(day, "ERR-ATT-06", IssueType.Error, "Po 6 h práce je nutná přestávka alespoň 30 min.", "breakEnd");
                     }
                     else if (beforeBreak > TimesheetLimits.MaxContinuousWorkBeforeBreakHours)
                     {
-                        yield return Issue(day, "ERR-ATT-07", IssueType.Error, "Přestávka musí začít nejpozději po 6 hodinách práce.", "breakStart");
+                        yield return Issue(day, "ERR-ATT-07", IssueType.Error, "Přestávka musí začít nejpozději po 6 h práce.", "breakStart");
                     }
                 }
             }
         }
         else if (day.ClockIn is not null && day.ClockOut is not null && shiftHours > TimesheetLimits.MaxContinuousWorkBeforeBreakHours && shiftHours <= TimesheetLimits.MaxWorkShiftHours && !hasBreak)
         {
-            yield return Issue(day, "ERR-ATT-06", IssueType.Error, "Po 6 hodinách práce je nutná přestávka alespoň 30 minut.", "breakStart");
+            yield return Issue(day, "ERR-ATT-06", IssueType.Error, "Po 6 h práce je nutná přestávka alespoň 30 min.", "breakStart");
         }
 
         TimeSpan nightStart = new(22, 0, 0);
