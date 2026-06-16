@@ -8,6 +8,9 @@ public sealed class CombinedTimesheetReviewerTests
     private static CombinedDay Day(int day, decimal worked, decimal core, decimal projects, decimal stag = 0, decimal coreWorkload = 1, bool skipAllocation = false) =>
         new(Date: new DateTime(2026, 6, day, 0, 0, 0, DateTimeKind.Utc), IsHoliday: false, Workload: 1, CoreWorkload: coreWorkload, WorkedHours: worked, CoreHours: core, ProjectHours: projects, StagHours: stag, HasAttendanceFilled: true, SkipAllocationRules: skipAllocation);
 
+    private static CombinedDay DayWithoutAttendance(int day, decimal core, decimal projects, decimal stag = 0) =>
+        new(Date: new DateTime(2026, 6, day, 0, 0, 0, DateTimeKind.Utc), IsHoliday: false, Workload: 1, CoreWorkload: 1, WorkedHours: 0, CoreHours: core, ProjectHours: projects, StagHours: stag, HasAttendanceFilled: false, SkipAllocationRules: false);
+
     private static AttendanceTimesheet EmptyAttendance(int year, int month) => new("1", "Test", 1, year, month, []);
 
     [Fact]
@@ -50,5 +53,17 @@ public sealed class CombinedTimesheetReviewerTests
         TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6), tracksAttendance: true);
 
         Assert.DoesNotContain(review.Issues, issue => issue.Code == "ERR-COM-04");
+    }
+
+    [Fact]
+    public void Review_requires_attendance_when_stag_or_allocation_is_filled()
+    {
+        CombinedTimesheet combined = new(2026, 6, 1, [DayWithoutAttendance(2, core: 3.83m, projects: 0m, stag: 3.83m)]);
+        TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6), tracksAttendance: true);
+
+        Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ATT-13" && issue.Field == "clockIn");
+        Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ATT-13" && issue.Field == "clockOut");
+        Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ATT-13" && issue.Field == "breakStart");
+        Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ATT-13" && issue.Field == "breakEnd");
     }
 }

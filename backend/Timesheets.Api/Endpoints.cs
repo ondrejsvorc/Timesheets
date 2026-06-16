@@ -76,6 +76,7 @@ public static class Endpoints
         .MapEndpoint<GetContractTimesheetsFilterOptions>()
         .MapEndpoint<GetContractTimesheets>()
         .MapEndpoint<GetContractEmployees>()
+        .MapEndpoint<GetContractEmployeeAddImpact>()
         .MapEndpoint<AddContractEmployee>()
         .MapEndpoint<GetContractEmployeeUpdateImpact>()
         .MapEndpoint<UpdateContractEmployee>()

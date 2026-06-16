@@ -49,16 +49,17 @@ public sealed class CombinedTimesheetReviewer
         return new TimesheetReview
         {
             Issues = ReviewTimesheet(timesheet).Concat(attendanceReview.Issues),
-            DayIssues = timesheet.Days.SelectMany(ReviewDay).Concat(attendanceReview.DayIssues)
+            DayIssues = timesheet.Days.SelectMany(day => ReviewDay(day, tracksAttendance)).Concat(attendanceReview.DayIssues)
         };
     }
 
     private static IEnumerable<TimesheetIssue> ReviewTimesheet(CombinedTimesheet timesheet) => ReviewMonthlyHours(timesheet);
 
-    private static IEnumerable<DayIssue> ReviewDay(CombinedDay day) =>
+    private static IEnumerable<DayIssue> ReviewDay(CombinedDay day, bool tracksAttendance) =>
     [
         .. ReviewBalance(day),
         .. ReviewStag(day),
+        .. ReviewMissingAttendance(day, tracksAttendance),
         .. ReviewWeekendAndHoliday(day)
     ];
 
@@ -82,6 +83,25 @@ public sealed class CombinedTimesheetReviewer
         {
             yield return new DayIssue("ERR-ALL-02", IssueType.Error, $"STAG vyžaduje v kmeni alespoň {day.StagHours:F2} h.", day.Date.Day, "coreHours");
         }
+    }
+
+    private static IEnumerable<DayIssue> ReviewMissingAttendance(CombinedDay day, bool tracksAttendance)
+    {
+        if (!tracksAttendance || day.SkipAllocationRules || day.HasAttendanceFilled)
+        {
+            yield break;
+        }
+
+        if (day.AllocatedHours <= 0m && day.StagHours <= 0m)
+        {
+            yield break;
+        }
+
+        const string message = "Chybí docházka.";
+        yield return new DayIssue("ERR-ATT-13", IssueType.Error, message, day.Date.Day, "clockIn");
+        yield return new DayIssue("ERR-ATT-13", IssueType.Error, message, day.Date.Day, "clockOut");
+        yield return new DayIssue("ERR-ATT-13", IssueType.Error, message, day.Date.Day, "breakStart");
+        yield return new DayIssue("ERR-ATT-13", IssueType.Error, message, day.Date.Day, "breakEnd");
     }
 
     private static IEnumerable<TimesheetIssue> ReviewMonthlyHours(CombinedTimesheet timesheet)

@@ -83,6 +83,17 @@ public sealed class AddContractEmployee : IEndpoint
             return TypedResults.BadRequest("Employee already has this position in contract for overlapping period.");
         }
 
+        ContractEmployeeAddImpact addImpact = await ContractEmployeeAddPlanner.PlanAsync(
+            id,
+            contract.EndDate,
+            new ContractEmployeeAddRequest(request.EmployeeId, request.StartDate, request.EndDate),
+            dbContext,
+            cancellationToken);
+        if (!addImpact.CanAdd)
+        {
+            return TypedResults.BadRequest(addImpact.BlockReason ?? "Pozici nelze přidat.");
+        }
+
         // Block assignment if it would exceed monthly base workload (imported or from core employment).
         DateTime start = request.StartDate.Kind == DateTimeKind.Utc ? request.StartDate : DateTime.SpecifyKind(request.StartDate, DateTimeKind.Utc);
         DateTime end = request.EndDate.HasValue
