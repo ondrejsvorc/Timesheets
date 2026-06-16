@@ -54,6 +54,9 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
   const isWeekendOrHoliday = day.isWeekend || day.isHoliday;
   const shouldLockByInterruption = Boolean(evaluation?.hasCoreOnlyInterruption || evaluation?.hasProportionalInterruption);
   const coreLocked = shouldLockByInterruption;
+  const allocatedInputHours = (day.coreHours ?? 0) + Object.values(day.projectHours).reduce((sum, hours) => sum + hours, 0);
+  const canGenerateAttendance = tracksAttendance && issues.some((issue) => issue.code === "ERR-ATT-13") && (day.attendance.schedules.length > 0 || allocatedInputHours > 0);
+  const canAllocateRow = balance > 0 || canGenerateAttendance;
 
   return (
     <div className={cn("grid grid-cols-subgrid col-[1/-1] border-b border-border/50", isWeekendOrHoliday && "bg-slate-100")}>
@@ -207,9 +210,10 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
             <Button
               variant="ghost"
               size="icon"
-              className={cn("h-7 w-7 shrink-0 transition-opacity", balance <= 0 ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50")}
+              disabled={!canAllocateRow}
+              className={cn("h-7 w-7 shrink-0 transition-opacity", !canAllocateRow ? "opacity-20 cursor-not-allowed" : "opacity-100 text-blue-600 hover:text-blue-700 hover:bg-blue-50")}
               onClick={() => {
-                if (balance > 0) void onAllocate(dayIndex + 1);
+                if (canAllocateRow) void onAllocate(dayIndex + 1);
               }}
               title={Texts.fillRemainingHoursEmptyOnly}
             >

@@ -58,7 +58,9 @@ export const AppHeader = () => {
 
         {/* Actions */}
         <div className="flex items-center gap-1">
-          <RoleViewSwitcher />
+          <Can action={UiAction.nav.employeeRoles}>
+            <RoleViewSwitcher />
+          </Can>
           <Button variant="ghost" size="icon" onClick={handleNotificationsClick} className="text-muted-foreground hover:text-foreground hover:bg-accent">
             <Bell className="h-5 w-5" />
           </Button>

@@ -22,7 +22,7 @@ public sealed class UpdateTimesheet : IEndpoint
         {
             return TypedResults.NotFound();
         }
-        if (user.EmployeeId != context.Timesheet.EmployeeId || context.Timesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
+        if ((!user.IsGlobalManagerRole() && user.EmployeeId != context.Timesheet.EmployeeId) || context.Timesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
         {
             return TypedResults.Forbid();
         }
