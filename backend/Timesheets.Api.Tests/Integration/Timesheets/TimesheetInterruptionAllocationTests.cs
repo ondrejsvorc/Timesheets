@@ -192,6 +192,40 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task AllocateTimesheet_FillsWeekendStagCoreOnSingleDay()
+    {
+        DateTime date = new(2026, 1, 17, 0, 0, 0, DateTimeKind.Utc);
+        Assert.False(TimesheetLogic.IsWeekday(date));
+        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid assignmentId = Guid.NewGuid();
+        await SeedSingleDayAsync(attendanceTimesheetId, date, AcademicEmployeeTypeId, assignmentId, assignmentWorkload: 0.25m);
+
+        TimesheetDraft draft = new(
+            Days:
+            [
+                new TimesheetDraftDay(
+                    Date: date,
+                    ClockIn: null,
+                    ClockOut: null,
+                    BreakStart: null,
+                    BreakEnd: null,
+                    CoreHours: 0m,
+                    Description: null,
+                    Schedules: [new TimeRange(new TimeSpan(9, 0, 0), new TimeSpan(12, 50, 0))])
+            ],
+            Projects: [new TimesheetDraftProject(assignmentId, [new TimesheetDraftProjectDay(date, 0m)])]);
+
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=17", draft);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
+        Assert.NotNull(allocation);
+        TimesheetAllocationDay day = allocation!.Days.Single();
+        Assert.True(day.CoreHours >= 3.83m);
+        Assert.DoesNotContain(allocation.Evaluation.DayIssues, issue => issue.Code == "ERR-ALL-02" && issue.Day == 17);
+    }
+
+    [Fact]
     public async Task AllocateTimesheet_GeneratesMissingAttendanceWithBreak()
     {
         DateTime date = new(2036, 7, 2, 0, 0, 0, DateTimeKind.Utc);

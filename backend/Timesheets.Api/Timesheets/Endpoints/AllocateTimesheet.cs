@@ -80,7 +80,7 @@ public sealed class AllocateTimesheet : IEndpoint
             return;
         }
 
-        decimal capacity = TimesheetInterruptionHours.DayCapacity(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.Description, totalWorkload, tracksAttendance);
+        decimal capacity = TimesheetInterruptionHours.DayCapacity(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.Description, totalWorkload, tracksAttendance, day.Schedules);
         decimal free = TimesheetLogic.Normalize(capacity - day.CoreHours - day.ProjectHours.Values.Sum());
         if (free <= 0)
         {
@@ -161,7 +161,7 @@ public sealed class AllocateTimesheet : IEndpoint
         }
 
         List<TimesheetDraftDayState> candidates = snapshot.Days
-            .Where(day => TimesheetLogic.IsWeekday(day.Date) && !TimesheetInterruptions.SkipAllocationRules(day.Description) && CanReceiveAnyHours(day, snapshot.Projects))
+            .Where(day => IsAcademicAllocationDay(day) && !TimesheetInterruptions.SkipAllocationRules(day.Description) && CanReceiveAnyHours(day, snapshot.Projects))
             .ToList();
         if (candidates.Count == 0)
         {
@@ -199,7 +199,8 @@ public sealed class AllocateTimesheet : IEndpoint
         {
             foreach (TimesheetDraftDayState day in days.OrderBy(_ => Random.Shared.Next()))
             {
-                decimal add = Math.Min(Math.Min(6m - targets[day], 12m - targets[day]), remaining);
+                decimal dayMax = AcademicDayMaxHours(day);
+                decimal add = Math.Min(Math.Min(6m - targets[day], dayMax - targets[day]), remaining);
                 if (add > 0m)
                 {
                     targets[day] = TimesheetLogic.Normalize(targets[day] + add);
@@ -210,7 +211,8 @@ public sealed class AllocateTimesheet : IEndpoint
 
         foreach (TimesheetDraftDayState day in days.OrderBy(_ => Random.Shared.Next()))
         {
-            decimal add = Math.Min(Math.Min(RandomDayHours() - targets[day], 12m - targets[day]), remaining);
+            decimal dayMax = AcademicDayMaxHours(day);
+            decimal add = Math.Min(Math.Min(RandomDayHours() - targets[day], dayMax - targets[day]), remaining);
             if (add > 0m)
             {
                 targets[day] = TimesheetLogic.Normalize(targets[day] + add);
@@ -220,19 +222,34 @@ public sealed class AllocateTimesheet : IEndpoint
 
         while (remaining > 0m)
         {
-            List<TimesheetDraftDayState> available = days.Where(day => targets[day] < 12m).ToList();
+            List<TimesheetDraftDayState> available = days.Where(day => targets[day] < AcademicDayMaxHours(day)).ToList();
             if (available.Count == 0)
             {
                 break;
             }
 
             TimesheetDraftDayState day = available[Random.Shared.Next(available.Count)];
-            decimal add = Math.Min(Math.Min(RandomAmount(12m - targets[day]), 12m - targets[day]), remaining);
+            decimal dayMax = AcademicDayMaxHours(day);
+            decimal add = Math.Min(Math.Min(RandomAmount(dayMax - targets[day]), dayMax - targets[day]), remaining);
             targets[day] = TimesheetLogic.Normalize(targets[day] + add);
             remaining = TimesheetLogic.Normalize(remaining - add);
         }
 
         return targets;
+    }
+
+    private static bool IsAcademicAllocationDay(TimesheetDraftDayState day) =>
+        TimesheetLogic.IsWeekday(day.Date) || TimesheetLogic.CalculateStagHours(day.Schedules) > 0m;
+
+    private static decimal AcademicDayMaxHours(TimesheetDraftDayState day)
+    {
+        if (TimesheetLogic.IsWeekday(day.Date) || !string.IsNullOrWhiteSpace(day.Description))
+        {
+            return 12m;
+        }
+
+        decimal stagHours = TimesheetLogic.CalculateStagHours(day.Schedules);
+        return stagHours > 0m ? TimesheetLogic.Normalize(Math.Min(12m, stagHours)) : 0m;
     }
 
     private static void AllocateIntoDayTargets(Dictionary<TimesheetDraftDayState, decimal> dayTargets, IReadOnlyList<TimesheetDraftProjectState> projects, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
