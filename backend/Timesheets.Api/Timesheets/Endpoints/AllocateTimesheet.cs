@@ -77,50 +77,59 @@ public sealed class AllocateTimesheet : IEndpoint
             return;
         }
 
-        decimal stagMissing = Math.Max(0m, TimesheetLogic.CalculateStagHours(day.Schedules) - day.CoreHours);
-        if (stagMissing > 0 && day.CoreHours == 0)
+        decimal stagHours = TimesheetLogic.CalculateStagHours(day.Schedules);
+        decimal stagMissing = Math.Max(0m, stagHours - day.CoreHours);
+        bool coreCanReceiveRemainder = day.CoreHours == 0 || stagMissing > 0m;
+        if (stagMissing > 0)
         {
-            decimal core = Math.Min(free, Math.Min(stagMissing, coreTarget));
+            decimal core = PreferQuarterStagTopUp(day.CoreHours, stagHours, free, coreTarget);
             day.CoreHours += core;
-            coreTarget -= core;
+            coreTarget = Math.Max(0m, coreTarget - core);
             free -= core;
         }
 
-        List<(Guid? ProjectId, decimal Remaining)> remaining = [];
-        if (day.CoreHours == 0 && coreTarget > 0)
-        {
-            remaining.Add((null, coreTarget));
-        }
-
+        List<(Guid ProjectId, decimal Remaining)> projectRemaining = [];
         foreach (TimesheetDraftProjectState project in projects)
         {
             if (!project.Locked && day.ProjectHours.GetValueOrDefault(project.Id) == 0 && projectTargets[project.Id] > 0)
             {
-                remaining.Add((project.Id, projectTargets[project.Id]));
+                projectRemaining.Add((project.Id, projectTargets[project.Id]));
             }
         }
 
-        decimal totalRemaining = remaining.Sum(item => item.Remaining);
+        decimal coreRemaining = coreCanReceiveRemainder ? coreTarget : 0m;
+        decimal totalRemaining = coreRemaining + projectRemaining.Sum(item => item.Remaining);
         decimal amount = Math.Min(free, totalRemaining);
         decimal left = amount;
 
-        for (int index = 0; index < remaining.Count; index++)
+        foreach ((Guid projectId, decimal target) in projectRemaining)
         {
-            (Guid? projectId, decimal target) = remaining[index];
-            decimal value = index == remaining.Count - 1 ? left : TimesheetLogic.Normalize(amount * target / totalRemaining);
-            value = Math.Min(value, target);
+            decimal maxValue = Math.Min(target, left);
+            decimal value = PreferQuarter(TimesheetLogic.Normalize(amount * target / totalRemaining), maxValue);
             left -= value;
+            day.ProjectHours[projectId] = value;
+            projectTargets[projectId] = Math.Max(0m, projectTargets[projectId] - value);
+        }
 
-            if (projectId.HasValue)
+        if (coreRemaining > 0m && left > 0m)
+        {
+            decimal core = Math.Min(coreRemaining, left);
+            day.CoreHours += core;
+            coreTarget = Math.Max(0m, coreTarget - core);
+            left -= core;
+        }
+
+        foreach ((Guid projectId, _) in projectRemaining)
+        {
+            if (left <= 0m)
             {
-                day.ProjectHours[projectId.Value] = value;
-                projectTargets[projectId.Value] -= value;
+                break;
             }
-            else
-            {
-                day.CoreHours = value;
-                coreTarget -= value;
-            }
+
+            decimal value = Math.Min(projectTargets[projectId], left);
+            day.ProjectHours[projectId] += value;
+            projectTargets[projectId] = Math.Max(0m, projectTargets[projectId] - value);
+            left -= value;
         }
     }
 
@@ -130,8 +139,36 @@ public sealed class AllocateTimesheet : IEndpoint
         return TimesheetLogic.Normalize(fundedDays * 8m * workload);
     }
 
+    private static decimal PreferQuarterStagTopUp(decimal currentCoreHours, decimal stagHours, decimal free, decimal coreTarget)
+    {
+        decimal required = TimesheetLogic.Normalize(stagHours - currentCoreHours);
+        if (required <= 0m)
+        {
+            return 0m;
+        }
+
+        decimal roundedFinal = RoundUpToQuarter(stagHours);
+        decimal rounded = TimesheetLogic.Normalize(Math.Max(required, roundedFinal - currentCoreHours));
+        return rounded <= free && rounded <= Math.Max(required, coreTarget) ? rounded : Math.Min(required, free);
+    }
+
+    private static decimal PreferQuarter(decimal value, decimal max)
+    {
+        decimal rounded = RoundToQuarter(value);
+        if (rounded > max)
+        {
+            rounded = Math.Floor(max * 4m) / 4m;
+        }
+
+        return rounded > 0m ? rounded : Math.Min(value, max);
+    }
+
+    private static decimal RoundToQuarter(decimal value) => TimesheetLogic.Normalize(Math.Round(value * 4m, MidpointRounding.AwayFromZero) / 4m);
+    private static decimal RoundUpToQuarter(decimal value) => TimesheetLogic.Normalize(Math.Ceiling(value * 4m) / 4m);
+
     private static IReadOnlyList<TimesheetDraftDayState> OrderDays(IReadOnlyList<TimesheetDraftDayState> days) => days
         .OrderByDescending(day => !string.IsNullOrWhiteSpace(day.Description))
+        .ThenByDescending(day => TimesheetLogic.CalculateStagHours(day.Schedules) > day.CoreHours)
         .ThenByDescending(day => day.ClockIn is not null && day.ClockOut is not null)
         .ThenBy(day => day.Date)
         .ToArray();

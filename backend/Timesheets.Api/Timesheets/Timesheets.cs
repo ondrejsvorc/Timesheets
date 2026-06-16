@@ -280,5 +280,5 @@ internal static class TimesheetInterruptions
         return codes.Length > 0 && !codes.Any(BusinessTripCodes.Contains) && !codes.Any(CoreOnlyCodes.Contains);
     }
 
-    public static bool SkipAllocationRules(string? raw) => HasBusinessTripInterruption(raw) || HasProportionalInterruption(raw);
+    public static bool SkipAllocationRules(string? raw) => HasBusinessTripInterruption(raw) || HasCoreOnlyInterruption(raw) || HasProportionalInterruption(raw);
 }

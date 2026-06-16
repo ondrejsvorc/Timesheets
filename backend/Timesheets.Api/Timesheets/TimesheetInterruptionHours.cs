@@ -4,13 +4,18 @@ internal static class TimesheetInterruptionHours
 {
     public static decimal DayCapacity(DateTime date, TimeSpan? clockIn, TimeSpan? clockOut, TimeSpan? breakStart, TimeSpan? breakEnd, string? description, decimal totalWorkload, bool tracksAttendance)
     {
-        if (tracksAttendance && (clockIn is not null || clockOut is not null))
+        if (tracksAttendance)
         {
-            decimal worked = TimesheetLogic.CalculateWorkedHoursFromAttendance(clockIn, clockOut, breakStart, breakEnd);
-            if (worked > 0m)
+            if (clockIn is not null || clockOut is not null || breakStart is not null || breakEnd is not null)
             {
-                return Math.Min(12m, worked);
+                decimal worked = TimesheetLogic.CalculateWorkedHoursFromAttendance(clockIn, clockOut, breakStart, breakEnd);
+                if (worked > 0m)
+                {
+                    return Math.Min(12m, worked);
+                }
             }
+
+            return string.IsNullOrWhiteSpace(description) ? 0m : TimesheetLogic.Normalize(8m * totalWorkload);
         }
 
         return TimesheetLogic.IsWeekday(date) || !string.IsNullOrWhiteSpace(description) ? TimesheetLogic.Normalize(8m * totalWorkload) : 0m;
