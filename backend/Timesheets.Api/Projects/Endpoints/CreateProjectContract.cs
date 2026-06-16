@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -44,7 +45,7 @@ public sealed class CreateProjectContract : IEndpoint
         }
 
         string name = request.Name.Trim();
-        string registrationNumber = request.RegistrationNumber.Trim();
+        string registrationNumber = Regex.Replace(request.RegistrationNumber, @"\s+", "").Trim();
         if (await ProjectContractValidation.HasDuplicateAsync(id, excludedContractId: null, name, registrationNumber, dbContext, cancellationToken))
         {
             return TypedResults.BadRequest(ProjectContractValidation.DuplicateError);
