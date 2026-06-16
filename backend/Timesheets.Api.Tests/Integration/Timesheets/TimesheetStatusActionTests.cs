@@ -140,6 +140,26 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     [Fact]
     public async Task GlobalManager_CanChangeAnotherEmployeesWholeStatus()
     {
+        // Approval of the whole (attendance) timesheet still requires all project parts to be approved.
+        using (IServiceScope setupScope = CreateScope())
+        {
+            AppDbContext setupContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            AttendanceTimesheet setupAttendance = await setupContext.AttendanceTimesheets.SingleAsync(timesheet => timesheet.Id == Guid.Parse("70000000-0000-0000-0000-000000000002"));
+            setupAttendance.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
+
+            List<ProjectTimesheet> projects = await setupContext.ProjectTimesheets
+                .Where(t => t.EmployeeId == SeededTestData.MarieEmployeeId && t.Year == 2024 && t.Month == 12)
+                .ToListAsync();
+            foreach (ProjectTimesheet project in projects)
+            {
+                project.TimesheetStatusId = TestTimesheetStatusIds.Approved;
+                project.LockedAt = DateTime.UtcNow;
+                project.LockedBy = SeededTestData.JanNovakEmployeeId;
+            }
+
+            await setupContext.SaveChangesAsync();
+        }
+
         UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.MarieEmployeeId, 2024, 12, "approve", null, [Guid.Parse("70000000-0000-0000-0000-000000000002")]);
 
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
