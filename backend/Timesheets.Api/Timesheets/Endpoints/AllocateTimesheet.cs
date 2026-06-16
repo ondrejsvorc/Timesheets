@@ -79,7 +79,7 @@ public sealed class AllocateTimesheet : IEndpoint
 
         decimal stagHours = TimesheetLogic.CalculateStagHours(day.Schedules);
         decimal stagMissing = Math.Max(0m, stagHours - day.CoreHours);
-        bool coreCanReceiveRemainder = day.CoreHours == 0 || stagMissing > 0m;
+        bool coreCanReceiveRemainder = coreTarget > 0m;
         if (stagMissing > 0)
         {
             decimal core = PreferQuarterStagTopUp(day.CoreHours, stagHours, free, coreTarget);
@@ -113,10 +113,9 @@ public sealed class AllocateTimesheet : IEndpoint
 
         if (coreRemaining > 0m && left > 0m)
         {
-            decimal core = Math.Min(coreRemaining, left);
-            day.CoreHours += core;
-            coreTarget = Math.Max(0m, coreTarget - core);
-            left -= core;
+            day.CoreHours += left;
+            coreTarget = Math.Max(0m, coreTarget - left);
+            left = 0m;
         }
 
         foreach ((Guid projectId, _) in projectRemaining)

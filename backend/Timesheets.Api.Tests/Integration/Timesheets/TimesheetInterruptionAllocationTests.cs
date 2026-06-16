@@ -62,7 +62,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         DateTime date = new(2036, 2, 4, 0, 0, 0, DateTimeKind.Utc);
         Guid attendanceTimesheetId = Guid.NewGuid();
-        await SeedSingleDayAsync(attendanceTimesheetId, date, AcademicEmployeeTypeId, assignmentId: null);
+        Guid assignmentId = Guid.NewGuid();
+        await SeedSingleDayAsync(attendanceTimesheetId, date, AcademicEmployeeTypeId, assignmentId, assignmentWorkload: 0.75m);
 
         TimesheetDraft draft = new(
             Days:
@@ -77,14 +78,16 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
                     Description: null,
                     Schedules: [new TimeRange(new TimeSpan(8, 0, 0), new TimeSpan(9, 50, 0))])
             ],
-            Projects: []);
+            Projects: [new TimesheetDraftProject(assignmentId, [new TimesheetDraftProjectDay(date, 0m)])]);
 
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", draft);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
         Assert.NotNull(allocation);
-        Assert.Equal(2m, allocation!.Days.Single().CoreHours);
+        TimesheetAllocationDay day = allocation!.Days.Single();
+        Assert.Equal(2m, day.CoreHours);
+        Assert.Equal(6m, day.ProjectHours[assignmentId]);
     }
 
     [Fact]
