@@ -60,8 +60,10 @@ public class AddContractEmployeeValidationTests : BaseIntegrationTest
 
         HttpResponseMessage beforeProject = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", new AddContractEmployee.Request(employeeId, "P1", "Dev", 1m, projectStart.AddDays(-1), projectEnd));
         HttpResponseMessage openAssignment = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", new AddContractEmployee.Request(employeeId, "P1", "Dev", 1m, projectStart, null));
+        HttpResponseMessage endAfterProject = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", new AddContractEmployee.Request(employeeId, "P2", "Dev", 1m, projectStart, projectEnd.AddDays(1)));
 
         Assert.Equal(HttpStatusCode.BadRequest, beforeProject.StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, openAssignment.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, openAssignment.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, endAfterProject.StatusCode);
     }
 }

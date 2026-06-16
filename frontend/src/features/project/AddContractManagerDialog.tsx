@@ -62,7 +62,7 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
   const employeeItems = useMemo(() => {
     if (!selectedContractId) return [];
     const managerEmployeeIds = new Set(existingManagers.filter((m) => m.contractId === selectedContractId).map((m) => m.employeeId));
-    return employees.filter((e) => !managerEmployeeIds.has(e.id)).map((e) => ({ value: e.id, label: e.fullName }));
+    return employees.filter((e) => !managerEmployeeIds.has(e.id)).map((e) => ({ value: e.id, label: e.fullName, searchText: e.personalNumber }));
   }, [selectedContractId, existingManagers, employees]);
 
   const handleOpenChange = (isOpen: boolean) => {

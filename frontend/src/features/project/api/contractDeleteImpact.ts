@@ -6,6 +6,8 @@ export interface DeleteContractImpactResponse {
   draftProjectTimesheetCount: number;
   submittedProjectTimesheetCount: number;
   approvedProjectTimesheetCount: number;
+  submittedAttendanceTimesheetCount: number;
+  approvedAttendanceTimesheetCount: number;
   hasProtectedTimesheets: boolean;
   canDelete: boolean;
 }

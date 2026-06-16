@@ -9,6 +9,8 @@ public sealed record ContractDeleteImpact(
     int DraftProjectTimesheetCount,
     int SubmittedProjectTimesheetCount,
     int ApprovedProjectTimesheetCount,
+    int SubmittedAttendanceTimesheetCount,
+    int ApprovedAttendanceTimesheetCount,
     bool HasProtectedTimesheets,
     bool CanDelete);
 
@@ -32,6 +34,8 @@ internal static class ContractDeleteImpactCalculator
             DraftProjectTimesheetCount: counts.DraftProjectTimesheetCount,
             SubmittedProjectTimesheetCount: counts.SubmittedProjectTimesheetCount,
             ApprovedProjectTimesheetCount: counts.ApprovedProjectTimesheetCount,
+            SubmittedAttendanceTimesheetCount: counts.SubmittedAttendanceTimesheetCount,
+            ApprovedAttendanceTimesheetCount: counts.ApprovedAttendanceTimesheetCount,
             HasProtectedTimesheets: counts.HasProtectedTimesheets,
             CanDelete: counts.CanDelete);
     }

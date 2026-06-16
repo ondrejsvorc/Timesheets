@@ -49,10 +49,18 @@ const createSchema = (existing: ContractEmployeeItem[], projectStartDate: string
       const projectStart = parseCalendarDate(projectStartDate);
       const projectEnd = projectEndDate ? parseCalendarDate(projectEndDate) : null;
 
-      if (start < projectStart || (projectEnd && (!end || end > projectEnd))) {
+      if (start < projectStart) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: [projectEnd && !end ? "endDate" : "startDate"],
+          path: ["startDate"],
+          message: Texts.positionOutsideProjectRange,
+        });
+      }
+
+      if (end && projectEnd && end > projectEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["endDate"],
           message: Texts.positionOutsideProjectRange,
         });
       }
@@ -114,6 +122,7 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
           response.employees.map((employee) => ({
             value: employee.id,
             label: employee.fullName,
+            searchText: employee.personalNumber,
           })),
         ),
       )

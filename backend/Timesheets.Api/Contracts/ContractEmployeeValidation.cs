@@ -17,7 +17,7 @@ internal static class ContractEmployeeValidation
             return "Začátek úvazku nesmí být před začátkem projektu.";
         }
 
-        if (projectEnd.HasValue && (!end.HasValue || end.Value > projectEnd.Value))
+        if (projectEnd.HasValue && end.HasValue && end.Value > projectEnd.Value)
         {
             return "Konec úvazku musí být nejpozději v den ukončení projektu.";
         }

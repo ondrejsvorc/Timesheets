@@ -161,6 +161,7 @@ const EmployeeSection = ({ contractId, employee, onDeleteRequested, onEditReques
         <Table className="table-fixed w-full">
           <TableHeader>
             <TableRow>
+              <TableHead className="w-24">{Texts.positionCode}</TableHead>
               <TableHead>{Texts.position}</TableHead>
               <TableHead className="w-24">{Texts.workload}</TableHead>
               <TableHead className="w-28">{Texts.from}</TableHead>
@@ -195,6 +196,7 @@ const PositionRow = ({ contractId, position, onDeleteRequested, onEditRequested 
 
   return (
     <TableRow className="cursor-pointer">
+      <TableCell>{position.positionCode ?? Texts.dash}</TableCell>
       <TableCell>{position.position ?? Texts.dash}</TableCell>
       <TableCell>{formatWorkloadPercent(position.workload)}</TableCell>
       <TableCell>{formatDate(position.startDate)}</TableCell>

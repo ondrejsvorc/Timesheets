@@ -9,6 +9,8 @@ internal sealed record DeleteImpactCounts(
     int DraftProjectTimesheetCount,
     int SubmittedProjectTimesheetCount,
     int ApprovedProjectTimesheetCount,
+    int SubmittedAttendanceTimesheetCount,
+    int ApprovedAttendanceTimesheetCount,
     bool HasProtectedTimesheets,
     bool CanDelete);
 
@@ -40,6 +42,8 @@ internal static class DeleteImpactCore
         int draftCount = 0;
         int submittedCount = 0;
         int approvedCount = 0;
+        int submittedAttendanceCount = 0;
+        int approvedAttendanceCount = 0;
 
         if (contractIds.Count > 0)
         {
@@ -60,6 +64,28 @@ internal static class DeleteImpactCore
                 .CountAsync(
                     t => contractIds.Contains(t.ContractId) && t.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId,
                     cancellationToken);
+
+            List<Guid> employeeIds = await dbContext.ContractEmployees
+                .AsNoTracking()
+                .Where(ce => contractIds.Contains(ce.ContractId))
+                .Select(ce => ce.EmployeeId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (employeeIds.Count > 0)
+            {
+                submittedAttendanceCount = await dbContext.AttendanceTimesheets
+                    .AsNoTracking()
+                    .CountAsync(
+                        t => employeeIds.Contains(t.EmployeeId) && t.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId,
+                        cancellationToken);
+
+                approvedAttendanceCount = await dbContext.AttendanceTimesheets
+                    .AsNoTracking()
+                    .CountAsync(
+                        t => employeeIds.Contains(t.EmployeeId) && t.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId,
+                        cancellationToken);
+            }
         }
 
         bool hasProtected = submittedCount > 0 || approvedCount > 0;
@@ -69,6 +95,8 @@ internal static class DeleteImpactCore
             DraftProjectTimesheetCount: draftCount,
             SubmittedProjectTimesheetCount: submittedCount,
             ApprovedProjectTimesheetCount: approvedCount,
+            SubmittedAttendanceTimesheetCount: submittedAttendanceCount,
+            ApprovedAttendanceTimesheetCount: approvedAttendanceCount,
             HasProtectedTimesheets: hasProtected,
             CanDelete: !hasProtected);
     }

@@ -9,6 +9,8 @@ import { cn } from "@/utils/cn";
 export interface ComboBoxItem {
   value: string;
   label: string;
+  /** Extra text for cmdk search; `value` is used as the unique item key. */
+  searchText?: string;
 }
 
 interface ComboBoxProps {
@@ -47,7 +49,8 @@ export const ComboBox = ({ value, items, placeholder, loading, disabled, onChang
                 {items.map((item) => (
                   <CommandItem
                     key={item.value}
-                    value={item.label}
+                    value={item.value}
+                    keywords={item.searchText ? [item.label, item.searchText] : [item.label]}
                     onSelect={() => {
                       onChange(item.value);
                       setOpen(false);

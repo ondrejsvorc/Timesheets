@@ -42,10 +42,18 @@ const createSchema = (projects: ProjectCatalogItem[]) =>
       const projectStart = parseCalendarDate(project.startDate);
       const projectEnd = project.endDate ? parseCalendarDate(project.endDate) : null;
 
-      if (start < projectStart || (projectEnd && (!end || end > projectEnd))) {
+      if (start < projectStart) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: [projectEnd && !end ? "endDate" : "startDate"],
+          path: ["startDate"],
+          message: Texts.positionOutsideProjectRange,
+        });
+      }
+
+      if (end && projectEnd && end > projectEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["endDate"],
           message: Texts.positionOutsideProjectRange,
         });
       }

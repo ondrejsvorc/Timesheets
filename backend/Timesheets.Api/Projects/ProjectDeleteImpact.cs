@@ -9,6 +9,8 @@ public sealed record ProjectDeleteImpact(
     int DraftProjectTimesheetCount,
     int SubmittedProjectTimesheetCount,
     int ApprovedProjectTimesheetCount,
+    int SubmittedAttendanceTimesheetCount,
+    int ApprovedAttendanceTimesheetCount,
     bool HasProtectedTimesheets,
     bool CanDelete);
 
@@ -36,6 +38,8 @@ internal static class ProjectDeleteImpactCalculator
             DraftProjectTimesheetCount: counts.DraftProjectTimesheetCount,
             SubmittedProjectTimesheetCount: counts.SubmittedProjectTimesheetCount,
             ApprovedProjectTimesheetCount: counts.ApprovedProjectTimesheetCount,
+            SubmittedAttendanceTimesheetCount: counts.SubmittedAttendanceTimesheetCount,
+            ApprovedAttendanceTimesheetCount: counts.ApprovedAttendanceTimesheetCount,
             HasProtectedTimesheets: counts.HasProtectedTimesheets,
             CanDelete: counts.CanDelete);
     }

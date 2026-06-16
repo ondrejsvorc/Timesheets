@@ -8,6 +8,8 @@ export interface TimesheetDeleteImpactCounts {
   draftProjectTimesheetCount: number;
   submittedProjectTimesheetCount: number;
   approvedProjectTimesheetCount: number;
+  submittedAttendanceTimesheetCount: number;
+  approvedAttendanceTimesheetCount: number;
   hasProtectedTimesheets: boolean;
   canDelete: boolean;
 }
@@ -32,6 +34,14 @@ export const appendTimesheetDeleteImpactConsequences = (consequences: string[], 
 
   if (impact.approvedProjectTimesheetCount > 0) {
     consequences.push(formatCount(Texts.deleteImpactProjectTimesheetsApproved, impact.approvedProjectTimesheetCount));
+  }
+
+  if (impact.submittedAttendanceTimesheetCount > 0) {
+    consequences.push(formatCount(Texts.deleteImpactAttendanceTimesheetsSubmitted, impact.submittedAttendanceTimesheetCount));
+  }
+
+  if (impact.approvedAttendanceTimesheetCount > 0) {
+    consequences.push(formatCount(Texts.deleteImpactAttendanceTimesheetsApproved, impact.approvedAttendanceTimesheetCount));
   }
 
   consequences.push(Texts.deleteImpactAttendancePreserved);
