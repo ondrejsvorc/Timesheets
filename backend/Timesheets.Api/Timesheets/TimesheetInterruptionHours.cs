@@ -34,17 +34,6 @@ internal static class TimesheetInterruptionHours
             return;
         }
 
-        if (TimesheetInterruptions.HasCoreOnlyInterruption(day.Description))
-        {
-            day.CoreHours = capacity;
-            foreach (TimesheetDraftProjectState project in projects)
-            {
-                day.ProjectHours[project.Id] = 0m;
-            }
-
-            return;
-        }
-
         if (TimesheetInterruptions.HasProportionalInterruption(day.Description))
         {
             ApplyProportional(day, projects, totalWorkload, capacity);

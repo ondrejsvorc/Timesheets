@@ -16,7 +16,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     public TimesheetInterruptionAllocationTests(CustomWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
-    public async Task AllocateTimesheet_UsesExplicitInterruptionRules()
+    public async Task AllocateTimesheet_UsesInterruptionRulesFromImis()
     {
         DateTime firstDate = new(2036, 1, 2, 0, 0, 0, DateTimeKind.Utc);
         Guid attendanceTimesheetId = Guid.NewGuid();
@@ -44,8 +44,9 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Assert.NotNull(allocation);
 
         TimesheetAllocationDay doctor = allocation!.Days.Single(day => day.Date == firstDate);
-        Assert.Equal(8m, doctor.CoreHours);
-        Assert.All(doctor.ProjectHours.Values, hours => Assert.Equal(0m, hours));
+        Assert.Equal(4m, doctor.CoreHours);
+        Assert.Equal(2m, doctor.ProjectHours[firstAssignmentId]);
+        Assert.Equal(2m, doctor.ProjectHours[secondAssignmentId]);
 
         TimesheetAllocationDay proportional = allocation.Days.Single(day => day.Date == firstDate.AddDays(1));
         Assert.Equal(4m, proportional.CoreHours);
@@ -113,25 +114,37 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task AllocateTimesheet_PrefersQuarterProjectsAndLeavesRemainderInCore()
+    public async Task AllocateTimesheet_FillsAcademicMonthWithinTargetsAndDailyBounds()
     {
-        DateTime date = new(2036, 4, 2, 0, 0, 0, DateTimeKind.Utc);
+        int year = 2037;
+        int month = 1;
         Guid attendanceTimesheetId = Guid.NewGuid();
         Guid assignmentId = Guid.NewGuid();
-        await SeedSingleDayAsync(attendanceTimesheetId, date, AcademicEmployeeTypeId, assignmentId, assignmentWorkload: 0.3m);
+        await SeedMonthAsync(attendanceTimesheetId, assignmentId, year, month, totalWorkload: 1m, assignmentWorkload: 0.5m);
+        DateTime[] dates = MonthDates(year, month);
 
         TimesheetDraft draft = new(
-            Days: [new TimesheetDraftDay(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: null, Schedules: [])],
-            Projects: [new TimesheetDraftProject(assignmentId, [new TimesheetDraftProjectDay(date, 0m)])]);
+            Days: dates.Select(date => new TimesheetDraftDay(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: null, Schedules: [])).ToArray(),
+            Projects: [new TimesheetDraftProject(assignmentId, dates.Select(date => new TimesheetDraftProjectDay(date, 0m)).ToArray())]);
 
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", draft);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
         Assert.NotNull(allocation);
-        TimesheetAllocationDay day = allocation!.Days.Single();
-        Assert.Equal(5.75m, day.CoreHours);
-        Assert.Equal(2.25m, day.ProjectHours[assignmentId]);
+
+        int weekdays = dates.Count(TimesheetLogic.IsWeekday);
+        decimal expectedColumnTotal = TimesheetLogic.Normalize(weekdays * 8m * 0.5m);
+        Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation!.Days.Sum(day => day.CoreHours)));
+        Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectHours[assignmentId])));
+
+        TimesheetAllocationDay[] activeDays = allocation.Days.Where(day => TimesheetLogic.IsWeekday(day.Date) && TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours[assignmentId]) > 0m).ToArray();
+        Assert.NotEmpty(activeDays);
+        Assert.True(activeDays.Length < weekdays);
+        foreach (TimesheetAllocationDay day in activeDays)
+        {
+            Assert.InRange(TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours[assignmentId]), 6m, 12m);
+        }
     }
 
     [Fact]
@@ -263,7 +276,44 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         await dbContext.SaveChangesAsync();
     }
 
-    private static ContractEmployee Assignment(Guid id, string code, string position, DateTime date, decimal workload = 0.25m) => new()
+    private async Task SeedMonthAsync(Guid attendanceTimesheetId, Guid assignmentId, int year, int month, decimal totalWorkload, decimal assignmentWorkload)
+    {
+        using IServiceScope scope = CreateScope();
+        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Employee employee = await dbContext.Employees.SingleAsync(employee => employee.Id == SeededTestData.JanNovakEmployeeId);
+        employee.EmployeeTypeId = AcademicEmployeeTypeId;
+        DateTime[] dates = MonthDates(year, month);
+        DateTime firstDate = dates[0];
+        DateTime lastDate = dates[^1];
+
+        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.NewGuid(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = totalWorkload });
+        dbContext.ContractEmployees.Add(Assignment(assignmentId, $"MONTH-{year}-{month}", $"Month {year}-{month}", firstDate, assignmentWorkload, lastDate));
+        dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
+        {
+            Id = attendanceTimesheetId,
+            EmployeeId = SeededTestData.JanNovakEmployeeId,
+            TimesheetStatusId = TestTimesheetStatusIds.Draft,
+            Year = year,
+            Month = month,
+            Days = dates.Select(date => AttendanceDay(date, null)).ToList()
+        });
+        dbContext.ProjectTimesheets.Add(new Data.Models.ProjectTimesheet
+        {
+            Id = Guid.NewGuid(),
+            EmployeeId = SeededTestData.JanNovakEmployeeId,
+            ContractId = SeededTestData.AlphaContractId,
+            ContractEmployeeId = assignmentId,
+            TimesheetStatusId = TestTimesheetStatusIds.Draft,
+            Year = year,
+            Month = month,
+            Workload = assignmentWorkload,
+            Days = dates.Select(date => ProjectDay(date, assignmentWorkload)).ToList()
+        });
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static ContractEmployee Assignment(Guid id, string code, string position, DateTime date, decimal workload = 0.25m, DateTime? endDate = null) => new()
     {
         Id = id,
         ContractId = SeededTestData.AlphaContractId,
@@ -272,7 +322,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Position = position,
         Workload = workload,
         StartDate = date,
-        EndDate = date.AddDays(2)
+        EndDate = endDate ?? date.AddDays(2)
     };
 
     private static Data.Models.AttendanceDay AttendanceDay(DateTime date, string? description) => new() { Id = Guid.NewGuid(), Date = date, Workload = 1m, HoursObligation = 8m, Description = description, Schedules = "[]" };
@@ -298,4 +348,5 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     private static Data.Models.ProjectDay ProjectDay(DateTime date, decimal workload = 0.25m) => new() { Id = Guid.NewGuid(), Date = date, Workload = workload, HoursObligation = 8m * workload };
     private static TimesheetDraftDay Day(DateTime date, string description) => new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: description, Schedules: []);
     private static TimesheetDraftProject Project(Guid assignmentId, DateTime firstDate) => new(ContractEmployeeId: assignmentId, Days: [new TimesheetDraftProjectDay(firstDate, 0m), new TimesheetDraftProjectDay(firstDate.AddDays(1), 0m), new TimesheetDraftProjectDay(firstDate.AddDays(2), 0m)]);
+    private static DateTime[] MonthDates(int year, int month) => Enumerable.Range(1, DateTime.DaysInMonth(year, month)).Select(day => new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc)).ToArray();
 }

@@ -200,11 +200,10 @@ internal static class TimesheetDrafts
         {
             (TimesheetDraftDayState day, CombinedDay combinedDay) = pair;
             bool businessTrip = TimesheetInterruptions.HasBusinessTripInterruption(day.Description);
-            bool coreOnly = TimesheetInterruptions.HasCoreOnlyInterruption(day.Description);
             bool proportional = TimesheetInterruptions.HasProportionalInterruption(day.Description);
             decimal balance = combinedDay.SkipAllocationRules || !combinedDay.HasAttendanceFilled ? 0m : TimesheetLogic.Round(combinedDay.WorkedHours - combinedDay.AllocatedHours);
             decimal nightHours = TimesheetLogic.CalculateNightHours(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
-            return new TimesheetDayEvaluation(Day: day.Date.Day, WorkedHours: combinedDay.WorkedHours, NightHours: nightHours, AllocatedHours: combinedDay.AllocatedHours, Balance: balance, HasBusinessTrip: businessTrip, HasCoreOnlyInterruption: coreOnly, HasProportionalInterruption: proportional);
+            return new TimesheetDayEvaluation(Day: day.Date.Day, WorkedHours: combinedDay.WorkedHours, NightHours: nightHours, AllocatedHours: combinedDay.AllocatedHours, Balance: balance, HasBusinessTrip: businessTrip, HasCoreOnlyInterruption: false, HasProportionalInterruption: proportional);
         }).ToList();
 
         int fundedDays = snapshot.Days.Count(day => TimesheetLogic.IsWeekday(day.Date));

@@ -1,3 +1,6 @@
+using System.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Data;
@@ -6,7 +9,11 @@ public static class DatabaseSeeder
 {
     public static async Task SeedTestDataAsync(AppDbContext context)
     {
-        if (!context.Employees.Any())
+        // ponytail: This is dev/test seed data. Make it concurrency-safe because multiple app instances
+        // (or parallel test hosts) can hit this at the same time; the upgrade path is a dedicated seed/migrate step.
+        await using IDbContextTransaction tx = await context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
+
+        if (!await context.Employees.AsNoTracking().AnyAsync())
         {
             List<Employee> employees =
             [
@@ -39,7 +46,7 @@ public static class DatabaseSeeder
             await context.SaveChangesAsync();
         }
 
-        if (!context.Projects.Any())
+        if (!await context.Projects.AsNoTracking().AnyAsync())
         {
             List<Project> projects =
             [
@@ -63,7 +70,7 @@ public static class DatabaseSeeder
             await context.SaveChangesAsync();
         }
 
-        if (!context.Contracts.Any())
+        if (!await context.Contracts.AsNoTracking().AnyAsync())
         {
             List<Contract> contracts =
             [
@@ -86,7 +93,7 @@ public static class DatabaseSeeder
             await context.SaveChangesAsync();
         }
 
-        if (!context.ProjectManagers.Any())
+        if (!await context.ProjectManagers.AsNoTracking().AnyAsync())
         {
             List<ProjectManager> projectManagers =
             [
@@ -106,7 +113,7 @@ public static class DatabaseSeeder
             context.ProjectManagers.AddRange(projectManagers);
         }
 
-        if (!context.ContractManagers.Any())
+        if (!await context.ContractManagers.AsNoTracking().AnyAsync())
         {
             List<ContractManager> contractManagers =
             [
@@ -126,7 +133,7 @@ public static class DatabaseSeeder
             context.ContractManagers.AddRange(contractManagers);
         }
 
-        if (!context.ContractEmployees.Any())
+        if (!await context.ContractEmployees.AsNoTracking().AnyAsync())
         {
             List<ContractEmployee> contractEmployees =
             [
@@ -167,7 +174,7 @@ public static class DatabaseSeeder
             context.ContractEmployees.AddRange(contractEmployees);
         }
 
-        if (!context.AttendanceTimesheets.Any())
+        if (!await context.AttendanceTimesheets.AsNoTracking().AnyAsync())
         {
             List<AttendanceTimesheet> attendanceTimesheets =
             [
@@ -208,7 +215,7 @@ public static class DatabaseSeeder
             context.AttendanceTimesheets.AddRange(attendanceTimesheets);
         }
 
-        if (!context.AttendanceDays.Any())
+        if (!await context.AttendanceDays.AsNoTracking().AnyAsync())
         {
             List<AttendanceDay> attendanceDays =
             [
@@ -338,7 +345,7 @@ public static class DatabaseSeeder
             context.AttendanceDays.AddRange(attendanceDays);
         }
 
-        if (!context.ProjectTimesheets.Any())
+        if (!await context.ProjectTimesheets.AsNoTracking().AnyAsync())
         {
             List<ProjectTimesheet> projectTimesheets =
             [
@@ -383,7 +390,7 @@ public static class DatabaseSeeder
             context.ProjectTimesheets.AddRange(projectTimesheets);
         }
 
-        if (!context.ProjectDays.Any())
+        if (!await context.ProjectDays.AsNoTracking().AnyAsync())
         {
             List<ProjectDay> projectDays =
             [
@@ -484,7 +491,7 @@ public static class DatabaseSeeder
             context.ProjectDays.AddRange(projectDays);
         }
 
-        if (!context.Notifications.Any())
+        if (!await context.Notifications.AsNoTracking().AnyAsync())
         {
             List<Notification> notifications =
             [
@@ -524,7 +531,7 @@ public static class DatabaseSeeder
             context.Notifications.AddRange(notifications);
         }
 
-        if (!context.DayInterruptions.Any())
+        if (!await context.DayInterruptions.AsNoTracking().AnyAsync())
         {
             List<DayInterruption> dayInterruptions =
             [
@@ -554,6 +561,7 @@ public static class DatabaseSeeder
         }
 
         await context.SaveChangesAsync();
+        await tx.CommitAsync();
     }
 }
 

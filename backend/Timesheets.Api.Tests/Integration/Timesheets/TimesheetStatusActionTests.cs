@@ -138,13 +138,13 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task GlobalManager_CannotChangeAnotherEmployeesWholeStatus()
+    public async Task GlobalManager_CanChangeAnotherEmployeesWholeStatus()
     {
         UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.MarieEmployeeId, 2024, 12, "approve", null, [Guid.Parse("70000000-0000-0000-0000-000000000002")]);
 
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]

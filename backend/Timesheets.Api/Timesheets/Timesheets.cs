@@ -258,7 +258,6 @@ public static class TimesheetLogic
 internal static class TimesheetInterruptions
 {
     private static readonly HashSet<string> BusinessTripCodes = ["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"];
-    private static readonly HashSet<string> CoreOnlyCodes = ["M", "N", "NK", "NL"];
 
     private static string[] ParseCodes(string? raw)
     {
@@ -272,13 +271,11 @@ internal static class TimesheetInterruptions
 
     public static bool HasBusinessTripInterruption(string? raw) => ParseCodes(raw).Any(BusinessTripCodes.Contains);
 
-    public static bool HasCoreOnlyInterruption(string? raw) => ParseCodes(raw).Any(CoreOnlyCodes.Contains);
-
     public static bool HasProportionalInterruption(string? raw)
     {
         string[] codes = ParseCodes(raw);
-        return codes.Length > 0 && !codes.Any(BusinessTripCodes.Contains) && !codes.Any(CoreOnlyCodes.Contains);
+        return codes.Length > 0 && !codes.Any(BusinessTripCodes.Contains);
     }
 
-    public static bool SkipAllocationRules(string? raw) => HasBusinessTripInterruption(raw) || HasCoreOnlyInterruption(raw) || HasProportionalInterruption(raw);
+    public static bool SkipAllocationRules(string? raw) => HasBusinessTripInterruption(raw) || HasProportionalInterruption(raw);
 }
