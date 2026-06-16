@@ -13,8 +13,8 @@ import { Texts } from "@/constants/texts";
 import { getEmployees } from "@/features/employees/api/getEmployees";
 import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
-import { AddContractEmployeeImpactDialog } from "./AddContractEmployeeImpactDialog";
-import type { addContractEmployee } from "./api/addContractEmployee";
+import { addContractEmployee } from "./api/addContractEmployee";
+import { getAddContractEmployeeImpact } from "./api/addContractEmployeeImpact";
 import type { EmployeeItem as ContractEmployeeItem } from "./api/getContractEmployees";
 
 type AddEmployeeToContractFormValues = z.infer<ReturnType<typeof createSchema>>;
@@ -101,7 +101,6 @@ interface AddEmployeeDialogProps {
 export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectEndDate, existingContractEmployees, onClose, onSaved }: AddEmployeeDialogProps) => {
   const [employees, setEmployees] = useState<ComboBoxItem[]>([]);
   const [employeesLoading, setEmployeesLoading] = useState(false);
-  const [pendingAdd, setPendingAdd] = useState<{ request: Parameters<typeof addContractEmployee>[1]; impactRequest: { employeeId: string; startDate: string; endDate?: string | null } } | null>(null);
   const resolver = useMemo(() => zodResolver(createSchema(existingContractEmployees, projectStartDate, projectEndDate)), [existingContractEmployees, projectEndDate, projectStartDate]);
 
   const form = useForm<AddEmployeeToContractFormValues>({
@@ -147,9 +146,15 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
     const workload = workloadPercentToFraction(values.workload);
     const endDateIso = toIsoOrEmpty(values.endDate) ?? null;
 
-    if (signal.aborted) return;
-    setPendingAdd({
-      request: {
+    const impact = await getAddContractEmployeeImpact(contractId, { employeeId: values.employeeId, startDate: values.startDate, endDate: endDateIso }, signal);
+
+    if (!impact.canAdd) {
+      throw new Error(impact.blockReason ?? Texts.addImpactBlocked);
+    }
+
+    await addContractEmployee(
+      contractId,
+      {
         employeeId: values.employeeId,
         positionCode: values.positionCode.trim(),
         position,
@@ -157,130 +162,118 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
         startDate: values.startDate,
         endDate: endDateIso,
       },
-      impactRequest: { employeeId: values.employeeId, startDate: values.startDate, endDate: endDateIso },
-    });
+      signal,
+    );
+
+    if (signal.aborted) return;
+    onSaved();
+    form.reset();
   };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{Texts.addEmployeePositionToEmployeeTitle}</DialogTitle>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{Texts.addEmployeePositionToEmployeeTitle}</DialogTitle>
+        </DialogHeader>
 
-          <Form {...form}>
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                // Prevent native form submission (would append query params to URL).
-                e.preventDefault();
-              }}
-            >
+        <Form {...form}>
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              // Prevent native form submission (would append query params to URL).
+              e.preventDefault();
+            }}
+          >
+            <FormField
+              control={form.control}
+              name="employeeId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{Texts.employees}</FormLabel>
+                  <FormControl>
+                    <ComboBox value={field.value} items={employees} placeholder={Texts.employees} loading={employeesLoading} onChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="employeeId"
+                name="positionCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{Texts.employees}</FormLabel>
+                    <FormLabel>{Texts.positionCode}</FormLabel>
                     <FormControl>
-                      <ComboBox value={field.value} items={employees} placeholder={Texts.employees} loading={employeesLoading} onChange={field.onChange} />
+                      <Input {...field} />
                     </FormControl>
                   </FormItem>
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="positionCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{Texts.positionCode}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="positionName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{Texts.position}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-              </div>
-
               <FormField
                 control={form.control}
-                name="workload"
+                name="positionName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{Texts.workload}</FormLabel>
+                    <FormLabel>{Texts.position}</FormLabel>
                     <FormControl>
-                      <WorkloadPercentInput {...field} />
+                      <Input {...field} />
                     </FormControl>
                   </FormItem>
                 )}
               />
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                {(["startDate", "endDate"] as const).map((name) => (
-                  <FormField
-                    key={name}
-                    control={form.control}
-                    name={name}
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>{name === "startDate" ? Texts.startDateRequiredLabel : Texts.endDateLabel}</FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            value={field.value}
-                            clearable={name !== "startDate" && !projectEndDate}
-                            disabledDate={(date) => {
-                              const beforeProject = date < parseCalendarDate(projectStartDate);
-                              const afterProject = projectEndDate ? date > parseCalendarDate(projectEndDate) : false;
-                              const outsideSelectedRange = name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false;
-                              return beforeProject || afterProject || outsideSelectedRange;
-                            }}
-                            onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
+            <FormField
+              control={form.control}
+              name="workload"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{Texts.workload}</FormLabel>
+                  <FormControl>
+                    <WorkloadPercentInput {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
-              <DialogFooter>
-                <DialogCancelButton onClick={handleClose} />
-                <DialogConfirmButton disabled={!form.formState.isValid} onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()} />
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
+            <div className="grid grid-cols-2 gap-4">
+              {(["startDate", "endDate"] as const).map((name) => (
+                <FormField
+                  key={name}
+                  control={form.control}
+                  name={name}
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>{name === "startDate" ? Texts.startDateRequiredLabel : Texts.endDateLabel}</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          value={field.value}
+                          clearable={name !== "startDate" && !projectEndDate}
+                          disabledDate={(date) => {
+                            const beforeProject = date < parseCalendarDate(projectStartDate);
+                            const afterProject = projectEndDate ? date > parseCalendarDate(projectEndDate) : false;
+                            const outsideSelectedRange = name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false;
+                            return beforeProject || afterProject || outsideSelectedRange;
+                          }}
+                          onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </div>
 
-      {pendingAdd && (
-        <AddContractEmployeeImpactDialog
-          contractId={contractId}
-          request={pendingAdd.request}
-          impactRequest={pendingAdd.impactRequest}
-          onClose={() => setPendingAdd(null)}
-          onSaved={() => {
-            setPendingAdd(null);
-            onSaved();
-            form.reset();
-          }}
-        />
-      )}
-    </>
+            <DialogFooter>
+              <DialogCancelButton onClick={handleClose} />
+              <DialogConfirmButton disabled={!form.formState.isValid} onClick={(_, signal) => form.handleSubmit((values) => handleSubmit(values, signal))()} />
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 };
