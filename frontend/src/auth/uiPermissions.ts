@@ -69,9 +69,11 @@ const isGlobalManager = (permissions: CurrentUserPermissions) => isAtLeast(permi
 const isManager = (permissions: CurrentUserPermissions) => isAtLeast(permissions.role, UserRole.ContractManager);
 const isOwnEmployee = (currentUserId: string | undefined, employeeId: string | undefined) => Boolean(currentUserId && employeeId && currentUserId === employeeId);
 
-const canSeeProject = (permissions: CurrentUserPermissions, projectId?: string) => isGlobalManager(permissions) || Boolean(projectId && permissions.visibleProjectIds.includes(projectId));
+const canSeeProject = (permissions: CurrentUserPermissions, projectId?: string) =>
+  isManager(permissions) && (isGlobalManager(permissions) || Boolean(projectId && permissions.visibleProjectIds.includes(projectId)));
 
-const canSeeContract = (permissions: CurrentUserPermissions, contractId?: string) => isGlobalManager(permissions) || Boolean(contractId && permissions.visibleContractIds.includes(contractId));
+const canSeeContract = (permissions: CurrentUserPermissions, contractId?: string) =>
+  isManager(permissions) && (isGlobalManager(permissions) || Boolean(contractId && permissions.visibleContractIds.includes(contractId)));
 
 const canManageProject = (permissions: CurrentUserPermissions, projectId?: string) => isGlobalManager(permissions) || Boolean(projectId && permissions.projectManagerOf.includes(projectId));
 
@@ -98,7 +100,7 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
 
   switch (action) {
     case UiAction.nav.projects:
-      return isGlobalManager(permissions) || permissions.visibleProjectIds.length > 0;
+      return isManager(permissions);
     case UiAction.nav.employees:
       return isManager(permissions);
     case UiAction.nav.myTimesheets:
@@ -150,10 +152,12 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
       return isGlobalManager(permissions) || isOwnEmployee(currentUserId, ctx.employeeId);
 
     case UiAction.timesheet.submit:
-    case UiAction.timesheet.finalApprove:
     case UiAction.timesheet.returnWhole:
     case UiAction.timesheet.unlock:
       return isOwnEmployee(currentUserId, ctx.employeeId);
+
+    case UiAction.timesheet.finalApprove:
+      return isGlobalManager(permissions) || isOwnEmployee(currentUserId, ctx.employeeId);
 
     case UiAction.timesheet.approveProject:
     case UiAction.timesheet.returnProject:

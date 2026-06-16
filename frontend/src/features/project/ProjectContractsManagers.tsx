@@ -96,7 +96,6 @@ export const ContractsManagersTable = ({ managers, dispatch }: ContractsManagers
             <TableHead>{Texts.contractId}</TableHead>
             <TableHead>{Texts.personalNumber}</TableHead>
             <TableHead>{Texts.fullName}</TableHead>
-            <TableHead>{Texts.email}</TableHead>
             <TableHead>{Texts.actions}</TableHead>
           </TableRow>
         </TableHeader>
@@ -125,7 +124,6 @@ export const ContractManagerRow = ({ manager, dispatch }: ContractManagerRowProp
       <TableCell>{manager.contractRegistrationNumber || Texts.dash}</TableCell>
       <TableCell>{manager.employeePersonalNumber}</TableCell>
       <TableCell>{manager.employeeFullName}</TableCell>
-      <TableCell>{manager.employeeEmail}</TableCell>
       <TableCell>
         {canRemove && (
           <DeleteButton

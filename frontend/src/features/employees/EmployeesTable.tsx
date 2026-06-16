@@ -31,7 +31,6 @@ export const EmployeesTable = ({ employees, onEmployeeTypeSaved }: EmployeesTabl
             <TableRow>
               <TableHead>{Texts.personalNumber}</TableHead>
               <TableHead>{Texts.fullName}</TableHead>
-              <TableHead>{Texts.email}</TableHead>
               <TableHead>{Texts.employeeType}</TableHead>
               <TableHead>{Texts.actions}</TableHead>
             </TableRow>
@@ -72,7 +71,6 @@ export const EmployeeRow = ({ employee, onEdit }: EmployeeRowProps) => {
     <TableRow className="cursor-pointer" onClick={() => navigate(Routes.employee(employee.id))}>
       <TableCell>{employee.personalNumber ?? Texts.dash}</TableCell>
       <TableCell>{employee.fullName}</TableCell>
-      <TableCell>{employee.email ?? Texts.dash}</TableCell>
       <TableCell>{resolveEmployeeTypeName(employee.employeeTypeId)}</TableCell>
       <TableCell>
         {canEditType && (

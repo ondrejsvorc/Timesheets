@@ -5,7 +5,6 @@ export interface EmployeeItem {
   employeeTypeId: string | null;
   personalNumber: string;
   fullName: string;
-  email: string | null;
   isGlobalManager: boolean;
 }
 

@@ -4,12 +4,12 @@ public sealed class AdministrationOptions
 {
     public const string SectionName = "Administration";
 
-    public string[] RoleManagerEmails { get; init; } = [];
+    public string[] RoleManagerPersonalNumbers { get; init; } = [];
 }
 
 public static class RoleManagerAuthorization
 {
-    public static bool IsRoleManager(string email, AdministrationOptions options) =>
-        options.RoleManagerEmails.Any(roleManagerEmail =>
-            string.Equals(roleManagerEmail.Trim(), email.Trim(), StringComparison.OrdinalIgnoreCase));
+    public static bool IsRoleManager(string personalNumber, AdministrationOptions options) =>
+        options.RoleManagerPersonalNumbers.Any(roleManagerPersonalNumber =>
+            string.Equals(roleManagerPersonalNumber.Trim(), personalNumber.Trim(), StringComparison.OrdinalIgnoreCase));
 }

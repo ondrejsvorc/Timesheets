@@ -13,7 +13,7 @@ public sealed class GetEmployees : IEndpoint
         app.MapGet("/", Handle)
            .WithSummary("Get Employees");
 
-    public sealed record EmployeeItem(Guid Id, Guid? EmployeeTypeId, string PersonalNumber, string FullName, string? Email, bool IsGlobalManager);
+    public sealed record EmployeeItem(Guid Id, Guid? EmployeeTypeId, string PersonalNumber, string FullName, bool IsGlobalManager);
     public sealed record Response(IEnumerable<EmployeeItem> Employees);
 
     private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
@@ -43,7 +43,6 @@ public sealed class GetEmployees : IEndpoint
                 e.EmployeeTypeId,
                 e.PersonalNumber,
                 EmployeeNameFormatter.Format(e.TitleBefore, e.FullName, e.TitleAfter),
-                e.Email,
                 e.IsGlobalManager
             ))
             .ToListAsync(cancellationToken);

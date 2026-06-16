@@ -75,7 +75,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
   const coreLocked = shouldLockByInterruption;
   const allocatedInputHours = (day.coreHours ?? 0) + Object.values(day.projectHours).reduce((sum, hours) => sum + hours, 0);
   const canGenerateAttendance = tracksAttendance && issues.some((issue) => issue.code === "ERR-ATT-13") && (day.attendance.schedules.length > 0 || allocatedInputHours > 0);
-  const stagMissing = issues.some((issue) => issue.code === "ERR-ALL-02") ? roundHours(calculateStagHours(day) - (day.coreHours ?? 0)) : 0;
+  const stagMissing = !tracksAttendance && issues.some((issue) => issue.code === "ERR-ALL-02") ? roundHours(calculateStagHours(day) - (day.coreHours ?? 0)) : 0;
   const displayBalance = stagMissing > 0 ? Math.max(balance, stagMissing) : balance;
   const canAllocateRow = displayBalance > 0 || canGenerateAttendance;
 
@@ -159,19 +159,21 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
           </div>
         </>
       )}
-      <div className={cellClass}>
-        <ValidationField validations={fieldIssues("schedules")}>
-          <StagSchedule
-            schedules={day.attendance.schedules}
-            onSchedulesChange={(schedules) =>
-              update((draft) => {
-                draft.attendance.schedules = schedules;
-              })
-            }
-            disabled={evaluation?.hasProportionalInterruption}
-          />
-        </ValidationField>
-      </div>
+      {!tracksAttendance && (
+        <div className={cellClass}>
+          <ValidationField validations={fieldIssues("schedules")}>
+            <StagSchedule
+              schedules={day.attendance.schedules}
+              onSchedulesChange={(schedules) =>
+                update((draft) => {
+                  draft.attendance.schedules = schedules;
+                })
+              }
+              disabled={evaluation?.hasProportionalInterruption}
+            />
+          </ValidationField>
+        </div>
+      )}
       <div className={cellClass}>
         <ValidationField validations={fieldIssues("coreHours")}>
           <LockableField locked={coreLocked}>

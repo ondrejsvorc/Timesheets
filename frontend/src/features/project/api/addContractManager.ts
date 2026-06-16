@@ -7,7 +7,6 @@ export type AddContractManagerResponse = {
   contractRegistrationNumber: string;
   employeePersonalNumber: string;
   employeeFullName: string;
-  employeeEmail: string;
 };
 
 export const addContractManager = async (contractId: string, employeeId: string, signal: AbortSignal): Promise<AddContractManagerResponse> => {
@@ -28,6 +27,5 @@ export function toProjectContractManagerItem(response: AddContractManagerRespons
     contractRegistrationNumber: response.contractRegistrationNumber,
     employeePersonalNumber: response.employeePersonalNumber,
     employeeFullName: response.employeeFullName,
-    employeeEmail: response.employeeEmail,
   };
 }

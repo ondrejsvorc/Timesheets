@@ -21,7 +21,7 @@ internal static class UserPermissionsLoader
 {
     public static async Task<UserPermissions> LoadAsync(Employee employee, AppDbContext dbContext, IOptions<AdministrationOptions> administrationOptions, CancellationToken cancellationToken)
     {
-        bool isRoleManager = RoleManagerAuthorization.IsRoleManager(employee.Email, administrationOptions.Value);
+        bool isRoleManager = RoleManagerAuthorization.IsRoleManager(employee.PersonalNumber, administrationOptions.Value);
 
         List<Guid> projectManagerOf = await dbContext.ProjectManagers
             .AsNoTracking()

@@ -69,6 +69,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         try
         {
             await db.Database.MigrateAsync();
+            await TestEmployeeFactory.CreateAsync(db, TestAuthHandler.PersonalNumber, "Test User", isGlobalManager: true);
         }
         catch (Exception ex)
         {

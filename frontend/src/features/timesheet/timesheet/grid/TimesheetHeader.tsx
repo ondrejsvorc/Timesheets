@@ -38,7 +38,7 @@ export const TimesheetHeader = ({ readOnly = false, tracksAttendance, projects, 
           <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.nightWork}</div>
         </>
       )}
-      <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">STAG</div>
+      {!tracksAttendance && <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">STAG</div>}
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Kmen ({formatWorkloadPercent(core.workload)}%)</div>
       {projects.map((project) => (
         <div key={project.id} className="h-10 px-2 flex items-center justify-center gap-1 text-center font-medium whitespace-nowrap min-w-0">

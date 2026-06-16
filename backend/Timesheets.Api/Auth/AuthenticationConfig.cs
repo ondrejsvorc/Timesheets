@@ -24,7 +24,6 @@ public static class AuthenticationConfig
             return value;
         }
 
-        string email = Required(dev, "Email");
         string fullName = Required(dev, "FullName");
         string personalNumber = Required(dev, "PersonalNumber");
         string? titleBefore = dev.GetValue<string?>("TitleBefore", null);
@@ -32,7 +31,6 @@ public static class AuthenticationConfig
 
         List<Claim> claims = new()
         {
-            new("eduPersonPrincipalName", email),
             new("displayName", fullName),
             new("personalNumber", personalNumber)
         };
@@ -50,4 +48,3 @@ public static class AuthenticationConfig
         return new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "Dev"));
     }
 }
-

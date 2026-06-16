@@ -43,6 +43,8 @@ file static class TimesheetLimits
 
 public sealed class CombinedTimesheetReviewer
 {
+    private const decimal ShortDayThresholdHours = 6m;
+
     public TimesheetReview Review(CombinedTimesheet timesheet, AttendanceTimesheet attendance, bool tracksAttendance)
     {
         TimesheetReview attendanceReview = tracksAttendance ? new AttendanceTimesheetReviewer().Review(attendance) : new TimesheetReview();
@@ -60,8 +62,38 @@ public sealed class CombinedTimesheetReviewer
         .. ReviewBalance(day),
         .. ReviewStag(day),
         .. ReviewMissingAttendance(day, tracksAttendance),
+        .. ReviewShortDay(day, tracksAttendance),
         .. ReviewWeekendAndHoliday(day)
     ];
+
+    private static IEnumerable<DayIssue> ReviewShortDay(CombinedDay day, bool tracksAttendance)
+    {
+        if (day.SkipAllocationRules)
+        {
+            yield break;
+        }
+
+        if (tracksAttendance)
+        {
+            if (!day.HasAttendanceFilled || day.WorkedHours <= 0m || day.WorkedHours >= ShortDayThresholdHours)
+            {
+                yield break;
+            }
+
+            string message = $"Odpracováno jen {day.WorkedHours:F2} h (méně než 6 h).";
+            yield return new DayIssue("WAR-ALL-04", IssueType.Warning, message, day.Date.Day, "clockIn");
+            yield return new DayIssue("WAR-ALL-04", IssueType.Warning, message, day.Date.Day, "clockOut");
+            yield break;
+        }
+
+        if (day.AllocatedHours <= 0m || day.AllocatedHours >= ShortDayThresholdHours)
+        {
+            yield break;
+        }
+
+        string academicMessage = $"Vykázáno jen {day.AllocatedHours:F2} h (méně než 6 h).";
+        yield return new DayIssue("WAR-ALL-04", IssueType.Warning, academicMessage, day.Date.Day, "allocatedHours");
+    }
 
     private static IEnumerable<DayIssue> ReviewBalance(CombinedDay day)
     {

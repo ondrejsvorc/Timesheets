@@ -66,7 +66,6 @@ public sealed class ExpectedLoadTests : BaseIntegrationTest
                 EmployeeTypeId = TestEmployeeFactory.DefaultEmployeeTypeId,
                 PersonalNumber = $"LOAD-{index:0000}",
                 FullName = $"Load Employee {index:0000}",
-                Email = $"load.employee.{index:0000}@example.com"
             })
             .ToList();
         Employee target = employees[0];

@@ -159,7 +159,6 @@ public static class ConfigureServices
                 options.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
 
                 // Be explicit about claim mapping (IdP can return these either in id_token or from UserInfo).
-                options.ClaimActions.Add(new JsonKeyClaimAction("eduPersonPrincipalName", ClaimValueTypes.String, "eduPersonPrincipalName"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("displayName", ClaimValueTypes.String, "displayName"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("displayName", ClaimValueTypes.String, "name"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("personalNumber", ClaimValueTypes.String, "personalNumber"));

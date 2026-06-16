@@ -39,7 +39,6 @@ import { TimesheetPage, type TimesheetPageData } from "./features/timesheet/time
 export type CurrentUser = {
   id: string;
   fullName: string;
-  email: string;
   employeeType: string | null;
   personalNumber: string;
   titleBefore: string | null;

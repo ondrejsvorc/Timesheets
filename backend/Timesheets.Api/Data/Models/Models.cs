@@ -73,7 +73,6 @@ public sealed class Employee
     public string? TitleBefore { get; set; }
     public string? TitleAfter { get; set; }
     public string FullName { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
     public bool IsGlobalManager { get; set; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

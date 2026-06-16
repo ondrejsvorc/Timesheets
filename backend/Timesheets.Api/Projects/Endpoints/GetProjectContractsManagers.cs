@@ -17,8 +17,7 @@ public sealed class GetProjectContractsManagers : IEndpoint
         Guid EmployeeId,
         string ContractRegistrationNumber,
         string EmployeePersonalNumber,
-        string EmployeeFullName,
-        string EmployeeEmail);
+        string EmployeeFullName);
     public sealed record Response(IEnumerable<ContractManagerItem> Managers);
 
     private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
@@ -38,8 +37,7 @@ public sealed class GetProjectContractsManagers : IEndpoint
                 cm.EmployeeId,
                 cm.Contract.RegistrationNumber,
                 cm.Employee.PersonalNumber,
-                EmployeeNameFormatter.Format(cm.Employee.TitleBefore, cm.Employee.FullName, cm.Employee.TitleAfter),
-                cm.Employee.Email
+                EmployeeNameFormatter.Format(cm.Employee.TitleBefore, cm.Employee.FullName, cm.Employee.TitleAfter)
             ))
             .ToListAsync(cancellationToken);
 

@@ -8,22 +8,21 @@ namespace Timesheets.Api.Auth;
 
 public sealed class UserSynchronizer(AppDbContext dbContext)
 {
-    private readonly record struct SynchronizedUser(string Email, string FullName, string PersonalNumber, string? TitleBefore, string? TitleAfter);
+    private readonly record struct SynchronizedUser(string FullName, string PersonalNumber, string? TitleBefore, string? TitleAfter);
 
     public async Task SyncFromPrincipalAsync(ClaimsPrincipal principal, CancellationToken cancellationToken)
     {
-        SynchronizedUser synchronizedUser = new(principal.GetEmail(), principal.GetFullName(), principal.GetPersonalNumber(), principal.GetTitleBefore(), principal.GetTitleAfter());
+        SynchronizedUser synchronizedUser = new(
+            principal.GetFullName(),
+            principal.GetPersonalNumber(),
+            principal.GetTitleBefore(),
+            principal.GetTitleAfter());
         await SyncUserAsync(synchronizedUser, cancellationToken);
     }
 
     private async Task SyncUserAsync(SynchronizedUser user, CancellationToken cancellationToken)
     {
         Employee? existing = await dbContext.Employees.FirstOrDefaultAsync(e => e.PersonalNumber == user.PersonalNumber, cancellationToken);
-
-        if (existing is null)
-        {
-            existing = await dbContext.Employees.FirstOrDefaultAsync(e => e.Email == user.Email, cancellationToken);
-        }
 
         if (existing is null)
         {
@@ -41,7 +40,6 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
         {
             Id = Guid.NewGuid(),
             FullName = user.FullName,
-            Email = user.Email,
             PersonalNumber = user.PersonalNumber,
             TitleBefore = user.TitleBefore,
             TitleAfter = user.TitleAfter,
@@ -79,12 +77,6 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
         if (existing.TitleAfter != user.TitleAfter)
         {
             existing.TitleAfter = user.TitleAfter;
-            hasChanges = true;
-        }
-
-        if (existing.Email != user.Email)
-        {
-            existing.Email = user.Email;
             hasChanges = true;
         }
 

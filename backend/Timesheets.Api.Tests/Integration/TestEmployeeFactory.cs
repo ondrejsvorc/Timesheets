@@ -8,7 +8,13 @@ internal static class TestEmployeeFactory
 {
     public static readonly Guid DefaultEmployeeTypeId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
-    public static async Task<Employee> CreateAsync(AppDbContext dbContext, string personalNumber, string fullName, string email, Guid? employeeTypeId = null, CancellationToken cancellationToken = default)
+    public static async Task<Employee> CreateAsync(
+        AppDbContext dbContext,
+        string personalNumber,
+        string fullName,
+        Guid? employeeTypeId = null,
+        bool isGlobalManager = false,
+        CancellationToken cancellationToken = default)
     {
         Employee employee = new()
         {
@@ -16,8 +22,7 @@ internal static class TestEmployeeFactory
             EmployeeTypeId = employeeTypeId ?? DefaultEmployeeTypeId,
             PersonalNumber = personalNumber,
             FullName = fullName,
-            Email = email,
-            IsGlobalManager = false,
+            IsGlobalManager = isGlobalManager,
             CreatedAt = DateTime.UtcNow,
         };
 
@@ -26,10 +31,16 @@ internal static class TestEmployeeFactory
         return employee;
     }
 
-    public static async Task<Employee> CreateAsync(IServiceProvider services, string personalNumber, string fullName, string email, Guid? employeeTypeId = null, CancellationToken cancellationToken = default)
+    public static async Task<Employee> CreateAsync(
+        IServiceProvider services,
+        string personalNumber,
+        string fullName,
+        Guid? employeeTypeId = null,
+        bool isGlobalManager = false,
+        CancellationToken cancellationToken = default)
     {
         using IServiceScope scope = services.CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        return await CreateAsync(dbContext, personalNumber, fullName, email, employeeTypeId, cancellationToken);
+        return await CreateAsync(dbContext, personalNumber, fullName, employeeTypeId, isGlobalManager, cancellationToken);
     }
 }

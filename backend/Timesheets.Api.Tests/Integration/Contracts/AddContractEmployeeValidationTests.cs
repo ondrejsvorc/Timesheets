@@ -24,7 +24,7 @@ public class AddContractEmployeeValidationTests : BaseIntegrationTest
         HttpResponseMessage contResp = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", contractRequest);
         contResp.EnsureSuccessStatusCode();
         Guid contractId = (await contResp.Content.ReadFromJsonAsync<CreateProjectContract.Response>())!.ProjectContract.Id;
-        Guid employeeId = await SeedEmployeeAsync($"A{suffix}", $"Jane AddContract {suffix}", $"jane.{suffix}@add.com");
+        Guid employeeId = await SeedEmployeeAsync($"A{suffix}", $"Jane AddContract {suffix}");
         return (contractId, employeeId, projectStart, projectEnd);
     }
 

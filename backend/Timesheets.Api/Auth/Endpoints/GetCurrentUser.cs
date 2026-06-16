@@ -15,7 +15,6 @@ public sealed class GetCurrentUser : IEndpoint
     public sealed record Response(
         Guid Id,
         string FullName,
-        string Email,
         string? EmployeeType,
         string PersonalNumber,
         string? TitleBefore,
@@ -38,7 +37,6 @@ public sealed class GetCurrentUser : IEndpoint
         Response response = new(
             Id: employee.Id,
             FullName: EmployeeNameFormatter.Format(employee.TitleBefore, employee.FullName, employee.TitleAfter),
-            Email: employee.Email,
             EmployeeType: employee.EmployeeTypeId == null ? null : employee.EmployeeType?.Name,
             PersonalNumber: employee.PersonalNumber,
             TitleBefore: employee.TitleBefore,

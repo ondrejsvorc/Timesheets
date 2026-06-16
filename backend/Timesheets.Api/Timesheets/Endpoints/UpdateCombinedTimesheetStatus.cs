@@ -102,7 +102,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return TypedResults.BadRequest($"Akci '{request.Action}' nelze provést ze stavu '{currentStatusName}'.");
         }
 
-        if (user.EmployeeId != attendanceTimesheet.EmployeeId)
+        if (!user.IsGlobalManagerRole() && user.EmployeeId != attendanceTimesheet.EmployeeId)
         {
             return TypedResults.Unauthorized();
         }

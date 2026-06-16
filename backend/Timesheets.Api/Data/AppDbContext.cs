@@ -70,13 +70,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .IsRequired()
             .HasMaxLength(100);
 
-        builder.Property(e => e.Email)
-            .IsRequired()
-            .HasMaxLength(200);
-
-        builder.HasIndex(e => e.Email)
-            .IsUnique();
-
         builder.Property(e => e.PersonalNumber)
             .IsRequired()
             .HasMaxLength(50);

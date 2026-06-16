@@ -66,4 +66,23 @@ public sealed class CombinedTimesheetReviewerTests
         Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ATT-13" && issue.Field == "breakStart");
         Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ATT-13" && issue.Field == "breakEnd");
     }
+
+    [Fact]
+    public void Review_warns_when_worked_hours_are_below_6h_for_attendance_employee()
+    {
+        CombinedTimesheet combined = new(2026, 6, 1, [Day(2, worked: 4, core: 4, projects: 0)]);
+        TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6), tracksAttendance: true);
+
+        Assert.Contains(review.DayIssues, issue => issue.Code == "WAR-ALL-04" && issue.Field == "clockIn");
+        Assert.Contains(review.DayIssues, issue => issue.Code == "WAR-ALL-04" && issue.Field == "clockOut");
+    }
+
+    [Fact]
+    public void Review_warns_when_allocated_hours_are_below_6h_for_academic_employee()
+    {
+        CombinedTimesheet combined = new(2026, 6, 1, [DayWithoutAttendance(2, core: 2, projects: 2, stag: 0)]);
+        TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6), tracksAttendance: false);
+
+        Assert.Contains(review.DayIssues, issue => issue.Code == "WAR-ALL-04" && issue.Field == "allocatedHours");
+    }
 }

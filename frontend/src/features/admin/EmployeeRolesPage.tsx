@@ -76,7 +76,7 @@ const EmployeeRolesPageContent = () => {
   return (
     <>
       <FilterBar filter={filter} setFilter={setFilter}>
-        <FilterSearchInput placeholder={Texts.searchByNameEmailOrNumber} />
+        <FilterSearchInput placeholder={Texts.searchByNameOrNumber} />
       </FilterBar>
       {filtered.length === 0 ? (
         <EmptyState />
@@ -87,7 +87,6 @@ const EmployeeRolesPageContent = () => {
               <TableRow>
                 <TableHead>{Texts.personalNumber}</TableHead>
                 <TableHead>{Texts.fullName}</TableHead>
-                <TableHead>{Texts.email}</TableHead>
                 <TableHead>{Texts.globalManager}</TableHead>
               </TableRow>
             </TableHeader>
@@ -100,7 +99,6 @@ const EmployeeRolesPageContent = () => {
                   <TableRow key={employee.id}>
                     <TableCell>{employee.personalNumber ?? Texts.dash}</TableCell>
                     <TableCell>{employee.fullName}</TableCell>
-                    <TableCell>{employee.email ?? Texts.dash}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Checkbox

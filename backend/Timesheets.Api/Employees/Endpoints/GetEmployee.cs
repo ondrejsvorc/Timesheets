@@ -12,7 +12,7 @@ public sealed class GetEmployee : IEndpoint
         app.MapGet("/{id}", Handle)
            .WithSummary("Get Employee");
 
-    public sealed record Response(Guid Id, Guid? EmployeeTypeId, string FullName, string PersonalNumber, string Email);
+    public sealed record Response(Guid Id, Guid? EmployeeTypeId, string FullName, string PersonalNumber);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
@@ -28,8 +28,7 @@ public sealed class GetEmployee : IEndpoint
                 e.Id,
                 e.EmployeeTypeId,
                 EmployeeNameFormatter.Format(e.TitleBefore, e.FullName, e.TitleAfter),
-                e.PersonalNumber,
-                e.Email
+                e.PersonalNumber
             ))
             .FirstOrDefaultAsync(cancellationToken);
 

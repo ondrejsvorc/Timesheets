@@ -26,7 +26,7 @@ public class ContractEmployeeLifecycleTests : BaseIntegrationTest
         Assert.Equal(HttpStatusCode.Created, contractResponse.StatusCode);
         Guid contractId = (await contractResponse.Content.ReadFromJsonAsync<CreateProjectContract.Response>())!.ProjectContract.Id;
 
-        Guid employeeId = await SeedEmployeeAsync("9999", "John Doe Contract", "john.doe@contracts.com");
+        Guid employeeId = await SeedEmployeeAsync("9999", "John Doe Contract");
         AddContractEmployee.Request addEmployeeRequest = new(employeeId, "POS-01", "Developer", 1.0m, DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(15));
         HttpResponseMessage addResponse = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", addEmployeeRequest);
         Assert.Equal(HttpStatusCode.Created, addResponse.StatusCode);

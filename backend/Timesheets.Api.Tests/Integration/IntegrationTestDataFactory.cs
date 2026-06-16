@@ -47,7 +47,7 @@ internal static class IntegrationTestDataFactory
         Guid contractId = createdContract!.ProjectContract.Id;
 
         string personalNumber = $"9{suffix.PadLeft(3, '0')}";
-        Employee employee = await TestEmployeeFactory.CreateAsync(services, personalNumber, $"Test Employee {suffix}", $"test.employee.{suffix}@example.com");
+        Employee employee = await TestEmployeeFactory.CreateAsync(services, personalNumber, $"Test Employee {suffix}");
         Guid employeeId = employee.Id;
 
         AddContractEmployee.Request addPositionRequest = new(

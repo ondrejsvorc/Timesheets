@@ -33,7 +33,7 @@ const EmployeePageHeader = () => {
   const employee = response.employee;
   const handleBack = useBackFromLocationState(Routes.employees());
   const employeeType = resolveEmployeeTypeName(employee.employeeTypeId);
-  const subtitleParts = [employee.personalNumber, employee.email, employeeType].filter((v) => Boolean(v && v.trim().length > 0));
+  const subtitleParts = [employee.personalNumber, employeeType].filter((v) => Boolean(v && v.trim().length > 0));
 
   return (
     <>

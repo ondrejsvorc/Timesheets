@@ -13,14 +13,8 @@ const createGridTemplate = (projectCount: number, tracksAttendance: boolean) => 
     ? ["minmax(6rem, max-content)" /* Příchod */, "minmax(6rem, max-content)" /* Odchod */, "minmax(6rem, max-content)" /* Pauza od */, "minmax(6rem, max-content)" /* Pauza do */]
     : [];
   const attendanceTotals = tracksAttendance ? ["minmax(4rem, max-content)" /* Docházka */, "minmax(4rem, max-content)" /* Noční */] : [];
-  const base = [
-    "minmax(8rem, max-content)" /* Den */,
-    ...attendanceTimes,
-    "minmax(max-content, max-content)" /* Přerušení */,
-    ...attendanceTotals,
-    "minmax(7rem, max-content)" /* STAG */,
-    "minmax(5rem, 1fr)" /* Kmen */,
-  ];
+  const stag = tracksAttendance ? [] : ["minmax(7rem, max-content)" /* STAG */];
+  const base = ["minmax(8rem, max-content)" /* Den */, ...attendanceTimes, "minmax(max-content, max-content)" /* Přerušení */, ...attendanceTotals, ...stag, "minmax(5rem, 1fr)" /* Kmen */];
   const projectColumns = projectCount > 0 ? [`repeat(${projectCount}, minmax(max-content, 1fr))`] : [];
   const control = "minmax(7rem, max-content)"; /* Kontrola */
   const delta = "minmax(7rem, max-content)"; /* Rozdíl */

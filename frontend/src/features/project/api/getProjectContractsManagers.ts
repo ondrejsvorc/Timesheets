@@ -6,7 +6,6 @@ export interface ProjectContractManagerItem {
   contractRegistrationNumber: string;
   employeePersonalNumber: string;
   employeeFullName: string;
-  employeeEmail: string;
 }
 
 export interface GetProjectContractsManagersResponse {

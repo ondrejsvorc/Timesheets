@@ -46,7 +46,7 @@ export const TimesheetFooter = ({ readOnly = false, tracksAttendance, projects, 
           <div />
         </>
       )}
-      <div />
+      {!tracksAttendance && <div />}
       <div className={cn(centered, totals.coreHours > totals.coreHoursObligation ? "text-red-600" : "text-blue-800")}>
         <Total value={totals.coreHours} obligation={totals.coreHoursObligation} />
       </div>

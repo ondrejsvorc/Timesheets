@@ -5,7 +5,6 @@ export interface EmployeeItem {
   employeeTypeId: string | null;
   fullName: string;
   personalNumber: string;
-  email: string;
 }
 
 export interface GetEmployeeResponse {
