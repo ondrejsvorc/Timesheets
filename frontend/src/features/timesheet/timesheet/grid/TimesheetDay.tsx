@@ -20,6 +20,25 @@ const cellLastClass = "sticky right-0 z-10 border-l border-slate-300";
 const hoursCellClass = "w-full text-right tabular-nums cursor-help border-b border-dotted border-slate-300";
 const dayLevelFields = new Set(["workedHours", "allocatedHours"]);
 
+const roundHours = (hours: number) => Math.round(Math.max(0, hours) * 100) / 100;
+
+const timeToMinutes = (time: string) => {
+  const [hours, minutes] = time.slice(0, 5).split(":").map(Number);
+  return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : 0;
+};
+
+const calculateStagHours = (day: TimesheetDayModel) =>
+  roundHours(
+    Math.min(
+      12,
+      day.attendance.schedules.reduce((total, schedule) => {
+        const start = timeToMinutes(schedule.start);
+        const end = timeToMinutes(schedule.end);
+        return end > start ? total + (end - start) / 60 : total;
+      }, 0),
+    ),
+  );
+
 interface TimesheetDayProps {
   tracksAttendance: boolean;
   day: TimesheetDayModel;
@@ -56,7 +75,9 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
   const coreLocked = shouldLockByInterruption;
   const allocatedInputHours = (day.coreHours ?? 0) + Object.values(day.projectHours).reduce((sum, hours) => sum + hours, 0);
   const canGenerateAttendance = tracksAttendance && issues.some((issue) => issue.code === "ERR-ATT-13") && (day.attendance.schedules.length > 0 || allocatedInputHours > 0);
-  const canAllocateRow = balance > 0 || canGenerateAttendance;
+  const stagMissing = issues.some((issue) => issue.code === "ERR-ALL-02") ? roundHours(calculateStagHours(day) - (day.coreHours ?? 0)) : 0;
+  const displayBalance = stagMissing > 0 ? Math.max(balance, stagMissing) : balance;
+  const canAllocateRow = displayBalance > 0 || canGenerateAttendance;
 
   return (
     <div className={cn("grid grid-cols-subgrid col-[1/-1] border-b border-border/50", isWeekendOrHoliday && "bg-slate-100")}>
@@ -203,10 +224,10 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
           </HoursToHumanTooltip>
         </ValidationField>
       </div>
-      <div className={cn(cellClass, numericCellClass, cellLastClass, balance === 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500")}>
+      <div className={cn(cellClass, numericCellClass, cellLastClass, displayBalance === 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500")}>
         <ValidationField validations={fieldIssues("balance")}>
           <div className="w-full flex items-center justify-end gap-2">
-            <div className="w-full text-right font-bold tabular-nums">{formatHours(balance)}</div>
+            <div className="w-full text-right font-bold tabular-nums">{formatHours(displayBalance)}</div>
             <Button
               variant="ghost"
               size="icon"
