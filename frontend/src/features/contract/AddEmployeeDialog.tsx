@@ -170,7 +170,13 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
           </DialogHeader>
 
           <Form {...form}>
-            <form className="space-y-4">
+            <form
+              className="space-y-4"
+              onSubmit={(e) => {
+                // Prevent native form submission (would append query params to URL).
+                e.preventDefault();
+              }}
+            >
               <FormField
                 control={form.control}
                 name="employeeId"
