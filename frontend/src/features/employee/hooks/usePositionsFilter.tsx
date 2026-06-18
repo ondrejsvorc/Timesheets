@@ -1,5 +1,5 @@
 import { type FilterCriteria, useFilter } from "@/hooks/useFilter";
-import type { EmployeePositionItem } from "../api/getEmployeePositions";
+import type { EmployeePositionItem } from "../api";
 
 export interface PositionsFilterCriteria extends FilterCriteria {}
 

@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import type { EmployeeItem, GetEmployeesResponse } from "@/features/employees/api/getEmployees";
+import type { EmployeeItem, GetEmployeesResponse } from "@/features/employees/api";
 import { type EmployeesFilterCriteria, useEmployeesFilter } from "@/features/employees/hooks/useEmployeesFilters";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { updateEmployeeGlobalManager } from "./api/updateEmployeeGlobalManager";

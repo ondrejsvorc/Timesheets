@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
-import { getEmployees } from "@/features/employees/api/getEmployees";
+import { getEmployees } from "@/features/employees/api";
 import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 import { addContractEmployee } from "./api/addContractEmployee";

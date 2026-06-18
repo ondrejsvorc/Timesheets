@@ -9,7 +9,7 @@ import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { createFilterControls } from "@/utils/createFilterControls";
-import type { GetEmployeesResponse } from "./api/getEmployees";
+import type { GetEmployeesResponse } from "./api";
 import { EmployeesTable } from "./EmployeesTable";
 import { type EmployeesFilterCriteria, useEmployeesFilter } from "./hooks/useEmployeesFilters";
 

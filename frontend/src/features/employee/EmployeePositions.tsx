@@ -12,7 +12,7 @@ import { createFilterControls } from "@/utils/createFilterControls";
 import { formatDate } from "@/utils/formatDate";
 import { formatWorkloadPercent } from "@/utils/formatWorkload";
 import { AddEmployeePositionDialog } from "./AddEmployeePositionDialog";
-import type { EmployeePositionItem, GetEmployeePositionsResponse } from "./api/getEmployeePositions";
+import type { EmployeePositionItem, GetEmployeePositionsResponse } from "./api";
 import { type PositionsFilterCriteria, usePositionsFilter } from "./hooks/usePositionsFilter";
 
 export const EmployeePositions = () => {

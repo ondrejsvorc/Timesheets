@@ -7,8 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Texts } from "@/constants/texts";
-import { getContractCatalog } from "@/features/employees/api/getContractCatalog";
-import { getProjectCatalog, type ProjectCatalogItem } from "@/features/employees/api/getProjectCatalog";
+import { getContractCatalog, getProjectCatalog, type ProjectCatalogItem } from "@/features/employees/api";
 import { cn } from "@/utils/cn";
 
 const roleViewModeOptions: { value: RoleViewMode; label: string }[] = [

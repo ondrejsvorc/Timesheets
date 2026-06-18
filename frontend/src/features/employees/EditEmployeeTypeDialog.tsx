@@ -9,8 +9,7 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { EmployeeTypeAcademicId, EmployeeTypeNonAcademicId } from "@/constants/api";
 import { Texts } from "@/constants/texts";
-import type { EmployeeItem } from "./api/getEmployees";
-import { updateEmployeeType } from "./api/updateEmployeeType";
+import { type EmployeeItem, updateEmployeeType } from "./api";
 
 type FormValues = z.infer<typeof schema>;
 

@@ -8,7 +8,7 @@ import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
-import type { EmployeeItem } from "./api/getEmployees";
+import type { EmployeeItem } from "./api";
 import { EditEmployeeTypeDialog } from "./EditEmployeeTypeDialog";
 
 interface EmployeesTableProps {

@@ -8,7 +8,7 @@ import { TabbedOutlet } from "@/components/shared/layout/TabbedOutlet";
 import { Routes } from "@/constants/routes";
 import { useBackFromLocationState } from "@/hooks/useBackFromLocationState";
 import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
-import type { GetEmployeeResponse } from "./api/getEmployee";
+import type { GetEmployeeResponse } from "./api";
 import { EmployeeTabs } from "./EmployeeTabs";
 
 export const EmployeePage = () => {

@@ -7,7 +7,7 @@ import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Texts } from "@/constants/texts";
-import { type EmployeeItem, getEmployees } from "@/features/employees/api/getEmployees";
+import { type EmployeeItem, getEmployees } from "@/features/employees/api";
 import { addContractManager, getProjectContracts, type ProjectContractItem, type ProjectContractManagerItem } from "./api";
 
 const schema = z.object({

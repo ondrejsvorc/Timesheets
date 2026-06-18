@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
-import { detectTimesheetImport, type ImportResult, importTimesheet, type TimesheetDetectionResult } from "./api/uploadTimesheets";
+import { detectTimesheetImport, type ImportResult, importTimesheet, type TimesheetDetectionResult } from "./api";
 
 interface UploadTimesheetsDialogProps {
   open: boolean;

@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { CZECH_MONTH_NAMES } from "@/features/contract/utils/czechMonths";
-import { type EmployeeTimesheetsFilterCriteria, filterToSearchParams, type GetEmployeeTimesheetsResponse } from "./api/getEmployeeTimesheets";
+import { type EmployeeTimesheetsFilterCriteria, filterToSearchParams, type GetEmployeeTimesheetsResponse } from "./api";
 import { UploadTimesheetsDialog } from "./UploadTimesheetsDialog";
 
 export type EmployeeTimesheetsLoaderData = {
