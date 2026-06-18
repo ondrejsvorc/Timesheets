@@ -189,6 +189,56 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task AllocateTimesheet_ReachesBothMonthlyTargetsForJanuaryWithInterruptions()
+    {
+        int year = 2043;
+        int month = 1;
+        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid assignmentId = Guid.NewGuid();
+        await SeedMonthAsync(attendanceTimesheetId, assignmentId, year, month, totalWorkload: 1m, assignmentWorkload: 0.5m);
+        DateTime[] dates = MonthDates(year, month);
+        Dictionary<int, string> interruptions = new()
+        {
+            [1] = "SCT",
+            [7] = "SCT",
+            [8] = "SCT",
+            [9] = "SCT",
+            [25] = "NL,N"
+        };
+        Dictionary<int, IReadOnlyList<TimeRange>> schedules = new()
+        {
+            [14] = [new TimeRange(new TimeSpan(9, 0, 0), new TimeSpan(9, 50, 0))],
+            [16] = [new TimeRange(new TimeSpan(16, 0, 0), new TimeSpan(16, 50, 0))],
+            [17] = [new TimeRange(new TimeSpan(9, 0, 0), new TimeSpan(9, 50, 0))],
+            [19] = [new TimeRange(new TimeSpan(9, 0, 0), new TimeSpan(9, 50, 0))],
+            [22] = [new TimeRange(new TimeSpan(16, 0, 0), new TimeSpan(16, 50, 0))]
+        };
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => new TimesheetDayEdit(
+                Date: date,
+                ClockIn: null,
+                ClockOut: null,
+                BreakStart: null,
+                BreakEnd: null,
+                CoreHours: 0m,
+                Description: interruptions.GetValueOrDefault(date.Day),
+                Schedules: schedules.GetValueOrDefault(date.Day) ?? [])).ToArray(),
+            Projects: [new ProjectColumnEdit(assignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())]);
+
+        for (int attempt = 0; attempt < 20; attempt++)
+        {
+            HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+            Assert.NotNull(allocation);
+
+            Assert.Equal(88m, TimesheetLogic.Normalize(allocation!.Days.Sum(day => day.CoreHours)));
+            Assert.Equal(88m, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectHours[assignmentId])));
+        }
+    }
+
+    [Fact]
     public async Task AllocateTimesheet_KeepsFixedCoreAndProjectHours()
     {
         DateTime date = new(2036, 5, 2, 0, 0, 0, DateTimeKind.Utc);

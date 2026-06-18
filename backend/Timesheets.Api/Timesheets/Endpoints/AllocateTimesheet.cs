@@ -355,6 +355,8 @@ public sealed class AllocateTimesheet : IEndpoint
                 projectTargets[selectedProjectId.Value] = TimesheetLogic.Normalize(projectTargets[selectedProjectId.Value] - amount);
             }
         }
+
+        CompleteMonthlyTargets(activeDays, sheet.Projects, ref coreTarget, projectTargets);
     }
 
     private static bool CanAllocateAcademicDay(EditableTimesheetDay day) =>
@@ -393,6 +395,98 @@ public sealed class AllocateTimesheet : IEndpoint
         !day.CoreHoursFixed || projects.Any(project => project.IsActiveOn(day.Date) && !project.Locked && !day.ProjectHoursFixed.GetValueOrDefault(project.Id));
 
     private static decimal CalculateDayTotal(EditableTimesheetDay day) => TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
+
+    private static void CompleteMonthlyTargets(IReadOnlyList<EditableTimesheetDay> days, IReadOnlyList<ProjectColumn> projects, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
+    {
+        foreach (ProjectColumn project in projects.OrderBy(_ => Random.Shared.Next()))
+        {
+            decimal target = projectTargets[project.Id];
+            CompleteProjectTarget(days, project, onlyExistingCells: true, allowTinyNewCell: true, ref target);
+            CompleteProjectTarget(days, project, onlyExistingCells: false, allowTinyNewCell: false, ref target);
+            CompleteProjectTarget(days, project, onlyExistingCells: true, allowTinyNewCell: true, ref target);
+            projectTargets[project.Id] = target;
+        }
+
+        CompleteCoreTarget(days, onlyExistingCells: true, allowTinyNewCell: true, ref coreTarget);
+        CompleteCoreTarget(days, onlyExistingCells: false, allowTinyNewCell: false, ref coreTarget);
+        CompleteCoreTarget(days, onlyExistingCells: true, allowTinyNewCell: true, ref coreTarget);
+    }
+
+    private static void CompleteProjectTarget(IReadOnlyList<EditableTimesheetDay> days, ProjectColumn project, bool onlyExistingCells, bool allowTinyNewCell, ref decimal target)
+    {
+        foreach (EditableTimesheetDay day in days.OrderBy(_ => Random.Shared.Next()))
+        {
+            if (target <= 0m)
+            {
+                return;
+            }
+            if (!project.IsActiveOn(day.Date) || project.Locked || day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+            {
+                continue;
+            }
+
+            decimal current = day.ProjectHours.GetValueOrDefault(project.Id);
+            if (onlyExistingCells && current <= 0m)
+            {
+                continue;
+            }
+
+            decimal add = CalculateCompletionAmount(target, CalculateFreeAcademicHours(day), current, allowTinyNewCell);
+            if (add <= 0m)
+            {
+                continue;
+            }
+
+            day.ProjectHours[project.Id] = TimesheetLogic.Normalize(current + add);
+            target = TimesheetLogic.Normalize(target - add);
+        }
+    }
+
+    private static void CompleteCoreTarget(IReadOnlyList<EditableTimesheetDay> days, bool onlyExistingCells, bool allowTinyNewCell, ref decimal target)
+    {
+        foreach (EditableTimesheetDay day in days.OrderBy(_ => Random.Shared.Next()))
+        {
+            if (target <= 0m)
+            {
+                return;
+            }
+            if (day.CoreHoursFixed)
+            {
+                continue;
+            }
+            if (onlyExistingCells && day.CoreHours <= 0m)
+            {
+                continue;
+            }
+
+            decimal add = CalculateCompletionAmount(target, CalculateFreeAcademicHours(day), day.CoreHours, allowTinyNewCell);
+            if (add <= 0m)
+            {
+                continue;
+            }
+
+            day.CoreHours = TimesheetLogic.Normalize(day.CoreHours + add);
+            target = TimesheetLogic.Normalize(target - add);
+        }
+    }
+
+    private static decimal CalculateCompletionAmount(decimal target, decimal free, decimal currentCell, bool allowTinyNewCell)
+    {
+        decimal amount = TimesheetLogic.Normalize(Math.Min(target, free));
+        if (amount <= 0m)
+        {
+            return 0m;
+        }
+        if (currentCell > 0m || amount >= 1m || allowTinyNewCell)
+        {
+            return amount;
+        }
+
+        return 0m;
+    }
+
+    private static decimal CalculateFreeAcademicHours(EditableTimesheetDay day) =>
+        TimesheetLogic.Normalize(CalculateAcademicDayMaxHours(day) - CalculateDayTotal(day));
 
     private static decimal GenerateRandomDayHours()
     {
@@ -513,7 +607,11 @@ public sealed class AllocateTimesheet : IEndpoint
     private static decimal PreferGeneratedCellHours(decimal value, decimal max)
     {
         max = TimesheetLogic.Normalize(max);
-        if (max <= 1m)
+        if (max < 1m)
+        {
+            return 0m;
+        }
+        if (max == 1m)
         {
             return max;
         }
