@@ -13,9 +13,7 @@ import { Texts } from "@/constants/texts";
 import { getEmployees } from "@/features/employees/api";
 import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
-import { addContractEmployee } from "./api/addContractEmployee";
-import { getAddContractEmployeeImpact } from "./api/addContractEmployeeImpact";
-import type { EmployeeItem as ContractEmployeeItem } from "./api/getContractEmployees";
+import { addContractEmployee, type EmployeeItem as ContractEmployeeItem, getAddContractEmployeeImpact } from "./api";
 
 type AddEmployeeToContractFormValues = z.infer<ReturnType<typeof createSchema>>;
 

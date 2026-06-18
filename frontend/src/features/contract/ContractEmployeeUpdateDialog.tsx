@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { ConsequenceDialog } from "@/components/shared/dialogs/ConsequenceDialog";
 import { Texts } from "@/constants/texts";
-import { type ContractEmployeeUpdateImpactResponse, formatUpdateImpactConsequences, getContractEmployeeUpdateImpact } from "./api/contractEmployeeUpdateImpact";
-import { type UpdateContractEmployeeRequest, updateContractEmployee } from "./api/updateContractEmployee";
+import { type ContractEmployeeUpdateImpactResponse, formatUpdateImpactConsequences, getContractEmployeeUpdateImpact, type UpdateContractEmployeeRequest, updateContractEmployee } from "./api";
 
 interface ContractEmployeeUpdateDialogProps {
   contractId: string;

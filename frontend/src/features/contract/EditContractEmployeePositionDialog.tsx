@@ -12,8 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
 import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadFractionToPercent, workloadPercentToFraction } from "@/utils/workloadPercentForm";
-import type { PositionItem } from "./api/getContractEmployees";
-import type { UpdateContractEmployeeRequest } from "./api/updateContractEmployee";
+import type { PositionItem, UpdateContractEmployeeRequest } from "./api";
 
 type EditPositionFormValues = z.infer<ReturnType<typeof createSchema>>;
 
