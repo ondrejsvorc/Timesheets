@@ -1,9 +1,7 @@
 using System.Net;
-using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
-using Timesheets.Api.Projects;
 using Xunit;
 
 namespace Timesheets.Api.Tests.Integration.Projects;
@@ -18,21 +16,6 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 3, 31, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.DeleteAsync($"/api/projects/{setup.ProjectId}");
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetProjectDeleteImpact_WithDraftTimesheets_AllowsDelete()
-    {
-        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 2, 28, 0, 0, 0, DateTimeKind.Utc));
-        HttpResponseMessage response = await Client.GetAsync($"/api/projects/{setup.ProjectId}/delete-impact");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        ProjectDeleteImpact? impact = await response.Content.ReadFromJsonAsync<ProjectDeleteImpact>();
-        Assert.NotNull(impact);
-        Assert.True(impact!.CanDelete);
-        Assert.False(impact.HasProtectedTimesheets);
-        Assert.True(impact.DraftProjectTimesheetCount > 0);
-        Assert.Equal(1, impact.ContractCount);
     }
 
     [Fact]
@@ -56,19 +39,11 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task GetProjectDeleteImpact_WithSubmittedTimesheets_ReportsProtectedCounts()
+    public async Task GetProjectDeleteImpactRoute_IsRemoved()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 7, 31, 0, 0, 0, DateTimeKind.Utc));
-        Guid projectTimesheetId = await GetSingleProjectTimesheetIdAsync(setup.ContractEmployeeId);
-        await SetProjectTimesheetStatusAsync(projectTimesheetId, TestTimesheetStatusIds.Submitted);
         HttpResponseMessage response = await Client.GetAsync($"/api/projects/{setup.ProjectId}/delete-impact");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        ProjectDeleteImpact? impact = await response.Content.ReadFromJsonAsync<ProjectDeleteImpact>();
-        Assert.NotNull(impact);
-        Assert.False(impact!.CanDelete);
-        Assert.True(impact.HasProtectedTimesheets);
-        Assert.Equal(1, impact.SubmittedProjectTimesheetCount);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

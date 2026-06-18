@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { DeleteIcon, EditIcon } from "@/components/shared/buttons/ActionButtons";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -11,8 +12,7 @@ import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { cn } from "@/utils/cn";
 import { formatDate } from "@/utils/formatDate";
-import { archiveProject, type ProjectItem, unarchiveProject } from "./api";
-import { ProjectDeleteDialog } from "./ProjectDeleteDialog";
+import { archiveProject, deleteProject, type ProjectItem, unarchiveProject } from "./api";
 import { UpdateProjectDialog } from "./UpdateProjectDialog";
 import { getProjectStatus } from "./utils/getProjectStatus";
 
@@ -117,13 +117,15 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
         }}
       />
       {isConfirmOpen && (
-        <ProjectDeleteDialog
-          projectId={project.id}
-          projectName={project.name}
-          onClose={() => setIsConfirmOpen(false)}
-          onDeleted={() => {
-            onDelete(project.id);
-            setIsConfirmOpen(false);
+        <ConfirmationDialog
+          open
+          onCancel={() => setIsConfirmOpen(false)}
+          onConfirm={async (_event, signal) => {
+            await deleteProject(project.id, signal);
+            if (!signal.aborted) {
+              onDelete(project.id);
+              setIsConfirmOpen(false);
+            }
           }}
         />
       )}

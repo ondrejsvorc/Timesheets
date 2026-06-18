@@ -44,18 +44,6 @@ interface UnarchiveProjectResponse {
   project: ProjectItem;
 }
 
-export interface DeleteProjectImpactResponse {
-  contractCount: number;
-  positionCount: number;
-  draftProjectTimesheetCount: number;
-  submittedProjectTimesheetCount: number;
-  approvedProjectTimesheetCount: number;
-  submittedAttendanceTimesheetCount: number;
-  approvedAttendanceTimesheetCount: number;
-  hasProtectedTimesheets: boolean;
-  canDelete: boolean;
-}
-
 export const getProjects = (): Promise<GetProjectsResponse> => {
   return withDelay("slow", () => {
     return customFetch<GetProjectsResponse>(`${ApiUrl}/projects`);
@@ -108,12 +96,6 @@ export const unarchiveProject = (projectId: string, signal?: AbortSignal): Promi
     }).then((response) => {
       return response.project;
     });
-  });
-};
-
-export const getProjectDeleteImpact = (projectId: string, signal?: AbortSignal): Promise<DeleteProjectImpactResponse> => {
-  return withDelay("fast", () => {
-    return customFetch<DeleteProjectImpactResponse>(`${ApiUrl}/projects/${projectId}/delete-impact`, { signal });
   });
 };
 

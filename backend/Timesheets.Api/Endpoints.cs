@@ -53,7 +53,6 @@ public static class Endpoints
 
     private static void MapProjectEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/projects").WithTags("Projects")
-        .MapEndpoint<GetProjectDeleteImpact>()
         .MapEndpoint<GetProject>()
         .MapEndpoint<UpdateProject>()
         .MapEndpoint<ArchiveProject>()
