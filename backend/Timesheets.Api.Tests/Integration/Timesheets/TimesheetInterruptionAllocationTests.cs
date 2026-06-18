@@ -287,6 +287,46 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task AllocateTimesheet_DoesNotBreakOvernightAttendanceWhenCompletingNonAcademicMonth()
+    {
+        int year = 2051;
+        int month = 1;
+        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid firstAssignmentId = Guid.NewGuid();
+        Guid secondAssignmentId = Guid.NewGuid();
+        await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(firstAssignmentId, 0.25m), (secondAssignmentId, 0.5m)]);
+        DateTime[] dates = MonthDates(year, month);
+        DateTime overnightDate = dates.First(TimesheetLogic.IsWeekday);
+
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => new TimesheetDayEdit(
+                Date: date,
+                ClockIn: date == overnightDate ? new TimeSpan(22, 0, 0) : TimeSpan.Zero,
+                ClockOut: date == overnightDate ? new TimeSpan(7, 0, 0) : TimeSpan.Zero,
+                BreakStart: TimeSpan.Zero,
+                BreakEnd: TimeSpan.Zero,
+                CoreHours: 0m,
+                Description: null,
+                Schedules: [])).ToArray(),
+            Projects:
+            [
+                new ProjectColumnEdit(firstAssignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray()),
+                new ProjectColumnEdit(secondAssignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())
+            ]);
+
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+        Assert.NotNull(allocation);
+
+        Assert.Equal(176m, allocation!.Evaluation.Totals.WorkedHours);
+        Assert.Equal(44m, allocation.Evaluation.Totals.CoreHours);
+        Assert.Equal(44m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
+        Assert.Equal(88m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
+    }
+
+    [Fact]
     public async Task AllocateTimesheet_KeepsFixedCoreAndProjectHours()
     {
         DateTime date = new(2036, 5, 2, 0, 0, 0, DateTimeKind.Utc);
@@ -510,7 +550,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         for (int index = 0; index < assignments.Count; index++)
         {
             (Guid id, decimal workload) = assignments[index];
-            dbContext.ContractEmployees.Add(Assignment(id, $"NONACA-{year}-{month}-{index}", $"Non-academic {index}", firstDate, workload, lastDate));
+            dbContext.ContractEmployees.Add(Assignment(id, $"NONACA-{year}-{month}-{index}", $"Non-academic {year}-{month}-{index}", firstDate, workload, lastDate));
             dbContext.ProjectTimesheets.Add(new Data.Models.ProjectTimesheet
             {
                 Id = Guid.NewGuid(),

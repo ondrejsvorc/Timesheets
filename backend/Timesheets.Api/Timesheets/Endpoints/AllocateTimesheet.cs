@@ -449,6 +449,10 @@ public sealed class AllocateTimesheet : IEndpoint
 
     private static decimal AddAttendanceHours(EditableTimesheetDay day, decimal missing)
     {
+        TimeSpan? originalClockIn = day.ClockIn;
+        TimeSpan? originalClockOut = day.ClockOut;
+        TimeSpan? originalBreakStart = day.BreakStart;
+        TimeSpan? originalBreakEnd = day.BreakEnd;
         decimal current = TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
         decimal add = Math.Min(missing, 12m - current);
         if (add <= 0m)
@@ -458,31 +462,42 @@ public sealed class AllocateTimesheet : IEndpoint
 
         if (current <= 0m || day.ClockIn is null || day.ClockOut is null)
         {
-            decimal generated = Math.Min(add, TimesheetLogic.IsWeekday(day.Date) ? 8m : 12m);
-            SetGeneratedAttendance(day, generated);
-            return TimesheetLogic.Normalize(missing - generated);
+            SetGeneratedAttendance(day, Math.Min(add, TimesheetLogic.IsWeekday(day.Date) ? 8m : 12m));
         }
-
-        bool hadBreak = TimesheetLogic.CalculateBreakHours(day.BreakStart, day.BreakEnd, day.ClockIn, day.ClockOut) > 0m;
-        decimal finalWork = TimesheetLogic.Normalize(current + add);
-        int extraMinutes = (int)Math.Round(add * 60m, MidpointRounding.AwayFromZero);
-        int start = (int)Math.Round(day.ClockIn.Value.TotalMinutes);
-        if (!hadBreak && finalWork > 6m)
+        else
         {
-            int breakStart = start + 4 * 60;
-            day.BreakStart = ToTimeOfDay(breakStart);
-            day.BreakEnd = ToTimeOfDay(breakStart + 30);
-            extraMinutes += 30;
+            bool hadBreak = TimesheetLogic.CalculateBreakHours(day.BreakStart, day.BreakEnd, day.ClockIn, day.ClockOut) > 0m;
+            decimal finalWork = TimesheetLogic.Normalize(current + add);
+            int extraMinutes = (int)Math.Round(add * 60m, MidpointRounding.AwayFromZero);
+            int start = (int)Math.Round(day.ClockIn.Value.TotalMinutes);
+            if (!hadBreak && finalWork > 6m)
+            {
+                int breakStart = start + 4 * 60;
+                day.BreakStart = ToTimeOfDay(breakStart);
+                day.BreakEnd = ToTimeOfDay(breakStart + 30);
+                extraMinutes += 30;
+            }
+
+            int end = (int)Math.Round(day.ClockOut.Value.TotalMinutes);
+            if (end <= start)
+            {
+                end += 24 * 60;
+            }
+
+            day.ClockOut = ToTimeOfDay(end + extraMinutes);
         }
 
-        int end = (int)Math.Round(day.ClockOut.Value.TotalMinutes);
-        if (end <= start)
+        decimal gained = TimesheetLogic.Normalize(TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd) - current);
+        if (gained <= 0m)
         {
-            end += 24 * 60;
+            day.ClockIn = originalClockIn;
+            day.ClockOut = originalClockOut;
+            day.BreakStart = originalBreakStart;
+            day.BreakEnd = originalBreakEnd;
+            return missing;
         }
 
-        day.ClockOut = ToTimeOfDay(end + extraMinutes);
-        return TimesheetLogic.Normalize(missing - add);
+        return TimesheetLogic.Normalize(missing - gained);
     }
 
     private static void SetGeneratedAttendance(EditableTimesheetDay day, decimal work)
