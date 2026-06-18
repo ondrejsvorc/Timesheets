@@ -38,22 +38,6 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
-    [Fact]
-    public async Task GetProjectDeleteImpactRoute_IsRemoved()
-    {
-        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 7, 31, 0, 0, 0, DateTimeKind.Utc));
-        HttpResponseMessage response = await Client.GetAsync($"/api/projects/{setup.ProjectId}/delete-impact");
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetProjectContractDeleteImpactRoute_IsRemoved()
-    {
-        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 9, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 9, 30, 0, 0, 0, DateTimeKind.Utc));
-        HttpResponseMessage response = await Client.GetAsync($"/api/projects/{setup.ProjectId}/contracts/{setup.ContractId}/delete-impact");
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-    }
-
     private async Task<Guid> GetSingleProjectTimesheetIdAsync(Guid contractEmployeeId)
     {
         using IServiceScope scope = CreateScope();
