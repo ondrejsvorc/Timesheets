@@ -16,7 +16,7 @@ import { Texts } from "@/constants/texts";
 import type { EmployeeItem, GetEmployeesResponse } from "@/features/employees/api";
 import { type EmployeesFilterCriteria, useEmployeesFilter } from "@/features/employees/hooks/useEmployeesFilters";
 import { createFilterControls } from "@/utils/createFilterControls";
-import { updateEmployeeGlobalManager } from "./api/updateEmployeeGlobalManager";
+import { updateEmployeeGlobalManager } from "./api";
 
 const EmployeeRolesPageContentLazy = lazy(async () => ({
   default: EmployeeRolesPageContent,
