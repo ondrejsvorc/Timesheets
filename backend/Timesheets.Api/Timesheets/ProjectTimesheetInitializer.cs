@@ -121,7 +121,7 @@ internal static class ProjectTimesheetInitializer
     }
 
     private static HashSet<DateOnly> GetHolidays(int year, ICzechHolidaysFactory holidaysFactory) => holidaysFactory.Create(year).Select(holiday => holiday.Date).ToHashSet();
-    private static ProjectDateRange EffectiveRange(ContractEmployee assignment) => TimesheetDrafts.EffectiveProjectRange(
+    private static ProjectDateRange EffectiveRange(ContractEmployee assignment) => TimesheetEngine.EffectiveProjectRange(
         assignment.StartDate,
         assignment.EndDate,
         assignment.Contract?.Project?.StartDate ?? assignment.StartDate,

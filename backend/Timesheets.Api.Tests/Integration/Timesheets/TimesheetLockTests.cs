@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
-using TimesheetDraft = Timesheets.Api.Timesheets.TimesheetDraft;
-using TimesheetDraftDay = Timesheets.Api.Timesheets.TimesheetDraftDay;
-using TimesheetDraftProject = Timesheets.Api.Timesheets.TimesheetDraftProject;
-using TimesheetDraftProjectDay = Timesheets.Api.Timesheets.TimesheetDraftProjectDay;
+using ProjectColumnEdit = Timesheets.Api.Timesheets.ProjectColumnEdit;
+using ProjectDayEdit = Timesheets.Api.Timesheets.ProjectDayEdit;
+using TimesheetDayEdit = Timesheets.Api.Timesheets.TimesheetDayEdit;
+using TimesheetEditRequest = Timesheets.Api.Timesheets.TimesheetEditRequest;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
 
@@ -24,8 +24,8 @@ public class TimesheetLockTests : BaseIntegrationTest
         Guid projectTimesheetId = Guid.NewGuid();
         await SeedTimesheetsAsync(attendanceTimesheetId, contractEmployeeId, projectTimesheetId, date);
 
-        TimesheetDraft forgedDraft = CreateDraft(contractEmployeeId, date, hours: 9m);
-        HttpResponseMessage forgedResponse = await Client.PutAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}", forgedDraft);
+        TimesheetEditRequest forgedRequest = CreateDraft(contractEmployeeId, date, hours: 9m);
+        HttpResponseMessage forgedResponse = await Client.PutAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}", forgedRequest);
         Assert.Equal(HttpStatusCode.OK, forgedResponse.StatusCode);
 
         using IServiceScope assertionScope = CreateScope();
@@ -45,8 +45,8 @@ public class TimesheetLockTests : BaseIntegrationTest
         Guid projectTimesheetId = Guid.NewGuid();
         await SeedTimesheetsAsync(attendanceTimesheetId, contractEmployeeId, projectTimesheetId, date, locked: false);
 
-        TimesheetDraft draft = CreateDraft(contractEmployeeId, date, hours: 2m, coreHours: 1m);
-        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}", draft);
+        TimesheetEditRequest request = CreateDraft(contractEmployeeId, date, hours: 2m, coreHours: 1m);
+        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using IServiceScope assertionScope = CreateScope();
@@ -67,10 +67,10 @@ public class TimesheetLockTests : BaseIntegrationTest
         await dbContext.SaveChangesAsync();
     }
 
-    private static TimesheetDraft CreateDraft(Guid contractEmployeeId, DateTime date, decimal hours, decimal coreHours = 0m)
+    private static TimesheetEditRequest CreateDraft(Guid contractEmployeeId, DateTime date, decimal hours, decimal coreHours = 0m)
     {
-        TimesheetDraftDay attendanceDay = new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: coreHours, Description: null, Schedules: []);
-        TimesheetDraftProject project = new(ContractEmployeeId: contractEmployeeId, Days: [new TimesheetDraftProjectDay(Date: date, Hours: hours)]);
-        return new TimesheetDraft(Days: [attendanceDay], Projects: [project]);
+        TimesheetDayEdit attendanceDay = new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: coreHours, Description: null, Schedules: []);
+        ProjectColumnEdit project = new(ContractEmployeeId: contractEmployeeId, Days: [new ProjectDayEdit(Date: date, Hours: hours)]);
+        return new TimesheetEditRequest(Days: [attendanceDay], Projects: [project]);
     }
 }

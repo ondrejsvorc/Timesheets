@@ -110,13 +110,13 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         bool statusWillChange = currentStatusId != targetStatus.Id;
         if (targetStatus.Id == TimesheetWorkflow.SubmittedStatusId && statusWillChange)
         {
-            TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(attendanceTimesheet.Id, dbContext, cancellationToken);
-            if (context is null)
+            LoadedTimesheet? loaded = await TimesheetEngine.LoadAsync(attendanceTimesheet.Id, dbContext, cancellationToken);
+            if (loaded is null)
             {
                 return TypedResults.NotFound();
             }
 
-            TimesheetEvaluation evaluation = TimesheetDrafts.Evaluate(context, TimesheetDrafts.Current(context));
+            TimesheetEvaluation evaluation = TimesheetEngine.Evaluate(loaded, TimesheetEngine.CurrentEditRequest(loaded));
             if (evaluation.HasErrors)
             {
                 return TypedResults.BadRequest("Výkaz obsahuje chyby a nelze ho odeslat ke schválení.");

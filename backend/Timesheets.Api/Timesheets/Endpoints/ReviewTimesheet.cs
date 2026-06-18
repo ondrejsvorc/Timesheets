@@ -10,21 +10,21 @@ public sealed class ReviewTimesheet : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
         app.MapPost("/{id}/review", Handle)
-            .WithSummary("Review Timesheet Draft")
-            .WithRequestValidation<TimesheetDraft>();
+            .WithSummary("Review Timesheet Edit")
+            .WithRequestValidation<TimesheetEditRequest>();
 
-    private static async Task<Results<Ok<TimesheetEvaluation>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromBody] TimesheetDraft draft, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<TimesheetEvaluation>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromBody] TimesheetEditRequest request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
-        TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(id, dbContext, cancellationToken);
-        if (context is null)
+        LoadedTimesheet? loaded = await TimesheetEngine.LoadAsync(id, dbContext, cancellationToken);
+        if (loaded is null)
         {
             return TypedResults.NotFound();
         }
-        if (!await user.CanAccessEmployeeAsync(context.Timesheet.EmployeeId, cancellationToken))
+        if (!await user.CanAccessEmployeeAsync(loaded.Timesheet.EmployeeId, cancellationToken))
         {
             return TypedResults.Forbid();
         }
 
-        return TypedResults.Ok(TimesheetDrafts.Evaluate(context, draft));
+        return TypedResults.Ok(TimesheetEngine.Evaluate(loaded, request));
     }
 }

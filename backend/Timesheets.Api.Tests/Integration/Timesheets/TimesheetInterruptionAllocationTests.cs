@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
 using Timesheets.Api.Timesheets;
+using Timesheets.Api.Timesheets.Endpoints;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
 
@@ -24,7 +25,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Guid secondAssignmentId = Guid.NewGuid();
         await SeedAsync(attendanceTimesheetId, firstAssignmentId, secondAssignmentId, firstDate);
 
-        TimesheetDraft draft = new(
+        TimesheetEditRequest request = new(
             Days:
             [
                 Day(firstDate, "NK"),
@@ -37,23 +38,23 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
                 Project(secondAssignmentId, firstDate)
             ]);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", draft);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
 
-        TimesheetAllocationDay doctor = allocation!.Days.Single(day => day.Date == firstDate);
+        AllocateTimesheet.DayResponse doctor = allocation!.Days.Single(day => day.Date == firstDate);
         Assert.Equal(4m, doctor.CoreHours);
         Assert.Equal(2m, doctor.ProjectHours[firstAssignmentId]);
         Assert.Equal(2m, doctor.ProjectHours[secondAssignmentId]);
 
-        TimesheetAllocationDay proportional = allocation.Days.Single(day => day.Date == firstDate.AddDays(1));
+        AllocateTimesheet.DayResponse proportional = allocation.Days.Single(day => day.Date == firstDate.AddDays(1));
         Assert.Equal(4m, proportional.CoreHours);
         Assert.Equal(2m, proportional.ProjectHours[firstAssignmentId]);
         Assert.Equal(2m, proportional.ProjectHours[secondAssignmentId]);
 
-        TimesheetAllocationDay businessTrip = allocation.Days.Single(day => day.Date == firstDate.AddDays(2));
+        AllocateTimesheet.DayResponse businessTrip = allocation.Days.Single(day => day.Date == firstDate.AddDays(2));
         Assert.Equal(0m, businessTrip.CoreHours);
         Assert.All(businessTrip.ProjectHours.Values, hours => Assert.Equal(0m, hours));
     }
@@ -66,10 +67,10 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Guid assignmentId = Guid.NewGuid();
         await SeedSingleDayAsync(attendanceTimesheetId, date, AcademicEmployeeTypeId, assignmentId, assignmentWorkload: 0.75m);
 
-        TimesheetDraft draft = new(
+        TimesheetEditRequest request = new(
             Days:
             [
-                new TimesheetDraftDay(
+                new TimesheetDayEdit(
                     Date: date,
                     ClockIn: null,
                     ClockOut: null,
@@ -79,14 +80,14 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
                     Description: null,
                     Schedules: [new TimeRange(new TimeSpan(8, 0, 0), new TimeSpan(9, 50, 0))])
             ],
-            Projects: [new TimesheetDraftProject(assignmentId, [new TimesheetDraftProjectDay(date, 0m)])]);
+            Projects: [new ProjectColumnEdit(assignmentId, [new ProjectDayEdit(date, 0m)])]);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", draft);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
-        TimesheetAllocationDay day = allocation!.Days.Single();
+        AllocateTimesheet.DayResponse day = allocation!.Days.Single();
         Assert.Equal(2m, day.CoreHours);
         Assert.Equal(6m, day.ProjectHours[assignmentId]);
     }
@@ -99,16 +100,16 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Guid assignmentId = Guid.NewGuid();
         await SeedSingleDayAsync(attendanceTimesheetId, date, NonAcademicEmployeeTypeId, assignmentId);
 
-        TimesheetDraft draft = new(
-            Days: [new TimesheetDraftDay(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: null, Schedules: [])],
-            Projects: [new TimesheetDraftProject(assignmentId, [new TimesheetDraftProjectDay(date, 0m)])]);
+        TimesheetEditRequest request = new(
+            Days: [new TimesheetDayEdit(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: null, Schedules: [])],
+            Projects: [new ProjectColumnEdit(assignmentId, [new ProjectDayEdit(date, 0m)])]);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", draft);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
-        TimesheetAllocationDay day = allocation!.Days.Single();
+        AllocateTimesheet.DayResponse day = allocation!.Days.Single();
         Assert.Equal(0m, day.CoreHours);
         Assert.Equal(0m, day.ProjectHours[assignmentId]);
     }
@@ -123,14 +124,14 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         await SeedMonthAsync(attendanceTimesheetId, assignmentId, year, month, totalWorkload: 1m, assignmentWorkload: 0.5m);
         DateTime[] dates = MonthDates(year, month);
 
-        TimesheetDraft draft = new(
-            Days: dates.Select(date => new TimesheetDraftDay(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: null, Schedules: [])).ToArray(),
-            Projects: [new TimesheetDraftProject(assignmentId, dates.Select(date => new TimesheetDraftProjectDay(date, 0m)).ToArray())]);
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => new TimesheetDayEdit(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: null, Schedules: [])).ToArray(),
+            Projects: [new ProjectColumnEdit(assignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())]);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", draft);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
 
         int weekdays = dates.Count(TimesheetLogic.IsWeekday);
@@ -138,13 +139,48 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation!.Days.Sum(day => day.CoreHours)));
         Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectHours[assignmentId])));
 
-        TimesheetAllocationDay[] activeDays = allocation.Days.Where(day => TimesheetLogic.IsWeekday(day.Date) && TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours[assignmentId]) > 0m).ToArray();
+        AllocateTimesheet.DayResponse[] activeDays = allocation.Days.Where(day => TimesheetLogic.IsWeekday(day.Date) && TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours[assignmentId]) > 0m).ToArray();
         Assert.NotEmpty(activeDays);
         Assert.True(activeDays.Length < weekdays);
-        foreach (TimesheetAllocationDay day in activeDays)
+        foreach (AllocateTimesheet.DayResponse day in activeDays)
         {
             Assert.InRange(TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours[assignmentId]), 6m, 12m);
         }
+    }
+
+    [Fact]
+    public async Task AllocateTimesheet_AddsWeekdaysWhenStagDaysCannotFitMonthlyTargets()
+    {
+        int year = 2038;
+        int month = 1;
+        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid assignmentId = Guid.NewGuid();
+        await SeedMonthAsync(attendanceTimesheetId, assignmentId, year, month, totalWorkload: 0.1m, assignmentWorkload: 0.05m);
+        DateTime[] dates = MonthDates(year, month);
+        HashSet<DateTime> weekendStagDates = dates.Where(date => !TimesheetLogic.IsWeekday(date)).Take(2).ToHashSet();
+
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => new TimesheetDayEdit(
+                Date: date,
+                ClockIn: null,
+                ClockOut: null,
+                BreakStart: null,
+                BreakEnd: null,
+                CoreHours: 0m,
+                Description: null,
+                Schedules: weekendStagDates.Contains(date) ? [new TimeRange(new TimeSpan(9, 0, 0), new TimeSpan(10, 0, 0))] : [])).ToArray(),
+            Projects: [new ProjectColumnEdit(assignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())]);
+
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+        Assert.NotNull(allocation);
+
+        int weekdays = dates.Count(TimesheetLogic.IsWeekday);
+        decimal expectedColumnTotal = TimesheetLogic.Normalize(weekdays * 8m * 0.05m);
+        Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation!.Days.Sum(day => day.CoreHours)));
+        Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectHours[assignmentId])));
     }
 
     [Fact]
@@ -155,16 +191,16 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Guid assignmentId = Guid.NewGuid();
         await SeedSingleDayAsync(attendanceTimesheetId, date, AcademicEmployeeTypeId, assignmentId, assignmentWorkload: 0.5m);
 
-        TimesheetDraft draft = new(
-            Days: [new TimesheetDraftDay(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 1.83m, Description: null, Schedules: [new TimeRange(new TimeSpan(16, 0, 0), new TimeSpan(16, 50, 0))], CoreHoursFixed: true)],
-            Projects: [new TimesheetDraftProject(assignmentId, [new TimesheetDraftProjectDay(date, 3m, HoursFixed: true)])]);
+        TimesheetEditRequest request = new(
+            Days: [new TimesheetDayEdit(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 1.83m, Description: null, Schedules: [new TimeRange(new TimeSpan(16, 0, 0), new TimeSpan(16, 50, 0))], CoreHoursFixed: true)],
+            Projects: [new ProjectColumnEdit(assignmentId, [new ProjectDayEdit(date, 3m, HoursFixed: true)])]);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=2", draft);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=2", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
-        TimesheetAllocationDay day = allocation!.Days.Single();
+        AllocateTimesheet.DayResponse day = allocation!.Days.Single();
         Assert.Equal(1.83m, day.CoreHours);
         Assert.Equal(3m, day.ProjectHours[assignmentId]);
     }
@@ -176,16 +212,16 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Guid attendanceTimesheetId = Guid.NewGuid();
         await SeedSingleDayAsync(attendanceTimesheetId, date, NonAcademicEmployeeTypeId, assignmentId: null);
 
-        TimesheetDraft draft = new(
-            Days: [new TimesheetDraftDay(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: null, Schedules: [new TimeRange(new TimeSpan(16, 50, 0), new TimeSpan(17, 50, 0))])],
+        TimesheetEditRequest request = new(
+            Days: [new TimesheetDayEdit(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: null, Schedules: [new TimeRange(new TimeSpan(16, 50, 0), new TimeSpan(17, 50, 0))])],
             Projects: []);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=2", draft);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=2", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
-        TimesheetAllocationDay day = allocation!.Days.Single();
+        AllocateTimesheet.DayResponse day = allocation!.Days.Single();
         Assert.Equal(new int?[] { 1010, 1070 }, day.Work);
         Assert.Equal(new int?[] { null, null }, day.Break);
         Assert.Equal(1m, day.CoreHours);
@@ -200,10 +236,10 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Guid assignmentId = Guid.NewGuid();
         await SeedSingleDayAsync(attendanceTimesheetId, date, AcademicEmployeeTypeId, assignmentId, assignmentWorkload: 0.25m);
 
-        TimesheetDraft draft = new(
+        TimesheetEditRequest request = new(
             Days:
             [
-                new TimesheetDraftDay(
+                new TimesheetDayEdit(
                     Date: date,
                     ClockIn: null,
                     ClockOut: null,
@@ -213,14 +249,14 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
                     Description: null,
                     Schedules: [new TimeRange(new TimeSpan(9, 0, 0), new TimeSpan(12, 50, 0))])
             ],
-            Projects: [new TimesheetDraftProject(assignmentId, [new TimesheetDraftProjectDay(date, 0m)])]);
+            Projects: [new ProjectColumnEdit(assignmentId, [new ProjectDayEdit(date, 0m)])]);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=17", draft);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=17", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
-        TimesheetAllocationDay day = allocation!.Days.Single();
+        AllocateTimesheet.DayResponse day = allocation!.Days.Single();
         Assert.True(day.CoreHours >= 3.83m);
         Assert.DoesNotContain(allocation.Evaluation.DayIssues, issue => issue.Code == "ERR-ALL-02" && issue.Day == 17);
     }
@@ -232,16 +268,16 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Guid attendanceTimesheetId = Guid.NewGuid();
         await SeedSingleDayAsync(attendanceTimesheetId, date, NonAcademicEmployeeTypeId, assignmentId: null);
 
-        TimesheetDraft draft = new(
-            Days: [new TimesheetDraftDay(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 7m, Description: null, Schedules: [], CoreHoursFixed: true)],
+        TimesheetEditRequest request = new(
+            Days: [new TimesheetDayEdit(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 7m, Description: null, Schedules: [], CoreHoursFixed: true)],
             Projects: []);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=2", draft);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=2", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        TimesheetAllocation? allocation = await response.Content.ReadFromJsonAsync<TimesheetAllocation>();
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
-        TimesheetAllocationDay day = allocation!.Days.Single();
+        AllocateTimesheet.DayResponse day = allocation!.Days.Single();
         Assert.Equal(new int?[] { 420, 870 }, day.Work);
         Assert.Equal(new int?[] { 660, 690 }, day.Break);
     }
@@ -380,7 +416,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     };
 
     private static Data.Models.ProjectDay ProjectDay(DateTime date, decimal workload = 0.25m) => new() { Id = Guid.NewGuid(), Date = date, Workload = workload, HoursObligation = 8m * workload };
-    private static TimesheetDraftDay Day(DateTime date, string description) => new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: description, Schedules: []);
-    private static TimesheetDraftProject Project(Guid assignmentId, DateTime firstDate) => new(ContractEmployeeId: assignmentId, Days: [new TimesheetDraftProjectDay(firstDate, 0m), new TimesheetDraftProjectDay(firstDate.AddDays(1), 0m), new TimesheetDraftProjectDay(firstDate.AddDays(2), 0m)]);
+    private static TimesheetDayEdit Day(DateTime date, string description) => new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: description, Schedules: []);
+    private static ProjectColumnEdit Project(Guid assignmentId, DateTime firstDate) => new(ContractEmployeeId: assignmentId, Days: [new ProjectDayEdit(firstDate, 0m), new ProjectDayEdit(firstDate.AddDays(1), 0m), new ProjectDayEdit(firstDate.AddDays(2), 0m)]);
     private static DateTime[] MonthDates(int year, int month) => Enumerable.Range(1, DateTime.DaysInMonth(year, month)).Select(day => new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc)).ToArray();
 }

@@ -6,21 +6,21 @@ using Timesheets.Api.Employees;
 
 namespace Timesheets.Api.Timesheets;
 
-public sealed record TimesheetDraftDay(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal CoreHours, string? Description, IReadOnlyList<TimeRange>? Schedules, bool CoreHoursFixed = false);
+public sealed record TimesheetDayEdit(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal CoreHours, string? Description, IReadOnlyList<TimeRange>? Schedules, bool CoreHoursFixed = false);
 
-public sealed record TimesheetDraftProjectDay(DateTime Date, decimal Hours, bool HoursFixed = false);
+public sealed record ProjectDayEdit(DateTime Date, decimal Hours, bool HoursFixed = false);
 
-public sealed record TimesheetDraftProject(Guid ContractEmployeeId, IReadOnlyList<TimesheetDraftProjectDay> Days);
+public sealed record ProjectColumnEdit(Guid ContractEmployeeId, IReadOnlyList<ProjectDayEdit> Days);
 
-public sealed record TimesheetDraft(IReadOnlyList<TimesheetDraftDay> Days, IReadOnlyList<TimesheetDraftProject>? Projects);
+public sealed record TimesheetEditRequest(IReadOnlyList<TimesheetDayEdit> Days, IReadOnlyList<ProjectColumnEdit>? Projects);
 
-public sealed class TimesheetDraftValidator : AbstractValidator<TimesheetDraft>
+public sealed class TimesheetEditRequestValidator : AbstractValidator<TimesheetEditRequest>
 {
-    public TimesheetDraftValidator()
+    public TimesheetEditRequestValidator()
     {
-        RuleFor(draft => draft.Days).NotEmpty().Must(HaveUniqueDates);
-        RuleFor(draft => draft.Projects).Must(HaveUniqueProjects);
-        RuleForEach(draft => draft.Days).ChildRules(day =>
+        RuleFor(request => request.Days).NotEmpty().Must(HaveUniqueDates);
+        RuleFor(request => request.Projects).Must(HaveUniqueProjects);
+        RuleForEach(request => request.Days).ChildRules(day =>
         {
             day.RuleFor(value => value.CoreHours).InclusiveBetween(0m, 12m);
             day.RuleFor(value => value.ClockIn).Must(IsTimeOfDay);
@@ -28,7 +28,7 @@ public sealed class TimesheetDraftValidator : AbstractValidator<TimesheetDraft>
             day.RuleFor(value => value.BreakStart).Must(IsTimeOfDay);
             day.RuleFor(value => value.BreakEnd).Must(IsTimeOfDay);
         });
-        RuleForEach(draft => draft.Projects).ChildRules(project =>
+        RuleForEach(request => request.Projects).ChildRules(project =>
         {
             project.RuleFor(value => value.Days).Must(HaveUniqueDates);
             project.RuleForEach(value => value.Days).ChildRules(day =>
@@ -37,9 +37,9 @@ public sealed class TimesheetDraftValidator : AbstractValidator<TimesheetDraft>
     }
 
     private static bool IsTimeOfDay(TimeSpan? value) => value is null || value >= TimeSpan.Zero && value < TimeSpan.FromDays(1);
-    private static bool HaveUniqueDates(IEnumerable<TimesheetDraftDay> days) => days.Select(day => DateOnly.FromDateTime(day.Date)).Distinct().Count() == days.Count();
-    private static bool HaveUniqueDates(IEnumerable<TimesheetDraftProjectDay> days) => days.Select(day => DateOnly.FromDateTime(day.Date)).Distinct().Count() == days.Count();
-    private static bool HaveUniqueProjects(IEnumerable<TimesheetDraftProject>? projects) => projects is null || projects.Select(project => project.ContractEmployeeId).Distinct().Count() == projects.Count();
+    private static bool HaveUniqueDates(IEnumerable<TimesheetDayEdit> days) => days.Select(day => DateOnly.FromDateTime(day.Date)).Distinct().Count() == days.Count();
+    private static bool HaveUniqueDates(IEnumerable<ProjectDayEdit> days) => days.Select(day => DateOnly.FromDateTime(day.Date)).Distinct().Count() == days.Count();
+    private static bool HaveUniqueProjects(IEnumerable<ProjectColumnEdit>? projects) => projects is null || projects.Select(project => project.ContractEmployeeId).Distinct().Count() == projects.Count();
 }
 
 public sealed record TimesheetDayEvaluation(int Day, decimal WorkedHours, decimal NightHours, decimal AllocatedHours, decimal Balance, bool HasBusinessTrip, bool HasCoreOnlyInterruption, bool HasProportionalInterruption);
@@ -49,9 +49,6 @@ public sealed record TimesheetProjectTotal(Guid ProjectId, decimal Hours, decima
 public sealed record TimesheetTotals(decimal WorkedHours, decimal HoursObligation, decimal AllocatedHours, decimal CoreHours, decimal CoreHoursObligation, IReadOnlyList<TimesheetProjectTotal> Projects);
 
 public sealed record TimesheetEvaluation(bool HasErrors, IReadOnlyList<TimesheetIssue> Issues, IReadOnlyList<DayIssue> DayIssues, IReadOnlyList<TimesheetDayEvaluation> Days, TimesheetTotals Totals);
-
-public sealed record TimesheetAllocationDay(DateTime Date, int?[] Work, int?[] Break, decimal CoreHours, IReadOnlyDictionary<Guid, decimal> ProjectHours);
-public sealed record TimesheetAllocation(IReadOnlyList<TimesheetAllocationDay> Days, TimesheetEvaluation Evaluation);
 
 internal sealed record ProjectDateRange(DateTime StartDate, DateTime? EndDate)
 {
@@ -64,14 +61,14 @@ internal sealed record ProjectDateRange(DateTime StartDate, DateTime? EndDate)
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value.Date : DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
 }
 
-internal sealed record TimesheetDraftContext(Data.Models.AttendanceTimesheet Timesheet, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
+internal sealed record LoadedTimesheet(Data.Models.AttendanceTimesheet Timesheet, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
 
-internal sealed record TimesheetDraftProjectState(Guid Id, decimal Workload, bool Locked, ProjectDateRange Range)
+internal sealed record ProjectColumn(Guid Id, decimal Workload, bool Locked, ProjectDateRange Range)
 {
     public bool IsActiveOn(DateTime date) => Range.Includes(date);
 }
 
-internal sealed class TimesheetDraftDayState
+internal sealed class EditableTimesheetDay
 {
     public required DateTime Date { get; init; }
     public required TimeSpan? ClockIn { get; set; }
@@ -87,11 +84,11 @@ internal sealed class TimesheetDraftDayState
     public required Dictionary<Guid, bool> ProjectHoursFixed { get; init; }
 }
 
-internal sealed record TimesheetDraftSnapshot(IReadOnlyList<TimesheetDraftDayState> Days, IReadOnlyList<TimesheetDraftProjectState> Projects);
+internal sealed record EditableTimesheet(IReadOnlyList<EditableTimesheetDay> Days, IReadOnlyList<ProjectColumn> Projects);
 
-internal static class TimesheetDrafts
+internal static class TimesheetEngine
 {
-    public static async Task<TimesheetDraftContext?> LoadAsync(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    public static async Task<LoadedTimesheet?> LoadAsync(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         Data.Models.AttendanceTimesheet? timesheet = await dbContext.AttendanceTimesheets
             .Include(value => value.Employee)
@@ -130,29 +127,29 @@ internal static class TimesheetDrafts
 
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(timesheet.EmployeeId, timesheet.Year, timesheet.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - projects.Sum(project => project.Workload));
-        return new TimesheetDraftContext(Timesheet: timesheet, Projects: projects, ProjectRanges: projectRanges, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
+        return new LoadedTimesheet(Timesheet: timesheet, Projects: projects, ProjectRanges: projectRanges, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
     }
 
-    public static TimesheetDraftSnapshot BuildSnapshot(TimesheetDraftContext context, TimesheetDraft draft)
+    public static EditableTimesheet BuildEditableTimesheet(LoadedTimesheet loaded, TimesheetEditRequest request)
     {
-        Dictionary<DateOnly, TimesheetDraftDay> days = draft.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
-        Dictionary<Guid, TimesheetDraftProject> projects = (draft.Projects ?? []).ToDictionary(project => project.ContractEmployeeId);
-        List<TimesheetDraftProjectState> projectStates = ProjectStates(context);
-        Dictionary<Guid, TimesheetDraftProjectState> projectStatesById = projectStates.ToDictionary(project => project.Id);
+        Dictionary<DateOnly, TimesheetDayEdit> days = request.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
+        Dictionary<Guid, ProjectColumnEdit> projects = (request.Projects ?? []).ToDictionary(project => project.ContractEmployeeId);
+        List<ProjectColumn> projectStates = ProjectColumns(loaded);
+        Dictionary<Guid, ProjectColumn> projectStatesById = projectStates.ToDictionary(project => project.Id);
 
-        List<TimesheetDraftDayState> dayStates = context.Timesheet.Days
+        List<EditableTimesheetDay> dayStates = loaded.Timesheet.Days
             .OrderBy(day => day.Date)
             .Select(day =>
             {
                 DateOnly date = DateOnly.FromDateTime(day.Date);
-                TimesheetDraftDay? update = days.GetValueOrDefault(date);
+                TimesheetDayEdit? update = days.GetValueOrDefault(date);
                 Dictionary<Guid, decimal> projectHours = [];
                 Dictionary<Guid, bool> projectHoursFixed = [];
 
-                foreach (Data.Models.ProjectTimesheet project in context.Projects)
+                foreach (Data.Models.ProjectTimesheet project in loaded.Projects)
                 {
-                    TimesheetDraftProjectState projectState = projectStatesById[project.ContractEmployeeId];
-                    TimesheetDraftProject? projectUpdate = projects.GetValueOrDefault(project.ContractEmployeeId);
+                    ProjectColumn projectState = projectStatesById[project.ContractEmployeeId];
+                    ProjectColumnEdit? projectUpdate = projects.GetValueOrDefault(project.ContractEmployeeId);
                     if (project.LockedAt is not null || !projectState.IsActiveOn(day.Date))
                     {
                         projectUpdate = null;
@@ -161,13 +158,13 @@ internal static class TimesheetDrafts
                     decimal persisted = projectState.IsActiveOn(day.Date)
                         ? project.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date)?.Hours ?? 0m
                         : 0m;
-                    TimesheetDraftProjectDay? projectDayUpdate = projectUpdate?.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date);
+                    ProjectDayEdit? projectDayUpdate = projectUpdate?.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date);
                     decimal hours = projectDayUpdate?.Hours ?? persisted;
                     projectHours[project.ContractEmployeeId] = TimesheetLogic.Normalize(hours);
                     projectHoursFixed[project.ContractEmployeeId] = projectState.IsActiveOn(day.Date) && (projectDayUpdate?.HoursFixed ?? false);
                 }
 
-                return new TimesheetDraftDayState
+                return new EditableTimesheetDay
                 {
                     Date = day.Date,
                     ClockIn = update is null ? day.ClockIn : update.ClockIn,
@@ -185,51 +182,51 @@ internal static class TimesheetDrafts
             })
             .ToList();
 
-        return new TimesheetDraftSnapshot(Days: dayStates, Projects: projectStates);
+        return new EditableTimesheet(Days: dayStates, Projects: projectStates);
     }
 
-    public static TimesheetDraft Current(TimesheetDraftContext context)
+    public static TimesheetEditRequest CurrentEditRequest(LoadedTimesheet loaded)
     {
-        TimesheetDraftDay[] days = context.Timesheet.Days.Select(day => new TimesheetDraftDay(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, CoreHours: day.CoreHours, Description: day.Description, Schedules: ParseSchedules(day.Schedules))).ToArray();
-        TimesheetDraftProject[] projects = context.Projects.Select(project =>
+        TimesheetDayEdit[] days = loaded.Timesheet.Days.Select(day => new TimesheetDayEdit(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, CoreHours: day.CoreHours, Description: day.Description, Schedules: ParseSchedules(day.Schedules))).ToArray();
+        ProjectColumnEdit[] projects = loaded.Projects.Select(project =>
         {
-            TimesheetDraftProjectDay[] projectDays = project.Days.Select(day => new TimesheetDraftProjectDay(Date: day.Date, Hours: day.Hours)).ToArray();
-            return new TimesheetDraftProject(ContractEmployeeId: project.ContractEmployeeId, Days: projectDays);
+            ProjectDayEdit[] projectDays = project.Days.Select(day => new ProjectDayEdit(Date: day.Date, Hours: day.Hours)).ToArray();
+            return new ProjectColumnEdit(ContractEmployeeId: project.ContractEmployeeId, Days: projectDays);
         }).ToArray();
-        return new TimesheetDraft(Days: days, Projects: projects);
+        return new TimesheetEditRequest(Days: days, Projects: projects);
     }
 
-    public static TimesheetEvaluation Evaluate(TimesheetDraftContext context, TimesheetDraft draft) => Evaluate(context, BuildSnapshot(context, draft));
+    public static TimesheetEvaluation Evaluate(LoadedTimesheet loaded, TimesheetEditRequest request) => Evaluate(loaded, BuildEditableTimesheet(loaded, request));
 
-    public static TimesheetEvaluation Evaluate(TimesheetDraftContext context, TimesheetDraftSnapshot snapshot)
+    public static TimesheetEvaluation Evaluate(LoadedTimesheet loaded, EditableTimesheet sheet)
     {
-        bool tracksAttendance = EmployeeTypes.TracksAttendance(context.Timesheet.Employee.EmployeeTypeId);
-        foreach (TimesheetDraftDayState day in snapshot.Days)
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.Timesheet.Employee.EmployeeTypeId);
+        foreach (EditableTimesheetDay day in sheet.Days)
         {
-            TimesheetInterruptionHours.ApplyToDayState(day, snapshot.Projects, context.TotalWorkload, tracksAttendance);
+            TimesheetInterruptionHours.ApplyToDayState(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance);
         }
 
-        List<AttendanceDay> attendanceDays = snapshot.Days.Select(day => new AttendanceDay(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, OtherInterruption: day.Description, Schedules: day.Schedules, IsHoliday: day.IsHoliday, Workload: context.TotalWorkload)).ToList();
-        AttendanceTimesheet attendance = new(EmployeePersonalNumber: context.Timesheet.Employee.PersonalNumber, EmployeeName: context.Timesheet.Employee.FullName, Workload: context.TotalWorkload, Year: context.Timesheet.Year, Month: context.Timesheet.Month, Days: attendanceDays);
+        List<AttendanceDay> attendanceDays = sheet.Days.Select(day => new AttendanceDay(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, OtherInterruption: day.Description, Schedules: day.Schedules, IsHoliday: day.IsHoliday, Workload: loaded.TotalWorkload)).ToList();
+        AttendanceTimesheet attendance = new(EmployeePersonalNumber: loaded.Timesheet.Employee.PersonalNumber, EmployeeName: loaded.Timesheet.Employee.FullName, Workload: loaded.TotalWorkload, Year: loaded.Timesheet.Year, Month: loaded.Timesheet.Month, Days: attendanceDays);
 
-        List<CombinedDay> combinedDays = snapshot.Days.Select(day =>
+        List<CombinedDay> combinedDays = sheet.Days.Select(day =>
         {
             decimal worked = TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
             decimal projectHours = day.ProjectHours.Values.Sum();
             decimal stagHours = TimesheetLogic.CalculateStagHours(day.Schedules);
             bool hasAttendance = tracksAttendance && (day.ClockIn is not null || day.ClockOut is not null);
             bool skipAllocationRules = TimesheetInterruptions.SkipAllocationRules(day.Description);
-            return new CombinedDay(Date: day.Date, IsHoliday: day.IsHoliday, Workload: context.TotalWorkload, CoreWorkload: context.CoreWorkload, WorkedHours: worked, CoreHours: day.CoreHours, ProjectHours: projectHours, StagHours: stagHours, HasAttendanceFilled: hasAttendance, SkipAllocationRules: skipAllocationRules);
+            return new CombinedDay(Date: day.Date, IsHoliday: day.IsHoliday, Workload: loaded.TotalWorkload, CoreWorkload: loaded.CoreWorkload, WorkedHours: worked, CoreHours: day.CoreHours, ProjectHours: projectHours, StagHours: stagHours, HasAttendanceFilled: hasAttendance, SkipAllocationRules: skipAllocationRules);
         }).ToList();
 
-        CombinedTimesheet combined = new(Year: context.Timesheet.Year, Month: context.Timesheet.Month, CoreWorkload: context.CoreWorkload, Days: combinedDays);
+        CombinedTimesheet combined = new(Year: loaded.Timesheet.Year, Month: loaded.Timesheet.Month, CoreWorkload: loaded.CoreWorkload, Days: combinedDays);
         TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, attendance, tracksAttendance);
         IReadOnlyList<TimesheetIssue> issues = review.Issues.ToArray();
         IReadOnlyList<DayIssue> dayIssues = review.DayIssues.ToArray();
 
-        List<TimesheetDayEvaluation> days = snapshot.Days.Zip(combinedDays).Select(pair =>
+        List<TimesheetDayEvaluation> days = sheet.Days.Zip(combinedDays).Select(pair =>
         {
-            (TimesheetDraftDayState day, CombinedDay combinedDay) = pair;
+            (EditableTimesheetDay day, CombinedDay combinedDay) = pair;
             bool businessTrip = TimesheetInterruptions.HasBusinessTripInterruption(day.Description);
             bool proportional = TimesheetInterruptions.HasProportionalInterruption(day.Description);
             decimal balance = combinedDay.SkipAllocationRules || !combinedDay.HasAttendanceFilled ? 0m : TimesheetLogic.Round(combinedDay.WorkedHours - combinedDay.AllocatedHours);
@@ -237,25 +234,25 @@ internal static class TimesheetDrafts
             return new TimesheetDayEvaluation(Day: day.Date.Day, WorkedHours: combinedDay.WorkedHours, NightHours: nightHours, AllocatedHours: combinedDay.AllocatedHours, Balance: balance, HasBusinessTrip: businessTrip, HasCoreOnlyInterruption: false, HasProportionalInterruption: proportional);
         }).ToList();
 
-        int fundedDays = snapshot.Days.Count(day => TimesheetLogic.IsWeekday(day.Date));
-        List<TimesheetProjectTotal> projectTotals = snapshot.Projects.Select(project =>
+        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWeekday(day.Date));
+        List<TimesheetProjectTotal> projectTotals = sheet.Projects.Select(project =>
         {
-            decimal hours = TimesheetLogic.Normalize(snapshot.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id)));
-            decimal obligation = TimesheetLogic.Normalize(snapshot.Days.Count(day => TimesheetLogic.IsWeekday(day.Date) && project.IsActiveOn(day.Date)) * 8m * project.Workload);
+            decimal hours = TimesheetLogic.Normalize(sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id)));
+            decimal obligation = TimesheetLogic.Normalize(sheet.Days.Count(day => TimesheetLogic.IsWeekday(day.Date) && project.IsActiveOn(day.Date)) * 8m * project.Workload);
             return new TimesheetProjectTotal(ProjectId: project.Id, Hours: hours, Obligation: obligation);
         }).ToList();
 
-        decimal hoursObligation = TimesheetLogic.Normalize(fundedDays * 8m * context.TotalWorkload);
-        TimesheetTotals totals = new(WorkedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.WorkedHours)), HoursObligation: hoursObligation, AllocatedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.AllocatedHours)), CoreHours: TimesheetLogic.Normalize(snapshot.Days.Sum(day => day.CoreHours)), CoreHoursObligation: TimesheetLogic.Normalize(hoursObligation - projectTotals.Sum(project => project.Obligation)), Projects: projectTotals);
+        decimal hoursObligation = TimesheetLogic.Normalize(fundedDays * 8m * loaded.TotalWorkload);
+        TimesheetTotals totals = new(WorkedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.WorkedHours)), HoursObligation: hoursObligation, AllocatedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.AllocatedHours)), CoreHours: TimesheetLogic.Normalize(sheet.Days.Sum(day => day.CoreHours)), CoreHoursObligation: TimesheetLogic.Normalize(hoursObligation - projectTotals.Sum(project => project.Obligation)), Projects: projectTotals);
 
         return new TimesheetEvaluation(HasErrors: review.HasErrors, Issues: issues, DayIssues: dayIssues, Days: days, Totals: totals);
     }
 
-    public static bool HasInactiveProjectHours(TimesheetDraftContext context, TimesheetDraft draft)
+    public static bool HasInactiveProjectHours(LoadedTimesheet loaded, TimesheetEditRequest request)
     {
-        foreach (TimesheetDraftProject project in draft.Projects ?? [])
+        foreach (ProjectColumnEdit project in request.Projects ?? [])
         {
-            if (!context.ProjectRanges.TryGetValue(project.ContractEmployeeId, out ProjectDateRange? range))
+            if (!loaded.ProjectRanges.TryGetValue(project.ContractEmployeeId, out ProjectDateRange? range))
             {
                 continue;
             }
@@ -269,10 +266,10 @@ internal static class TimesheetDrafts
         return false;
     }
 
-    public static void Apply(TimesheetDraftContext context, TimesheetDraft draft)
+    public static void ApplyEdits(LoadedTimesheet loaded, TimesheetEditRequest request)
     {
-        Dictionary<DateOnly, Data.Models.AttendanceDay> days = context.Timesheet.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
-        foreach (TimesheetDraftDay update in draft.Days)
+        Dictionary<DateOnly, Data.Models.AttendanceDay> days = loaded.Timesheet.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
+        foreach (TimesheetDayEdit update in request.Days)
         {
             if (!days.TryGetValue(DateOnly.FromDateTime(update.Date), out Data.Models.AttendanceDay? day))
             {
@@ -289,10 +286,10 @@ internal static class TimesheetDrafts
             day.HoursWithoutBreak = TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
         }
 
-        Dictionary<Guid, TimesheetDraftProject> projects = (draft.Projects ?? []).ToDictionary(project => project.ContractEmployeeId);
-        foreach (Data.Models.ProjectTimesheet project in context.Projects)
+        Dictionary<Guid, ProjectColumnEdit> projects = (request.Projects ?? []).ToDictionary(project => project.ContractEmployeeId);
+        foreach (Data.Models.ProjectTimesheet project in loaded.Projects)
         {
-            if (context.ProjectRanges.TryGetValue(project.ContractEmployeeId, out ProjectDateRange? range))
+            if (loaded.ProjectRanges.TryGetValue(project.ContractEmployeeId, out ProjectDateRange? range))
             {
                 foreach (Data.Models.ProjectDay day in project.Days.Where(day => !range.Includes(day.Date)))
                 {
@@ -300,7 +297,7 @@ internal static class TimesheetDrafts
                 }
             }
 
-            if (!projects.TryGetValue(project.ContractEmployeeId, out TimesheetDraftProject? update))
+            if (!projects.TryGetValue(project.ContractEmployeeId, out ProjectColumnEdit? update))
             {
                 continue;
             }
@@ -313,40 +310,40 @@ internal static class TimesheetDrafts
 
             Dictionary<DateOnly, Data.Models.ProjectDay> projectDays = project.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
 
-            foreach (TimesheetDraftProjectDay projectDay in update.Days)
+            foreach (ProjectDayEdit projectDay in update.Days)
             {
                 if (projectDays.TryGetValue(DateOnly.FromDateTime(projectDay.Date), out Data.Models.ProjectDay? day))
                 {
-                    bool active = context.ProjectRanges.TryGetValue(project.ContractEmployeeId, out range) && range.Includes(projectDay.Date);
+                    bool active = loaded.ProjectRanges.TryGetValue(project.ContractEmployeeId, out range) && range.Includes(projectDay.Date);
                     day.Hours = active ? TimesheetLogic.Normalize(projectDay.Hours) : 0m;
                 }
             }
         }
 
-        context.Timesheet.UpdatedAt = DateTime.UtcNow;
+        loaded.Timesheet.UpdatedAt = DateTime.UtcNow;
     }
 
     public static async Task ApplyInterruptionHoursAsync(Guid timesheetId, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        TimesheetDraftContext? context = await LoadAsync(timesheetId, dbContext, cancellationToken);
-        if (context is null)
+        LoadedTimesheet? loaded = await LoadAsync(timesheetId, dbContext, cancellationToken);
+        if (loaded is null)
         {
             return;
         }
 
-        TimesheetDraftSnapshot snapshot = BuildSnapshot(context, Current(context));
-        bool tracksAttendance = EmployeeTypes.TracksAttendance(context.Timesheet.Employee.EmployeeTypeId);
-        foreach (TimesheetDraftDayState day in snapshot.Days)
+        EditableTimesheet sheet = BuildEditableTimesheet(loaded, CurrentEditRequest(loaded));
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.Timesheet.Employee.EmployeeTypeId);
+        foreach (EditableTimesheetDay day in sheet.Days)
         {
-            TimesheetInterruptionHours.ApplyToDayState(day, snapshot.Projects, context.TotalWorkload, tracksAttendance);
+            TimesheetInterruptionHours.ApplyToDayState(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance);
         }
 
-        TimesheetDraft draft = new(
-            Days: snapshot.Days.Select(day => new TimesheetDraftDay(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.CoreHours, day.Description, day.Schedules)).ToList(),
-            Projects: snapshot.Projects.Select(project => new TimesheetDraftProject(
+        TimesheetEditRequest request = new(
+            Days: sheet.Days.Select(day => new TimesheetDayEdit(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.CoreHours, day.Description, day.Schedules)).ToList(),
+            Projects: sheet.Projects.Select(project => new ProjectColumnEdit(
                 project.Id,
-                snapshot.Days.Select(day => new TimesheetDraftProjectDay(day.Date, day.ProjectHours.GetValueOrDefault(project.Id))).ToList())).ToList());
-        Apply(context, draft);
+                sheet.Days.Select(day => new ProjectDayEdit(day.Date, day.ProjectHours.GetValueOrDefault(project.Id))).ToList())).ToList());
+        ApplyEdits(loaded, request);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -374,12 +371,12 @@ internal static class TimesheetDrafts
         return new ProjectDateRange(start, end);
     }
 
-    private static List<TimesheetDraftProjectState> ProjectStates(TimesheetDraftContext context) => context.Projects
-        .Select(project => new TimesheetDraftProjectState(
+    private static List<ProjectColumn> ProjectColumns(LoadedTimesheet loaded) => loaded.Projects
+        .Select(project => new ProjectColumn(
             Id: project.ContractEmployeeId,
             Workload: project.Workload,
             Locked: project.LockedAt is not null,
-            Range: context.ProjectRanges.GetValueOrDefault(project.ContractEmployeeId) ?? new ProjectDateRange(DateTime.MinValue, null)))
+            Range: loaded.ProjectRanges.GetValueOrDefault(project.ContractEmployeeId) ?? new ProjectDateRange(DateTime.MinValue, null)))
         .ToList();
 
     private static DateTime Max(DateTime first, DateTime second) => first >= second ? first : second;

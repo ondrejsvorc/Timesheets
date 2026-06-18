@@ -12,54 +12,57 @@ public sealed class AllocateTimesheet : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
         app.MapPost("/{id}/allocate", Handle)
-            .WithSummary("Allocate Timesheet Draft")
-            .WithRequestValidation<TimesheetDraft>();
+            .WithSummary("Allocate Timesheet Edit")
+            .WithRequestValidation<TimesheetEditRequest>();
 
-    private static async Task<Results<Ok<TimesheetAllocation>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromQuery] int? day, [FromBody] TimesheetDraft draft, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
+    public sealed record DayResponse(DateTime Date, int?[] Work, int?[] Break, decimal CoreHours, IReadOnlyDictionary<Guid, decimal> ProjectHours);
+    public sealed record Response(IReadOnlyList<DayResponse> Days, TimesheetEvaluation Evaluation);
+
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromQuery] int? day, [FromBody] TimesheetEditRequest request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
-        TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(id, dbContext, cancellationToken);
-        if (context is null)
+        LoadedTimesheet? loaded = await TimesheetEngine.LoadAsync(id, dbContext, cancellationToken);
+        if (loaded is null)
         {
             return TypedResults.NotFound();
         }
-        if ((!user.IsGlobalManagerRole() && user.EmployeeId != context.Timesheet.EmployeeId) || context.Timesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
+        if ((!user.IsGlobalManagerRole() && user.EmployeeId != loaded.Timesheet.EmployeeId) || loaded.Timesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
         {
             return TypedResults.Forbid();
         }
 
-        return TypedResults.Ok(Allocate(context, draft, day));
+        return TypedResults.Ok(Allocate(loaded, request, day));
     }
 
-    private static TimesheetAllocation Allocate(TimesheetDraftContext context, TimesheetDraft draft, int? dayNumber)
+    private static Response Allocate(LoadedTimesheet loaded, TimesheetEditRequest request, int? dayNumber)
     {
-        TimesheetDraftSnapshot snapshot = TimesheetDrafts.BuildSnapshot(context, draft);
-        bool tracksAttendance = EmployeeTypes.TracksAttendance(context.Timesheet.Employee.EmployeeTypeId);
+        EditableTimesheet sheet = TimesheetEngine.BuildEditableTimesheet(loaded, request);
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.Timesheet.Employee.EmployeeTypeId);
         if (!tracksAttendance && !dayNumber.HasValue)
         {
-            AllocateAcademicMonth(context, snapshot);
-            return ToAllocation(context, snapshot);
+            AllocateAcademicMonth(loaded, sheet);
+            return ToAllocation(loaded, sheet);
         }
 
-        IReadOnlyList<TimesheetDraftDayState> days = dayNumber.HasValue ? snapshot.Days.Where(day => day.Date.Day == dayNumber.Value).ToArray() : OrderDays(snapshot.Days);
-        Dictionary<Guid, decimal> targets = snapshot.Projects.ToDictionary(project => project.Id, project => Math.Max(0m, MonthlyTarget(snapshot, project) - snapshot.Days.Sum(value => value.ProjectHours.GetValueOrDefault(project.Id))));
-        decimal coreTarget = Math.Max(0m, CoreMonthlyTarget(snapshot, context.TotalWorkload) - snapshot.Days.Sum(value => value.CoreHours));
+        IReadOnlyList<EditableTimesheetDay> days = dayNumber.HasValue ? sheet.Days.Where(day => day.Date.Day == dayNumber.Value).ToArray() : OrderDays(sheet.Days);
+        Dictionary<Guid, decimal> targets = sheet.Projects.ToDictionary(project => project.Id, project => Math.Max(0m, MonthlyTarget(sheet, project) - sheet.Days.Sum(value => value.ProjectHours.GetValueOrDefault(project.Id))));
+        decimal coreTarget = Math.Max(0m, CoreMonthlyTarget(sheet, loaded.TotalWorkload) - sheet.Days.Sum(value => value.CoreHours));
 
-        foreach (TimesheetDraftDayState day in days)
+        foreach (EditableTimesheetDay day in days)
         {
             GenerateAttendanceIfMissing(day, tracksAttendance);
-            AllocateDay(day, snapshot.Projects, context.TotalWorkload, tracksAttendance, ref coreTarget, targets);
+            AllocateDay(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance, ref coreTarget, targets);
         }
 
-        return ToAllocation(context, snapshot);
+        return ToAllocation(loaded, sheet);
     }
 
-    private static TimesheetAllocation ToAllocation(TimesheetDraftContext context, TimesheetDraftSnapshot snapshot)
+    private static Response ToAllocation(LoadedTimesheet loaded, EditableTimesheet sheet)
     {
-        List<TimesheetAllocationDay> allocation = snapshot.Days.Select(day => new TimesheetAllocationDay(Date: day.Date, Work: [ToMinutes(day.ClockIn), ToMinutes(day.ClockOut)], Break: [ToMinutes(day.BreakStart), ToMinutes(day.BreakEnd)], CoreHours: day.CoreHours, ProjectHours: day.ProjectHours)).ToList();
-        return new TimesheetAllocation(Days: allocation, Evaluation: TimesheetDrafts.Evaluate(context, snapshot));
+        List<DayResponse> allocation = sheet.Days.Select(day => new DayResponse(Date: day.Date, Work: [ToMinutes(day.ClockIn), ToMinutes(day.ClockOut)], Break: [ToMinutes(day.BreakStart), ToMinutes(day.BreakEnd)], CoreHours: day.CoreHours, ProjectHours: day.ProjectHours)).ToList();
+        return new Response(Days: allocation, Evaluation: TimesheetEngine.Evaluate(loaded, sheet));
     }
 
-    private static void AllocateDay(TimesheetDraftDayState day, IReadOnlyList<TimesheetDraftProjectState> projects, decimal totalWorkload, bool tracksAttendance, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
+    private static void AllocateDay(EditableTimesheetDay day, IReadOnlyList<ProjectColumn> projects, decimal totalWorkload, bool tracksAttendance, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
     {
         if (TimesheetInterruptions.HasBusinessTripInterruption(day.Description))
         {
@@ -72,7 +75,7 @@ public sealed class AllocateTimesheet : IEndpoint
             Dictionary<Guid, decimal> previousProjectHours = projects.ToDictionary(project => project.Id, project => day.ProjectHours.GetValueOrDefault(project.Id));
             TimesheetInterruptionHours.ApplyToDayState(day, projects, totalWorkload, tracksAttendance);
             coreTarget = Math.Max(0m, coreTarget - (day.CoreHours - previousCoreHours));
-            foreach (TimesheetDraftProjectState project in projects)
+            foreach (ProjectColumn project in projects)
             {
                 projectTargets[project.Id] = Math.Max(0m, projectTargets[project.Id] - (day.ProjectHours.GetValueOrDefault(project.Id) - previousProjectHours[project.Id]));
             }
@@ -99,7 +102,7 @@ public sealed class AllocateTimesheet : IEndpoint
         }
 
         List<(Guid ProjectId, decimal Remaining)> projectRemaining = [];
-        foreach (TimesheetDraftProjectState project in projects)
+        foreach (ProjectColumn project in projects)
         {
             bool fixedHours = day.ProjectHoursFixed.GetValueOrDefault(project.Id);
             if (project.IsActiveOn(day.Date) && !project.Locked && !fixedHours && day.ProjectHours.GetValueOrDefault(project.Id) == 0 && projectTargets[project.Id] > 0)
@@ -143,45 +146,60 @@ public sealed class AllocateTimesheet : IEndpoint
         }
     }
 
-    private static void AllocateAcademicMonth(TimesheetDraftContext context, TimesheetDraftSnapshot snapshot)
+    private static void AllocateAcademicMonth(LoadedTimesheet loaded, EditableTimesheet sheet)
     {
-        foreach (TimesheetDraftDayState day in snapshot.Days.Where(day => TimesheetInterruptions.SkipAllocationRules(day.Description)))
+        foreach (EditableTimesheetDay day in sheet.Days.Where(day => TimesheetInterruptions.SkipAllocationRules(day.Description)))
         {
-            TimesheetInterruptionHours.ApplyToDayState(day, snapshot.Projects, context.TotalWorkload, tracksAttendance: false);
+            TimesheetInterruptionHours.ApplyToDayState(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance: false);
         }
 
-        ApplyStagMinimums(snapshot);
+        ApplyStagMinimums(sheet);
 
-        decimal coreTarget = Math.Max(0m, CoreMonthlyTarget(snapshot, context.TotalWorkload) - snapshot.Days.Sum(day => day.CoreHours));
-        Dictionary<Guid, decimal> projectTargets = snapshot.Projects.ToDictionary(project => project.Id, project => Math.Max(0m, MonthlyTarget(snapshot, project) - snapshot.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))));
+        decimal coreTarget = Math.Max(0m, CoreMonthlyTarget(sheet, loaded.TotalWorkload) - sheet.Days.Sum(day => day.CoreHours));
+        Dictionary<Guid, decimal> projectTargets = sheet.Projects.ToDictionary(project => project.Id, project => Math.Max(0m, MonthlyTarget(sheet, project) - sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))));
         decimal remaining = TimesheetLogic.Normalize(coreTarget + projectTargets.Values.Sum());
         if (remaining <= 0m)
         {
             return;
         }
 
-        List<TimesheetDraftDayState> candidates = snapshot.Days
-            .Where(day => IsAcademicAllocationDay(day) && !TimesheetInterruptions.SkipAllocationRules(day.Description) && CanReceiveAnyHours(day, snapshot.Projects))
+        List<EditableTimesheetDay> candidates = sheet.Days
+            .Where(day => IsAcademicAllocationDay(day) && !TimesheetInterruptions.SkipAllocationRules(day.Description) && CanReceiveAnyHours(day, sheet.Projects))
             .ToList();
         if (candidates.Count == 0)
         {
             return;
         }
 
-        List<TimesheetDraftDayState> activeDays = candidates.Where(day => DayTotal(day) > 0m).ToList();
+        List<EditableTimesheetDay> activeDays = candidates.Where(day => DayTotal(day) > 0m).ToList();
         int activeCount = ChooseActiveDayCount(candidates.Count, activeDays.Count, candidates.Sum(DayTotal) + remaining);
-        foreach (TimesheetDraftDayState day in candidates.Where(day => DayTotal(day) == 0m).OrderBy(_ => Random.Shared.Next()).Take(Math.Max(0, activeCount - activeDays.Count)))
+        foreach (EditableTimesheetDay day in candidates.Where(day => DayTotal(day) == 0m).OrderBy(_ => Random.Shared.Next()).Take(Math.Max(0, activeCount - activeDays.Count)))
         {
             activeDays.Add(day);
         }
+        AddCapacityDays(activeDays, candidates, remaining);
 
-        Dictionary<TimesheetDraftDayState, decimal> dayTargets = BuildDayTargets(activeDays, remaining);
-        AllocateIntoDayTargets(dayTargets, snapshot.Projects, ref coreTarget, projectTargets);
+        Dictionary<EditableTimesheetDay, decimal> dayTargets = BuildDayTargets(activeDays, remaining);
+        AllocateIntoDayTargets(dayTargets, sheet.Projects, ref coreTarget, projectTargets);
     }
 
-    private static void ApplyStagMinimums(TimesheetDraftSnapshot snapshot)
+    private static void AddCapacityDays(List<EditableTimesheetDay> activeDays, IReadOnlyList<EditableTimesheetDay> candidates, decimal remaining)
     {
-        foreach (TimesheetDraftDayState day in snapshot.Days.Where(day => !day.CoreHoursFixed && !TimesheetInterruptions.SkipAllocationRules(day.Description)))
+        decimal neededCapacity = TimesheetLogic.Normalize(activeDays.Sum(DayTotal) + remaining);
+        foreach (EditableTimesheetDay day in candidates.Except(activeDays).OrderBy(_ => Random.Shared.Next()))
+        {
+            if (activeDays.Sum(AcademicDayMaxHours) >= neededCapacity)
+            {
+                return;
+            }
+
+            activeDays.Add(day);
+        }
+    }
+
+    private static void ApplyStagMinimums(EditableTimesheet sheet)
+    {
+        foreach (EditableTimesheetDay day in sheet.Days.Where(day => !day.CoreHoursFixed && !TimesheetInterruptions.SkipAllocationRules(day.Description)))
         {
             decimal required = TimesheetLogic.Normalize(TimesheetLogic.CalculateStagHours(day.Schedules) - day.CoreHours);
             if (required > 0m)
@@ -191,13 +209,13 @@ public sealed class AllocateTimesheet : IEndpoint
         }
     }
 
-    private static Dictionary<TimesheetDraftDayState, decimal> BuildDayTargets(IReadOnlyList<TimesheetDraftDayState> days, decimal remaining)
+    private static Dictionary<EditableTimesheetDay, decimal> BuildDayTargets(IReadOnlyList<EditableTimesheetDay> days, decimal remaining)
     {
-        Dictionary<TimesheetDraftDayState, decimal> targets = days.ToDictionary(day => day, DayTotal);
+        Dictionary<EditableTimesheetDay, decimal> targets = days.ToDictionary(day => day, DayTotal);
         decimal finalTotal = TimesheetLogic.Normalize(targets.Values.Sum() + remaining);
         if (finalTotal >= 6m)
         {
-            foreach (TimesheetDraftDayState day in days.OrderBy(_ => Random.Shared.Next()))
+            foreach (EditableTimesheetDay day in days.OrderBy(_ => Random.Shared.Next()))
             {
                 decimal dayMax = AcademicDayMaxHours(day);
                 decimal add = Math.Min(Math.Min(6m - targets[day], dayMax - targets[day]), remaining);
@@ -209,7 +227,7 @@ public sealed class AllocateTimesheet : IEndpoint
             }
         }
 
-        foreach (TimesheetDraftDayState day in days.OrderBy(_ => Random.Shared.Next()))
+        foreach (EditableTimesheetDay day in days.OrderBy(_ => Random.Shared.Next()))
         {
             decimal dayMax = AcademicDayMaxHours(day);
             decimal add = Math.Min(Math.Min(RandomDayHours() - targets[day], dayMax - targets[day]), remaining);
@@ -222,13 +240,13 @@ public sealed class AllocateTimesheet : IEndpoint
 
         while (remaining > 0m)
         {
-            List<TimesheetDraftDayState> available = days.Where(day => targets[day] < AcademicDayMaxHours(day)).ToList();
+            List<EditableTimesheetDay> available = days.Where(day => targets[day] < AcademicDayMaxHours(day)).ToList();
             if (available.Count == 0)
             {
                 break;
             }
 
-            TimesheetDraftDayState day = available[Random.Shared.Next(available.Count)];
+            EditableTimesheetDay day = available[Random.Shared.Next(available.Count)];
             decimal dayMax = AcademicDayMaxHours(day);
             decimal add = Math.Min(Math.Min(RandomAmount(dayMax - targets[day]), dayMax - targets[day]), remaining);
             targets[day] = TimesheetLogic.Normalize(targets[day] + add);
@@ -238,10 +256,10 @@ public sealed class AllocateTimesheet : IEndpoint
         return targets;
     }
 
-    private static bool IsAcademicAllocationDay(TimesheetDraftDayState day) =>
+    private static bool IsAcademicAllocationDay(EditableTimesheetDay day) =>
         TimesheetLogic.IsWeekday(day.Date) || TimesheetLogic.CalculateStagHours(day.Schedules) > 0m;
 
-    private static decimal AcademicDayMaxHours(TimesheetDraftDayState day)
+    private static decimal AcademicDayMaxHours(EditableTimesheetDay day)
     {
         if (TimesheetLogic.IsWeekday(day.Date) || !string.IsNullOrWhiteSpace(day.Description))
         {
@@ -252,13 +270,13 @@ public sealed class AllocateTimesheet : IEndpoint
         return stagHours > 0m ? TimesheetLogic.Normalize(Math.Min(12m, stagHours)) : 0m;
     }
 
-    private static void AllocateIntoDayTargets(Dictionary<TimesheetDraftDayState, decimal> dayTargets, IReadOnlyList<TimesheetDraftProjectState> projects, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
+    private static void AllocateIntoDayTargets(Dictionary<EditableTimesheetDay, decimal> dayTargets, IReadOnlyList<ProjectColumn> projects, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
     {
-        Dictionary<Guid, TimesheetDraftProjectState> projectsById = projects.ToDictionary(project => project.Id);
+        Dictionary<Guid, ProjectColumn> projectsById = projects.ToDictionary(project => project.Id);
         while (coreTarget + projectTargets.Values.Sum() > 0m)
         {
-            List<(TimesheetDraftDayState Day, Guid? ProjectId, decimal Gap, decimal Remaining)> options = [];
-            foreach ((TimesheetDraftDayState day, decimal target) in dayTargets)
+            List<(EditableTimesheetDay Day, Guid? ProjectId, decimal Gap, decimal Remaining)> options = [];
+            foreach ((EditableTimesheetDay day, decimal target) in dayTargets)
             {
                 decimal gap = TimesheetLogic.Normalize(target - DayTotal(day));
                 if (gap <= 0m)
@@ -285,7 +303,7 @@ public sealed class AllocateTimesheet : IEndpoint
                 break;
             }
 
-            (TimesheetDraftDayState selectedDay, Guid? selectedProjectId, decimal selectedGap, decimal selectedTargetLeft) = options[Random.Shared.Next(options.Count)];
+            (EditableTimesheetDay selectedDay, Guid? selectedProjectId, decimal selectedGap, decimal selectedTargetLeft) = options[Random.Shared.Next(options.Count)];
             decimal amount = Math.Min(Math.Min(RandomAmount(selectedGap), selectedGap), selectedTargetLeft);
             if (selectedProjectId is null)
             {
@@ -318,10 +336,10 @@ public sealed class AllocateTimesheet : IEndpoint
         return Math.Min(candidatesCount, Math.Clamp(preferred, lower, upper));
     }
 
-    private static bool CanReceiveAnyHours(TimesheetDraftDayState day, IReadOnlyList<TimesheetDraftProjectState> projects) =>
+    private static bool CanReceiveAnyHours(EditableTimesheetDay day, IReadOnlyList<ProjectColumn> projects) =>
         !day.CoreHoursFixed || projects.Any(project => project.IsActiveOn(day.Date) && !project.Locked && !day.ProjectHoursFixed.GetValueOrDefault(project.Id));
 
-    private static decimal DayTotal(TimesheetDraftDayState day) => TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
+    private static decimal DayTotal(EditableTimesheetDay day) => TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
 
     private static decimal RandomDayHours()
     {
@@ -358,7 +376,7 @@ public sealed class AllocateTimesheet : IEndpoint
         return TimesheetLogic.Normalize(raw);
     }
 
-    private static void GenerateAttendanceIfMissing(TimesheetDraftDayState day, bool tracksAttendance)
+    private static void GenerateAttendanceIfMissing(EditableTimesheetDay day, bool tracksAttendance)
     {
         if (!tracksAttendance
             || TimesheetInterruptions.SkipAllocationRules(day.Description)
@@ -399,17 +417,17 @@ public sealed class AllocateTimesheet : IEndpoint
 
     private static int? ToMinutes(TimeSpan? value) => value.HasValue ? (int)Math.Round(value.Value.TotalMinutes) : null;
 
-    private static decimal MonthlyTarget(TimesheetDraftSnapshot snapshot, TimesheetDraftProjectState project)
+    private static decimal MonthlyTarget(EditableTimesheet sheet, ProjectColumn project)
     {
-        int fundedDays = snapshot.Days.Count(day => TimesheetLogic.IsWeekday(day.Date) && project.IsActiveOn(day.Date));
+        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWeekday(day.Date) && project.IsActiveOn(day.Date));
         return TimesheetLogic.Normalize(fundedDays * 8m * project.Workload);
     }
 
-    private static decimal CoreMonthlyTarget(TimesheetDraftSnapshot snapshot, decimal totalWorkload)
+    private static decimal CoreMonthlyTarget(EditableTimesheet sheet, decimal totalWorkload)
     {
-        int fundedDays = snapshot.Days.Count(day => TimesheetLogic.IsWeekday(day.Date));
+        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWeekday(day.Date));
         decimal total = TimesheetLogic.Normalize(fundedDays * 8m * totalWorkload);
-        return TimesheetLogic.Normalize(total - snapshot.Projects.Sum(project => MonthlyTarget(snapshot, project)));
+        return TimesheetLogic.Normalize(total - sheet.Projects.Sum(project => MonthlyTarget(sheet, project)));
     }
 
     private static decimal PreferQuarterStagTopUp(decimal currentCoreHours, decimal stagHours, decimal free, decimal coreTarget)
@@ -439,7 +457,7 @@ public sealed class AllocateTimesheet : IEndpoint
     private static decimal RoundToQuarter(decimal value) => TimesheetLogic.Normalize(Math.Round(value * 4m, MidpointRounding.AwayFromZero) / 4m);
     private static decimal RoundUpToQuarter(decimal value) => TimesheetLogic.Normalize(Math.Ceiling(value * 4m) / 4m);
 
-    private static IReadOnlyList<TimesheetDraftDayState> OrderDays(IReadOnlyList<TimesheetDraftDayState> days) => days
+    private static IReadOnlyList<EditableTimesheetDay> OrderDays(IReadOnlyList<EditableTimesheetDay> days) => days
         .OrderByDescending(day => !string.IsNullOrWhiteSpace(day.Description))
         .ThenByDescending(day => TimesheetLogic.CalculateStagHours(day.Schedules) > day.CoreHours)
         .ThenByDescending(day => day.ClockIn is not null && day.ClockOut is not null)

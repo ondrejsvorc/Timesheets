@@ -27,7 +27,7 @@ internal static class TimesheetInterruptionHours
         return stagHours > 0m ? TimesheetLogic.Normalize(Math.Min(12m, stagHours)) : 0m;
     }
 
-    public static void ApplyToDayState(TimesheetDraftDayState day, IReadOnlyList<TimesheetDraftProjectState> projects, decimal totalWorkload, bool tracksAttendance)
+    public static void ApplyToDayState(EditableTimesheetDay day, IReadOnlyList<ProjectColumn> projects, decimal totalWorkload, bool tracksAttendance)
     {
         if (TimesheetInterruptions.HasBusinessTripInterruption(day.Description))
         {
@@ -46,28 +46,28 @@ internal static class TimesheetInterruptionHours
         }
     }
 
-    private static void ApplyProportional(TimesheetDraftDayState day, IReadOnlyList<TimesheetDraftProjectState> projects, decimal totalWorkload, decimal capacity)
+    private static void ApplyProportional(EditableTimesheetDay day, IReadOnlyList<ProjectColumn> projects, decimal totalWorkload, decimal capacity)
     {
         if (totalWorkload <= 0m)
         {
             return;
         }
 
-        List<TimesheetDraftProjectState> activeProjects = projects.Where(project => project.IsActiveOn(day.Date)).ToList();
+        List<ProjectColumn> activeProjects = projects.Where(project => project.IsActiveOn(day.Date)).ToList();
         decimal projectWorkload = activeProjects.Sum(project => project.Workload);
         decimal coreWorkload = Math.Max(0m, totalWorkload - projectWorkload);
         decimal allocated = 0m;
         day.CoreHours = TimesheetLogic.Normalize(capacity * coreWorkload / totalWorkload);
         allocated += day.CoreHours;
 
-        foreach (TimesheetDraftProjectState project in projects.Where(project => !project.IsActiveOn(day.Date)))
+        foreach (ProjectColumn project in projects.Where(project => !project.IsActiveOn(day.Date)))
         {
             day.ProjectHours[project.Id] = 0m;
         }
 
         for (int index = 0; index < activeProjects.Count; index++)
         {
-            TimesheetDraftProjectState project = activeProjects[index];
+            ProjectColumn project = activeProjects[index];
             decimal hours = index == activeProjects.Count - 1 ? TimesheetLogic.Normalize(capacity - allocated) : TimesheetLogic.Normalize(capacity * project.Workload / totalWorkload);
             day.ProjectHours[project.Id] = hours;
             allocated += hours;

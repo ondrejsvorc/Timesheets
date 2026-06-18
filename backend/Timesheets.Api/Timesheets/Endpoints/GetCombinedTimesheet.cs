@@ -80,7 +80,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
                 row.Position,
                 row.Workload,
                 row.LockedAt,
-                TimesheetDrafts.EffectiveProjectRange(row.AssignmentStartDate, row.AssignmentEndDate, row.ProjectStartDate, row.ProjectEndDate),
+                TimesheetEngine.EffectiveProjectRange(row.AssignmentStartDate, row.AssignmentEndDate, row.ProjectStartDate, row.ProjectEndDate),
                 row.Days))
             .ToList();
 
@@ -88,8 +88,8 @@ public sealed class GetCombinedTimesheet : IEndpoint
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
         bool tracksAttendance = EmployeeTypes.TracksAttendance(attendanceTimesheet.EmployeeTypeId);
-        List<TimesheetDraftProjectState> projectStates = projectTimesheets
-            .Select(t => new TimesheetDraftProjectState(t.ActivityId, t.Workload, t.LockedAt is not null, t.Range))
+        List<ProjectColumn> projectStates = projectTimesheets
+            .Select(t => new ProjectColumn(t.ActivityId, t.Workload, t.LockedAt is not null, t.Range))
             .ToList();
         List<ProjectDefinition> projects = projectTimesheets
             .Select(t => new ProjectDefinition(
@@ -157,7 +157,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
                 decimal coreHours = attendanceDay?.CoreHours ?? 0m;
                 if (attendanceDay is not null && !string.IsNullOrWhiteSpace(attendanceDay.Description))
                 {
-                    TimesheetDraftDayState dayState = new()
+                    EditableTimesheetDay dayState = new()
                     {
                         Date = date,
                         ClockIn = attendanceDay.ClockIn,

@@ -11,27 +11,27 @@ public sealed class UpdateTimesheet : IEndpoint
     public static void Map(IEndpointRouteBuilder app) =>
         app.MapPut("/{id}", Handle)
             .WithSummary("Update Timesheet")
-            .WithRequestValidation<TimesheetDraft>();
+            .WithRequestValidation<TimesheetEditRequest>();
 
     public sealed record Response(Guid Id, TimesheetEvaluation Evaluation);
 
-    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, [FromBody] TimesheetDraft draft, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, [FromBody] TimesheetEditRequest request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
-        TimesheetDraftContext? context = await TimesheetDrafts.LoadAsync(id, dbContext, cancellationToken);
-        if (context is null)
+        LoadedTimesheet? loaded = await TimesheetEngine.LoadAsync(id, dbContext, cancellationToken);
+        if (loaded is null)
         {
             return TypedResults.NotFound();
         }
-        if ((!user.IsGlobalManagerRole() && user.EmployeeId != context.Timesheet.EmployeeId) || context.Timesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
+        if ((!user.IsGlobalManagerRole() && user.EmployeeId != loaded.Timesheet.EmployeeId) || loaded.Timesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
         {
             return TypedResults.Forbid();
         }
-        if (TimesheetDrafts.HasInactiveProjectHours(context, draft))
+        if (TimesheetEngine.HasInactiveProjectHours(loaded, request))
         {
             return TypedResults.BadRequest("Zakázkové hodiny nelze vyplnit mimo platnost pozice nebo projektu.");
         }
-        TimesheetDrafts.Apply(context, draft);
-        TimesheetEvaluation evaluation = TimesheetDrafts.Evaluate(context, draft);
+        TimesheetEngine.ApplyEdits(loaded, request);
+        TimesheetEvaluation evaluation = TimesheetEngine.Evaluate(loaded, request);
         await dbContext.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(new Response(id, evaluation));
     }
