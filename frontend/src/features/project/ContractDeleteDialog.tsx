@@ -1,46 +1,19 @@
-import { useEffect, useState } from "react";
-import { ConsequenceDialog } from "@/components/shared/dialogs/ConsequenceDialog";
-import { Texts } from "@/constants/texts";
-import { canConfirmDelete } from "@/utils/deleteImpactConsequences";
-import { type DeleteContractImpactResponse, formatContractDeleteImpactConsequences, getContractDeleteImpact } from "./api/contractDeleteImpact";
-import { deleteProjectContract } from "./api/deleteProjectContract";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
+import { deleteProjectContract } from "./api";
 
 interface ContractDeleteDialogProps {
   projectId: string;
   contractId: string;
-  contractName: string;
   onClose: () => void;
   onDeleted: () => void;
 }
 
-export const ContractDeleteDialog = ({ projectId, contractId, contractName, onClose, onDeleted }: ContractDeleteDialogProps) => {
-  const [impact, setImpact] = useState<DeleteContractImpactResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    getContractDeleteImpact(contractId, controller.signal)
-      .then(setImpact)
-      .finally(() => setLoading(false));
-    return () => controller.abort();
-  }, [contractId]);
-
+export const ContractDeleteDialog = ({ projectId, contractId, onClose, onDeleted }: ContractDeleteDialogProps) => {
   return (
-    <ConsequenceDialog
+    <ConfirmationDialog
       open
-      title={Texts.deleteTitle.replace("{name}", contractName)}
-      description={Texts.deleteDescription}
-      consequences={impact ? formatContractDeleteImpactConsequences(impact) : []}
-      confirmLabel={Texts.delete}
-      confirmDisabled={!impact || !canConfirmDelete(impact)}
-      loading={loading}
-      loadingContent={<p className="text-sm text-muted-foreground">{Texts.deleteImpactLoading}</p>}
       onCancel={onClose}
       onConfirm={async (_event, signal) => {
-        if (!impact || !canConfirmDelete(impact)) {
-          return;
-        }
         await deleteProjectContract(projectId, contractId, signal);
         if (!signal.aborted) {
           onDeleted();

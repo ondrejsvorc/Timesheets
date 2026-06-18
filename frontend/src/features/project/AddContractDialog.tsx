@@ -1,7 +1,6 @@
 import { FormDialog } from "@/components/shared/dialogs/FormDialog";
 import { Texts } from "@/constants/texts";
-import { createProjectContract } from "./api/createProjectContract";
-import type { ProjectContractItem } from "./api/shared/projectContractItem";
+import { createProjectContract, type ProjectContractItem } from "./api";
 import { ContractForm, type ContractFormValues } from "./ContractForm";
 
 interface AddContractDialogProps {

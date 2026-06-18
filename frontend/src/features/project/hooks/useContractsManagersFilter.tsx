@@ -1,5 +1,5 @@
 import { type FilterCriteria, useFilter } from "@/hooks/useFilter";
-import type { ProjectContractManagerItem } from "../api/getProjectContractsManagers";
+import type { ProjectContractManagerItem } from "../api";
 
 export interface ContractsManagersFilterCriteria extends FilterCriteria {}
 

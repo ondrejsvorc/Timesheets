@@ -8,10 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Texts } from "@/constants/texts";
 import { type EmployeeItem, getEmployees } from "@/features/employees/api/getEmployees";
-import { addContractManager, toProjectContractManagerItem } from "./api/addContractManager";
-import { getProjectContracts } from "./api/getProjectContracts";
-import type { ProjectContractManagerItem } from "./api/getProjectContractsManagers";
-import type { ProjectContractItem } from "./api/shared/projectContractItem";
+import { addContractManager, getProjectContracts, type ProjectContractItem, type ProjectContractManagerItem } from "./api";
 
 const schema = z.object({
   contractId: z.string().min(1, Texts.contract),
@@ -79,7 +76,7 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
 
   const handleSubmit = async (values: FormValues, signal: AbortSignal) => {
     const response = await addContractManager(values.contractId, values.employeeId, signal);
-    onSaved(toProjectContractManagerItem(response));
+    onSaved(response);
     onClose();
   };
 

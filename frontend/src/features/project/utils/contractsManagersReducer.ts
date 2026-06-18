@@ -1,5 +1,5 @@
 import { compareIds } from "@/utils/compareIds";
-import type { ProjectContractManagerItem } from "../api/getProjectContractsManagers";
+import type { ProjectContractManagerItem } from "../api";
 
 export interface PendingDelete {
   contractId: string;

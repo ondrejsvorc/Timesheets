@@ -14,8 +14,7 @@ import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
 import { createFilterControls } from "@/utils/createFilterControls";
 import { AddContractDialog } from "./AddContractDialog";
-import type { GetProjectContractsResponse } from "./api/getProjectContracts";
-import type { ProjectContractItem } from "./api/shared/projectContractItem";
+import type { GetProjectContractsResponse, ProjectContractItem } from "./api";
 import { ContractDeleteDialog } from "./ContractDeleteDialog";
 import { EditContractDialog } from "./EditContractDialog";
 import { type ContractsFilterCriteria, useContractsFilter } from "./hooks/useContractsFilter";
@@ -111,7 +110,6 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
         <ContractDeleteDialog
           projectId={projectId}
           contractId={contractToDelete.id}
-          contractName={contractToDelete.name}
           onClose={() => setContractToDelete(null)}
           onDeleted={() => {
             dispatch({ type: "delete", contractId: contractToDelete.id });
