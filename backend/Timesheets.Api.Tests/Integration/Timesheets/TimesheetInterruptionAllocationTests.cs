@@ -146,6 +146,11 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         {
             Assert.InRange(TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours[assignmentId]), 6m, 12m);
         }
+
+        IEnumerable<decimal> generatedCells = allocation.Days
+            .SelectMany(day => new[] { day.CoreHours, day.ProjectHours[assignmentId] })
+            .Where(hours => hours > 0m);
+        Assert.All(generatedCells, hours => Assert.True(hours >= 1m, $"Generated cell is shorter than 1 hour: {hours}"));
     }
 
     [Fact]
