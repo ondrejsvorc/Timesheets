@@ -93,7 +93,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task AllocateTimesheet_DoesNotFillNonAcademicDayWithoutAttendance()
+    public async Task AllocateTimesheet_GeneratesNonAcademicAttendanceAndAllocationWhenMissing()
     {
         DateTime date = new(2036, 3, 3, 0, 0, 0, DateTimeKind.Utc);
         Guid attendanceTimesheetId = Guid.NewGuid();
@@ -110,8 +110,10 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
         AllocateTimesheet.DayResponse day = allocation!.Days.Single();
-        Assert.Equal(0m, day.CoreHours);
-        Assert.Equal(0m, day.ProjectHours[assignmentId]);
+        Assert.Equal(new int?[] { 480, 990 }, day.Work);
+        Assert.Equal(new int?[] { 720, 750 }, day.Break);
+        Assert.Equal(4m, day.CoreHours);
+        Assert.Equal(4m, day.ProjectHours[assignmentId]);
     }
 
     [Fact]
@@ -235,6 +237,52 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
 
             Assert.Equal(88m, TimesheetLogic.Normalize(allocation!.Days.Sum(day => day.CoreHours)));
             Assert.Equal(88m, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectHours[assignmentId])));
+        }
+    }
+
+    [Fact]
+    public async Task AllocateTimesheet_ReachesNonAcademicAttendanceAndProjectTargets()
+    {
+        int year = 2045;
+        int month = 1;
+        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid firstAssignmentId = Guid.NewGuid();
+        Guid secondAssignmentId = Guid.NewGuid();
+        await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(firstAssignmentId, 0.25m), (secondAssignmentId, 0.5m)]);
+        DateTime[] dates = MonthDates(year, month);
+
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date =>
+            {
+                bool filled = TimesheetLogic.IsWeekday(date) && date.Day <= 15;
+                return new TimesheetDayEdit(
+                    Date: date,
+                    ClockIn: filled ? new TimeSpan(8, 0, 0) : TimeSpan.Zero,
+                    ClockOut: filled ? new TimeSpan(16, 0, 0) : TimeSpan.Zero,
+                    BreakStart: TimeSpan.Zero,
+                    BreakEnd: TimeSpan.Zero,
+                    CoreHours: 0m,
+                    Description: null,
+                    Schedules: []);
+            }).ToArray(),
+            Projects:
+            [
+                new ProjectColumnEdit(firstAssignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray()),
+                new ProjectColumnEdit(secondAssignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())
+            ]);
+
+        for (int attempt = 0; attempt < 20; attempt++)
+        {
+            HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+            Assert.NotNull(allocation);
+
+            Assert.Equal(176m, allocation!.Evaluation.Totals.WorkedHours);
+            Assert.Equal(44m, allocation.Evaluation.Totals.CoreHours);
+            Assert.Equal(44m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
+            Assert.Equal(88m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
         }
     }
 
@@ -434,6 +482,48 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             Workload = assignmentWorkload,
             Days = dates.Select(date => ProjectDay(date, assignmentWorkload)).ToList()
         });
+
+        await dbContext.SaveChangesAsync();
+    }
+
+    private async Task SeedNonAcademicMonthAsync(Guid attendanceTimesheetId, int year, int month, IReadOnlyList<(Guid Id, decimal Workload)> assignments)
+    {
+        using IServiceScope scope = CreateScope();
+        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Employee employee = await dbContext.Employees.SingleAsync(employee => employee.Id == SeededTestData.JanNovakEmployeeId);
+        employee.EmployeeTypeId = NonAcademicEmployeeTypeId;
+        DateTime[] dates = MonthDates(year, month);
+        DateTime firstDate = dates[0];
+        DateTime lastDate = dates[^1];
+
+        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.NewGuid(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = 1m });
+        dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
+        {
+            Id = attendanceTimesheetId,
+            EmployeeId = SeededTestData.JanNovakEmployeeId,
+            TimesheetStatusId = TestTimesheetStatusIds.Draft,
+            Year = year,
+            Month = month,
+            Days = dates.Select(date => AttendanceDay(date, null)).ToList()
+        });
+
+        for (int index = 0; index < assignments.Count; index++)
+        {
+            (Guid id, decimal workload) = assignments[index];
+            dbContext.ContractEmployees.Add(Assignment(id, $"NONACA-{year}-{month}-{index}", $"Non-academic {index}", firstDate, workload, lastDate));
+            dbContext.ProjectTimesheets.Add(new Data.Models.ProjectTimesheet
+            {
+                Id = Guid.NewGuid(),
+                EmployeeId = SeededTestData.JanNovakEmployeeId,
+                ContractId = SeededTestData.BetaContractId,
+                ContractEmployeeId = id,
+                TimesheetStatusId = TestTimesheetStatusIds.Draft,
+                Year = year,
+                Month = month,
+                Workload = workload,
+                Days = dates.Select(date => ProjectDay(date, workload)).ToList()
+            });
+        }
 
         await dbContext.SaveChangesAsync();
     }
