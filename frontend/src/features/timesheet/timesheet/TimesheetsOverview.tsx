@@ -4,7 +4,7 @@ import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageH
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { formatWorkload } from "../timesheetFormat";
-import type { CombinedTimesheetMonthSummary, GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
+import type { CombinedTimesheetMonthSummary, GetCombinedTimesheetOverviewResponse } from "./api";
 import { TimesheetOverviewRowActions } from "./TimesheetOverviewRowActions";
 
 interface TimesheetsOverviewProps {

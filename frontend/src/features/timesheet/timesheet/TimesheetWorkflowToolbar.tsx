@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { Timesheet, TimesheetEvaluation } from "../Timesheet";
-import type { GetCombinedTimesheetOverviewResponse } from "./api/getCombinedTimesheetOverview";
-import { type TimesheetStatusAction, updateCombinedTimesheetStatus } from "./api/updateCombinedTimesheetStatus";
+import { type GetCombinedTimesheetOverviewResponse, type TimesheetStatusAction, updateCombinedTimesheetStatus } from "./api";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
 
 interface TimesheetWorkflowToolbarProps {

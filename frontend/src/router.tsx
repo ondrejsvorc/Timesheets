@@ -25,9 +25,7 @@ import { ProjectContractsManagers } from "./features/project/ProjectContractsMan
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
-import { getCombinedTimesheet } from "./features/timesheet/timesheet/api/getCombinedTimesheet";
-import { getCombinedTimesheetOverview } from "./features/timesheet/timesheet/api/getCombinedTimesheetOverview";
-import { getTimesheetComments } from "./features/timesheet/timesheet/api/getTimesheetComments";
+import { getCombinedTimesheet, getCombinedTimesheetOverview, getTimesheetComments } from "./features/timesheet/timesheet/api";
 import { TimesheetPage, type TimesheetPageData } from "./features/timesheet/timesheet/TimesheetPage";
 
 export type CurrentUser = {
