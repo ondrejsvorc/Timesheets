@@ -1,5 +1,5 @@
 import { type FilterCriteria, useFilter } from "@/hooks/useFilter";
-import type { ProjectItem } from "../api/shared/projectItem";
+import type { ProjectItem } from "../api";
 import { getProjectStatus } from "../utils/getProjectStatus";
 
 export type ProjectStatusFilter = "active" | "archived" | "all";

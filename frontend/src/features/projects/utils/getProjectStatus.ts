@@ -1,5 +1,5 @@
 import { isAfter, isSameDay, parseISO, startOfDay } from "date-fns";
-import type { ProjectItem } from "../api/shared/projectItem";
+import type { ProjectItem } from "../api";
 
 export type ProjectStatus = "archived" | "active" | "inactive";
 

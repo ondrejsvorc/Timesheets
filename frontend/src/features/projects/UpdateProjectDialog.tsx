@@ -2,8 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { FormDialog } from "@/components/shared/dialogs/FormDialog";
 import { Texts } from "@/constants/texts";
-import type { ProjectItem } from "./api/shared/projectItem";
-import { updateProject } from "./api/updateProject";
+import { type ProjectItem, updateProject } from "./api";
 import { ProjectFormFields, type ProjectFormValues, projectFormDefaultValues, projectFormSchema } from "./ProjectFormFields";
 
 interface UpdateProjectDialogProps {

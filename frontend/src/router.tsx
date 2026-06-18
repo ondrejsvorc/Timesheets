@@ -29,7 +29,7 @@ import { getProjectContractsManagers } from "./features/project/api/getProjectCo
 import { ProjectContracts } from "./features/project/ProjectContracts";
 import { ProjectContractsManagers } from "./features/project/ProjectContractsManagers";
 import { ProjectPage } from "./features/project/ProjectPage";
-import { getProjects } from "./features/projects/api/getProjects";
+import { getProjects } from "./features/projects/api";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { getCombinedTimesheet } from "./features/timesheet/timesheet/api/getCombinedTimesheet";
 import { getCombinedTimesheetOverview } from "./features/timesheet/timesheet/api/getCombinedTimesheetOverview";
