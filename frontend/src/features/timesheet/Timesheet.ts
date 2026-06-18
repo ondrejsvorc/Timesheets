@@ -23,6 +23,7 @@ export interface ProjectDefinition {
   position: string;
   workload: number;
   locked: boolean;
+  activeDays: boolean[];
 }
 
 export interface TimesheetDay {

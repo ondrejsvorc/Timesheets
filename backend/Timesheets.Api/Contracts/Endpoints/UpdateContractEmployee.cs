@@ -59,12 +59,18 @@ public sealed class UpdateContractEmployee : IEndpoint
             return TypedResults.NotFound();
         }
 
+        DateTime? projectEndDate = await dbContext.Contracts
+            .AsNoTracking()
+            .Where(contract => contract.Id == id)
+            .Select(contract => contract.Project.EndDate)
+            .SingleAsync(cancellationToken);
+
         ContractEmployeeUpdateRequest updateRequest = new(
             request.PositionCode,
             request.Position,
             request.Workload,
             request.StartDate,
-            request.EndDate);
+            request.EndDate ?? projectEndDate);
 
         ContractEmployeeUpdateImpact impact = await ContractEmployeeUpdatePlanner.PlanAsync(
             existing,
@@ -86,7 +92,7 @@ public sealed class UpdateContractEmployee : IEndpoint
                 existing.EmployeeId,
                 request.Position,
                 impact.NewAssignmentStartDate!.Value,
-                request.EndDate,
+                updateRequest.EndDate,
                 contractEmployeeId,
                 dbContext,
                 cancellationToken);
@@ -100,7 +106,7 @@ public sealed class UpdateContractEmployee : IEndpoint
                 existing.EmployeeId,
                 request.Workload,
                 impact.NewAssignmentStartDate!.Value,
-                request.EndDate,
+                updateRequest.EndDate,
                 contractEmployeeId,
                 dbContext,
                 cancellationToken);
@@ -121,7 +127,7 @@ public sealed class UpdateContractEmployee : IEndpoint
                 Position = request.Position,
                 Workload = request.Workload,
                 StartDate = impact.NewAssignmentStartDate!.Value,
-                EndDate = request.EndDate,
+                EndDate = updateRequest.EndDate,
             };
 
             dbContext.ContractEmployees.Add(replacement);

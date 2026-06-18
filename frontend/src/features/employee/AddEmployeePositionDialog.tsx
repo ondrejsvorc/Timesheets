@@ -126,8 +126,10 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
   };
 
   const handleProjectChange = (nextProjectId: string) => {
-    form.setValue("projectId", nextProjectId);
+    const nextProject = projectCatalog.find((project) => project.id === nextProjectId);
+    form.setValue("projectId", nextProjectId, { shouldValidate: true });
     form.setValue("contractId", "");
+    form.setValue("endDate", nextProject?.endDate ?? undefined, { shouldValidate: true });
   };
 
   const projectItems = projectCatalog.map((project) => ({ value: project.id, label: project.name }));
@@ -146,7 +148,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
         position: values.positionName.trim(),
         workload: workloadPercentToFraction(values.workload),
         startDate: values.startDate,
-        endDate: toIsoOrEmpty(values.endDate) ?? null,
+        endDate: toIsoOrEmpty(values.endDate) ?? selectedProject?.endDate ?? null,
       },
       signal,
     );

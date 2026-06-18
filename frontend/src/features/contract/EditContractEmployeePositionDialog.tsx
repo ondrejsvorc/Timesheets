@@ -56,7 +56,7 @@ const createSchema = (position: PositionItem, projectStartDate: string, projectE
       const metadataChanged =
         values.positionCode.trim() !== position.positionCode || values.positionName.trim() !== position.position || workloadPercentToFraction(values.workload) !== position.workload;
 
-      const endIso = toIsoOrEmpty(values.endDate) ?? null;
+      const endIso = toIsoOrEmpty(values.endDate) ?? projectEndDate ?? null;
       const endChanged = endIso !== position.endDate;
       const startChanged = values.startDate !== position.startDate;
 
@@ -97,7 +97,7 @@ export const EditContractEmployeePositionDialog = ({ open, position, projectStar
       positionName: position.position,
       workload: workloadFractionToPercent(position.workload),
       startDate: position.startDate,
-      endDate: position.endDate ?? undefined,
+      endDate: position.endDate ?? projectEndDate ?? undefined,
     },
   });
 
@@ -115,7 +115,7 @@ export const EditContractEmployeePositionDialog = ({ open, position, projectStar
       position: values.positionName.trim(),
       workload: workloadPercentToFraction(values.workload),
       startDate: values.startDate,
-      endDate: toIsoOrEmpty(values.endDate) ?? null,
+      endDate: toIsoOrEmpty(values.endDate) ?? projectEndDate ?? null,
     });
     form.reset();
   };

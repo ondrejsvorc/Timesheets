@@ -195,7 +195,8 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
         </ValidationField>
       </div>
       {projects.map((project) => {
-        const locked = project.locked || shouldLockByInterruption;
+        const active = project.activeDays[dayIndex] ?? true;
+        const locked = project.locked || shouldLockByInterruption || !active;
         return (
           <div key={project.id} className={cellClass}>
             <ValidationField validations={fieldIssues(`project:${project.id}`)}>

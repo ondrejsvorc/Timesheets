@@ -67,6 +67,8 @@ public sealed class AddContractEmployee : IEndpoint
             return TypedResults.NotFound();
         }
 
+        DateTime? effectiveEndDate = request.EndDate ?? contract.EndDate;
+
         bool overlappingSamePositionExists = await dbContext.ContractEmployees
             .AsNoTracking()
             .AnyAsync(ce =>
@@ -75,7 +77,7 @@ public sealed class AddContractEmployee : IEndpoint
                 && ce.Position == request.Position
                 // overlap check (inclusive): [StartDate, EndDate] intersects
                 && (ce.EndDate == null || request.StartDate <= ce.EndDate)
-                && (request.EndDate == null || ce.StartDate <= request.EndDate),
+                && (effectiveEndDate == null || ce.StartDate <= effectiveEndDate),
                 cancellationToken);
 
         if (overlappingSamePositionExists)
@@ -86,7 +88,7 @@ public sealed class AddContractEmployee : IEndpoint
         ContractEmployeeAddImpact addImpact = await ContractEmployeeAddPlanner.PlanAsync(
             id,
             contract.EndDate,
-            new ContractEmployeeAddRequest(request.EmployeeId, request.StartDate, request.EndDate),
+            new ContractEmployeeAddRequest(request.EmployeeId, request.StartDate, effectiveEndDate),
             dbContext,
             cancellationToken);
         if (!addImpact.CanAdd)
@@ -96,8 +98,8 @@ public sealed class AddContractEmployee : IEndpoint
 
         // Block assignment if it would exceed monthly base workload (imported or from core employment).
         DateTime start = request.StartDate.Kind == DateTimeKind.Utc ? request.StartDate : DateTime.SpecifyKind(request.StartDate, DateTimeKind.Utc);
-        DateTime end = request.EndDate.HasValue
-            ? (request.EndDate.Value.Kind == DateTimeKind.Utc ? request.EndDate.Value : DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc))
+        DateTime end = effectiveEndDate.HasValue
+            ? (effectiveEndDate.Value.Kind == DateTimeKind.Utc ? effectiveEndDate.Value : DateTime.SpecifyKind(effectiveEndDate.Value, DateTimeKind.Utc))
             : start;
 
         DateTime cursor = new(start.Year, start.Month, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -133,12 +135,12 @@ public sealed class AddContractEmployee : IEndpoint
             Position = request.Position,
             Workload = request.Workload,
             StartDate = request.StartDate,
-            EndDate = request.EndDate,
+            EndDate = effectiveEndDate,
         };
 
         dbContext.ContractEmployees.Add(newContractEmployee);
 
-        await EnsureTimesheetsForAssignmentAsync(newContractEmployee, request, dbContext, holidaysFactory, cancellationToken);
+        await EnsureTimesheetsForAssignmentAsync(newContractEmployee, dbContext, holidaysFactory, cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -155,7 +157,7 @@ public sealed class AddContractEmployee : IEndpoint
             request.Position,
             request.Workload,
             request.StartDate,
-            request.EndDate,
+            effectiveEndDate,
             employee.PersonalNumber,
             employee.FullName,
             employee.EmployeeTypeId);
@@ -163,11 +165,11 @@ public sealed class AddContractEmployee : IEndpoint
         return TypedResults.Created($"/contracts/{id}/employees/{request.EmployeeId}", response);
     }
 
-    private static async Task EnsureTimesheetsForAssignmentAsync(ContractEmployee contractEmployee, Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)
+    private static async Task EnsureTimesheetsForAssignmentAsync(ContractEmployee contractEmployee, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)
     {
-        DateTime start = request.StartDate.Kind == DateTimeKind.Utc ? request.StartDate : DateTime.SpecifyKind(request.StartDate, DateTimeKind.Utc);
-        DateTime end = request.EndDate.HasValue
-            ? (request.EndDate.Value.Kind == DateTimeKind.Utc ? request.EndDate.Value : DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Utc))
+        DateTime start = contractEmployee.StartDate.Kind == DateTimeKind.Utc ? contractEmployee.StartDate : DateTime.SpecifyKind(contractEmployee.StartDate, DateTimeKind.Utc);
+        DateTime end = contractEmployee.EndDate.HasValue
+            ? (contractEmployee.EndDate.Value.Kind == DateTimeKind.Utc ? contractEmployee.EndDate.Value : DateTime.SpecifyKind(contractEmployee.EndDate.Value, DateTimeKind.Utc))
             : start;
 
         DateTime cursor = new(start.Year, start.Month, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -186,7 +188,7 @@ public sealed class AddContractEmployee : IEndpoint
             }
             else
             {
-                existing.Workload = request.Workload;
+                existing.Workload = contractEmployee.Workload;
                 existing.UpdatedAt = DateTime.UtcNow;
             }
 

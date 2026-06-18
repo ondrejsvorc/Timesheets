@@ -71,11 +71,15 @@ export const buildTimesheetDraft = (timesheet: Timesheet): TimesheetDraft => ({
   })),
   projects: timesheet.projects.map((project) => ({
     contractEmployeeId: project.id,
-    days: timesheet.days.map((day, index) => ({
-      date: dayDate(timesheet.year, timesheet.month, index + 1),
-      hours: day.projectHours[project.id] ?? 0,
-      hoursFixed: (day.projectHours[project.id] ?? 0) > 0,
-    })),
+    days: timesheet.days.map((day, index) => {
+      const active = project.activeDays[index] ?? true;
+      const hours = active ? day.projectHours[project.id] ?? 0 : 0;
+      return {
+        date: dayDate(timesheet.year, timesheet.month, index + 1),
+        hours,
+        hoursFixed: active && hours > 0,
+      };
+    }),
   })),
 });
 

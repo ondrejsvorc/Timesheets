@@ -54,6 +54,11 @@ internal static class ContractEmployeeUpdatePlanner
             return Blocked(projectRangeError);
         }
 
+        if (!request.EndDate.HasValue && projectRange.EndDate.HasValue)
+        {
+            request = request with { EndDate = projectRange.EndDate };
+        }
+
         if (IsUnchanged(existing, request))
         {
             return Blocked("Nebyla zadána žádná změna.");

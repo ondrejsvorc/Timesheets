@@ -33,7 +33,10 @@ internal static class ProjectTimesheetInitializer
         DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);
         List<ContractEmployee> assignments = await dbContext.ContractEmployees
             .AsNoTracking()
+            .Include(assignment => assignment.Contract)
+            .ThenInclude(contract => contract.Project)
             .Where(assignment => assignment.EmployeeId == employeeId && assignment.StartDate <= periodEnd && (!assignment.EndDate.HasValue || assignment.EndDate >= periodStart))
+            .Where(assignment => !assignment.Contract.Project.EndDate.HasValue || assignment.Contract.Project.EndDate >= periodStart)
             .ToListAsync(cancellationToken);
 
         if (assignments.Count == 0)
@@ -93,9 +96,15 @@ internal static class ProjectTimesheetInitializer
             CreatedAt = DateTime.UtcNow,
         };
 
+        ProjectDateRange range = EffectiveRange(assignment);
         for (int day = 1; day <= DateTime.DaysInMonth(year, month); day++)
         {
             DateTime date = new(year, month, day, 0, 0, 0, DateTimeKind.Utc);
+            if (!range.Includes(date))
+            {
+                continue;
+            }
+
             projectTimesheet.Days.Add(new Data.Models.ProjectDay
             {
                 Id = Guid.NewGuid(),
@@ -112,5 +121,10 @@ internal static class ProjectTimesheetInitializer
     }
 
     private static HashSet<DateOnly> GetHolidays(int year, ICzechHolidaysFactory holidaysFactory) => holidaysFactory.Create(year).Select(holiday => holiday.Date).ToHashSet();
+    private static ProjectDateRange EffectiveRange(ContractEmployee assignment) => TimesheetDrafts.EffectiveProjectRange(
+        assignment.StartDate,
+        assignment.EndDate,
+        assignment.Contract?.Project?.StartDate ?? assignment.StartDate,
+        assignment.Contract?.Project?.EndDate);
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);
 }

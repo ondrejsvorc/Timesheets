@@ -53,16 +53,22 @@ internal static class TimesheetInterruptionHours
             return;
         }
 
-        decimal projectWorkload = projects.Sum(project => project.Workload);
+        List<TimesheetDraftProjectState> activeProjects = projects.Where(project => project.IsActiveOn(day.Date)).ToList();
+        decimal projectWorkload = activeProjects.Sum(project => project.Workload);
         decimal coreWorkload = Math.Max(0m, totalWorkload - projectWorkload);
         decimal allocated = 0m;
         day.CoreHours = TimesheetLogic.Normalize(capacity * coreWorkload / totalWorkload);
         allocated += day.CoreHours;
 
-        for (int index = 0; index < projects.Count; index++)
+        foreach (TimesheetDraftProjectState project in projects.Where(project => !project.IsActiveOn(day.Date)))
         {
-            TimesheetDraftProjectState project = projects[index];
-            decimal hours = index == projects.Count - 1 ? TimesheetLogic.Normalize(capacity - allocated) : TimesheetLogic.Normalize(capacity * project.Workload / totalWorkload);
+            day.ProjectHours[project.Id] = 0m;
+        }
+
+        for (int index = 0; index < activeProjects.Count; index++)
+        {
+            TimesheetDraftProjectState project = activeProjects[index];
+            decimal hours = index == activeProjects.Count - 1 ? TimesheetLogic.Normalize(capacity - allocated) : TimesheetLogic.Normalize(capacity * project.Workload / totalWorkload);
             day.ProjectHours[project.Id] = hours;
             allocated += hours;
         }

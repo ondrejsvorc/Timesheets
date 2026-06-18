@@ -71,7 +71,7 @@ const createSchema = (existing: ContractEmployeeItem[], projectStartDate: string
 
       const positionName = normalize(values.positionName);
       const startDate = values.startDate;
-      const endDate = toIsoOrEmpty(values.endDate);
+      const endDate = toIsoOrEmpty(values.endDate) ?? projectEndDate ?? undefined;
 
       const hasOverlap = employee.positions.some((p) => {
         const pName = normalize(p.position);
@@ -130,6 +130,12 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
       .finally(() => setEmployeesLoading(false));
   }, [open]);
 
+  useEffect(() => {
+    if (open && projectEndDate && !form.getValues("endDate")) {
+      form.setValue("endDate", projectEndDate, { shouldValidate: true });
+    }
+  }, [form, open, projectEndDate]);
+
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       handleClose();
@@ -144,7 +150,7 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
   const handleSubmit = async (values: AddEmployeeToContractFormValues, signal: AbortSignal) => {
     const position = values.positionName.trim();
     const workload = workloadPercentToFraction(values.workload);
-    const endDateIso = toIsoOrEmpty(values.endDate) ?? null;
+    const endDateIso = toIsoOrEmpty(values.endDate) ?? projectEndDate ?? null;
 
     const impact = await getAddContractEmployeeImpact(contractId, { employeeId: values.employeeId, startDate: values.startDate, endDate: endDateIso }, signal);
 

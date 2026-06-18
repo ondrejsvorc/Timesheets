@@ -17,12 +17,13 @@ public sealed class GetCombinedTimesheet : IEndpoint
            .WithSummary("Get Combined Timesheet");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
-    public sealed record ProjectDefinition(string Id, string RegistrationNumber, string Name, string Position, decimal Workload, bool Locked);
+    public sealed record ProjectDefinition(string Id, string RegistrationNumber, string Name, string Position, decimal Workload, bool Locked, bool[] ActiveDays);
     public sealed record DayItem(int Day, int?[] Work, int?[] Break, decimal CoreHours, decimal[] ProjectHours, bool IsHoliday, bool IsWeekend, string? Note, IReadOnlyList<int[]>? Schedules);
     public sealed record Response(Guid Id, int Year, int Month, decimal TotalWorkload, decimal CoreWorkload, bool TracksAttendance, IEnumerable<ProjectDefinition> Projects, IEnumerable<DayItem> Days);
     private sealed record AttendanceDaySource(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal Workload, decimal HoursWithoutBreak, decimal CoreHours, bool IsHoliday, string? Description, string Schedules);
     private sealed record ProjectDaySource(DateTime Date, decimal Hours, bool IsHoliday);
-    private sealed record ProjectTimesheetSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, List<ProjectDaySource> Days);
+    private sealed record ProjectTimesheetSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, ProjectDateRange Range, List<ProjectDaySource> Days);
+    private sealed record ProjectTimesheetRow(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, DateTime AssignmentStartDate, DateTime? AssignmentEndDate, DateTime ProjectStartDate, DateTime? ProjectEndDate, List<ProjectDaySource> Days);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle([AsParameters] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ICurrentUser user, CancellationToken cancellationToken)
     {
@@ -49,13 +50,13 @@ public sealed class GetCombinedTimesheet : IEndpoint
 
         await ProjectTimesheetInitializer.EnsureForEmployeeMonthAsync(request.EmployeeId, request.Year, request.Month, dbContext, holidaysFactory, cancellationToken);
 
-        List<ProjectTimesheetSource> projectTimesheets = await (
+        List<ProjectTimesheetRow> projectTimesheetRows = await (
             from timesheet in dbContext.ProjectTimesheets.AsNoTracking()
             join contractEmployee in dbContext.ContractEmployees.AsNoTracking() on timesheet.ContractEmployeeId equals contractEmployee.Id
             join contract in dbContext.Contracts.AsNoTracking() on contractEmployee.ContractId equals contract.Id
             join project in dbContext.Projects.AsNoTracking() on contract.ProjectId equals project.Id
             where timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month
-            select new ProjectTimesheetSource(
+            select new ProjectTimesheetRow(
                 contractEmployee.Id,
                 project.Id,
                 contract.RegistrationNumber,
@@ -63,16 +64,32 @@ public sealed class GetCombinedTimesheet : IEndpoint
                 contractEmployee.Position,
                 timesheet.Workload,
                 timesheet.LockedAt,
+                contractEmployee.StartDate,
+                contractEmployee.EndDate,
+                project.StartDate,
+                project.EndDate,
                 timesheet.Days.Select(d => new ProjectDaySource(d.Date, d.Hours, d.IsHoliday)).ToList()
             )
         ).ToListAsync(cancellationToken);
+        List<ProjectTimesheetSource> projectTimesheets = projectTimesheetRows
+            .Select(row => new ProjectTimesheetSource(
+                row.ActivityId,
+                row.ProjectId,
+                row.RegistrationNumber,
+                row.ProjectName,
+                row.Position,
+                row.Workload,
+                row.LockedAt,
+                TimesheetDrafts.EffectiveProjectRange(row.AssignmentStartDate, row.AssignmentEndDate, row.ProjectStartDate, row.ProjectEndDate),
+                row.Days))
+            .ToList();
 
         decimal totalProjectWorkload = projectTimesheets.Sum(t => t.Workload);
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
         bool tracksAttendance = EmployeeTypes.TracksAttendance(attendanceTimesheet.EmployeeTypeId);
         List<TimesheetDraftProjectState> projectStates = projectTimesheets
-            .Select(t => new TimesheetDraftProjectState(t.ActivityId, t.Workload, t.LockedAt is not null))
+            .Select(t => new TimesheetDraftProjectState(t.ActivityId, t.Workload, t.LockedAt is not null, t.Range))
             .ToList();
         List<ProjectDefinition> projects = projectTimesheets
             .Select(t => new ProjectDefinition(
@@ -81,7 +98,8 @@ public sealed class GetCombinedTimesheet : IEndpoint
                 t.ProjectName,
                 t.Position,
                 t.Workload,
-                t.LockedAt is not null
+                t.LockedAt is not null,
+                BuildActiveDays(request.Year, request.Month, t.Range)
             ))
             .OrderBy(p => p.Name)
             .ToList();
@@ -91,7 +109,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
             .ToDictionary(x => x.Id, x => x.Index);
 
         Dictionary<DateOnly, Dictionary<string, decimal>> projectHoursByDate = projectTimesheets
-            .SelectMany(timesheet => timesheet.Days.Select(day => new
+            .SelectMany(timesheet => timesheet.Days.Where(day => timesheet.Range.Includes(day.Date)).Select(day => new
             {
                 Date = DateOnly.FromDateTime(day.Date),
                 timesheet.ActivityId,
@@ -188,6 +206,10 @@ public sealed class GetCombinedTimesheet : IEndpoint
 
         return (int)Math.Round(value.Value.TotalMinutes);
     }
+
+    private static bool[] BuildActiveDays(int year, int month, ProjectDateRange range) => Enumerable.Range(1, DateTime.DaysInMonth(year, month))
+        .Select(day => range.Includes(new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc)))
+        .ToArray();
 
     private static IReadOnlyList<int[]>? ParseSchedules(string? value)
     {

@@ -41,8 +41,8 @@ public sealed class AllocateTimesheet : IEndpoint
         }
 
         IReadOnlyList<TimesheetDraftDayState> days = dayNumber.HasValue ? snapshot.Days.Where(day => day.Date.Day == dayNumber.Value).ToArray() : OrderDays(snapshot.Days);
-        Dictionary<Guid, decimal> targets = snapshot.Projects.ToDictionary(project => project.Id, project => Math.Max(0m, MonthlyTarget(snapshot, project.Workload) - snapshot.Days.Sum(value => value.ProjectHours.GetValueOrDefault(project.Id))));
-        decimal coreTarget = Math.Max(0m, MonthlyTarget(snapshot, context.CoreWorkload) - snapshot.Days.Sum(value => value.CoreHours));
+        Dictionary<Guid, decimal> targets = snapshot.Projects.ToDictionary(project => project.Id, project => Math.Max(0m, MonthlyTarget(snapshot, project) - snapshot.Days.Sum(value => value.ProjectHours.GetValueOrDefault(project.Id))));
+        decimal coreTarget = Math.Max(0m, CoreMonthlyTarget(snapshot, context.TotalWorkload) - snapshot.Days.Sum(value => value.CoreHours));
 
         foreach (TimesheetDraftDayState day in days)
         {
@@ -102,7 +102,7 @@ public sealed class AllocateTimesheet : IEndpoint
         foreach (TimesheetDraftProjectState project in projects)
         {
             bool fixedHours = day.ProjectHoursFixed.GetValueOrDefault(project.Id);
-            if (!project.Locked && !fixedHours && day.ProjectHours.GetValueOrDefault(project.Id) == 0 && projectTargets[project.Id] > 0)
+            if (project.IsActiveOn(day.Date) && !project.Locked && !fixedHours && day.ProjectHours.GetValueOrDefault(project.Id) == 0 && projectTargets[project.Id] > 0)
             {
                 projectRemaining.Add((project.Id, projectTargets[project.Id]));
             }
@@ -152,8 +152,8 @@ public sealed class AllocateTimesheet : IEndpoint
 
         ApplyStagMinimums(snapshot);
 
-        decimal coreTarget = Math.Max(0m, MonthlyTarget(snapshot, context.CoreWorkload) - snapshot.Days.Sum(day => day.CoreHours));
-        Dictionary<Guid, decimal> projectTargets = snapshot.Projects.ToDictionary(project => project.Id, project => Math.Max(0m, MonthlyTarget(snapshot, project.Workload) - snapshot.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))));
+        decimal coreTarget = Math.Max(0m, CoreMonthlyTarget(snapshot, context.TotalWorkload) - snapshot.Days.Sum(day => day.CoreHours));
+        Dictionary<Guid, decimal> projectTargets = snapshot.Projects.ToDictionary(project => project.Id, project => Math.Max(0m, MonthlyTarget(snapshot, project) - snapshot.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))));
         decimal remaining = TimesheetLogic.Normalize(coreTarget + projectTargets.Values.Sum());
         if (remaining <= 0m)
         {
@@ -273,7 +273,7 @@ public sealed class AllocateTimesheet : IEndpoint
 
                 foreach ((Guid projectId, decimal targetLeft) in projectTargets)
                 {
-                    if (targetLeft > 0m && !projectsById[projectId].Locked && !day.ProjectHoursFixed.GetValueOrDefault(projectId))
+                    if (targetLeft > 0m && projectsById[projectId].IsActiveOn(day.Date) && !projectsById[projectId].Locked && !day.ProjectHoursFixed.GetValueOrDefault(projectId))
                     {
                         options.Add((day, projectId, gap, targetLeft));
                     }
@@ -319,7 +319,7 @@ public sealed class AllocateTimesheet : IEndpoint
     }
 
     private static bool CanReceiveAnyHours(TimesheetDraftDayState day, IReadOnlyList<TimesheetDraftProjectState> projects) =>
-        !day.CoreHoursFixed || projects.Any(project => !project.Locked && !day.ProjectHoursFixed.GetValueOrDefault(project.Id));
+        !day.CoreHoursFixed || projects.Any(project => project.IsActiveOn(day.Date) && !project.Locked && !day.ProjectHoursFixed.GetValueOrDefault(project.Id));
 
     private static decimal DayTotal(TimesheetDraftDayState day) => TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
 
@@ -399,10 +399,17 @@ public sealed class AllocateTimesheet : IEndpoint
 
     private static int? ToMinutes(TimeSpan? value) => value.HasValue ? (int)Math.Round(value.Value.TotalMinutes) : null;
 
-    private static decimal MonthlyTarget(TimesheetDraftSnapshot snapshot, decimal workload)
+    private static decimal MonthlyTarget(TimesheetDraftSnapshot snapshot, TimesheetDraftProjectState project)
+    {
+        int fundedDays = snapshot.Days.Count(day => TimesheetLogic.IsWeekday(day.Date) && project.IsActiveOn(day.Date));
+        return TimesheetLogic.Normalize(fundedDays * 8m * project.Workload);
+    }
+
+    private static decimal CoreMonthlyTarget(TimesheetDraftSnapshot snapshot, decimal totalWorkload)
     {
         int fundedDays = snapshot.Days.Count(day => TimesheetLogic.IsWeekday(day.Date));
-        return TimesheetLogic.Normalize(fundedDays * 8m * workload);
+        decimal total = TimesheetLogic.Normalize(fundedDays * 8m * totalWorkload);
+        return TimesheetLogic.Normalize(total - snapshot.Projects.Sum(project => MonthlyTarget(snapshot, project)));
     }
 
     private static decimal PreferQuarterStagTopUp(decimal currentCoreHours, decimal stagHours, decimal free, decimal coreTarget)
