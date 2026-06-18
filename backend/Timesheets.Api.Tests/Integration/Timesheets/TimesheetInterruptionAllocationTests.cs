@@ -297,7 +297,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             {
                 Id = Guid.NewGuid(),
                 EmployeeId = SeededTestData.JanNovakEmployeeId,
-                ContractId = SeededTestData.AlphaContractId,
+                ContractId = SeededTestData.BetaContractId,
                 ContractEmployeeId = assignmentId.Value,
                 TimesheetStatusId = TestTimesheetStatusIds.Draft,
                 Year = date.Year,
@@ -335,7 +335,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         {
             Id = Guid.NewGuid(),
             EmployeeId = SeededTestData.JanNovakEmployeeId,
-            ContractId = SeededTestData.AlphaContractId,
+            ContractId = SeededTestData.BetaContractId,
             ContractEmployeeId = assignmentId,
             TimesheetStatusId = TestTimesheetStatusIds.Draft,
             Year = year,
@@ -350,7 +350,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     private static ContractEmployee Assignment(Guid id, string code, string position, DateTime date, decimal workload = 0.25m, DateTime? endDate = null) => new()
     {
         Id = id,
-        ContractId = SeededTestData.AlphaContractId,
+        ContractId = SeededTestData.BetaContractId,
         EmployeeId = SeededTestData.JanNovakEmployeeId,
         PositionCode = code,
         Position = position,
@@ -365,7 +365,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         Id = Guid.NewGuid(),
         EmployeeId = SeededTestData.JanNovakEmployeeId,
-        ContractId = SeededTestData.AlphaContractId,
+        ContractId = SeededTestData.BetaContractId,
         ContractEmployeeId = assignmentId,
         TimesheetStatusId = TestTimesheetStatusIds.Draft,
         Year = firstDate.Year,
