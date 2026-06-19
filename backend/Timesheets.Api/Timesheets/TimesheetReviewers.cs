@@ -124,7 +124,7 @@ public sealed class CombinedTimesheetReviewer
             yield break;
         }
 
-        if (day.AllocatedHours <= 0m && day.StagHours <= 0m)
+        if (day.AllocatedHours <= 0m)
         {
             yield break;
         }
@@ -219,6 +219,7 @@ public sealed class AttendanceTimesheetReviewer
         bool activity = day.ClockIn is not null || day.ClockOut is not null || day.BreakStart is not null || day.BreakEnd is not null;
         bool hasBreak = day.BreakStart is not null || day.BreakEnd is not null;
         decimal shiftHours = TimesheetLogic.CalculateElapsedHours(day.ClockIn, day.ClockOut);
+        decimal workedHours = TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
 
         if (day.IsWorkday && day.Workload == 0 && activity)
         {
@@ -235,12 +236,12 @@ public sealed class AttendanceTimesheetReviewer
 
         if (day.ClockIn is not null && day.ClockOut is not null)
         {
-            bool invalidOrder = day.ClockOut == day.ClockIn || day.ClockOut < day.ClockIn && shiftHours > TimesheetLimits.MaxWorkShiftHours;
+            bool invalidOrder = day.ClockOut == day.ClockIn || day.ClockOut < day.ClockIn && workedHours > TimesheetLimits.MaxWorkShiftHours;
             if (invalidOrder)
             {
                 yield return Issue(day, "ERR-ATT-02", IssueType.Error, "Odchod musí být po příchodu.", "clockOut");
             }
-            if (shiftHours > TimesheetLimits.MaxWorkShiftHours)
+            if (workedHours > TimesheetLimits.MaxWorkShiftHours)
             {
                 yield return Issue(day, "ERR-ATT-05", IssueType.Error, "Práce v jednom dni přesahuje 12 h.", "clockOut");
             }

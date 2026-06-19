@@ -77,6 +77,15 @@ public sealed class CombinedTimesheetReviewerTests
     }
 
     [Fact]
+    public void Review_does_not_require_attendance_for_hidden_stag_only()
+    {
+        CombinedTimesheet combined = new(2026, 6, 1, [DayWithoutAttendance(2, core: 0m, projects: 0m, stag: 3.83m)]);
+        TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6), tracksAttendance: true);
+
+        Assert.DoesNotContain(review.DayIssues, issue => issue.Code == "ERR-ATT-13");
+    }
+
+    [Fact]
     public void Review_warns_when_worked_hours_are_below_6h_for_attendance_employee()
     {
         CombinedTimesheet combined = new(2026, 6, 1, [Day(2, worked: 4, core: 4, projects: 0)]);
