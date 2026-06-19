@@ -55,10 +55,20 @@ export const goToLogin = (returnTo?: string) => {
 const isAuthFailure = (response: Response): boolean => response.status === 401;
 
 export const fetchWithAuth = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-  const response = await fetch(input, {
-    ...init,
-    credentials: "include",
-  });
+  let response: Response;
+  try {
+    response = await fetch(input, {
+      ...init,
+      credentials: "include",
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      goToLogin();
+      return new Promise(() => {});
+    }
+    throw error;
+  }
+
   if (isAuthFailure(response)) {
     goToLogin();
     return new Promise(() => {});

@@ -175,6 +175,16 @@ public static class ConfigureServices
 
                 options.Events = new OpenIdConnectEvents
                 {
+                    OnRedirectToIdentityProvider = context =>
+                    {
+                        if (context.Request.Path.StartsWithSegments("/api"))
+                        {
+                            context.HandleResponse();
+                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnRedirectToIdentityProviderForSignOut = context =>
                     {
                         // We want the IdP to redirect straight to the SPA route (e.g. /login),
