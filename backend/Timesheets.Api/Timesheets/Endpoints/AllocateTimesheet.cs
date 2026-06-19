@@ -50,7 +50,7 @@ public sealed class AllocateTimesheet : IEndpoint
     private static Response Allocate(LoadedTimesheet loaded, TimesheetEditRequest request, int? dayNumber)
     {
         EditableTimesheet sheet = TimesheetEngine.BuildEditableTimesheet(loaded, request);
-        bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.Timesheet.Employee.EmployeeTypeId);
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.EmployeeTypeId);
 
         if (tracksAttendance)
         {

@@ -286,6 +286,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.HasKey(at => at.Id);
 
         builder.Property(at => at.EmployeeId).IsRequired();
+        builder.Property(at => at.EmployeeTypeId);
         builder.Property(at => at.TimesheetStatusId).IsRequired();
         builder.Property(at => at.Year).IsRequired();
         builder.Property(at => at.Month).IsRequired();
@@ -297,6 +298,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.HasOne(at => at.Employee)
             .WithMany(e => e.AttendanceTimesheets)
             .HasForeignKey(at => at.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<EmployeeType>()
+            .WithMany()
+            .HasForeignKey(at => at.EmployeeTypeId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(at => at.TimesheetStatus)

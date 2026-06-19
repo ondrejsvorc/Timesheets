@@ -130,6 +130,7 @@ public sealed class AttendanceTimesheet
 {
     public Guid Id { get; set; }
     public Guid EmployeeId { get; set; }
+    public Guid? EmployeeTypeId { get; set; }
     public Guid TimesheetStatusId { get; set; }
     public Guid? ApprovedBy { get; set; }
     public int Year { get; set; }

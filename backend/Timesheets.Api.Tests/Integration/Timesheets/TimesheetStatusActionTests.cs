@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -187,4 +189,124 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         Guid statusId = await assertionContext.AttendanceTimesheets.Where(timesheet => timesheet.Id == attendanceTimesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
         Assert.Equal(TestTimesheetStatusIds.Approved, statusId);
     }
+    [Fact]
+    public async Task ProjectManager_CanApproveManagedProjectPart()
+    {
+        WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Draft);
+        string managerPersonalNumber = "pm-" + Guid.NewGuid().ToString("N")[..17];
+        Employee manager = await TestEmployeeFactory.CreateAsync(Factory.Services, managerPersonalNumber, "Project Manager");
+        using (IServiceScope scope = CreateScope())
+        {
+            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            dbContext.ProjectManagers.Add(new ProjectManager { Id = Guid.NewGuid(), ProjectId = workflow.ProjectId, EmployeeId = manager.Id });
+            await dbContext.SaveChangesAsync();
+        }
+
+        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.ProjectTimesheetId]);
+        HttpStatusCode statusCode = await PutStatusAsAsync(manager.PersonalNumber, request);
+
+        Assert.Equal(HttpStatusCode.OK, statusCode);
+        using IServiceScope assertionScope = CreateScope();
+        AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        ProjectTimesheet project = await assertionContext.ProjectTimesheets.AsNoTracking().SingleAsync(timesheet => timesheet.Id == workflow.ProjectTimesheetId);
+        Assert.Equal(TestTimesheetStatusIds.Approved, project.TimesheetStatusId);
+        Assert.Equal(manager.Id, project.LockedBy);
+        Assert.NotNull(project.LockedAt);
+    }
+
+    [Fact]
+    public async Task Employee_CannotApproveProjectPart()
+    {
+        WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Draft);
+        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.ProjectTimesheetId]);
+
+        HttpStatusCode statusCode = await PutStatusAsAsync(workflow.EmployeePersonalNumber, request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, statusCode);
+    }
+
+    [Fact]
+    public async Task FinalApproval_RequiresApprovedProjectParts()
+    {
+        WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Draft);
+        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.AttendanceTimesheetId]);
+
+        HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Employee_CanFinalApproveOwnWholeTimesheetAfterProjectPartsAreApproved()
+    {
+        WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Approved);
+        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.AttendanceTimesheetId]);
+
+        HttpStatusCode statusCode = await PutStatusAsAsync(workflow.EmployeePersonalNumber, request);
+
+        Assert.Equal(HttpStatusCode.OK, statusCode);
+        using IServiceScope assertionScope = CreateScope();
+        AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        AttendanceTimesheet attendance = await assertionContext.AttendanceTimesheets.AsNoTracking().SingleAsync(timesheet => timesheet.Id == workflow.AttendanceTimesheetId);
+        Assert.Equal(TestTimesheetStatusIds.Approved, attendance.TimesheetStatusId);
+        Assert.Equal(workflow.EmployeeId, attendance.ApprovedBy);
+        Assert.NotNull(attendance.ApprovedAt);
+    }
+
+    private async Task<WorkflowSetup> CreateWorkflowSetupAsync(Guid attendanceStatusId, Guid projectStatusId)
+    {
+        const int year = 2048;
+        const int month = 1;
+        DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, periodStart, periodStart.AddMonths(1).AddDays(-1), workload: 0.5m);
+        Guid attendanceTimesheetId = Guid.NewGuid();
+
+        using IServiceScope scope = CreateScope();
+        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        ProjectTimesheet projectTimesheet = await dbContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.ContractEmployeeId == setup.ContractEmployeeId && timesheet.Year == year && timesheet.Month == month);
+        projectTimesheet.TimesheetStatusId = projectStatusId;
+        projectTimesheet.LockedAt = projectStatusId == TestTimesheetStatusIds.Approved ? DateTime.UtcNow : null;
+        projectTimesheet.LockedBy = projectStatusId == TestTimesheetStatusIds.Approved ? setup.EmployeeId : null;
+
+        Guid? employeeTypeId = await dbContext.Employees
+            .Where(employee => employee.Id == setup.EmployeeId)
+            .Select(employee => employee.EmployeeTypeId)
+            .SingleAsync();
+
+        dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet
+        {
+            Id = attendanceTimesheetId,
+            EmployeeId = setup.EmployeeId,
+            EmployeeTypeId = employeeTypeId,
+            TimesheetStatusId = attendanceStatusId,
+            Year = year,
+            Month = month,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await dbContext.SaveChangesAsync();
+
+        return new WorkflowSetup(setup.EmployeeId, setup.EmployeePersonalNumber, attendanceTimesheetId, projectTimesheet.Id, setup.ProjectId, year, month);
+    }
+
+    private async Task<HttpStatusCode> PutStatusAsAsync(string personalNumber, UpdateCombinedTimesheetStatus.Request request)
+    {
+        using WebApplicationFactory<Program> factory = CreateAuthenticatedFactory();
+        using HttpClient client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        using HttpRequestMessage message = new(HttpMethod.Put, "/api/timesheets/combined/status")
+        {
+            Content = JsonContent.Create(request)
+        };
+        message.Headers.Add(TestAuthHandler.PersonalNumberHeader, personalNumber);
+        using HttpResponseMessage response = await client.SendAsync(message);
+        return response.StatusCode;
+    }
+
+    private WebApplicationFactory<Program> CreateAuthenticatedFactory() => Factory.WithWebHostBuilder(builder =>
+        builder.ConfigureAppConfiguration((_, config) =>
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Authentication:Enabled"] = "true"
+            })));
+
+    private sealed record WorkflowSetup(Guid EmployeeId, string EmployeePersonalNumber, Guid AttendanceTimesheetId, Guid ProjectTimesheetId, Guid ProjectId, int Year, int Month);
 }

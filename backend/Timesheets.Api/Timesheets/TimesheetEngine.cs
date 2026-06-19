@@ -61,7 +61,7 @@ internal sealed record ProjectDateRange(DateTime StartDate, DateTime? EndDate)
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value.Date : DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
 }
 
-internal sealed record LoadedTimesheet(Data.Models.AttendanceTimesheet Timesheet, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
+internal sealed record LoadedTimesheet(Data.Models.AttendanceTimesheet Timesheet, Guid? EmployeeTypeId, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
 
 internal sealed record ProjectColumn(Guid Id, decimal Workload, bool Locked, ProjectDateRange Range)
 {
@@ -127,7 +127,8 @@ internal static class TimesheetEngine
 
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(timesheet.EmployeeId, timesheet.Year, timesheet.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - projects.Sum(project => project.Workload));
-        return new LoadedTimesheet(Timesheet: timesheet, Projects: projects, ProjectRanges: projectRanges, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
+        Guid? employeeTypeId = timesheet.EmployeeTypeId ?? timesheet.Employee.EmployeeTypeId;
+        return new LoadedTimesheet(Timesheet: timesheet, EmployeeTypeId: employeeTypeId, Projects: projects, ProjectRanges: projectRanges, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
     }
 
     public static EditableTimesheet BuildEditableTimesheet(LoadedTimesheet loaded, TimesheetEditRequest request)
@@ -200,7 +201,7 @@ internal static class TimesheetEngine
 
     public static TimesheetEvaluation Evaluate(LoadedTimesheet loaded, EditableTimesheet sheet)
     {
-        bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.Timesheet.Employee.EmployeeTypeId);
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.EmployeeTypeId);
         foreach (EditableTimesheetDay day in sheet.Days)
         {
             TimesheetInterruptionHours.ApplyToDayState(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance);
@@ -332,7 +333,7 @@ internal static class TimesheetEngine
         }
 
         EditableTimesheet sheet = BuildEditableTimesheet(loaded, CurrentEditRequest(loaded));
-        bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.Timesheet.Employee.EmployeeTypeId);
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.EmployeeTypeId);
         foreach (EditableTimesheetDay day in sheet.Days)
         {
             TimesheetInterruptionHours.ApplyToDayState(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance);
