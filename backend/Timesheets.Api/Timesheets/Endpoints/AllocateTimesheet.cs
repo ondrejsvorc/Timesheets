@@ -10,6 +10,20 @@ namespace Timesheets.Api.Timesheets.Endpoints;
 
 public sealed class AllocateTimesheet : IEndpoint
 {
+    private const int MinGeneratedMinutes = 6 * 60;
+    private const int MaxGeneratedMinutes = 12 * 60;
+    private const int MinGeneratedHourCents = 6 * 100;
+    private const int MaxGeneratedHourCents = 12 * 100;
+    private static readonly decimal[] GeneratedAttendanceHourValues = Enumerable
+        .Range(MinGeneratedMinutes, MaxGeneratedMinutes - MinGeneratedMinutes + 1)
+        .Select(MinutesToHours)
+        .Distinct()
+        .OrderBy(value => value)
+        .ToArray();
+    private static readonly HashSet<int> GeneratedAttendanceHourCents = GeneratedAttendanceHourValues
+        .Select(ToCents)
+        .ToHashSet();
+
     public static void Map(IEndpointRouteBuilder app) =>
         app.MapPost("/{id}/allocate", Handle)
             .WithSummary("Allocate Timesheet Edit")
@@ -66,22 +80,13 @@ public sealed class AllocateTimesheet : IEndpoint
 
     private static void AllocateNonAcademicMonth(LoadedTimesheet loaded, EditableTimesheet sheet)
     {
-        CompleteNonAcademicAttendance(loaded, sheet);
+        ResetGeneratedAllocations(sheet);
+        ApplyNonAcademicInterruptions(sheet, loaded.TotalWorkload);
         Dictionary<Guid, decimal> projectTargets = CalculateProjectMonthlyRemainders(sheet);
         decimal coreTarget = CalculateCoreMonthlyRemainder(sheet, loaded.TotalWorkload);
-
-        foreach (EditableTimesheetDay day in OrderNonAcademicDays(sheet.Days))
-        {
-            GenerateAttendanceIfMissing(day);
-            FillDayFromMonthlyTargets(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance: true, ref coreTarget, projectTargets);
-        }
-
-        CompleteMonthlyTargets(
-            OrderNonAcademicDays(sheet.Days),
-            sheet.Projects,
-            day => CalculateFreeNonAcademicHours(day, loaded.TotalWorkload),
-            ref coreTarget,
-            projectTargets);
+        AllocateNonAcademicGeneratedHours(sheet, coreTarget, projectTargets);
+        RebuildNonAcademicAttendanceFromAllocation(sheet);
+        EnsureNonAcademicMonthTargets(sheet, loaded.TotalWorkload);
     }
 
     private static void AllocateNonAcademicDay(LoadedTimesheet loaded, EditableTimesheet sheet, int dayNumber)
@@ -94,7 +99,7 @@ public sealed class AllocateTimesheet : IEndpoint
 
         Dictionary<Guid, decimal> projectTargets = CalculateProjectMonthlyRemainders(sheet);
         decimal coreTarget = CalculateCoreMonthlyRemainder(sheet, loaded.TotalWorkload);
-        GenerateAttendanceIfMissing(day);
+        GenerateNonAcademicDayAttendanceIfMissing(day, loaded.TotalWorkload);
         FillDayFromMonthlyTargets(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance: true, ref coreTarget, projectTargets);
     }
 
@@ -408,96 +413,325 @@ public sealed class AllocateTimesheet : IEndpoint
 
     private static decimal CalculateDayTotal(EditableTimesheetDay day) => TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
 
-    private static void CompleteNonAcademicAttendance(LoadedTimesheet loaded, EditableTimesheet sheet)
+    private static void ResetGeneratedAllocations(EditableTimesheet sheet)
     {
-        decimal target = CalculateTotalMonthlyTarget(sheet, loaded.TotalWorkload);
-        decimal worked = TimesheetLogic.Normalize(sheet.Days.Sum(day => TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd)));
-        decimal missing = TimesheetLogic.Normalize(target - worked);
-        if (missing <= 0m)
+        foreach (EditableTimesheetDay day in sheet.Days)
+        {
+            if (!day.CoreHoursFixed)
+            {
+                day.CoreHours = 0m;
+            }
+
+            foreach (ProjectColumn project in sheet.Projects)
+            {
+                if (!day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+                {
+                    day.ProjectHours[project.Id] = 0m;
+                }
+            }
+        }
+    }
+
+    private static void ApplyNonAcademicInterruptions(EditableTimesheet sheet, decimal totalWorkload)
+    {
+        foreach (EditableTimesheetDay day in sheet.Days.Where(day => TimesheetInterruptions.HasProportionalInterruption(day.Description)))
+        {
+            if (TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd) <= 0m)
+            {
+                SetGeneratedAttendance(day, TimesheetLogic.Normalize(8m * totalWorkload));
+            }
+
+            TimesheetInterruptionHours.ApplyToDayState(day, sheet.Projects, totalWorkload, tracksAttendance: true);
+        }
+    }
+
+    private static void AllocateNonAcademicGeneratedHours(EditableTimesheet sheet, decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
+    {
+        foreach (ProjectColumn project in sheet.Projects.OrderByDescending(project => projectTargets[project.Id]))
+        {
+            PlaceGeneratedHours(sheet, project.Id, projectTargets[project.Id]);
+        }
+
+        PlaceGeneratedHours(sheet, projectId: null, coreTarget);
+    }
+
+    private static void PlaceGeneratedHours(EditableTimesheet sheet, Guid? projectId, decimal target)
+    {
+        target = TimesheetLogic.Normalize(target);
+        if (target <= 0m)
         {
             return;
         }
 
-        foreach (EditableTimesheetDay day in sheet.Days
-            .Where(day => CanGenerateNonAcademicAttendance(day) && TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd) > 0m)
-            .OrderBy(_ => Random.Shared.Next()))
+        foreach (int count in CandidateGeneratedCellCounts(target))
         {
-            if (missing <= 0m)
+            IReadOnlyList<decimal> amounts = SplitGeneratedAmounts(target, count);
+            List<(EditableTimesheetDay Day, decimal Amount)>? placements = TryPlanGeneratedPlacements(sheet, projectId, amounts);
+            if (placements is null)
             {
-                return;
+                continue;
             }
 
-            missing = AddAttendanceHours(day, missing);
+            foreach ((EditableTimesheetDay day, decimal amount) in placements)
+            {
+                if (projectId is Guid id)
+                {
+                    day.ProjectHours[id] = TimesheetLogic.Normalize(day.ProjectHours.GetValueOrDefault(id) + amount);
+                }
+                else
+                {
+                    day.CoreHours = TimesheetLogic.Normalize(day.CoreHours + amount);
+                }
+            }
+
+            return;
         }
 
-        foreach (EditableTimesheetDay day in sheet.Days
-            .Where(day => CanGenerateNonAcademicAttendance(day) && TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd) <= 0m)
-            .OrderBy(day => TimesheetLogic.IsWeekday(day.Date) ? 0 : 1)
-            .ThenBy(_ => Random.Shared.Next()))
-        {
-            if (missing <= 0m)
-            {
-                return;
-            }
+        throw new InvalidOperationException($"Cannot place generated hours {target:F2} for {(projectId.HasValue ? $"project {projectId}" : "core")} into 6-12 h cells.");
+    }
 
-            missing = AddAttendanceHours(day, missing);
+    private static IEnumerable<int> CandidateGeneratedCellCounts(decimal target)
+    {
+        int min = (int)Math.Ceiling(target / 12m);
+        int max = (int)Math.Floor(target / 6m);
+        if (max < min)
+        {
+            throw new InvalidOperationException($"Cannot split generated target {target:F2} into 6-12 h cells.");
+        }
+
+        int preferred = Math.Clamp((int)Math.Round(target / 8m, MidpointRounding.AwayFromZero), min, max);
+        yield return preferred;
+
+        for (int offset = 1; preferred - offset >= min || preferred + offset <= max; offset++)
+        {
+            if (preferred + offset <= max)
+            {
+                yield return preferred + offset;
+            }
+            if (preferred - offset >= min)
+            {
+                yield return preferred - offset;
+            }
         }
     }
 
-    private static bool CanGenerateNonAcademicAttendance(EditableTimesheetDay day) =>
-        !day.IsHoliday && !TimesheetInterruptions.SkipAllocationRules(day.Description);
-
-    private static decimal AddAttendanceHours(EditableTimesheetDay day, decimal missing)
+    private static IReadOnlyList<decimal> SplitGeneratedAmounts(decimal target, int count)
     {
-        TimeSpan? originalClockIn = day.ClockIn;
-        TimeSpan? originalClockOut = day.ClockOut;
-        TimeSpan? originalBreakStart = day.BreakStart;
-        TimeSpan? originalBreakEnd = day.BreakEnd;
-        decimal current = TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
-        decimal add = Math.Min(missing, 12m - current);
-        if (add <= 0m)
+        target = TimesheetLogic.Normalize(target);
+        if (!CanSplitGeneratedAmount(target, count))
         {
-            return missing;
+            return [];
         }
 
-        if (current <= 0m || day.ClockIn is null || day.ClockOut is null)
+        List<decimal> amounts = [];
+        decimal remaining = target;
+        for (int index = 0; index < count; index++)
         {
-            SetGeneratedAttendance(day, Math.Min(add, TimesheetLogic.IsWeekday(day.Date) ? 8m : 12m));
-        }
-        else
-        {
-            bool hadBreak = TimesheetLogic.CalculateBreakHours(day.BreakStart, day.BreakEnd, day.ClockIn, day.ClockOut) > 0m;
-            decimal finalWork = TimesheetLogic.Normalize(current + add);
-            int extraMinutes = (int)Math.Round(add * 60m, MidpointRounding.AwayFromZero);
-            int start = (int)Math.Round(day.ClockIn.Value.TotalMinutes);
-            if (!hadBreak && finalWork > 6m)
+            int rest = count - index - 1;
+            decimal min = Math.Max(6m, TimesheetLogic.Normalize(remaining - 12m * rest));
+            decimal max = Math.Min(12m, TimesheetLogic.Normalize(remaining - 6m * rest));
+            if (min > max)
             {
-                int breakStart = start + 4 * 60;
-                day.BreakStart = ToTimeOfDay(breakStart);
-                day.BreakEnd = ToTimeOfDay(breakStart + 30);
-                extraMinutes += 30;
+                return [];
             }
 
-            int end = (int)Math.Round(day.ClockOut.Value.TotalMinutes);
-            if (end <= start)
+            decimal preferred = rest == 0 ? remaining : GenerateRandomDayHours();
+            decimal? amount = GeneratedAttendanceHourValues
+                .Where(value => value >= min && value <= max && CanSplitGeneratedAmount(TimesheetLogic.Normalize(remaining - value), rest))
+                .OrderBy(value => Math.Abs(value - preferred))
+                .ThenBy(_ => Random.Shared.Next())
+                .Cast<decimal?>()
+                .FirstOrDefault();
+            if (amount is null)
             {
-                end += 24 * 60;
+                return [];
             }
 
-            day.ClockOut = ToTimeOfDay(end + extraMinutes);
+            amounts.Add(amount.Value);
+            remaining = TimesheetLogic.Normalize(remaining - amount.Value);
         }
 
-        decimal gained = TimesheetLogic.Normalize(TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd) - current);
-        if (gained <= 0m)
+        return remaining == 0m ? amounts : [];
+    }
+
+    private static bool CanSplitGeneratedAmount(decimal total, int count)
+    {
+        int cents = ToCents(total);
+        if (count == 0)
         {
-            day.ClockIn = originalClockIn;
-            day.ClockOut = originalClockOut;
-            day.BreakStart = originalBreakStart;
-            day.BreakEnd = originalBreakEnd;
-            return missing;
+            return cents == 0;
         }
 
-        return TimesheetLogic.Normalize(missing - gained);
+        int min = MinGeneratedHourCents * count;
+        int max = MaxGeneratedHourCents * count;
+        if (cents < min || cents > max)
+        {
+            return false;
+        }
+
+        if (count == 1)
+        {
+            return GeneratedAttendanceHourCents.Contains(cents);
+        }
+
+        // Two or more minute-based 6-12 h values can compose every cent value in range except these edge cents.
+        return cents != min + 1 && cents != max - 1;
+    }
+
+    private static bool IsRepresentableAttendanceHours(decimal hours) =>
+        !TimesheetLogic.HasUnequalHours(MinutesToHours(ToRoundedMinutes(hours)), hours);
+
+    private static decimal MinutesToHours(int minutes) => TimesheetLogic.Normalize(minutes / 60m);
+
+    private static int ToRoundedMinutes(decimal hours) => (int)Math.Round(hours * 60m, MidpointRounding.AwayFromZero);
+
+    private static int ToCents(decimal hours) => (int)Math.Round(TimesheetLogic.Normalize(hours) * 100m, MidpointRounding.AwayFromZero);
+
+    private static List<(EditableTimesheetDay Day, decimal Amount)>? TryPlanGeneratedPlacements(EditableTimesheet sheet, Guid? projectId, IReadOnlyList<decimal> amounts)
+    {
+        Dictionary<EditableTimesheetDay, decimal> planned = [];
+        List<(EditableTimesheetDay Day, decimal Amount)> placements = [];
+
+        foreach (decimal amount in amounts.OrderByDescending(value => value))
+        {
+            EditableTimesheetDay? day = EligibleGeneratedDays(sheet, projectId)
+                .Select(day => new
+                {
+                    Day = day,
+                    Free = TimesheetLogic.Normalize(12m - CalculateDayTotal(day) - planned.GetValueOrDefault(day))
+                })
+                .Where(candidate => candidate.Free >= amount && IsRepresentableAttendanceHours(CalculateDayTotal(candidate.Day) + planned.GetValueOrDefault(candidate.Day) + amount))
+                .OrderBy(candidate => TimesheetLogic.Normalize(candidate.Free - amount))
+                .ThenBy(candidate => TimesheetLogic.IsWeekday(candidate.Day.Date) ? 0 : 1)
+                .ThenBy(_ => Random.Shared.Next())
+                .Select(candidate => candidate.Day)
+                .FirstOrDefault();
+
+            if (day is null)
+            {
+                return null;
+            }
+
+            planned[day] = TimesheetLogic.Normalize(planned.GetValueOrDefault(day) + amount);
+            placements.Add((day, amount));
+        }
+
+        return placements;
+    }
+
+    private static IEnumerable<EditableTimesheetDay> EligibleGeneratedDays(EditableTimesheet sheet, Guid? projectId)
+    {
+        foreach (EditableTimesheetDay day in sheet.Days)
+        {
+            if (day.IsHoliday || TimesheetInterruptions.SkipAllocationRules(day.Description))
+            {
+                continue;
+            }
+
+            if (projectId is null)
+            {
+                if (!day.CoreHoursFixed)
+                {
+                    yield return day;
+                }
+                continue;
+            }
+
+            ProjectColumn project = sheet.Projects.Single(project => project.Id == projectId.Value);
+            if (project.IsActiveOn(day.Date) && !project.Locked && !day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+            {
+                yield return day;
+            }
+        }
+    }
+
+    private static void RebuildNonAcademicAttendanceFromAllocation(EditableTimesheet sheet)
+    {
+        foreach (EditableTimesheetDay day in sheet.Days)
+        {
+            decimal work = CalculateDayTotal(day);
+            if (work <= 0m)
+            {
+                day.ClockIn = null;
+                day.ClockOut = null;
+                day.BreakStart = null;
+                day.BreakEnd = null;
+                continue;
+            }
+
+            if (work > 12m)
+            {
+                throw new InvalidOperationException($"Generated day {day.Date:yyyy-MM-dd} has {work:F2} h, expected at most 12 h.");
+            }
+
+            SetGeneratedAttendance(day, work);
+        }
+    }
+
+    private static void EnsureNonAcademicMonthTargets(EditableTimesheet sheet, decimal totalWorkload)
+    {
+        List<string> errors = [];
+        decimal worked = TimesheetLogic.Normalize(sheet.Days.Sum(day => TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd)));
+        decimal target = CalculateTotalMonthlyTarget(sheet, totalWorkload);
+        decimal core = TimesheetLogic.Normalize(sheet.Days.Sum(day => day.CoreHours));
+        decimal coreTarget = CalculateCoreMonthlyTarget(sheet, totalWorkload);
+
+        AddMismatch(errors, "worked", worked, target);
+        AddMismatch(errors, "core", core, coreTarget);
+        foreach (ProjectColumn project in sheet.Projects)
+        {
+            AddMismatch(errors, $"project {project.Id}", TimesheetLogic.Normalize(sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))), CalculateProjectMonthlyTarget(sheet, project));
+        }
+
+        foreach (EditableTimesheetDay day in sheet.Days.Where(day => !TimesheetInterruptions.SkipAllocationRules(day.Description)))
+        {
+            decimal total = CalculateDayTotal(day);
+            if (total > 0m && (total < 6m || total > 12m))
+            {
+                errors.Add($"day {day.Date:yyyy-MM-dd} total {total:F2}/6-12");
+            }
+            if (day.CoreHours > 0m && (day.CoreHours < 6m || day.CoreHours > 12m))
+            {
+                errors.Add($"day {day.Date:yyyy-MM-dd} core {day.CoreHours:F2}/6-12");
+            }
+            foreach (ProjectColumn project in sheet.Projects)
+            {
+                decimal hours = day.ProjectHours.GetValueOrDefault(project.Id);
+                if (hours > 0m && (hours < 6m || hours > 12m))
+                {
+                    errors.Add($"day {day.Date:yyyy-MM-dd} project {project.Id} {hours:F2}/6-12");
+                }
+            }
+        }
+
+        if (errors.Count > 0)
+        {
+            throw new InvalidOperationException("Generated non-academic timesheet missed targets: " + string.Join("; ", errors));
+        }
+    }
+
+    private static void AddMismatch(List<string> errors, string label, decimal actual, decimal expected)
+    {
+        if (TimesheetLogic.HasUnequalHours(actual, expected))
+        {
+            errors.Add($"{label} {actual:F2}/{expected:F2}");
+        }
+    }
+
+    private static void GenerateNonAcademicDayAttendanceIfMissing(EditableTimesheetDay day, decimal totalWorkload)
+    {
+        if (TimesheetInterruptions.SkipAllocationRules(day.Description) || TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd) > 0m)
+        {
+            return;
+        }
+
+        if (TimesheetLogic.CalculateStagHours(day.Schedules) > 0m || CalculateDayTotal(day) > 0m)
+        {
+            GenerateAttendanceIfMissing(day);
+            return;
+        }
+
+        SetGeneratedAttendance(day, TimesheetLogic.Normalize(8m * totalWorkload));
     }
 
     private static void SetGeneratedAttendance(EditableTimesheetDay day, decimal work)
@@ -519,9 +753,6 @@ public sealed class AllocateTimesheet : IEndpoint
             day.BreakEnd = null;
         }
     }
-
-    private static TimeSpan ToTimeOfDay(int minutes) => TimeSpan.FromMinutes(minutes % (24 * 60));
-
     private static void CompleteMonthlyTargets(IReadOnlyList<EditableTimesheetDay> days, IReadOnlyList<ProjectColumn> projects, Func<EditableTimesheetDay, decimal> calculateFreeHours, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
     {
         foreach (ProjectColumn project in projects.OrderBy(_ => Random.Shared.Next()))
@@ -702,13 +933,13 @@ public sealed class AllocateTimesheet : IEndpoint
     private static Dictionary<Guid, decimal> CalculateProjectMonthlyRemainders(EditableTimesheet sheet) =>
         sheet.Projects.ToDictionary(
             project => project.Id,
-            project => Math.Max(0m, CalculateProjectMonthlyTarget(sheet, project) - sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))));
+            project => TimesheetLogic.Normalize(Math.Max(0m, CalculateProjectMonthlyTarget(sheet, project) - sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id)))));
 
     private static decimal CalculateTotalMonthlyTarget(EditableTimesheet sheet, decimal totalWorkload) =>
         TimesheetLogic.Normalize(CalculateCoreMonthlyTarget(sheet, totalWorkload) + sheet.Projects.Sum(project => CalculateProjectMonthlyTarget(sheet, project)));
 
     private static decimal CalculateCoreMonthlyRemainder(EditableTimesheet sheet, decimal totalWorkload) =>
-        Math.Max(0m, CalculateCoreMonthlyTarget(sheet, totalWorkload) - sheet.Days.Sum(day => day.CoreHours));
+        TimesheetLogic.Normalize(Math.Max(0m, CalculateCoreMonthlyTarget(sheet, totalWorkload) - sheet.Days.Sum(day => day.CoreHours)));
 
     private static decimal CalculateProjectMonthlyTarget(EditableTimesheet sheet, ProjectColumn project)
     {

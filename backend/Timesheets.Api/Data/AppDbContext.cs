@@ -266,7 +266,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(ce => ce.Workload)
             .IsRequired()
-            .HasPrecision(5, 2);
+            .HasPrecision(7, 4);
 
         builder.Property(ce => ce.StartDate)
             .IsRequired();
@@ -343,7 +343,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(ad => ad.Workload)
             .IsRequired()
-            .HasPrecision(5, 2);
+            .HasPrecision(7, 4);
 
         builder.Property(ad => ad.HoursWithoutBreak)
             .IsRequired()
@@ -477,7 +477,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(pt => pt.Workload)
             .IsRequired()
-            .HasPrecision(5, 2);
+            .HasPrecision(7, 4);
 
         builder.Property(pt => pt.TimesheetStatusId)
             .IsRequired();
@@ -533,7 +533,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(pd => pd.Workload)
             .IsRequired()
-            .HasPrecision(5, 2);
+            .HasPrecision(7, 4);
 
         builder.Property(pd => pd.HoursObligation)
             .IsRequired()
@@ -556,7 +556,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(ce => ce.Workload)
             .IsRequired()
-            .HasPrecision(5, 2);
+            .HasPrecision(7, 4);
 
         builder.Property(ce => ce.StartDate)
             .IsRequired();
@@ -585,7 +585,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(ew => ew.Workload)
             .IsRequired()
-            .HasPrecision(5, 2);
+            .HasPrecision(7, 4);
 
         builder.HasIndex(ew => new { ew.EmployeeId, ew.Year, ew.Month })
             .IsUnique();

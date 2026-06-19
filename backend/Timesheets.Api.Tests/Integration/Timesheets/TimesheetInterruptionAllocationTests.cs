@@ -104,7 +104,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             Days: [new TimesheetDayEdit(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: null, Schedules: [])],
             Projects: [new ProjectColumnEdit(assignmentId, [new ProjectDayEdit(date, 0m)])]);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=3", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
@@ -283,6 +283,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             Assert.Equal(44m, allocation.Evaluation.Totals.CoreHours);
             Assert.Equal(44m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
             Assert.Equal(88m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
+            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
         }
     }
 
@@ -324,8 +325,195 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Assert.Equal(44m, allocation.Evaluation.Totals.CoreHours);
         Assert.Equal(44m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
         Assert.Equal(88m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
+        AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
     }
 
+    [Fact]
+    public async Task AllocateTimesheet_RebuildsNonAcademicMonthFromBadGeneratedInput()
+    {
+        int year = 2054;
+        int month = 1;
+        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid firstAssignmentId = Guid.NewGuid();
+        Guid secondAssignmentId = Guid.NewGuid();
+        await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(firstAssignmentId, 0.25m), (secondAssignmentId, 0.5m)]);
+        DateTime[] dates = MonthDates(year, month);
+
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => new TimesheetDayEdit(
+                Date: date,
+                ClockIn: TimesheetLogic.IsWeekday(date) ? new TimeSpan(7, 0, 0) : new TimeSpan(17, 25, 0),
+                ClockOut: TimesheetLogic.IsWeekday(date) ? new TimeSpan(18, 30, 0) : new TimeSpan(17, 27, 0),
+                BreakStart: TimesheetLogic.IsWeekday(date) ? new TimeSpan(10, 45, 0) : TimeSpan.Zero,
+                BreakEnd: TimesheetLogic.IsWeekday(date) ? new TimeSpan(11, 15, 0) : TimeSpan.Zero,
+                CoreHours: date.Day % 3 == 0 ? 5m : 0m,
+                Description: null,
+                Schedules: [])).ToArray(),
+            Projects:
+            [
+                new ProjectColumnEdit(firstAssignmentId, dates.Select(date => new ProjectDayEdit(date, date.Day % 2 == 0 ? 2m : 0m)).ToArray()),
+                new ProjectColumnEdit(secondAssignmentId, dates.Select(date => new ProjectDayEdit(date, date.Day % 2 == 1 ? 7m : 0m)).ToArray())
+            ]);
+
+        for (int attempt = 0; attempt < 50; attempt++)
+        {
+            HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+            Assert.NotNull(allocation);
+
+            Assert.Equal(176m, allocation!.Evaluation.Totals.WorkedHours);
+            Assert.Equal(44m, allocation.Evaluation.Totals.CoreHours);
+            Assert.Equal(44m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
+            Assert.Equal(88m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
+            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
+        }
+    }
+
+    [Fact]
+    public async Task AllocateTimesheet_GeneratesNonAcademicCoreOnlyMonth()
+    {
+        int year = 2056;
+        int month = 1;
+        Guid attendanceTimesheetId = Guid.NewGuid();
+        await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, []);
+        DateTime[] dates = MonthDates(year, month);
+        decimal expected = dates.Count(TimesheetLogic.IsWeekday) * 8m;
+
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => new TimesheetDayEdit(date, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0m, null, [])).ToArray(),
+            Projects: []);
+
+        for (int attempt = 0; attempt < 25; attempt++)
+        {
+            HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+            Assert.NotNull(allocation);
+
+            Assert.Equal(expected, allocation!.Evaluation.Totals.WorkedHours);
+            Assert.Equal(expected, allocation.Evaluation.Totals.CoreHours);
+            Assert.Empty(allocation.Evaluation.Totals.Projects);
+            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
+        }
+    }
+
+    [Fact]
+    public async Task AllocateTimesheet_GeneratesNonAcademicMonthWithSeveralProjectWorkloads()
+    {
+        int year = 2058;
+        int month = 1;
+        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid firstAssignmentId = Guid.NewGuid();
+        Guid secondAssignmentId = Guid.NewGuid();
+        Guid thirdAssignmentId = Guid.NewGuid();
+        await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(firstAssignmentId, 0.10m), (secondAssignmentId, 0.15m), (thirdAssignmentId, 0.25m)]);
+        DateTime[] dates = MonthDates(year, month);
+        decimal total = dates.Count(TimesheetLogic.IsWeekday) * 8m;
+
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => new TimesheetDayEdit(date, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0m, null, [])).ToArray(),
+            Projects:
+            [
+                new ProjectColumnEdit(firstAssignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray()),
+                new ProjectColumnEdit(secondAssignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray()),
+                new ProjectColumnEdit(thirdAssignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())
+            ]);
+
+        for (int attempt = 0; attempt < 25; attempt++)
+        {
+            HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+            Assert.NotNull(allocation);
+
+            Assert.Equal(total, allocation!.Evaluation.Totals.WorkedHours);
+            Assert.Equal(TimesheetLogic.Normalize(total * 0.50m), allocation.Evaluation.Totals.CoreHours);
+            Assert.Equal(TimesheetLogic.Normalize(total * 0.10m), allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
+            Assert.Equal(TimesheetLogic.Normalize(total * 0.15m), allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
+            Assert.Equal(TimesheetLogic.Normalize(total * 0.25m), allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == thirdAssignmentId).Hours);
+            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
+        }
+    }
+
+
+    [Fact]
+    public async Task AllocateTimesheet_GeneratesNonAcademicMonthWithDecimalProjectWorkload()
+    {
+        int year = 2060;
+        int month = 1;
+        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid assignmentId = Guid.NewGuid();
+        await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(assignmentId, 0.1075m)]);
+        DateTime[] dates = MonthDates(year, month);
+        decimal total = dates.Count(TimesheetLogic.IsWeekday) * 8m;
+        decimal projectTarget = TimesheetLogic.Normalize(total * 0.1075m);
+
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => new TimesheetDayEdit(date, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0m, null, [])).ToArray(),
+            Projects: [new ProjectColumnEdit(assignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())]);
+
+        for (int attempt = 0; attempt < 25; attempt++)
+        {
+            HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+            Assert.NotNull(allocation);
+
+            Assert.Equal(total, allocation!.Evaluation.Totals.WorkedHours);
+            Assert.Equal(TimesheetLogic.Normalize(total - projectTarget), allocation.Evaluation.Totals.CoreHours);
+            Assert.Equal(projectTarget, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == assignmentId).Hours);
+            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
+        }
+    }
+
+    [Fact]
+    public async Task AllocateTimesheet_GeneratesNonAcademicMonthWithProportionalInterruption()
+    {
+        int year = 2062;
+        int month = 1;
+        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid assignmentId = Guid.NewGuid();
+        await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(assignmentId, 0.5m)]);
+        DateTime[] dates = MonthDates(year, month);
+        DateTime interruptionDate = dates.First(TimesheetLogic.IsWeekday);
+        decimal total = dates.Count(TimesheetLogic.IsWeekday) * 8m;
+        decimal columnTarget = TimesheetLogic.Normalize(total * 0.5m);
+
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => new TimesheetDayEdit(
+                Date: date,
+                ClockIn: TimeSpan.Zero,
+                ClockOut: TimeSpan.Zero,
+                BreakStart: TimeSpan.Zero,
+                BreakEnd: TimeSpan.Zero,
+                CoreHours: 0m,
+                Description: date == interruptionDate ? "D" : null,
+                Schedules: [])).ToArray(),
+            Projects: [new ProjectColumnEdit(assignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())]);
+
+        for (int attempt = 0; attempt < 25; attempt++)
+        {
+            HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+            Assert.NotNull(allocation);
+
+            Assert.Equal(total, allocation!.Evaluation.Totals.WorkedHours);
+            Assert.Equal(columnTarget, allocation.Evaluation.Totals.CoreHours);
+            Assert.Equal(columnTarget, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == assignmentId).Hours);
+
+            AllocateTimesheet.DayResponse interruption = allocation.Days.Single(day => day.Date == interruptionDate);
+            Assert.Equal(4m, interruption.CoreHours);
+            Assert.Equal(4m, interruption.ProjectHours[assignmentId]);
+            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation, interruptionDate);
+        }
+    }
     [Fact]
     public async Task AllocateTimesheet_KeepsFixedCoreAndProjectHours()
     {
@@ -423,6 +611,33 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AllocateTimesheet.DayResponse day = allocation!.Days.Single();
         Assert.Equal(new int?[] { 420, 870 }, day.Work);
         Assert.Equal(new int?[] { 660, 690 }, day.Break);
+    }
+
+    private static void AssertGeneratedNonAcademicCellsStayWithinBounds(AllocateTimesheet.Response allocation, params DateTime[] ignoredDates)
+    {
+        HashSet<DateTime> ignored = ignoredDates.ToHashSet();
+        foreach (AllocateTimesheet.DayResponse day in allocation.Days)
+        {
+            if (ignored.Contains(day.Date))
+            {
+                continue;
+            }
+
+            decimal total = TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
+            if (total > 0m)
+            {
+                Assert.InRange(total, 6m, 12m);
+            }
+            if (day.CoreHours > 0m)
+            {
+                Assert.InRange(day.CoreHours, 6m, 12m);
+            }
+
+            foreach (decimal hours in day.ProjectHours.Values.Where(hours => hours > 0m))
+            {
+                Assert.InRange(hours, 6m, 12m);
+            }
+        }
     }
 
     private async Task SeedAsync(Guid attendanceTimesheetId, Guid firstAssignmentId, Guid secondAssignmentId, DateTime firstDate)
