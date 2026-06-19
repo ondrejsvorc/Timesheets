@@ -360,7 +360,8 @@ public sealed class AllocateTimesheet : IEndpoint
 
             (EditableTimesheetDay selectedDay, Guid? selectedProjectId, decimal selectedGap, decimal selectedTargetLeft) =
                 options[Random.Shared.Next(options.Count)];
-            decimal amount = Math.Min(Math.Min(GenerateRandomAmount(selectedGap), selectedGap), selectedTargetLeft);
+            decimal maxAmount = Math.Min(selectedGap, selectedTargetLeft);
+            decimal amount = GenerateRandomAmount(maxAmount);
             if (selectedProjectId is null)
             {
                 selectedDay.CoreHours = TimesheetLogic.Normalize(selectedDay.CoreHours + amount);
@@ -374,6 +375,7 @@ public sealed class AllocateTimesheet : IEndpoint
         }
 
         CompleteMonthlyTargets(activeDays, sheet.Projects, CalculateFreeAcademicHours, ref coreTarget, projectTargets);
+        EnsureAcademicMonthTargets(sheet, loaded.TotalWorkload);
     }
 
     private static bool CanAllocateAcademicDay(EditableTimesheetDay day) =>
@@ -665,6 +667,21 @@ public sealed class AllocateTimesheet : IEndpoint
             }
 
             SetGeneratedAttendance(day, work);
+        }
+    }
+
+    private static void EnsureAcademicMonthTargets(EditableTimesheet sheet, decimal totalWorkload)
+    {
+        List<string> errors = [];
+        AddMismatch(errors, "core", TimesheetLogic.Normalize(sheet.Days.Sum(day => day.CoreHours)), CalculateCoreMonthlyTarget(sheet, totalWorkload));
+        foreach (ProjectColumn project in sheet.Projects)
+        {
+            AddMismatch(errors, $"project {project.Id}", TimesheetLogic.Normalize(sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))), CalculateProjectMonthlyTarget(sheet, project));
+        }
+
+        if (errors.Count > 0)
+        {
+            throw new InvalidOperationException("Generated academic timesheet missed targets: " + string.Join("; ", errors));
         }
     }
 
