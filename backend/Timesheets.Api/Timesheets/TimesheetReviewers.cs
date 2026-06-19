@@ -60,7 +60,7 @@ public sealed class CombinedTimesheetReviewer
     private static IEnumerable<DayIssue> ReviewDay(CombinedDay day, bool tracksAttendance) =>
     [
         .. ReviewBalance(day),
-        .. ReviewStag(day),
+        .. ReviewStag(day, tracksAttendance),
         .. ReviewMissingAttendance(day, tracksAttendance),
         .. ReviewShortDay(day, tracksAttendance),
         .. ReviewWeekendAndHoliday(day)
@@ -109,9 +109,9 @@ public sealed class CombinedTimesheetReviewer
         yield return new DayIssue("ERR-ALL-01", IssueType.Error, description, day.Date.Day, "balance");
     }
 
-    private static IEnumerable<DayIssue> ReviewStag(CombinedDay day)
+    private static IEnumerable<DayIssue> ReviewStag(CombinedDay day, bool tracksAttendance)
     {
-        if (!day.SkipAllocationRules && day.CoreWorkload > 0 && day.StagHours > 0 && day.CoreHours + 0.009m < day.StagHours)
+        if (!tracksAttendance && !day.SkipAllocationRules && day.CoreWorkload > 0 && day.StagHours > 0 && day.CoreHours + 0.009m < day.StagHours)
         {
             yield return new DayIssue("ERR-ALL-02", IssueType.Error, $"STAG: v kmeni musí být alespoň {day.StagHours:F2} h.", day.Date.Day, "coreHours");
         }

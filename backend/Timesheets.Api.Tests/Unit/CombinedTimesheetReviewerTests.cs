@@ -31,11 +31,20 @@ public sealed class CombinedTimesheetReviewerTests
     }
 
     [Fact]
-    public void Review_requires_core_at_least_stag_when_kmen_workload_exists()
+    public void Review_requires_core_at_least_stag_for_academic_employee()
+    {
+        CombinedTimesheet combined = new(2026, 6, 0.5m, [Day(2, worked: 8, core: 1, projects: 7, stag: 2)]);
+        TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6), tracksAttendance: false);
+        Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ALL-02");
+    }
+
+    [Fact]
+    public void Review_skips_stag_rule_for_non_academic_employee()
     {
         CombinedTimesheet combined = new(2026, 6, 0.5m, [Day(2, worked: 8, core: 1, projects: 7, stag: 2)]);
         TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6), tracksAttendance: true);
-        Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ALL-02");
+
+        Assert.DoesNotContain(review.DayIssues, issue => issue.Code == "ERR-ALL-02");
     }
 
     [Fact]
