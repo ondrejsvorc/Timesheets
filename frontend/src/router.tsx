@@ -19,9 +19,10 @@ import { EmployeePositions } from "./features/employee/EmployeePositions";
 import { EmployeeTimesheets } from "./features/employee/EmployeeTimesheets";
 import { getEmployees } from "./features/employees/api";
 import { EmployeesPage } from "./features/employees/EmployeesPage";
-import { getProject, getProjectContracts, getProjectContractsManagers } from "./features/project/api";
+import { getProject, getProjectContracts, getProjectContractsManagers, getProjectManagers } from "./features/project/api";
 import { ProjectContracts } from "./features/project/ProjectContracts";
 import { ProjectContractsManagers } from "./features/project/ProjectContractsManagers";
+import { ProjectManagers } from "./features/project/ProjectManagers";
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
@@ -134,6 +135,15 @@ export const router = createBrowserRouter([
               const projectId = requireProjectId(params);
               await denyUnless(UiAction.projects.view, { projectId }, request);
               return { promise: getProjectContracts(projectId) };
+            },
+          },
+          {
+            path: "project-managers",
+            element: <ProjectManagers />,
+            loader: async ({ params, request }) => {
+              const projectId = requireProjectId(params);
+              await denyUnless(UiAction.projectManagers.view, { projectId }, request);
+              return { promise: getProjectManagers(projectId) };
             },
           },
           {

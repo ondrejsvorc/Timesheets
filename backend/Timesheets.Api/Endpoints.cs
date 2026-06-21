@@ -63,7 +63,10 @@ public static class Endpoints
         .MapEndpoint<CreateProject>()
         .MapEndpoint<GetProjectContract>()
         .MapEndpoint<GetProjectContracts>()
+        .MapEndpoint<GetProjectManagers>()
         .MapEndpoint<GetProjectContractsManagers>()
+        .MapEndpoint<AddProjectManager>()
+        .MapEndpoint<RemoveProjectManager>()
         .MapEndpoint<CreateProjectContract>()
         .MapEndpoint<UpdateProjectContract>()
         .MapEndpoint<DeleteProjectContract>();

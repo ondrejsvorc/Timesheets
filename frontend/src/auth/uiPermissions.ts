@@ -20,6 +20,11 @@ export const UiAction = {
     delete: "contracts.delete",
     view: "contracts.view",
   },
+  projectManagers: {
+    view: "projectManagers.view",
+    add: "projectManagers.add",
+    remove: "projectManagers.remove",
+  },
   contractManagers: {
     view: "contractManagers.view",
     add: "contractManagers.add",
@@ -130,6 +135,9 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
     case UiAction.contractEmployees.view:
       return canSeeContract(permissions, ctx.contractId);
 
+    case UiAction.projectManagers.view:
+    case UiAction.projectManagers.add:
+    case UiAction.projectManagers.remove:
     case UiAction.contractManagers.view:
     case UiAction.contractManagers.add:
     case UiAction.contractManagers.remove:

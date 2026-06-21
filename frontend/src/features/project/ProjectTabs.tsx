@@ -22,6 +22,14 @@ export const ProjectTabs = () => {
         >
           {Texts.contracts}
         </NavLink>
+        <Can action={UiAction.projectManagers.view} context={{ projectId: id }}>
+          <NavLink
+            to={Routes.projectManagers(id)}
+            className={({ isActive }) => cn("pb-2 text-sm font-medium transition-colors", isActive ? "border-b-2 border-primary text-foreground" : "text-muted-foreground hover:text-foreground")}
+          >
+            {Texts.projectManagers}
+          </NavLink>
+        </Can>
         <Can action={UiAction.contractManagers.view} context={{ projectId: id }}>
           <NavLink
             to={Routes.projectContractsManagers(id)}

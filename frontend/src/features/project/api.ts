@@ -37,6 +37,16 @@ export interface UpdateProjectContractResponse {
   projectContract: ProjectContractItem;
 }
 
+export interface ProjectManagerItem {
+  projectId: string;
+  employeeId: string;
+  employeePersonalNumber: string;
+  employeeFullName: string;
+}
+
+export interface GetProjectManagersResponse {
+  managers: ProjectManagerItem[];
+}
 export interface ProjectContractManagerItem {
   contractId: string;
   employeeId: string;
@@ -98,9 +108,34 @@ export const deleteProjectContract = (projectId: string, contractId: string, sig
   });
 };
 
+export const getProjectManagers = (projectId: string): Promise<GetProjectManagersResponse> => {
+  return withDelay("slow", () => {
+    return customFetch<GetProjectManagersResponse>(`${ApiUrl}/projects/${projectId}/managers`);
+  });
+};
 export const getProjectContractsManagers = (projectId: string): Promise<GetProjectContractsManagersResponse> => {
   return withDelay("slow", () => {
     return customFetch<GetProjectContractsManagersResponse>(`${ApiUrl}/projects/${projectId}/contracts/managers`);
+  });
+};
+
+export const addProjectManager = (projectId: string, employeeId: string, signal: AbortSignal): Promise<ProjectManagerItem> => {
+  return withDelay("fast", () => {
+    return customFetch<ProjectManagerItem>(`${ApiUrl}/projects/${projectId}/managers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId, employeeId }),
+      signal,
+    });
+  });
+};
+
+export const removeProjectManager = (projectId: string, employeeId: string, signal: AbortSignal): Promise<void> => {
+  return withDelay("fast", () => {
+    return customFetch<void>(`${ApiUrl}/projects/${projectId}/managers/${employeeId}`, {
+      method: "DELETE",
+      signal,
+    });
   });
 };
 

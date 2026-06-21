@@ -106,6 +106,7 @@ export const Texts = {
   editProject: "Upravit projekt",
   addContract: "Vytvořit zakázku",
   addManager: "Přidat manažera",
+  projectManagers: "Manažeři projektu",
   contractsManagers: "Manažeři zakázek",
   addEmployee: "Přidat zaměstnance",
   from: "Od",
