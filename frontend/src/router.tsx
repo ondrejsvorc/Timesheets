@@ -108,7 +108,7 @@ export const router = createBrowserRouter([
     id: "root",
     path: "/",
     element: <App />,
-    hydrateFallbackElement: <LoadingScreen message={Texts.redirectingToLogin} />,
+    hydrateFallbackElement: <LoadingScreen />,
     loader: requireAuth,
     children: [
       {
