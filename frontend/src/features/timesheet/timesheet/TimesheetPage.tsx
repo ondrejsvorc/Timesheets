@@ -3,7 +3,7 @@ import { useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "reac
 import { useImmer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
-import { BackButton } from "@/components/shared/buttons/ActionButtons";
+import { BackButton, FullscreenButton } from "@/components/shared/buttons/ActionButtons";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
@@ -54,12 +54,6 @@ const TimesheetPageLoaded = () => {
         </PageSubtitle>
       </PageHeader>
       <TimesheetsOverview overview={overview} />
-      <SubPageHeader>
-        <div className="flex items-center gap-2">
-          <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
-          <TimesheetStatusBadge status={overview.status} />
-        </div>
-      </SubPageHeader>
       <TimesheetEditor key={timesheetData.timesheet.id} initialData={timesheetData} overview={overview} />
       {employeeId && <TimesheetComments scope={{ employeeId, year: overview.year, month: overview.month }} comments={comments} />}
     </>
@@ -77,9 +71,15 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
   const [searchParams] = useSearchParams();
   const timesheetEmployeeId = searchParams.get("employeeId") ?? "";
   const canEditTimesheet = useCan(UiAction.timesheet.edit, { employeeId: timesheetEmployeeId });
+  const canSubmit = useCan(UiAction.timesheet.submit, { employeeId: timesheetEmployeeId });
+  const canManageWhole = useCan(UiAction.timesheet.finalApprove, { employeeId: timesheetEmployeeId });
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const isDraft = overview.status === Texts.statusInProgress;
+  const isSubmitted = overview.status === Texts.statusPendingApproval;
+  const isApproved = overview.status === Texts.statusApproved;
   const isEditable = overview.status === Texts.statusInProgress && canEditTimesheet;
+  const hasWorkflowButtons = (isDraft && canSubmit) || (isSubmitted && canManageWhole) || (isApproved && canManageWhole);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -157,15 +157,23 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
 
   return (
     <div className={cn(isFullscreen && "fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background p-4 md:p-6")}>
-      <TimesheetWorkflowToolbar
-        timesheet={timesheet}
-        evaluation={evaluation}
-        overview={overview}
-        isFullscreen={isFullscreen}
-        onToggleFullscreen={() => setIsFullscreen((current) => !current)}
-        onSave={handleSave}
-        onClearAttendanceFields={handleClearAttendanceFields}
-      />
+      <SubPageHeader actions={!hasWorkflowButtons && <FullscreenButton onClick={() => setIsFullscreen((current) => !current)} isFullscreen={isFullscreen} />}>
+        <div className="flex items-center gap-2">
+          <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
+          <TimesheetStatusBadge status={overview.status} />
+        </div>
+      </SubPageHeader>
+      {hasWorkflowButtons && (
+        <TimesheetWorkflowToolbar
+          timesheet={timesheet}
+          evaluation={evaluation}
+          overview={overview}
+          isFullscreen={isFullscreen}
+          onToggleFullscreen={() => setIsFullscreen((current) => !current)}
+          onSave={handleSave}
+          onClearAttendanceFields={handleClearAttendanceFields}
+        />
+      )}
       <TimesheetGrid
         timesheet={timesheet}
         evaluation={evaluation}
