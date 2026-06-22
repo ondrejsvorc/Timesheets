@@ -40,14 +40,16 @@ export const TimesheetHeader = ({ readOnly = false, tracksAttendance, projects, 
       )}
       {!tracksAttendance && <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">STAG</div>}
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Kmen ({formatWorkloadPercent(core.workload)}%)</div>
-      {projects.map((project) => (
+      {projects.map((project, index) => (
         <div key={project.id} className="h-10 px-2 flex items-center justify-center gap-1 text-center font-medium whitespace-nowrap min-w-0">
           <Tooltip delayDuration={120}>
             <TooltipTrigger asChild>
-              <span className="cursor-help border-b border-dotted border-slate-400">{project.registrationNumber || Texts.noContractNumber}</span>
+              <span className="cursor-help border-b border-dotted border-slate-400">Z{index + 1}</span>
             </TooltipTrigger>
-            <TooltipContent side="top">
-              {project.name} · {formatWorkloadPercent(project.workload)} %
+            <TooltipContent side="top" className="space-y-1 text-left">
+              <div className="font-medium">{project.name}</div>
+              <div>{project.registrationNumber || Texts.noContractNumber}</div>
+              <div>{formatWorkloadPercent(project.workload)} %</div>
             </TooltipContent>
           </Tooltip>
           {project.locked && <Lock className="h-3.5 w-3.5 text-slate-500" aria-label={Texts.lockContractColumn} />}

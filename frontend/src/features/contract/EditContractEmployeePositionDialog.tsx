@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DialogCancelButton } from "@/components/shared/buttons/DialogButtons";
 import { DatePicker } from "@/components/shared/inputs/DatePicker";
+import { MaskedInput, maskPositionCode, positionCodePattern } from "@/components/shared/inputs/MaskedInput";
 import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -17,11 +18,10 @@ import type { PositionItem, UpdateContractEmployeeRequest } from "./api";
 type EditPositionFormValues = z.infer<ReturnType<typeof createSchema>>;
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
-
 const createSchema = (position: PositionItem, projectStartDate: string, projectEndDate: string | null) =>
   z
     .object({
-      positionCode: z.string().nonempty(),
+      positionCode: z.string().regex(positionCodePattern),
       positionName: z.string().nonempty(),
       workload: z
         .string()
@@ -136,7 +136,7 @@ export const EditContractEmployeePositionDialog = ({ open, position, projectStar
                   <FormItem>
                     <FormLabel>{Texts.positionCode}</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <MaskedInput {...field} mask={maskPositionCode} inputMode="numeric" placeholder="1.1.1.8.585" />
                     </FormControl>
                   </FormItem>
                 )}

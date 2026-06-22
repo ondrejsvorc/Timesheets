@@ -5,6 +5,7 @@ import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
 import { DatePicker } from "@/components/shared/inputs/DatePicker";
+import { MaskedInput, maskPositionCode, positionCodePattern } from "@/components/shared/inputs/MaskedInput";
 import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
@@ -16,14 +17,13 @@ import { parseCalendarDate } from "@/utils/calendarDate";
 import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
-
 type AddEmployeePositionFormValues = z.infer<ReturnType<typeof createSchema>>;
 const createSchema = (projects: ProjectCatalogItem[]) =>
   z
     .object({
       projectId: z.string().nonempty(),
       contractId: z.string().nonempty(),
-      positionCode: z.string().nonempty(),
+      positionCode: z.string().regex(positionCodePattern),
       positionName: z.string().nonempty(),
       workload: z
         .string()
@@ -199,7 +199,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                   <FormItem>
                     <FormLabel>Kód pozice *</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <MaskedInput {...field} mask={maskPositionCode} inputMode="numeric" placeholder="1.1.1.8.585" />
                     </FormControl>
                   </FormItem>
                 )}

@@ -45,7 +45,7 @@ public class UpdateProjectContractTests : BaseIntegrationTest
         CreateProjectContract.Response? createdContract = await postContractResponse.Content.ReadFromJsonAsync<CreateProjectContract.Response>();
         Guid contractId = createdContract!.ProjectContract.Id;
 
-        UpdateProjectContract.Request updateRequest = new("Contract After Update", "CONT-UPD-003");
+        UpdateProjectContract.Request updateRequest = new("Contract After Update", "54321 10 9876 54");
         HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/projects/{projectId}/contracts/{contractId}", updateRequest);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 

@@ -26,9 +26,12 @@ public class CreateProjectContractTests : BaseIntegrationTest
     public async Task CreateProjectContract_WithValidData_ReturnsCreated()
     {
         Guid projectId = await CreateProjectAsync();
-        CreateProjectContract.Request request = new("Test Contract", "CONT-001");
+        CreateProjectContract.Request request = new("Test Contract", "12345 12 1234 12");
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", request);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+        CreateProjectContract.Response? content = await response.Content.ReadFromJsonAsync<CreateProjectContract.Response>();
+        Assert.Equal(request.RegistrationNumber, content!.ProjectContract.RegistrationNumber);
     }
 
     [Fact]

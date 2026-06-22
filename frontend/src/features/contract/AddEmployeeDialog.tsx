@@ -5,6 +5,7 @@ import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
 import { DatePicker } from "@/components/shared/inputs/DatePicker";
+import { MaskedInput, maskPositionCode, positionCodePattern } from "@/components/shared/inputs/MaskedInput";
 import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
@@ -20,7 +21,6 @@ type AddEmployeeToContractFormValues = z.infer<ReturnType<typeof createSchema>>;
 const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCase();
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
-
 const intervalsOverlapInclusive = (aStart: string, aEnd: string | null | undefined, bStart: string, bEnd: string | null | undefined) => {
   const aS = parseCalendarDate(aStart).getTime();
   const aE = aEnd ? parseCalendarDate(aEnd).getTime() : Number.POSITIVE_INFINITY;
@@ -33,7 +33,7 @@ const createSchema = (existing: ContractEmployeeItem[], projectStartDate: string
   z
     .object({
       employeeId: z.string().nonempty(),
-      positionCode: z.string().nonempty(),
+      positionCode: z.string().regex(positionCodePattern),
       positionName: z.string().nonempty(),
       workload: z
         .string()
@@ -210,7 +210,7 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
                   <FormItem>
                     <FormLabel>{Texts.positionCode}</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <MaskedInput {...field} mask={maskPositionCode} inputMode="numeric" placeholder="1.1.1.8.585" />
                     </FormControl>
                   </FormItem>
                 )}

@@ -2,6 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
+import { contractRegistrationNumberPattern, MaskedInput, maskContractRegistrationNumber } from "@/components/shared/inputs/MaskedInput";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { Texts } from "@/constants/texts";
 export type ContractFormValues = z.infer<typeof contractSchema>;
 export const contractSchema = z.object({
   name: z.string().nonempty(),
-  contractId: z.string().nonempty(),
+  contractId: z.string().regex(contractRegistrationNumberPattern),
 });
 
 interface ContractFormProps {
@@ -23,7 +24,7 @@ export const ContractForm = ({ initialValues, onSubmit, onCancel }: ContractForm
   const form = useForm<ContractFormValues>({
     resolver: zodResolver(contractSchema),
     mode: "onChange",
-    defaultValues: initialValues,
+    defaultValues: { contractId: "", name: "", ...initialValues },
   });
 
   return (
@@ -38,7 +39,7 @@ export const ContractForm = ({ initialValues, onSubmit, onCancel }: ContractForm
                 {Texts.contractId} <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
-                <Input {...field} />
+                <MaskedInput {...field} mask={maskContractRegistrationNumber} inputMode="numeric" placeholder="12345 12 1234 12" />
               </FormControl>
             </FormItem>
           )}
