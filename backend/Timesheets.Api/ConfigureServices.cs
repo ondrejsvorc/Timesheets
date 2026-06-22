@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Security.Claims;
 using CzechHolidays;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -12,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Timesheets.Api.Administration;
 using Timesheets.Api.Auth;
+using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Notifications;
 using Timesheets.Api.Timesheets;
@@ -166,6 +168,7 @@ public static class ConfigureServices
                 options.ClaimActions.Add(new JsonKeyClaimAction("title", ClaimValueTypes.String, "title"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("titleBefore", ClaimValueTypes.String, "titleBefore"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("titleAfter", ClaimValueTypes.String, "titleAfter"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("eduPersonScopedAffiliation", ClaimValueTypes.String, "eduPersonScopedAffiliation"));
 
                 options.Scope.Clear();
                 foreach (string scope in auth.GetSection("Scope").Get<string[]>() ?? [])
@@ -249,6 +252,14 @@ public static class ConfigureServices
                         if (context.Principal is null)
                         {
                             throw new InvalidOperationException("OIDC Principal is missing.");
+                        }
+
+                        if (!context.Principal.CanUseTimesheets())
+                        {
+                            context.HandleResponse();
+                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                            context.Response.Redirect("/auth/employee-only");
+                            return;
                         }
 
                         UserSynchronizer synchronizer = context.HttpContext.RequestServices.GetRequiredService<UserSynchronizer>();

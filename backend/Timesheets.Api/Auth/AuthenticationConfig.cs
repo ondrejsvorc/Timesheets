@@ -28,6 +28,7 @@ public static class AuthenticationConfig
         string personalNumber = Required(dev, "PersonalNumber");
         string? titleBefore = dev.GetValue<string?>("TitleBefore", null);
         string? titleAfter = dev.GetValue<string?>("TitleAfter", null);
+        string[] affiliations = dev.GetSection("Affiliation").Get<string[]>() ?? [];
 
         List<Claim> claims = new()
         {
@@ -43,6 +44,11 @@ public static class AuthenticationConfig
         if (!string.IsNullOrWhiteSpace(titleAfter))
         {
             claims.Add(new Claim("titleAfter", titleAfter));
+        }
+
+        foreach (string affiliation in affiliations.Where(value => !string.IsNullOrWhiteSpace(value)))
+        {
+            claims.Add(new Claim("eduPersonScopedAffiliation", affiliation));
         }
 
         return new ClaimsPrincipal(new ClaimsIdentity(claims, authenticationType: "Dev"));

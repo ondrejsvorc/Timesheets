@@ -8,7 +8,7 @@ namespace Timesheets.Api.Auth;
 
 public sealed class UserSynchronizer(AppDbContext dbContext)
 {
-    private readonly record struct SynchronizedUser(string FullName, string PersonalNumber, string? TitleBefore, string? TitleAfter);
+    private readonly record struct SynchronizedUser(string FullName, string PersonalNumber, string? TitleBefore, string? TitleAfter, Guid EmployeeTypeId);
 
     public async Task SyncFromPrincipalAsync(ClaimsPrincipal principal, CancellationToken cancellationToken)
     {
@@ -16,7 +16,8 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
             principal.GetFullName(),
             principal.GetPersonalNumber(),
             principal.GetTitleBefore(),
-            principal.GetTitleAfter());
+            principal.GetTitleAfter(),
+            principal.GetEmployeeTypeId());
         await SyncUserAsync(synchronizedUser, cancellationToken);
     }
 
@@ -44,7 +45,7 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
             TitleBefore = user.TitleBefore,
             TitleAfter = user.TitleAfter,
             IsGlobalManager = false,
-            EmployeeTypeId = null,
+            EmployeeTypeId = user.EmployeeTypeId,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -77,6 +78,12 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
         if (existing.TitleAfter != user.TitleAfter)
         {
             existing.TitleAfter = user.TitleAfter;
+            hasChanges = true;
+        }
+
+        if (existing.EmployeeTypeId != user.EmployeeTypeId)
+        {
+            existing.EmployeeTypeId = user.EmployeeTypeId;
             hasChanges = true;
         }
 

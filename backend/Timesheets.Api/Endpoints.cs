@@ -30,6 +30,7 @@ public static class Endpoints
         {
             endpoints.MapEndpoint<Login>();
             endpoints.MapEndpoint<Logout>();
+            endpoints.MapEndpoint<EmployeeOnly>();
         }
 
         endpoints.MapEndpoint<GetCurrentUser>();
