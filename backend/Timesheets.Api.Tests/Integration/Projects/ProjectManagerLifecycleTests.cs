@@ -14,7 +14,7 @@ public class ProjectManagerLifecycleTests : BaseIntegrationTest
     [Fact]
     public async Task Project_Manager_Lifecycle_HappyPath_CompletesSuccessfully()
     {
-        CreateProject.Request createProjectRequest = new("Test Project for Project Managers", "REG-PROJ-MAN-001", DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
+        CreateProject.Request createProjectRequest = new("Test Project for Project Managers", TestIdentifiers.Project(1010), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
         HttpResponseMessage projectResponse = await Client.PostAsJsonAsync("/api/projects", createProjectRequest);
         Assert.Equal(HttpStatusCode.Created, projectResponse.StatusCode);
         CreateProject.Response projectBody = (await projectResponse.Content.ReadFromJsonAsync<CreateProject.Response>())!;

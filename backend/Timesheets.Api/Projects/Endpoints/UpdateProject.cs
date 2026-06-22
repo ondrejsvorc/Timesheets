@@ -29,7 +29,8 @@ public sealed class UpdateProject : IEndpoint
 
             RuleFor(x => x.RegistrationNumber)
                 .NotEmpty()
-                .MaximumLength(ProjectSchema.RegistrationNumber.MaxLength);
+                .MaximumLength(ProjectSchema.RegistrationNumber.MaxLength)
+                .Matches(ProjectSchema.RegistrationNumber.Pattern);
 
             RuleFor(x => x.StartDate)
                 .LessThan(x => x.EndDate)

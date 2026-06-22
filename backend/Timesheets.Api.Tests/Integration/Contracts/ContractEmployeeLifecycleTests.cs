@@ -16,25 +16,26 @@ public class ContractEmployeeLifecycleTests : BaseIntegrationTest
     [Fact]
     public async Task Contract_Employee_Lifecycle_HappyPath_CompletesSuccessfully()
     {
-        CreateProject.Request createProjectRequest = new("Test Project for Contract Employees", "REG-CON-EMP-001", DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
+        CreateProject.Request createProjectRequest = new("Test Project for Contract Employees", TestIdentifiers.Project(1030), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
         HttpResponseMessage projectResponse = await Client.PostAsJsonAsync("/api/projects", createProjectRequest);
         Assert.Equal(HttpStatusCode.Created, projectResponse.StatusCode);
         Guid projectId = (await projectResponse.Content.ReadFromJsonAsync<CreateProject.Response>())!.Project.Id;
 
-        CreateProjectContract.Request createContractRequest = new("Test Contract Employee", "REG-CONT-001");
+        CreateProjectContract.Request createContractRequest = new("Test Contract Employee", TestIdentifiers.Contract(1030));
         HttpResponseMessage contractResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", createContractRequest);
         Assert.Equal(HttpStatusCode.Created, contractResponse.StatusCode);
         Guid contractId = (await contractResponse.Content.ReadFromJsonAsync<CreateProjectContract.Response>())!.ProjectContract.Id;
 
         Guid employeeId = await SeedEmployeeAsync("9999", "John Doe Contract");
-        AddContractEmployee.Request addEmployeeRequest = new(employeeId, "POS-01", "Developer", 1.0m, DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(15));
+        string positionCode = TestIdentifiers.Position(1);
+        AddContractEmployee.Request addEmployeeRequest = new(employeeId, positionCode, "Developer", 1.0m, DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(15));
         HttpResponseMessage addResponse = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/employees", addEmployeeRequest);
         Assert.Equal(HttpStatusCode.Created, addResponse.StatusCode);
 
         GetContractEmployees.Response? employeesList = await (await Client.GetAsync($"/api/contracts/{contractId}/employees")).Content.ReadFromJsonAsync<GetContractEmployees.Response>();
         Assert.NotNull(employeesList);
-        Assert.Contains(employeesList!.Employees, employee => employee.Id == employeeId && employee.Positions.Any(position => position.PositionCode == "POS-01"));
-        Guid contractEmployeeId = employeesList.Employees.First(employee => employee.Id == employeeId).Positions.First(position => position.PositionCode == "POS-01").Id;
+        Assert.Contains(employeesList!.Employees, employee => employee.Id == employeeId && employee.Positions.Any(position => position.PositionCode == positionCode));
+        Guid contractEmployeeId = employeesList.Employees.First(employee => employee.Id == employeeId).Positions.First(position => position.PositionCode == positionCode).Id;
 
         HttpResponseMessage deleteResponse = await Client.DeleteAsync($"/api/contracts/{contractId}/employees/{contractEmployeeId}");
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);

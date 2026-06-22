@@ -210,7 +210,7 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
                   <FormItem>
                     <FormLabel>{Texts.positionCode}</FormLabel>
                     <FormControl>
-                      <MaskedInput {...field} mask={maskPositionCode} inputMode="numeric" placeholder="1.1.1.8.585" />
+                      <MaskedInput {...field} mask={maskPositionCode} inputMode="numeric" placeholder="1.1.1.2.1.09" />
                     </FormControl>
                   </FormItem>
                 )}

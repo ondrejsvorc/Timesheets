@@ -2,6 +2,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { DatePicker } from "@/components/shared/inputs/DatePicker";
+import { MaskedInput, maskProjectRegistrationNumber, projectRegistrationNumberPattern } from "@/components/shared/inputs/MaskedInput";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { parseCalendarDate } from "@/utils/calendarDate";
 
 export const projectFormSchema = z.object({
   name: z.string().min(1),
-  registrationNumber: z.string().min(1),
+  registrationNumber: z.string().regex(projectRegistrationNumberPattern),
   startDate: z.string().min(1),
   endDate: z.string().min(1).optional(),
 });
@@ -46,7 +47,7 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
                 {Texts.projectIdLabel} <span className="text-destructive">*</span>
               </FormLabel>
               <FormControl>
-                <Input {...field} />
+                <MaskedInput {...field} mask={maskProjectRegistrationNumber} inputMode="numeric" placeholder="22161 37 2121 01" />
               </FormControl>
             </FormItem>
           )}

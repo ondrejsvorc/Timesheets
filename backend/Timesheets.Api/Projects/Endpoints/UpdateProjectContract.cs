@@ -22,7 +22,7 @@ public sealed class UpdateProjectContract : IEndpoint
         public Validator()
         {
             RuleFor(x => x.Name).NotEmpty().MaximumLength(ContractSchema.Name.MaxLength);
-            RuleFor(x => x.RegistrationNumber).NotEmpty().MaximumLength(ContractSchema.RegistrationNumber.MaxLength);
+            RuleFor(x => x.RegistrationNumber).NotEmpty().MaximumLength(ContractSchema.RegistrationNumber.MaxLength).Matches(ContractSchema.RegistrationNumber.Pattern);
         }
     }
 

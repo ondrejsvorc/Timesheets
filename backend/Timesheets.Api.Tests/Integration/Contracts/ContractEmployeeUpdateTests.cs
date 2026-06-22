@@ -17,7 +17,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateImpact_Split_ReturnsCreatesNewAssignment()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
-        ContractEmployeeUpdateRequest request = new("POS-01", "Senior Developer", 1.0m, new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        ContractEmployeeUpdateRequest request = new(TestIdentifiers.Position(1), "Senior Developer", 1.0m, new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}/update-impact", request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -33,7 +33,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateContractEmployee_Split_EndsOldAndCreatesNew()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
-        UpdateContractEmployee.Request request = new("POS-01", "Senior Developer", 1.0m, new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        UpdateContractEmployee.Request request = new(TestIdentifiers.Position(1), "Senior Developer", 1.0m, new DateTime(2024, 6, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}", request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -54,7 +54,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateImpact_ShortenEnd_WithDraftDaysOutside_ReturnsDraftDaysToRemove()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
-        ContractEmployeeUpdateRequest request = new("POS-01", "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 11, 30, 0, 0, 0, DateTimeKind.Utc));
+        ContractEmployeeUpdateRequest request = new(TestIdentifiers.Position(1), "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 11, 30, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}/update-impact", request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -69,7 +69,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateContractEmployee_ShortenEnd_RemovesDraftDaysOutsideRange()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
-        UpdateContractEmployee.Request request = new("POS-01", "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 11, 30, 0, 0, 0, DateTimeKind.Utc));
+        UpdateContractEmployee.Request request = new(TestIdentifiers.Position(1), "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 11, 30, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}", request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -86,7 +86,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
         Guid decemberTimesheetId = await GetProjectTimesheetIdAsync(setup.ContractEmployeeId, 2024, 12);
         await SetProjectTimesheetStatusAsync(decemberTimesheetId, TestTimesheetStatusIds.Submitted);
 
-        ContractEmployeeUpdateRequest request = new("POS-01", "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 11, 30, 0, 0, 0, DateTimeKind.Utc));
+        ContractEmployeeUpdateRequest request = new(TestIdentifiers.Position(1), "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 11, 30, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}/update-impact", request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -100,7 +100,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateImpact_Unchanged_ReturnsBlocked()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
-        ContractEmployeeUpdateRequest request = new("POS-01", "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        ContractEmployeeUpdateRequest request = new(TestIdentifiers.Position(1), "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}/update-impact", request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
@@ -113,7 +113,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateImpact_ExtendEnd_ReturnsNewMonths()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 6, 30, 0, 0, 0, DateTimeKind.Utc));
-        ContractEmployeeUpdateRequest request = new("POS-01", "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        ContractEmployeeUpdateRequest request = new(TestIdentifiers.Position(1), "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}/update-impact", request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 

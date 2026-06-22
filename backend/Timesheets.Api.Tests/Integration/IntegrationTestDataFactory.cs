@@ -29,7 +29,7 @@ internal static class IntegrationTestDataFactory
 
         CreateProject.Request createProjectRequest = new(
             $"Test Project {suffix}",
-            $"REG-TEST-{suffix}",
+            TestIdentifiers.Project(sequence),
             positionStart,
             positionEnd?.AddYears(1));
 
@@ -39,7 +39,7 @@ internal static class IntegrationTestDataFactory
         Assert.NotNull(createdProject);
         Guid projectId = createdProject!.Project.Id;
 
-        CreateProjectContract.Request createContractRequest = new($"Test Contract {suffix}", $"CONT-{suffix}");
+        CreateProjectContract.Request createContractRequest = new($"Test Contract {suffix}", TestIdentifiers.Contract(sequence));
         HttpResponseMessage contractResponse = await client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", createContractRequest);
         Assert.Equal(HttpStatusCode.Created, contractResponse.StatusCode);
         CreateProjectContract.Response? createdContract = await contractResponse.Content.ReadFromJsonAsync<CreateProjectContract.Response>();
@@ -52,7 +52,7 @@ internal static class IntegrationTestDataFactory
 
         AddContractEmployee.Request addPositionRequest = new(
             employeeId,
-            "POS-01",
+            TestIdentifiers.Position(1),
             "Developer",
             workload,
             positionStart,
@@ -69,7 +69,7 @@ internal static class IntegrationTestDataFactory
         GetContractEmployees.PositionItem position = employees!.Employees
             .Single(employeeItem => employeeItem.Id == employeeId)
             .Positions
-            .Single(item => item.PositionCode == "POS-01");
+            .Single(item => item.PositionCode == TestIdentifiers.Position(1));
 
         return new TestProjectSetup(projectId, contractId, employeeId, position.Id, personalNumber);
     }

@@ -13,12 +13,12 @@ public class ContractManagerLifecycleTests : BaseIntegrationTest
     [Fact]
     public async Task Contract_Manager_Lifecycle_HappyPath_CompletesSuccessfully()
     {
-        CreateProject.Request createProjectRequest = new("Test Project for Contract Managers", "REG-CON-MAN-001", DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
+        CreateProject.Request createProjectRequest = new("Test Project for Contract Managers", TestIdentifiers.Project(1050), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
         HttpResponseMessage projectResponse = await Client.PostAsJsonAsync("/api/projects", createProjectRequest);
         Assert.Equal(HttpStatusCode.Created, projectResponse.StatusCode);
         Guid projectId = (await projectResponse.Content.ReadFromJsonAsync<CreateProject.Response>())!.Project.Id;
 
-        CreateProjectContract.Request createContractRequest = new("Test Contract Manager", "REG-CONT-002");
+        CreateProjectContract.Request createContractRequest = new("Test Contract Manager", TestIdentifiers.Contract(1050));
         HttpResponseMessage contractResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", createContractRequest);
         Assert.Equal(HttpStatusCode.Created, contractResponse.StatusCode);
         Guid contractId = (await contractResponse.Content.ReadFromJsonAsync<CreateProjectContract.Response>())!.ProjectContract.Id;
