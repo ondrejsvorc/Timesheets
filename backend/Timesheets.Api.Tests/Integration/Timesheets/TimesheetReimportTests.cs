@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
+using Timesheets.Api.Employees;
 using Timesheets.Api.Timesheets.Endpoints;
 using Xunit;
 
@@ -105,6 +106,32 @@ public class TimesheetReimportTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task ImportTimesheet_SnapshotsCurrentEmployeeType()
+    {
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
+        await SetEmployeeTypeAsync(setup.EmployeeId, EmployeeTypes.NonAcademicId);
+        byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
+
+        using MultipartFormDataContent importForm = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx");
+        HttpResponseMessage importResponse = await Client.PostAsync("/api/timesheets/", importForm);
+
+        Assert.Equal(HttpStatusCode.OK, importResponse.StatusCode);
+        ImportTimesheet.Response? importPayload = await importResponse.Content.ReadFromJsonAsync<ImportTimesheet.Response>();
+        Assert.NotNull(importPayload);
+        Assert.True(importPayload!.Result.Success);
+
+        using IServiceScope scope = CreateScope();
+        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Guid? employeeTypeId = await dbContext.AttendanceTimesheets
+            .AsNoTracking()
+            .Where(timesheet => timesheet.EmployeeId == setup.EmployeeId && timesheet.Year == 2024 && timesheet.Month == 10)
+            .Select(timesheet => timesheet.EmployeeTypeId)
+            .SingleAsync();
+
+        Assert.Equal(EmployeeTypes.NonAcademicId, employeeTypeId);
+    }
+
+    [Fact]
     public async Task ImportTimesheet_Reimport_PreservesTimesheetIdAndComments()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
@@ -148,6 +175,14 @@ public class TimesheetReimportTests : BaseIntegrationTest
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         int affected = await dbContext.AttendanceTimesheets.Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
+        Assert.Equal(1, affected);
+    }
+
+    private async Task SetEmployeeTypeAsync(Guid employeeId, Guid employeeTypeId)
+    {
+        using IServiceScope scope = CreateScope();
+        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        int affected = await dbContext.Employees.Where(employee => employee.Id == employeeId).ExecuteUpdateAsync(setters => setters.SetProperty(employee => employee.EmployeeTypeId, employeeTypeId));
         Assert.Equal(1, affected);
     }
 

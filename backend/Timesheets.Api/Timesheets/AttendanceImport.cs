@@ -203,6 +203,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         {
             Id = Guid.NewGuid(),
             EmployeeId = employeeId,
+            EmployeeTypeId = employeeTypeId,
             TimesheetStatusId = draftStatus.Id,
             Year = importedTimesheet.Year,
             Month = importedTimesheet.Month,
