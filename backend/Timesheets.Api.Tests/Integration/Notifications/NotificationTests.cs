@@ -32,7 +32,7 @@ public class NotificationTests : BaseIntegrationTest
         using (var scope = CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            
+
             // Add 51 notifications for employee 1
             for (int i = 0; i < 51; i++)
             {
@@ -159,7 +159,7 @@ public class NotificationTests : BaseIntegrationTest
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var myNotif = await db.Notifications.FindAsync(myNotificationId);
             var foreignNotif = await db.Notifications.FindAsync(foreignNotificationId);
-            
+
             Assert.True(myNotif!.IsRead); // Mine is marked as read
             Assert.False(foreignNotif!.IsRead); // Foreign remains unread
         }
