@@ -776,13 +776,13 @@ public sealed class AllocateTimesheet : IEndpoint
         {
             decimal target = projectTargets[project.Id];
             CompleteProjectTarget(days, project, calculateFreeHours, onlyExistingCells: true, allowTinyNewCell: true, ref target);
-            CompleteProjectTarget(days, project, calculateFreeHours, onlyExistingCells: false, allowTinyNewCell: false, ref target);
+            CompleteProjectTarget(days, project, calculateFreeHours, onlyExistingCells: false, allowTinyNewCell: true, ref target);
             CompleteProjectTarget(days, project, calculateFreeHours, onlyExistingCells: true, allowTinyNewCell: true, ref target);
             projectTargets[project.Id] = target;
         }
 
         CompleteCoreTarget(days, calculateFreeHours, onlyExistingCells: true, allowTinyNewCell: true, ref coreTarget);
-        CompleteCoreTarget(days, calculateFreeHours, onlyExistingCells: false, allowTinyNewCell: false, ref coreTarget);
+        CompleteCoreTarget(days, calculateFreeHours, onlyExistingCells: false, allowTinyNewCell: true, ref coreTarget);
         CompleteCoreTarget(days, calculateFreeHours, onlyExistingCells: true, allowTinyNewCell: true, ref coreTarget);
     }
 
