@@ -127,7 +127,7 @@ internal static class TimesheetEngine
 
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(timesheet.EmployeeId, timesheet.Year, timesheet.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - projects.Sum(project => project.Workload));
-        Guid? employeeTypeId = timesheet.EmployeeTypeId ?? timesheet.Employee.EmployeeTypeId;
+        Guid? employeeTypeId = timesheet.EmployeeTypeId;
         return new LoadedTimesheet(Timesheet: timesheet, EmployeeTypeId: employeeTypeId, Projects: projects, ProjectRanges: projectRanges, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
     }
 

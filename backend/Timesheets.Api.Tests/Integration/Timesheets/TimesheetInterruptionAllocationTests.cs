@@ -653,6 +653,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         {
             Id = attendanceTimesheetId,
             EmployeeId = SeededTestData.JanNovakEmployeeId,
+            EmployeeTypeId = AcademicEmployeeTypeId,
             TimesheetStatusId = TestTimesheetStatusIds.Draft,
             Year = firstDate.Year,
             Month = firstDate.Month,
@@ -678,6 +679,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         {
             Id = attendanceTimesheetId,
             EmployeeId = SeededTestData.JanNovakEmployeeId,
+            EmployeeTypeId = employeeTypeId,
             TimesheetStatusId = TestTimesheetStatusIds.Draft,
             Year = date.Year,
             Month = date.Month,
@@ -720,6 +722,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         {
             Id = attendanceTimesheetId,
             EmployeeId = SeededTestData.JanNovakEmployeeId,
+            EmployeeTypeId = AcademicEmployeeTypeId,
             TimesheetStatusId = TestTimesheetStatusIds.Draft,
             Year = year,
             Month = month,
@@ -756,6 +759,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         {
             Id = attendanceTimesheetId,
             EmployeeId = SeededTestData.JanNovakEmployeeId,
+            EmployeeTypeId = NonAcademicEmployeeTypeId,
             TimesheetStatusId = TestTimesheetStatusIds.Draft,
             Year = year,
             Month = month,

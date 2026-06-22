@@ -38,7 +38,7 @@ public sealed class GetCombinedTimesheet : IEndpoint
             .Select(t => new
             {
                 t.Id,
-                EmployeeTypeId = t.EmployeeTypeId ?? t.Employee.EmployeeTypeId,
+                t.EmployeeTypeId,
                 Days = t.Days.Select(d => new AttendanceDaySource(d.Date, d.ClockIn, d.ClockOut, d.BreakStart, d.BreakEnd, d.Workload, d.HoursWithoutBreak, d.CoreHours, d.IsHoliday, d.Description, d.Schedules)).ToList()
             })
             .SingleOrDefaultAsync(cancellationToken);
