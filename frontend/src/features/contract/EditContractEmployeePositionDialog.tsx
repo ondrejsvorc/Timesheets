@@ -4,7 +4,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DialogCancelButton } from "@/components/shared/buttons/DialogButtons";
 import { DatePicker } from "@/components/shared/inputs/DatePicker";
-import { MaskedInput, maskPositionCode, positionCodePattern } from "@/components/shared/inputs/MaskedInput";
 import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,7 +20,7 @@ const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().lengt
 const createSchema = (position: PositionItem, projectStartDate: string, projectEndDate: string | null) =>
   z
     .object({
-      positionCode: z.string().regex(positionCodePattern),
+      positionCode: z.string().trim().min(1).max(50),
       positionName: z.string().nonempty(),
       workload: z
         .string()
@@ -136,7 +135,7 @@ export const EditContractEmployeePositionDialog = ({ open, position, projectStar
                   <FormItem>
                     <FormLabel>{Texts.positionCode}</FormLabel>
                     <FormControl>
-                      <MaskedInput {...field} mask={maskPositionCode} inputMode="numeric" placeholder="1.1.1.2.1.09" />
+                      <Input {...field} />
                     </FormControl>
                   </FormItem>
                 )}

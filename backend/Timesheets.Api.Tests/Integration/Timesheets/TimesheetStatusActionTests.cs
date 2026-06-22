@@ -176,11 +176,11 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Submitted, Year = 2038, Month = 1 });
+            dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Submitted, Year = 2099, Month = 1 });
             await dbContext.SaveChangesAsync();
         }
 
-        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.JanNovakEmployeeId, 2038, 1, "approve", null, [attendanceTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.JanNovakEmployeeId, 2099, 1, "approve", null, [attendanceTimesheetId]);
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);

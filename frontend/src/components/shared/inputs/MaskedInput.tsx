@@ -28,11 +28,7 @@ const maskGroups = (value: string, groups: number[], separator: string) => {
 };
 
 export const maskContractRegistrationNumber = (value: string) => maskGroups(value, [5, 2, 4, 2], " ");
-export const maskProjectRegistrationNumber = maskContractRegistrationNumber;
-export const maskPositionCode = (value: string) => maskGroups(value, [1, 1, 1, 1, 1, 2], ".");
 export const contractRegistrationNumberPattern = /^\d{5} \d{2} \d{4} \d{2}$/;
-export const projectRegistrationNumberPattern = contractRegistrationNumberPattern;
-export const positionCodePattern = /^\d\.\d\.\d\.\d\.\d\.\d{2}$/;
 
 export const MaskedInput = ({ value, mask, onChange, ...props }: MaskedInputProps) => {
   return <Input {...props} value={mask(value ?? "")} onChange={(event) => onChange?.(mask(event.currentTarget.value))} />;

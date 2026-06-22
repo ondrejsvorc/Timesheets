@@ -21,7 +21,7 @@ public sealed class GetContractEmployeeUpdateImpact : IEndpoint
     {
         public Validator()
         {
-            RuleFor(x => x.PositionCode).NotEmpty().MaximumLength(ContractEmployeeSchema.PositionCode.MaxLength).Matches(ContractEmployeeSchema.PositionCode.Pattern);
+            RuleFor(x => x.PositionCode).NotEmpty().MaximumLength(ContractEmployeeSchema.PositionCode.MaxLength);
             RuleFor(x => x.Position).NotEmpty().MaximumLength(ContractEmployeeSchema.Position.MaxLength);
             RuleFor(x => x.Workload).GreaterThan(0);
             RuleFor(x => x.StartDate).NotEmpty();

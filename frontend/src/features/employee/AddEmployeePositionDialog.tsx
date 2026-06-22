@@ -5,7 +5,6 @@ import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
 import { DatePicker } from "@/components/shared/inputs/DatePicker";
-import { MaskedInput, maskPositionCode, positionCodePattern } from "@/components/shared/inputs/MaskedInput";
 import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
@@ -23,7 +22,7 @@ const createSchema = (projects: ProjectCatalogItem[]) =>
     .object({
       projectId: z.string().nonempty(),
       contractId: z.string().nonempty(),
-      positionCode: z.string().regex(positionCodePattern),
+      positionCode: z.string().trim().min(1).max(50),
       positionName: z.string().nonempty(),
       workload: z
         .string()
@@ -199,7 +198,7 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                   <FormItem>
                     <FormLabel>Kód pozice *</FormLabel>
                     <FormControl>
-                      <MaskedInput {...field} mask={maskPositionCode} inputMode="numeric" placeholder="1.1.1.2.1.09" />
+                      <Input {...field} />
                     </FormControl>
                   </FormItem>
                 )}

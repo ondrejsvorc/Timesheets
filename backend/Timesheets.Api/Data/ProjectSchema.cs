@@ -10,6 +10,5 @@ public static class ProjectSchema
     public static class RegistrationNumber
     {
         public const int MaxLength = 100;
-        public const string Pattern = @"^\d{5} \d{2} \d{4} \d{2}$";
     }
 }

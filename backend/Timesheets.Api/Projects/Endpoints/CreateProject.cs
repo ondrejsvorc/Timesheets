@@ -29,8 +29,7 @@ public sealed class CreateProject : IEndpoint
 
             RuleFor(x => x.RegistrationNumber)
                 .NotEmpty()
-                .MaximumLength(ProjectSchema.RegistrationNumber.MaxLength)
-                .Matches(ProjectSchema.RegistrationNumber.Pattern);
+                .MaximumLength(ProjectSchema.RegistrationNumber.MaxLength);
 
             RuleFor(x => x.StartDate)
                 .LessThan(x => x.EndDate)
