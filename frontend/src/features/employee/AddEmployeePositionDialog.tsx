@@ -14,7 +14,7 @@ import { Texts } from "@/constants/texts";
 import { addContractEmployee } from "@/features/contract/api";
 import { getContractCatalog, getProjectCatalog, type ProjectCatalogItem } from "@/features/employees/api";
 import { parseCalendarDate } from "@/utils/calendarDate";
-import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
+import { isWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
 type AddEmployeePositionFormValues = z.infer<ReturnType<typeof createSchema>>;
@@ -28,7 +28,7 @@ const createSchema = (projects: ProjectCatalogItem[]) =>
       workload: z
         .string()
         .nonempty()
-        .refine((v) => isWholeWorkloadPercentInRange(v, 0, 100), Texts.enterWholeNumberRange0to100),
+        .refine((v) => isWorkloadPercentInRange(v, 0, 100), Texts.enterWorkloadRange0to100),
       startDate: z.string().nonempty(),
       endDate: z.string().optional(),
     })

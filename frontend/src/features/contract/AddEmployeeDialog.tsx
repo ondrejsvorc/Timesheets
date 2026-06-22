@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
 import { getEmployees } from "@/features/employees/api";
 import { parseCalendarDate } from "@/utils/calendarDate";
-import { isWholeWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
+import { isWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 import { addContractEmployee, type EmployeeItem as ContractEmployeeItem, getAddContractEmployeeImpact } from "./api";
 
 type AddEmployeeToContractFormValues = z.infer<ReturnType<typeof createSchema>>;
@@ -38,7 +38,7 @@ const createSchema = (existing: ContractEmployeeItem[], projectStartDate: string
       workload: z
         .string()
         .nonempty()
-        .refine((v) => isWholeWorkloadPercentInRange(v, 1, 100), Texts.enterWholeNumberRange1to100),
+        .refine((v) => isWorkloadPercentInRange(v, 1, 100), Texts.enterWorkloadRange1to100),
       startDate: z.string().nonempty(),
       endDate: z.string().optional(),
     })

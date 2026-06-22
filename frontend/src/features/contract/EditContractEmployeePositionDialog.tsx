@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
 import { parseCalendarDate } from "@/utils/calendarDate";
-import { isWholeWorkloadPercentInRange, workloadFractionToPercent, workloadPercentToFraction } from "@/utils/workloadPercentForm";
+import { isWorkloadPercentInRange, workloadFractionToPercent, workloadPercentToFraction } from "@/utils/workloadPercentForm";
 import type { PositionItem, UpdateContractEmployeeRequest } from "./api";
 
 type EditPositionFormValues = z.infer<ReturnType<typeof createSchema>>;
@@ -26,7 +26,7 @@ const createSchema = (position: PositionItem, projectStartDate: string, projectE
       workload: z
         .string()
         .nonempty()
-        .refine((v) => isWholeWorkloadPercentInRange(v, 1, 100), Texts.enterWholeNumberRange1to100),
+        .refine((v) => isWorkloadPercentInRange(v, 1, 100), Texts.enterWorkloadRange1to100),
       startDate: z.string().nonempty(),
       endDate: z.string().optional(),
     })

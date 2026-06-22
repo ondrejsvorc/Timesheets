@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
+import { formatWorkloadPercent } from "@/utils/formatWorkload";
 import {
   buildEmployeesView,
   buildMonthsView,
@@ -214,10 +215,6 @@ function ContractTimesheetsFilterControls({ options }: { options: GetContractTim
   );
 }
 
-function workloadPercent(workload: number): string {
-  return `${Math.round(workload * 100)}%`;
-}
-
 const overviewLinkClassName = "text-foreground hover:underline underline-offset-4";
 
 interface EmployeeNameLinkProps {
@@ -314,7 +311,7 @@ function TimesheetItemRow({ item }: TimesheetItemRowProps) {
       <TableCell>
         <TimesheetStatusBadge status={item.status} />
       </TableCell>
-      <TableCell>{workloadPercent(item.workload)}</TableCell>
+      <TableCell>{formatWorkloadPercent(item.workload)}</TableCell>
       <TableCell>
         <ActionDropdownMenu>
           <EditAction onClick={() => {}} />

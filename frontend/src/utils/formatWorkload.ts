@@ -12,5 +12,7 @@ export function formatWorkloadPercent(value: unknown): string {
 
   // Supports both fractional input (0.25) and percent input (25).
   const fraction = parsed > 1 ? parsed / 100 : parsed;
-  return `${Math.round(fraction * 100)} %`;
+  return `${Number((fraction * 100).toFixed(2))
+    .toString()
+    .replace(".", ",")} %`;
 }
