@@ -16,7 +16,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public CustomWebApplicationFactory()
     {
         _dbContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+            .WithImage("public.ecr.aws/docker/library/postgres:17-alpine")
             .WithDatabase("timesheets_test_db")
             .WithUsername("postgres")
             .WithPassword("postgres")
