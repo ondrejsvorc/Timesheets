@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { FormDialog } from "@/components/shared/dialogs/FormDialog";
+import { maskProjectRegistrationNumber } from "@/components/shared/inputs/MaskedInput";
 import { Texts } from "@/constants/texts";
 import { type CreateProjectRequest, createProject, type ProjectItem } from "./api";
 import { ProjectFormFields, type ProjectFormValues, projectFormDefaultValues, projectFormSchema } from "./ProjectFormFields";
@@ -26,7 +27,7 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
   const handleSubmit = async (values: ProjectFormValues, signal: AbortSignal) => {
     const request: CreateProjectRequest = {
       name: values.name,
-      registrationNumber: values.registrationNumber,
+      registrationNumber: maskProjectRegistrationNumber(values.registrationNumber),
       startDate: values.startDate,
       endDate: values.endDate ?? null,
     };

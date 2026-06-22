@@ -1,6 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { FormDialog } from "@/components/shared/dialogs/FormDialog";
+import { maskProjectRegistrationNumber } from "@/components/shared/inputs/MaskedInput";
 import { Texts } from "@/constants/texts";
 import { type ProjectItem, updateProject } from "./api";
 import { ProjectFormFields, type ProjectFormValues, projectFormDefaultValues, projectFormSchema } from "./ProjectFormFields";
@@ -14,7 +15,7 @@ interface UpdateProjectDialogProps {
 
 const projectToFormValues = (project: ProjectItem): ProjectFormValues => ({
   name: project.name,
-  registrationNumber: project.registrationNumber,
+  registrationNumber: maskProjectRegistrationNumber(project.registrationNumber),
   startDate: project.startDate,
   endDate: project.endDate ?? undefined,
 });
