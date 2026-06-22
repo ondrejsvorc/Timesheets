@@ -51,7 +51,12 @@ jobs:
     - name: Build
       run: dotnet build Timesheets.slnx --no-restore --configuration Release
 
+    - name: Pull test database image
+      run: docker pull public.ecr.aws/docker/library/postgres:17-alpine
+
     - name: Run tests
+      env:
+        TESTCONTAINERS_RYUK_DISABLED: true
       run: dotnet test Timesheets.slnx --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
     - name: Publish

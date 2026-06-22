@@ -4,7 +4,8 @@ using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Tests.Integration;
 
-public abstract class BaseIntegrationTest : IClassFixture<CustomWebApplicationFactory>
+[Collection("Integration")]
+public abstract class BaseIntegrationTest
 {
     protected readonly CustomWebApplicationFactory Factory;
     protected readonly HttpClient Client;
