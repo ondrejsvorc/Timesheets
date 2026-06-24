@@ -54,6 +54,16 @@ jobs:
     - name: Pull test database image
       run: docker pull public.ecr.aws/docker/library/postgres:17-alpine
 
+    - name: Save test database image
+      run: docker save public.ecr.aws/docker/library/postgres:17-alpine -o /tmp/postgres-17-alpine.tar
+
+    - name: Upload test database image
+      uses: actions/upload-artifact@v6
+      with:
+        name: postgres-17-alpine-image
+        path: /tmp/postgres-17-alpine.tar
+        retention-days: 1
+
     - name: Run tests
       env:
         TESTCONTAINERS_RYUK_DISABLED: true
@@ -136,11 +146,20 @@ jobs:
         name: frontend-dist
         path: ./frontend/.ci/dist
 
+    - name: Download database image
+      uses: actions/download-artifact@v7
+      with:
+        name: postgres-17-alpine-image
+        path: /tmp/postgres-image
+
+    - name: Load database image
+      run: docker load -i /tmp/postgres-image/postgres-17-alpine.tar
+
     - name: Build containers
       run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build timesheets.database timesheets.backend timesheets.frontend
 
     - name: Start containers
-      run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d timesheets.database timesheets.backend timesheets.frontend
+      run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up --pull never -d timesheets.database timesheets.backend timesheets.frontend
 
     - name: Wait for backend
       shell: bash
