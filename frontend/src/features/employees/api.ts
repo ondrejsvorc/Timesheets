@@ -35,10 +35,6 @@ export interface GetContractCatalogResponse {
   contracts: ContractCatalogItem[];
 }
 
-export interface UpdateEmployeeTypeRequest {
-  employeeTypeId: string | null;
-}
-
 export const getEmployees = (): Promise<GetEmployeesResponse> => {
   return withDelay("slow", () => {
     return customFetch<GetEmployeesResponse>(`${ApiUrl}/employees`);
@@ -59,16 +55,5 @@ export const getContractCatalog = (projectId?: string): Promise<GetContractCatal
   const params = new URLSearchParams({ projectId });
   return withDelay("slow", () => {
     return customFetch<GetContractCatalogResponse>(`${ApiUrl}/contracts/catalog?${params.toString()}`);
-  });
-};
-
-export const updateEmployeeType = (employeeId: string, request: UpdateEmployeeTypeRequest, signal: AbortSignal): Promise<void> => {
-  return withDelay("fast", () => {
-    return customFetch<void>(`${ApiUrl}/employees/${employeeId}/type`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ employeeTypeId: request.employeeTypeId }),
-      signal,
-    });
   });
 };

@@ -106,7 +106,6 @@ public static class Endpoints
         app.MapGroup("/employees").WithTags("Employees")
         .MapEndpoint<GetEmployee>()
         .MapEndpoint<UpdateEmployeeGlobalManagerRole>()
-        .MapEndpoint<UpdateEmployeeType>()
         .MapEndpoint<GetEmployees>()
         .MapEndpoint<GetEmployeePositions>()
         .MapEndpoint<GetEmployeeTimesheets>();

@@ -1,6 +1,5 @@
 import { lazy } from "react";
-import { Navigate, useAsyncValue, useLoaderData, useRevalidator } from "react-router";
-import { useImmer } from "use-immer";
+import { Navigate, useAsyncValue, useLoaderData } from "react-router";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
@@ -43,27 +42,14 @@ const { FilterSearchInput } = createFilterControls<EmployeesFilterCriteria>();
 
 const EmployeesPageContent = () => {
   const response = useAsyncValue() as GetEmployeesResponse;
-  const revalidator = useRevalidator();
-  const [employees, setEmployees] = useImmer(response.employees);
-  const { filter, setFilter, filtered } = useEmployeesFilter(employees);
+  const { filter, setFilter, filtered } = useEmployeesFilter(response.employees);
 
   return (
     <>
       <FilterBar filter={filter} setFilter={setFilter}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-      <EmployeesTable
-        employees={filtered}
-        onEmployeeTypeSaved={(employeeId, employeeTypeId) => {
-          setEmployees((draft) => {
-            const employee = draft.find((e) => e.id === employeeId);
-            if (employee) {
-              employee.employeeTypeId = employeeTypeId;
-            }
-          });
-          revalidator.revalidate();
-        }}
-      />
+      <EmployeesTable employees={filtered} />
     </>
   );
 };

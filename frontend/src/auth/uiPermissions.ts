@@ -42,7 +42,6 @@ export const UiAction = {
   employees: {
     list: "employees.list",
     view: "employees.view",
-    editType: "employees.editType",
   },
   timesheet: {
     view: "timesheet.view",
@@ -115,7 +114,6 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
 
     case UiAction.projects.add:
     case UiAction.projects.delete:
-    case UiAction.employees.editType:
       return isGlobalManager(permissions);
 
     case UiAction.timesheet.import:
