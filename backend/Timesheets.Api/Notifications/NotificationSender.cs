@@ -10,7 +10,7 @@ public class NotificationSender(AppDbContext db, IHubContext<NotificationHub> hu
     {
         Notification notification = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             EmployeeId = employeeId,
             Message = message
         };

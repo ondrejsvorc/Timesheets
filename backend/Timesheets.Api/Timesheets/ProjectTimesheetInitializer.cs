@@ -85,7 +85,7 @@ internal static class ProjectTimesheetInitializer
     {
         Data.Models.ProjectTimesheet projectTimesheet = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             EmployeeId = assignment.EmployeeId,
             ContractId = assignment.ContractId,
             ContractEmployeeId = assignment.Id,
@@ -107,7 +107,7 @@ internal static class ProjectTimesheetInitializer
 
             projectTimesheet.Days.Add(new Data.Models.ProjectDay
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.CreateVersion7(),
                 ProjectTimesheetId = projectTimesheet.Id,
                 Date = date,
                 Hours = 0m,

@@ -52,7 +52,7 @@ public sealed class CreateProjectContract : IEndpoint
 
         Contract contract = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             ProjectId = id,
             Name = name,
             RegistrationNumber = registrationNumber,

@@ -17,7 +17,7 @@ public class CreateProjectContractTests : BaseIntegrationTest
 
     private async Task<Guid> CreateProjectAsync()
     {
-        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string suffix = TestIdentifiers.Suffix();
         CreateProject.Request request = new($"Test Project For Contract {suffix}", TestIdentifiers.Project(Interlocked.Increment(ref _projectSequence)), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
         HttpResponseMessage response = await Client.PostAsJsonAsync("/api/projects", request);
         CreateProject.Response? content = await response.Content.ReadFromJsonAsync<CreateProject.Response>();
@@ -114,7 +114,7 @@ public class CreateProjectContractTests : BaseIntegrationTest
 
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        dbContext.Contracts.Add(new Contract { Id = Guid.NewGuid(), ProjectId = projectId, Name = "  database contract  ", RegistrationNumber = TestIdentifiers.Contract(9) });
+        dbContext.Contracts.Add(new Contract { Id = Guid.CreateVersion7(), ProjectId = projectId, Name = "  database contract  ", RegistrationNumber = TestIdentifiers.Contract(9) });
 
         await Assert.ThrowsAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
     }

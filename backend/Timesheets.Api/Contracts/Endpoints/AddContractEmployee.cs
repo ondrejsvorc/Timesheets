@@ -128,7 +128,7 @@ public sealed class AddContractEmployee : IEndpoint
 
         ContractEmployee newContractEmployee = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             ContractId = id,
             EmployeeId = request.EmployeeId,
             PositionCode = request.PositionCode,

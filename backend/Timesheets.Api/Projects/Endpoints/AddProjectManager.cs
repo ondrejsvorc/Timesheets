@@ -61,7 +61,7 @@ public sealed class AddProjectManager : IEndpoint
 
         var projectManager = new ProjectManager
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             ProjectId = id,
             EmployeeId = request.EmployeeId,
         };

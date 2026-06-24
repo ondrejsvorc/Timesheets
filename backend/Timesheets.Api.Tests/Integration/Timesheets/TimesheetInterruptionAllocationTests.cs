@@ -20,9 +20,9 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     public async Task AllocateTimesheet_UsesInterruptionRulesFromImis()
     {
         DateTime firstDate = new(2036, 1, 2, 0, 0, 0, DateTimeKind.Utc);
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid firstAssignmentId = Guid.NewGuid();
-        Guid secondAssignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid firstAssignmentId = Guid.CreateVersion7();
+        Guid secondAssignmentId = Guid.CreateVersion7();
         await SeedAsync(attendanceTimesheetId, firstAssignmentId, secondAssignmentId, firstDate);
 
         TimesheetEditRequest request = new(
@@ -63,8 +63,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     public async Task AllocateTimesheet_TopsUpPartialCoreToStagMinimum()
     {
         DateTime date = new(2036, 2, 4, 0, 0, 0, DateTimeKind.Utc);
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid assignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
         await SeedSingleDayAsync(attendanceTimesheetId, date, AcademicEmployeeTypeId, assignmentId, assignmentWorkload: 0.75m);
 
         TimesheetEditRequest request = new(
@@ -96,8 +96,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     public async Task AllocateTimesheet_GeneratesNonAcademicAttendanceAndAllocationWhenMissing()
     {
         DateTime date = new(2036, 3, 3, 0, 0, 0, DateTimeKind.Utc);
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid assignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
         await SeedSingleDayAsync(attendanceTimesheetId, date, NonAcademicEmployeeTypeId, assignmentId);
 
         TimesheetEditRequest request = new(
@@ -121,8 +121,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         int year = 2037;
         int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid assignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
         await SeedMonthAsync(attendanceTimesheetId, assignmentId, year, month, totalWorkload: 1m, assignmentWorkload: 0.5m);
         DateTime[] dates = MonthDates(year, month);
 
@@ -160,8 +160,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         int year = 2038;
         int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid assignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
         await SeedMonthAsync(attendanceTimesheetId, assignmentId, year, month, totalWorkload: 0.1m, assignmentWorkload: 0.05m);
         DateTime[] dates = MonthDates(year, month);
         HashSet<DateTime> weekendStagDates = dates.Where(date => !TimesheetLogic.IsWeekday(date)).Take(2).ToHashSet();
@@ -195,8 +195,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         int year = 2043;
         int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid assignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
         await SeedMonthAsync(attendanceTimesheetId, assignmentId, year, month, totalWorkload: 1m, assignmentWorkload: 0.5m);
         DateTime[] dates = MonthDates(year, month);
         Dictionary<int, string> interruptions = new()
@@ -245,9 +245,9 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         int year = 2045;
         int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid firstAssignmentId = Guid.NewGuid();
-        Guid secondAssignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid firstAssignmentId = Guid.CreateVersion7();
+        Guid secondAssignmentId = Guid.CreateVersion7();
         await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(firstAssignmentId, 0.25m), (secondAssignmentId, 0.5m)]);
         DateTime[] dates = MonthDates(year, month);
 
@@ -292,9 +292,9 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         int year = 2051;
         int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid firstAssignmentId = Guid.NewGuid();
-        Guid secondAssignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid firstAssignmentId = Guid.CreateVersion7();
+        Guid secondAssignmentId = Guid.CreateVersion7();
         await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(firstAssignmentId, 0.25m), (secondAssignmentId, 0.5m)]);
         DateTime[] dates = MonthDates(year, month);
         DateTime overnightDate = dates.First(TimesheetLogic.IsWeekday);
@@ -333,9 +333,9 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         int year = 2054;
         int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid firstAssignmentId = Guid.NewGuid();
-        Guid secondAssignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid firstAssignmentId = Guid.CreateVersion7();
+        Guid secondAssignmentId = Guid.CreateVersion7();
         await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(firstAssignmentId, 0.25m), (secondAssignmentId, 0.5m)]);
         DateTime[] dates = MonthDates(year, month);
 
@@ -376,7 +376,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         int year = 2056;
         int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
         await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, []);
         DateTime[] dates = MonthDates(year, month);
         decimal expected = dates.Count(TimesheetLogic.IsWeekday) * 8m;
@@ -405,10 +405,10 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         int year = 2058;
         int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid firstAssignmentId = Guid.NewGuid();
-        Guid secondAssignmentId = Guid.NewGuid();
-        Guid thirdAssignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid firstAssignmentId = Guid.CreateVersion7();
+        Guid secondAssignmentId = Guid.CreateVersion7();
+        Guid thirdAssignmentId = Guid.CreateVersion7();
         await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(firstAssignmentId, 0.10m), (secondAssignmentId, 0.15m), (thirdAssignmentId, 0.25m)]);
         DateTime[] dates = MonthDates(year, month);
         decimal total = dates.Count(TimesheetLogic.IsWeekday) * 8m;
@@ -445,8 +445,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         int year = 2060;
         int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid assignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
         await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(assignmentId, 0.1075m)]);
         DateTime[] dates = MonthDates(year, month);
         decimal total = dates.Count(TimesheetLogic.IsWeekday) * 8m;
@@ -476,8 +476,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         int year = 2062;
         int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid assignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
         await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(assignmentId, 0.5m)]);
         DateTime[] dates = MonthDates(year, month);
         DateTime interruptionDate = dates.First(TimesheetLogic.IsWeekday);
@@ -518,8 +518,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     public async Task AllocateTimesheet_KeepsFixedCoreAndProjectHours()
     {
         DateTime date = new(2036, 5, 2, 0, 0, 0, DateTimeKind.Utc);
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid assignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
         await SeedSingleDayAsync(attendanceTimesheetId, date, AcademicEmployeeTypeId, assignmentId, assignmentWorkload: 0.5m);
 
         TimesheetEditRequest request = new(
@@ -540,7 +540,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     public async Task AllocateTimesheet_GeneratesMissingAttendanceFromStag()
     {
         DateTime date = new(2036, 6, 2, 0, 0, 0, DateTimeKind.Utc);
-        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
         await SeedSingleDayAsync(attendanceTimesheetId, date, NonAcademicEmployeeTypeId, assignmentId: null);
 
         TimesheetEditRequest request = new(
@@ -563,8 +563,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     {
         DateTime date = new(2026, 1, 17, 0, 0, 0, DateTimeKind.Utc);
         Assert.False(TimesheetLogic.IsWeekday(date));
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid assignmentId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
         await SeedSingleDayAsync(attendanceTimesheetId, date, AcademicEmployeeTypeId, assignmentId, assignmentWorkload: 0.25m);
 
         TimesheetEditRequest request = new(
@@ -596,7 +596,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     public async Task AllocateTimesheet_GeneratesMissingAttendanceWithBreak()
     {
         DateTime date = new(2036, 7, 2, 0, 0, 0, DateTimeKind.Utc);
-        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
         await SeedSingleDayAsync(attendanceTimesheetId, date, NonAcademicEmployeeTypeId, assignmentId: null);
 
         TimesheetEditRequest request = new(
@@ -648,7 +648,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         ContractEmployee firstAssignment = Assignment(firstAssignmentId, "INT-1", "Interruption 1", firstDate);
         ContractEmployee secondAssignment = Assignment(secondAssignmentId, "INT-2", "Interruption 2", firstDate);
         dbContext.ContractEmployees.AddRange(firstAssignment, secondAssignment);
-        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.NewGuid(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = firstDate.Year, Month = firstDate.Month, Workload = 1m });
+        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = firstDate.Year, Month = firstDate.Month, Workload = 1m });
         dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
         {
             Id = attendanceTimesheetId,
@@ -674,7 +674,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Employee employee = await dbContext.Employees.SingleAsync(employee => employee.Id == SeededTestData.JanNovakEmployeeId);
         employee.EmployeeTypeId = employeeTypeId;
-        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.NewGuid(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = date.Year, Month = date.Month, Workload = 1m });
+        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = date.Year, Month = date.Month, Workload = 1m });
         dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
         {
             Id = attendanceTimesheetId,
@@ -691,7 +691,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             dbContext.ContractEmployees.Add(Assignment(assignmentId.Value, $"GEN-{date:yyyy-MM}", $"Generation {date:yyyy-MM}", date, assignmentWorkload));
             dbContext.ProjectTimesheets.Add(new Data.Models.ProjectTimesheet
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.CreateVersion7(),
                 EmployeeId = SeededTestData.JanNovakEmployeeId,
                 ContractId = SeededTestData.BetaContractId,
                 ContractEmployeeId = assignmentId.Value,
@@ -716,7 +716,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         DateTime firstDate = dates[0];
         DateTime lastDate = dates[^1];
 
-        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.NewGuid(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = totalWorkload });
+        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = totalWorkload });
         dbContext.ContractEmployees.Add(Assignment(assignmentId, $"MONTH-{year}-{month}", $"Month {year}-{month}", firstDate, assignmentWorkload, lastDate));
         dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
         {
@@ -730,7 +730,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         });
         dbContext.ProjectTimesheets.Add(new Data.Models.ProjectTimesheet
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             EmployeeId = SeededTestData.JanNovakEmployeeId,
             ContractId = SeededTestData.BetaContractId,
             ContractEmployeeId = assignmentId,
@@ -754,7 +754,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         DateTime firstDate = dates[0];
         DateTime lastDate = dates[^1];
 
-        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.NewGuid(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = 1m });
+        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = 1m });
         dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
         {
             Id = attendanceTimesheetId,
@@ -772,7 +772,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             dbContext.ContractEmployees.Add(Assignment(id, $"NONACA-{year}-{month}-{index}", $"Non-academic {year}-{month}-{index}", firstDate, workload, lastDate));
             dbContext.ProjectTimesheets.Add(new Data.Models.ProjectTimesheet
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.CreateVersion7(),
                 EmployeeId = SeededTestData.JanNovakEmployeeId,
                 ContractId = SeededTestData.BetaContractId,
                 ContractEmployeeId = id,
@@ -799,11 +799,11 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         EndDate = endDate ?? date.AddDays(2)
     };
 
-    private static Data.Models.AttendanceDay AttendanceDay(DateTime date, string? description) => new() { Id = Guid.NewGuid(), Date = date, Workload = 1m, HoursObligation = 8m, Description = description, Schedules = "[]" };
+    private static Data.Models.AttendanceDay AttendanceDay(DateTime date, string? description) => new() { Id = Guid.CreateVersion7(), Date = date, Workload = 1m, HoursObligation = 8m, Description = description, Schedules = "[]" };
 
     private static Data.Models.ProjectTimesheet ProjectTimesheet(Guid assignmentId, DateTime firstDate) => new()
     {
-        Id = Guid.NewGuid(),
+        Id = Guid.CreateVersion7(),
         EmployeeId = SeededTestData.JanNovakEmployeeId,
         ContractId = SeededTestData.BetaContractId,
         ContractEmployeeId = assignmentId,
@@ -819,7 +819,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         ]
     };
 
-    private static Data.Models.ProjectDay ProjectDay(DateTime date, decimal workload = 0.25m) => new() { Id = Guid.NewGuid(), Date = date, Workload = workload, HoursObligation = 8m * workload };
+    private static Data.Models.ProjectDay ProjectDay(DateTime date, decimal workload = 0.25m) => new() { Id = Guid.CreateVersion7(), Date = date, Workload = workload, HoursObligation = 8m * workload };
     private static TimesheetDayEdit Day(DateTime date, string description) => new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: description, Schedules: []);
     private static ProjectColumnEdit Project(Guid assignmentId, DateTime firstDate) => new(ContractEmployeeId: assignmentId, Days: [new ProjectDayEdit(firstDate, 0m), new ProjectDayEdit(firstDate.AddDays(1), 0m), new ProjectDayEdit(firstDate.AddDays(2), 0m)]);
     private static DateTime[] MonthDates(int year, int month) => Enumerable.Range(1, DateTime.DaysInMonth(year, month)).Select(day => new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc)).ToArray();

@@ -97,21 +97,21 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     {
         const int year = 2039;
         const int month = 1;
-        Guid attendanceTimesheetId = Guid.NewGuid();
-        Guid contractEmployeeId = Guid.NewGuid();
-        Guid projectTimesheetId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid contractEmployeeId = Guid.CreateVersion7();
+        Guid projectTimesheetId = Guid.CreateVersion7();
 
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
             AttendanceDay[] days = Enumerable.Range(1, DateTime.DaysInMonth(year, month))
-                .Select(day => new AttendanceDay { Id = Guid.NewGuid(), Date = new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc), Workload = 0m, HoursObligation = 0m, Schedules = "[]" })
+                .Select(day => new AttendanceDay { Id = Guid.CreateVersion7(), Date = new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc), Workload = 0m, HoursObligation = 0m, Schedules = "[]" })
                 .ToArray();
 
-            dbContext.ContractManagers.Add(new ContractManager { Id = Guid.NewGuid(), ContractId = SeededTestData.AlphaContractId, EmployeeId = SeededTestData.MarieEmployeeId });
+            dbContext.ContractManagers.Add(new ContractManager { Id = Guid.CreateVersion7(), ContractId = SeededTestData.AlphaContractId, EmployeeId = SeededTestData.MarieEmployeeId });
             dbContext.ContractEmployees.Add(new ContractEmployee { Id = contractEmployeeId, ContractId = SeededTestData.AlphaContractId, EmployeeId = SeededTestData.JanNovakEmployeeId, PositionCode = "WF-2039", Position = "Workflow 2039", Workload = 0m, StartDate = periodStart, EndDate = periodStart.AddMonths(1).AddDays(-1) });
-            dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.NewGuid(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = 0m });
+            dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = 0m });
             dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month, Days = days });
             dbContext.ProjectTimesheets.Add(new ProjectTimesheet { Id = projectTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, ContractId = SeededTestData.AlphaContractId, ContractEmployeeId = contractEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month, Workload = 0m });
             await dbContext.SaveChangesAsync();
@@ -172,7 +172,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     [Fact]
     public async Task Employee_CanCompleteOwnWholeTimesheet()
     {
-        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -193,12 +193,12 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     public async Task ProjectManager_CanApproveManagedProjectPart()
     {
         WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Draft);
-        string managerPersonalNumber = "pm-" + Guid.NewGuid().ToString("N")[..17];
+        string managerPersonalNumber = "pm-" + TestIdentifiers.Suffix(17);
         Employee manager = await TestEmployeeFactory.CreateAsync(Factory.Services, managerPersonalNumber, "Project Manager");
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            dbContext.ProjectManagers.Add(new ProjectManager { Id = Guid.NewGuid(), ProjectId = workflow.ProjectId, EmployeeId = manager.Id });
+            dbContext.ProjectManagers.Add(new ProjectManager { Id = Guid.CreateVersion7(), ProjectId = workflow.ProjectId, EmployeeId = manager.Id });
             await dbContext.SaveChangesAsync();
         }
 
@@ -259,7 +259,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         const int month = 1;
         DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, periodStart, periodStart.AddMonths(1).AddDays(-1), workload: 0.5m);
-        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
 
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();

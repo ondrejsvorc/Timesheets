@@ -39,7 +39,7 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
     {
         Employee employee = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             FullName = user.FullName,
             PersonalNumber = user.PersonalNumber,
             TitleBefore = user.TitleBefore,

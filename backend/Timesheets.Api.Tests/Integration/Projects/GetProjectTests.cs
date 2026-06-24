@@ -10,7 +10,7 @@ public class GetProjectTests : BaseIntegrationTest
     [Fact]
     public async Task GetProject_WithNonExistentId_ReturnsNotFound()
     {
-        Guid nonExistentId = Guid.NewGuid();
+        Guid nonExistentId = Guid.CreateVersion7();
         HttpResponseMessage response = await Client.GetAsync($"/api/projects/{nonExistentId}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

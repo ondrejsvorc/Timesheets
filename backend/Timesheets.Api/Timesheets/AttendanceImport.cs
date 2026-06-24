@@ -201,7 +201,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
         Data.Models.AttendanceTimesheet timesheet = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             EmployeeId = employeeId,
             EmployeeTypeId = employeeTypeId,
             TimesheetStatusId = draftStatus.Id,
@@ -248,7 +248,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         {
             dbContext.AttendanceDays.Add(new Data.Models.AttendanceDay
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.CreateVersion7(),
                 AttendanceTimesheetId = attendanceTimesheetId,
                 Date = ToUtcDate(day.Date),
                 ClockIn = day.ClockIn,
@@ -312,7 +312,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         {
             dbContext.EmployeeWorkloads.Add(new Data.Models.EmployeeWorkload
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.CreateVersion7(),
                 EmployeeId = employeeId,
                 Year = year,
                 Month = month,

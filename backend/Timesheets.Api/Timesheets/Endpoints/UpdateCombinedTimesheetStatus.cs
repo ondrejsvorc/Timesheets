@@ -159,7 +159,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         {
             TimesheetStatusHistory history = new()
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.CreateVersion7(),
                 AttendanceTimesheetId = attendanceTimesheet.Id,
                 FromStatusId = statusChanged ? currentStatusId : targetStatus.Id,
                 ToStatusId = targetStatus.Id,
@@ -254,7 +254,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
                 TimesheetStatusHistory history = new()
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.CreateVersion7(),
                     ProjectTimesheetId = projectTimesheet.Id,
                     FromStatusId = currentStatusId,
                     ToStatusId = targetStatus.Id,
@@ -275,7 +275,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             attendanceTimesheet.UpdatedAt = DateTime.UtcNow;
             dbContext.TimesheetStatusHistories.Add(new TimesheetStatusHistory
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.CreateVersion7(),
                 AttendanceTimesheetId = attendanceTimesheet.Id,
                 FromStatusId = previousAttendanceStatusId,
                 ToStatusId = TimesheetWorkflow.DraftStatusId,
@@ -379,7 +379,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             projectTimesheet.UpdatedAt = DateTime.UtcNow;
             dbContext.TimesheetStatusHistories.Add(new TimesheetStatusHistory
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.CreateVersion7(),
                 ProjectTimesheetId = projectTimesheet.Id,
                 FromStatusId = previousStatusId,
                 ToStatusId = TimesheetWorkflow.DraftStatusId,

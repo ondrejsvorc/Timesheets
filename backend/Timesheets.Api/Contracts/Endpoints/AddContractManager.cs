@@ -58,7 +58,7 @@ public sealed class AddContractManager : IEndpoint
 
         var contractManager = new ContractManager
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             ContractId = id,
             EmployeeId = request.EmployeeId,
         };

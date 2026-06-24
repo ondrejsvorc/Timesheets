@@ -80,7 +80,7 @@ public class CreateProjectTests : BaseIntegrationTest
     [Fact]
     public async Task CreateProject_WithDuplicateName_ReturnsBadRequest()
     {
-        string duplicateName = $"Duplicate Name Project {Guid.NewGuid():N}";
+        string duplicateName = $"Duplicate Name Project {Guid.CreateVersion7():N}";
         CreateProject.Request first = new(duplicateName, NextRegistrationNumber(), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10));
         HttpResponseMessage firstResponse = await Client.PostAsJsonAsync("/api/projects", first);
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);

@@ -14,7 +14,7 @@ public class UpdateContractEmployeeValidationTests : BaseIntegrationTest
 
     private async Task<(Guid ContractId, Guid ContractEmployeeId, DateTime ProjectEnd)> SetupContractEmployeeAsync()
     {
-        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string suffix = TestIdentifiers.Suffix();
         int identifier = Interlocked.Increment(ref _identifierSequence);
         DateTime projectStart = DateTime.UtcNow.Date;
         DateTime projectEnd = projectStart.AddDays(30);

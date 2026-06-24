@@ -62,7 +62,7 @@ public sealed class ExpectedLoadTests : BaseIntegrationTest
         List<Employee> employees = Enumerable.Range(1, 600)
             .Select(index => new Employee
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.CreateVersion7(),
                 EmployeeTypeId = TestEmployeeFactory.DefaultEmployeeTypeId,
                 PersonalNumber = $"LOAD-{index:0000}",
                 FullName = $"Load Employee {index:0000}",
@@ -70,17 +70,17 @@ public sealed class ExpectedLoadTests : BaseIntegrationTest
             .ToList();
         Employee target = employees[0];
         dbContext.Employees.AddRange(employees);
-        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.NewGuid(), EmployeeId = target.Id, Year = year, Month = month, Workload = 1m });
+        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = target.Id, Year = year, Month = month, Workload = 1m });
 
         for (int index = 1; index <= 10; index++)
         {
-            Guid contractId = Guid.NewGuid();
-            Guid assignmentId = Guid.NewGuid();
+            Guid contractId = Guid.CreateVersion7();
+            Guid assignmentId = Guid.CreateVersion7();
             dbContext.Contracts.Add(new Contract { Id = contractId, ProjectId = SeededTestData.BetaProjectId, Name = $"Load Contract {index:00}", RegistrationNumber = $"LOAD-{index:00}" });
             dbContext.ContractEmployees.Add(new ContractEmployee { Id = assignmentId, ContractId = contractId, EmployeeId = target.Id, PositionCode = $"LOAD-{index:00}", Position = $"Load Position {index:00}", Workload = 0.05m, StartDate = monthStart, EndDate = monthStart.AddMonths(1).AddDays(-1) });
         }
 
-        Guid attendanceTimesheetId = Guid.NewGuid();
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
         dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet
         {
             Id = attendanceTimesheetId,
@@ -91,7 +91,7 @@ public sealed class ExpectedLoadTests : BaseIntegrationTest
             Days = Enumerable.Range(1, DateTime.DaysInMonth(year, month)).Select(day =>
             {
                 DateTime date = new(year, month, day, 0, 0, 0, DateTimeKind.Utc);
-                return new AttendanceDay { Id = Guid.NewGuid(), Date = date, Workload = 1m, HoursObligation = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? 0m : 8m, Schedules = "[]" };
+                return new AttendanceDay { Id = Guid.CreateVersion7(), Date = date, Workload = 1m, HoursObligation = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? 0m : 8m, Schedules = "[]" };
             }).ToList()
         });
 

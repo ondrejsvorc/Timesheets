@@ -18,7 +18,7 @@ internal static class TestEmployeeFactory
     {
         Employee employee = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             EmployeeTypeId = employeeTypeId ?? DefaultEmployeeTypeId,
             PersonalNumber = personalNumber,
             FullName = fullName,

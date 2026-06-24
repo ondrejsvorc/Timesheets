@@ -52,7 +52,7 @@ public sealed class AddTimesheetComment : IEndpoint
 
         Data.Models.TimesheetComment comment = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             AttendanceTimesheetId = timesheetScope.AttendanceTimesheetId,
             Text = request.Text.Trim(),
             AuthorEmployeeId = user.EmployeeId,

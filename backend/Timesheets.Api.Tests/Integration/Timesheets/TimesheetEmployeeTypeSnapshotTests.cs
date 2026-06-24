@@ -90,16 +90,16 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
 
     private async Task<SnapshotSetup> SeedSnapshotTimesheetAsync(int year, int month, Guid snapshotEmployeeTypeId, Guid currentEmployeeTypeId)
     {
-        string personalNumber = "snap-" + Guid.NewGuid().ToString("N")[..16];
+        string personalNumber = "snap-" + TestIdentifiers.Suffix(16);
         Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, personalNumber, "Snapshot Employee", snapshotEmployeeTypeId);
-        Guid timesheetId = Guid.NewGuid();
+        Guid timesheetId = Guid.CreateVersion7();
         DateTime date = new(year, month, 2, 0, 0, 0, DateTimeKind.Utc);
 
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Employee storedEmployee = await dbContext.Employees.SingleAsync(item => item.Id == employee.Id);
         storedEmployee.EmployeeTypeId = currentEmployeeTypeId;
-        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.NewGuid(), EmployeeId = employee.Id, Year = year, Month = month, Workload = 1m });
+        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = employee.Id, Year = year, Month = month, Workload = 1m });
         dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
         {
             Id = timesheetId,
@@ -112,7 +112,7 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
             [
                 new Data.Models.AttendanceDay
                 {
-                    Id = Guid.NewGuid(),
+                    Id = Guid.CreateVersion7(),
                     Date = date,
                     Workload = 1m,
                     HoursObligation = 8m,

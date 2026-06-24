@@ -46,7 +46,7 @@ public sealed class CreateProject : IEndpoint
 
         Project project = new()
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             Name = request.Name.Trim(),
             RegistrationNumber = request.RegistrationNumber.Trim(),
             StartDate = request.StartDate,

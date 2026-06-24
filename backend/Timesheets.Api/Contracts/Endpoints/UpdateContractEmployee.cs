@@ -120,7 +120,7 @@ public sealed class UpdateContractEmployee : IEndpoint
 
             ContractEmployee replacement = new()
             {
-                Id = Guid.NewGuid(),
+                Id = Guid.CreateVersion7(),
                 ContractId = id,
                 EmployeeId = existing.EmployeeId,
                 PositionCode = request.PositionCode,

@@ -12,7 +12,7 @@ public class UpdateProjectTests : BaseIntegrationTest
     [Fact]
     public async Task UpdateProject_WithNonExistentId_ReturnsNotFound()
     {
-        Guid nonExistentId = Guid.NewGuid();
+        Guid nonExistentId = Guid.CreateVersion7();
         UpdateProject.Request request = new("Updated Name", TestIdentifiers.Project(1020), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10));
         HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/projects/{nonExistentId}", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

@@ -190,7 +190,7 @@ public class TimesheetReimportTests : BaseIntegrationTest
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        dbContext.TimesheetComments.Add(new TimesheetComment { Id = Guid.NewGuid(), AttendanceTimesheetId = attendanceTimesheetId, AuthorEmployeeId = SeededTestData.JanNovakEmployeeId, Text = text });
+        dbContext.TimesheetComments.Add(new TimesheetComment { Id = Guid.CreateVersion7(), AttendanceTimesheetId = attendanceTimesheetId, AuthorEmployeeId = SeededTestData.JanNovakEmployeeId, Text = text });
         await dbContext.SaveChangesAsync();
     }
 }

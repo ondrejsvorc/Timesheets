@@ -60,7 +60,7 @@ public class UpdateProjectContractTests : BaseIntegrationTest
     [Fact]
     public async Task UpdateProjectContract_WithNormalizedDuplicate_ReturnsBadRequest()
     {
-        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string suffix = TestIdentifiers.Suffix();
         CreateProject.Request projectRequest = new($"Project {suffix}", TestIdentifiers.Project(202), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
         CreateProject.Response? project = await (await Client.PostAsJsonAsync("/api/projects", projectRequest)).Content.ReadFromJsonAsync<CreateProject.Response>();
         Guid projectId = project!.Project.Id;
