@@ -105,15 +105,16 @@ internal static class ProjectTimesheetInitializer
                 continue;
             }
 
+            bool isHoliday = holidays.Contains(DateOnly.FromDateTime(date));
             projectTimesheet.Days.Add(new Data.Models.ProjectDay
             {
                 Id = Guid.CreateVersion7(),
                 ProjectTimesheetId = projectTimesheet.Id,
                 Date = date,
                 Hours = 0m,
-                IsHoliday = holidays.Contains(DateOnly.FromDateTime(date)),
+                IsHoliday = isHoliday,
                 Workload = assignment.Workload,
-                HoursObligation = TimesheetLogic.CalculateTotalHoursObligation(date, isHoliday: false, workload: assignment.Workload),
+                HoursObligation = TimesheetLogic.CalculateTotalHoursObligation(date, isHoliday, assignment.Workload),
             });
         }
 

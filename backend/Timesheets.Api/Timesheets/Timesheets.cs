@@ -97,7 +97,7 @@ public static class TimesheetLogic
     public static bool IsWeekend(DateTime date) => date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
     public static bool IsWeekday(DateTime date) => !IsWeekend(date);
     public static bool IsWorkday(DateTime date, bool isHoliday) => date.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday && !isHoliday;
-    public static decimal CalculateTotalHoursObligation(DateTime date, bool isHoliday, decimal workload) => IsWeekday(date) ? Normalize(StandardWorkdayHours * workload) : 0m;
+    public static decimal CalculateTotalHoursObligation(DateTime date, bool isHoliday, decimal workload) => IsWorkday(date, isHoliday) ? Normalize(StandardWorkdayHours * workload) : 0m;
 
     public static decimal CalculateWorkedHoursFromAttendance(TimeSpan? clockIn, TimeSpan? clockOut, TimeSpan? breakStart, TimeSpan? breakEnd)
     {

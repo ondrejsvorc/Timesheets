@@ -123,16 +123,21 @@ public sealed class GetCombinedTimesheet : IEndpoint
                     .ToDictionary(projectGroup => projectGroup.Key, projectGroup => projectGroup.Sum(item => item.Hours))
             );
 
-        Dictionary<DateOnly, bool> holidayByDate = attendanceTimesheet.Days
-            .ToDictionary(day => DateOnly.FromDateTime(day.Date), day => day.IsHoliday);
+        HashSet<DateOnly> holidays = holidaysFactory.Create(request.Year).Select(holiday => holiday.Date).ToHashSet();
+        Dictionary<DateOnly, bool> holidayByDate = Enumerable.Range(1, DateTime.DaysInMonth(request.Year, request.Month))
+            .Select(day => DateOnly.FromDateTime(new DateTime(request.Year, request.Month, day, 0, 0, 0, DateTimeKind.Utc)))
+            .ToDictionary(date => date, date => holidays.Contains(date));
+
+        foreach (AttendanceDaySource attendanceDay in attendanceTimesheet.Days)
+        {
+            DateOnly date = DateOnly.FromDateTime(attendanceDay.Date);
+            holidayByDate[date] = attendanceDay.IsHoliday || holidayByDate.GetValueOrDefault(date);
+        }
 
         foreach (var projectDay in projectTimesheets.SelectMany(timesheet => timesheet.Days))
         {
             DateOnly date = DateOnly.FromDateTime(projectDay.Date);
-            if (!holidayByDate.ContainsKey(date))
-            {
-                holidayByDate[date] = projectDay.IsHoliday;
-            }
+            holidayByDate[date] = projectDay.IsHoliday || holidayByDate.GetValueOrDefault(date);
         }
 
         Dictionary<DateOnly, AttendanceDaySource> attendanceDaysByDate = attendanceTimesheet.Days

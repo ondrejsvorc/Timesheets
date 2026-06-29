@@ -87,10 +87,15 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
                     x.timesheet.TimesheetStatusId))
             .ToListAsync(cancellationToken);
 
+        HashSet<DateOnly> holidays = holidaysFactory.Create(request.Year).Select(holiday => holiday.Date).ToHashSet();
+        List<TimesheetMonthSummaryDay> summaryDays = attendanceInfo.Days
+            .Select(day => day with { IsHoliday = day.IsHoliday || holidays.Contains(DateOnly.FromDateTime(day.Date)) })
+            .ToList();
+
         decimal totalProjectWorkload = projectRows.Sum(item => item.Workload);
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
-        TimesheetMonthSummary summary = TimesheetMonthSummaryCalculator.Compute(request.Year, request.Month, attendanceInfo.Days, totalWorkload);
+        TimesheetMonthSummary summary = TimesheetMonthSummaryCalculator.Compute(request.Year, request.Month, summaryDays, totalWorkload);
 
         List<OverviewItem> items =
         [
