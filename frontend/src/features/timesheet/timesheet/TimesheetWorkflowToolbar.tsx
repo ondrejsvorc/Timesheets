@@ -19,10 +19,9 @@ interface TimesheetWorkflowToolbarProps {
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   onSave: (signal: AbortSignal) => Promise<TimesheetEvaluation>;
-  onClearAttendanceFields: () => void;
 }
 
-export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFullscreen, onToggleFullscreen, onSave, onClearAttendanceFields }: TimesheetWorkflowToolbarProps) => {
+export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFullscreen, onToggleFullscreen, onSave }: TimesheetWorkflowToolbarProps) => {
   const [searchParams] = useSearchParams();
   const revalidator = useRevalidator();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
@@ -95,17 +94,12 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           {isDraft && canSubmit && (
-            <>
-              <Button type="button" onClick={handleSubmitClick}>
-                <span className="inline-flex items-center gap-2">
-                  <Send className="size-4" />
-                  {Texts.submitForApproval}
-                </span>
-              </Button>
-              <Button type="button" variant="outline" onClick={onClearAttendanceFields}>
-                {Texts.clearAttendanceEntryAndBreak}
-              </Button>
-            </>
+            <Button type="button" onClick={handleSubmitClick}>
+              <span className="inline-flex items-center gap-2">
+                <Send className="size-4" />
+                {Texts.submitForApproval}
+              </span>
+            </Button>
           )}
           {isSubmitted && canManageWhole && (
             <>

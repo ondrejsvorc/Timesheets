@@ -111,21 +111,6 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
     [isEditable, setTimesheet],
   );
 
-  const handleClearAttendanceFields = useCallback(() => {
-    if (!isEditable) {
-      return;
-    }
-
-    setTimesheet((draft) => {
-      draft.days.forEach((day) => {
-        day.attendance.clockIn = "";
-        day.attendance.clockOut = "";
-        day.attendance.breakStart = "";
-        day.attendance.breakEnd = "";
-      });
-    });
-  }, [isEditable, setTimesheet]);
-
   const handleSave = useCallback(
     async (signal: AbortSignal) => {
       const nextEvaluation = await updateTimesheet(timesheet, signal);
@@ -171,7 +156,6 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
           isFullscreen={isFullscreen}
           onToggleFullscreen={() => setIsFullscreen((current) => !current)}
           onSave={handleSave}
-          onClearAttendanceFields={handleClearAttendanceFields}
         />
       )}
       <TimesheetGrid
