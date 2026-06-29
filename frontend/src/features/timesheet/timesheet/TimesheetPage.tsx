@@ -149,14 +149,7 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
         </div>
       </SubPageHeader>
       {hasWorkflowButtons && (
-        <TimesheetWorkflowToolbar
-          timesheet={timesheet}
-          evaluation={evaluation}
-          overview={overview}
-          isFullscreen={isFullscreen}
-          onToggleFullscreen={() => setIsFullscreen((current) => !current)}
-          onSave={handleSave}
-        />
+        <TimesheetWorkflowToolbar timesheet={timesheet} overview={overview} isFullscreen={isFullscreen} onToggleFullscreen={() => setIsFullscreen((current) => !current)} onSave={handleSave} />
       )}
       <TimesheetGrid
         timesheet={timesheet}

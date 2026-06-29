@@ -14,14 +14,13 @@ import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./
 
 interface TimesheetWorkflowToolbarProps {
   timesheet: Timesheet;
-  evaluation: TimesheetEvaluation;
   overview: GetCombinedTimesheetOverviewResponse;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   onSave: (signal: AbortSignal) => Promise<TimesheetEvaluation>;
 }
 
-export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFullscreen, onToggleFullscreen, onSave }: TimesheetWorkflowToolbarProps) => {
+export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, onToggleFullscreen, onSave }: TimesheetWorkflowToolbarProps) => {
   const [searchParams] = useSearchParams();
   const revalidator = useRevalidator();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
@@ -50,14 +49,6 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
       signal,
     );
     revalidator.revalidate();
-  };
-
-  const handleSubmitClick = () => {
-    if (evaluation.hasErrors) {
-      setSubmitBlockedOpen(true);
-      return;
-    }
-    setActiveWorkflow("submit");
   };
 
   const handleSaveClick = async (signal: AbortSignal) => {
@@ -94,7 +85,7 @@ export const TimesheetWorkflowToolbar = ({ timesheet, evaluation, overview, isFu
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           {isDraft && canSubmit && (
-            <Button type="button" onClick={handleSubmitClick}>
+            <Button type="button" onClick={() => setActiveWorkflow("submit")}>
               <span className="inline-flex items-center gap-2">
                 <Send className="size-4" />
                 {Texts.submitForApproval}
