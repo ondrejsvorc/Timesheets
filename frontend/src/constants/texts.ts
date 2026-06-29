@@ -212,7 +212,7 @@ export const Texts = {
   month: "Měsíc",
   year: "Rok",
   status: "Stav",
-  importAttendanceFirstForMonth: "Nejdřív naimportujte docházku pro tento měsíc.",
+  importAttendanceFirstForMonth: "Nejdříve nahrajte docházku za tento měsíc.",
   allMonths: "Všechny měsíce",
   selectMonths: "Vyberte měsíce",
   monthsCount: "{count} měsíců",

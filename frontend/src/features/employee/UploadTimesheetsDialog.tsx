@@ -79,9 +79,7 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
 
     setUploadItems((current) => {
       const currentKeys = new Set(current.map((item) => item.key));
-      const added = filesToDetect
-        .filter((file) => !currentKeys.has(getFileKey(file)))
-        .map((file) => ({ key: getFileKey(file), file, status: "detecting" as const, detection: null, result: null }));
+      const added = filesToDetect.filter((file) => !currentKeys.has(getFileKey(file))).map((file) => ({ key: getFileKey(file), file, status: "detecting" as const, detection: null, result: null }));
 
       return [...current, ...added];
     });
