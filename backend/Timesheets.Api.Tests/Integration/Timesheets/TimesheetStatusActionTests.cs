@@ -130,6 +130,37 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task ContractManager_CannotSubmitVisibleEmployeesWholeTimesheet()
+    {
+        const int year = 2040;
+        const int month = 1;
+        DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid contractEmployeeId = Guid.CreateVersion7();
+        Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, "emp-" + TestIdentifiers.Suffix(17), "Visible Employee");
+        Employee manager = await TestEmployeeFactory.CreateAsync(Factory.Services, "cm-" + TestIdentifiers.Suffix(17), "Contract Manager");
+
+        using (IServiceScope scope = CreateScope())
+        {
+            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            dbContext.ContractManagers.Add(new ContractManager { Id = Guid.CreateVersion7(), ContractId = SeededTestData.AlphaContractId, EmployeeId = manager.Id });
+            dbContext.ContractEmployees.Add(new ContractEmployee { Id = contractEmployeeId, ContractId = SeededTestData.AlphaContractId, EmployeeId = employee.Id, PositionCode = "WF-2040", Position = "Workflow 2040", Workload = 0m, StartDate = periodStart, EndDate = periodStart.AddMonths(1).AddDays(-1) });
+            dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = employee.Id, Year = year, Month = month, Workload = 0m });
+            dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = employee.Id, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month });
+            await dbContext.SaveChangesAsync();
+        }
+
+        UpdateCombinedTimesheetStatus.Request request = new(employee.Id, year, month, "submit", null, [attendanceTimesheetId]);
+        HttpStatusCode statusCode = await PutStatusAsAsync(manager.PersonalNumber, request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, statusCode);
+        using IServiceScope assertionScope = CreateScope();
+        AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Guid statusId = await assertionContext.AttendanceTimesheets.Where(timesheet => timesheet.Id == attendanceTimesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
+        Assert.Equal(TestTimesheetStatusIds.Draft, statusId);
+    }
+
+    [Fact]
     public async Task UnsupportedAction_ReturnsBadRequest()
     {
         UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.PetrEmployeeId, 2024, 12, "delete", null, [SeededTestData.PetrDecProjectTimesheetId]);

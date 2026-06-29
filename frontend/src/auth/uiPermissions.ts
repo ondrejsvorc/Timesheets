@@ -158,6 +158,8 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
       return isGlobalManager(permissions) || isOwnEmployee(currentUserId, ctx.employeeId);
 
     case UiAction.timesheet.submit:
+      return isGlobalManager(permissions) || isOwnEmployee(currentUserId, ctx.employeeId);
+
     case UiAction.timesheet.returnWhole:
     case UiAction.timesheet.unlock:
       return isOwnEmployee(currentUserId, ctx.employeeId);
