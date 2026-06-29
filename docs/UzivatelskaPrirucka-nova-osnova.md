@@ -47,13 +47,13 @@ Pro přihlášení do aplikace zadejte své přihlašovací údaje do systému I
 
 Pro odhlášení klikněte na ikonu profilu a v zobrazené nabídce zvolte možnost *Odhlásit se*.
 
-![Odhlášení](./images/v-00-02-odhlaseni.png)
+![Odhlášení](./images/v-00-02-odhlaseni-sipky.png)
 
 ## Projekty
 
 Modul Projekty slouží ke správě univerzitních projektů. Projekt představuje nejvyšší organizační celek, pod který jsou následně zařazeny jednotlivé zakázky. U každého projektu lze evidovat základní identifikační údaje, dobu jeho platnosti a odpovědné osoby.
 
-![Stránka Projekty](./images/v-01-00-00-projekty.png)
+![Stránka Projekty](./images/v-01-00-94-projekty-sipka-navbar.png)
 
 ### Vytvoření projektu
 
@@ -87,40 +87,70 @@ Modul Zakázky představují dílčí části projektů, ke kterým jsou přiřa
 
 ### Úprava zakázky
 
+![Stránka detailu projektu - záložka Zakázky - tlačítko upravit](./images/v-01-01-95-projekt-zakazky-sipka-upravit_zakazku.png)
+![Dialog pro upravení zakázky](./images/v-01-01-02-projekt-zakazka-modal-upravit.png)
+
 ### Přidání manažera zakázky
 
 ![Stránka detailu projektu - překliknutí záložky](./images/v-01-01-93-projekt-zakazky-sipka-zalozka-zak.manazeri.png)
 ![Stránka detailu projektu - záložka Manažeři zakázek](./images/v-01-03-00-projekt-zak.manazeri.png)
 ![Dialog pro přidaní manažera zakázky](./images/v-01-03-01-projekt-zak.manazeri-modal-pridat.png)
 
-### Přidání zaměstnance do zakázky
+### Přidání zaměstnance do zakázky (vytvoření pracovní pozice zaměstnance)
 
 ![Rozkliknutí detailu dané zakázky](./images/v-01-01-94-projekt-zakazky-sipka-zakazka.png)
 ![Stránka detailu zakázky - překliknutí záložky](./images/v-02-00-91-zakazka-vykazy-sipka-zalozka_zamestnanci.png)
 ![Stránka detailu zakázky - záložka Zaměstnanci](./images/v-02-01-92-zakazka-zamestnanci-sipka-vytvorit.png)
 ![Dialog pro přidání pozice v zakázce](./images/v-02-01-01-zakazka-zamestnanci-modal-pridat.png)
 
+### Úprava pozice zaměstnance v zakázce
+
+![Stránka detailu zakázky - záložka Zaměstnanci](./images/v-02-01-93-zakazka-zamestnanci-sipka-upravit.png)
+![Dialog pro úpravu pocize v zakázce](./images/v-02-01-02-zakazka-zamestnanci-modal-upravit_pozici.png)
+
 ## Zaměstnanci
 
 Modul Zaměstnanci slouží ke správě pracovních pozic zaměstnanců v jednotlivých zakázkách. U každé pozice lze evidovat období platnosti, rozsah úvazku a další údaje potřebné pro správné vytváření a vyhodnocování pracovních výkazů.
 
+### Přehled pracovních pozic
+
+![Rozkliknutí detailu daného zaměstnance](./images/v-03-00-91-zamestnanci-sipka-zamestnanec.png)
+![Stránka detailu zaměstnanec - překliknutí záložky](./images/v-03-01-91-zamestnanec-detail-vykazy-sipka-pozice.png)
+
 ### Vytvoření pracovní pozice
+
+Vytvořit pozici lze dvěma způsoby:
+1) Přes zaměstnance
+Otevření přehledu pracovních pozic daného zaměstnance viz *Zaměstnanci > Přehled pracovních pozic*
+![Stránka detailu zaměstnance - záložka Pozice](./images/v-03-02-91-zamestnanec-detail-pozice-sipka-pridat.png)
+![Dialog pro přidání pracovní pozice zaměstnanci](./images/v-03-02-01-zamestnanec-detail-pozice-modal-pridat.png)
+
+2) Přes zakázku – viz *Zakázky > Přidání zaměstnance do zakázky (vytvoření pracovní pozice zaměstnance)*
 
 ### Úprava pracovní pozice
 
-### Přehled pracovních pozic
+Vytvořit pozici lze dvěma způsoby:
+1) Přes zaměstnance
+![Stránka detailu zaměstnane - záložka Pozice](./images/v-03-02-92-zamestnanec-detail-pozice-sipka-upravit.png)
+![Dialog pro úpravu pocize v zakázce](./images/v-03-02-02-zamestnanec-detail-pozice-modal-upravit.png)
+
+2) Přes zakázku – viz *Zakázky > Úprava pozice zaměstnance v zakázce*
 
 ## Docházka
 
 Modul Docházka slouží k nahrání docházkových dat exportovaných ze systému IMIS. Nahraná data představují podklad pro vytváření pracovních výkazů a kontrolu vykázané pracovní doby.
 
 ### Export docházky z IMIS
-[ZDE SCREENSHOTY Z IMIS JAK TEN VÝKAZ SPRÁVNĚ VYEXPORTOVAT]
+![Export docházky z IMIS - krok 1](./images/v-imis-01.png)
+![Export docházky z IMIS - krok 2](./images/v-imis-02.png)
+![Export docházky z IMIS - krok 3](./images/v-imis-03.png)
+Příklad exportu docházky za měsíc duben 2026. Pokud není datum vylněn, exportuje se automaticky aktuální měsíc.
 
 ### Nahrání docházky z IMIS
 V současné době není aplikace propojena se systémem IMIS. Docházku je proto nutné nejprve exportovat ze systému IMIS a následně ji nahrát do aplikace Výkazy.
 
-[OBRÁZEK ZDE]
+![Stránka Moje Výkazy / Detail zaměstnance](./images/v-03-01-92-zamestnanec-sipka-nahrat.png)
+![Dialog pro nahrání pracovní docházky](./images/v-03-01-01-zamestnanec-detail-vykazy-modal-nahrat_dochazku.png)
 
 ## Výkazy
 
