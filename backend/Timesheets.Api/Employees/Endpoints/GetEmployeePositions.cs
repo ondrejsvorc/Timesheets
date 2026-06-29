@@ -12,11 +12,8 @@ public sealed class GetEmployeePositions : IEndpoint
            .WithSummary("Get Employee Positions");
 
     public sealed record EmployeePositionItem(
-        Guid Id,
         Guid ProjectId,
         string ProjectName,
-        DateTime ProjectStartDate,
-        DateTime? ProjectEndDate,
         Guid ContractId,
         string ContractRegistrationNumber,
         string PositionCode,
@@ -50,11 +47,8 @@ public sealed class GetEmployeePositions : IEndpoint
             .ThenBy(e => e.Contract.RegistrationNumber)
             .ThenBy(e => e.StartDate)
             .Select(e => new EmployeePositionItem(
-                e.Id,
                 e.Contract.Project.Id,
                 e.Contract.Project.Name,
-                e.Contract.Project.StartDate,
-                e.Contract.Project.EndDate,
                 e.Contract.Id,
                 e.Contract.RegistrationNumber,
                 e.PositionCode,

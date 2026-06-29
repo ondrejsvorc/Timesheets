@@ -14,11 +14,8 @@ export interface GetEmployeeResponse {
 }
 
 export interface EmployeePositionItem {
-  id: string;
   projectId: string;
   projectName: string;
-  projectStartDate: string;
-  projectEndDate: string | null;
   contractId: string;
   contractRegistrationNumber: string;
   positionCode: string;
