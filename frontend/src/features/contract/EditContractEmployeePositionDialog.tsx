@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Check } from "lucide-react";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -63,14 +64,6 @@ const createSchema = (position: PositionItem, projectStartDate: string, projectE
           code: z.ZodIssueCode.custom,
           path: ["positionName"],
           message: Texts.updateImpactBlocked,
-        });
-      }
-
-      if (metadataChanged && parseCalendarDate(values.startDate).getTime() <= parseCalendarDate(position.startDate).getTime()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["startDate"],
-          message: Texts.updatePositionStartAfterCurrent,
         });
       }
     });
@@ -199,6 +192,7 @@ export const EditContractEmployeePositionDialog = ({ open, position, projectStar
             <DialogFooter>
               <DialogCancelButton onClick={handleClose} />
               <Button type="button" disabled={!form.formState.isValid} onClick={() => form.handleSubmit(handleSubmit)()}>
+                <Check className="size-4" />
                 {Texts.confirm}
               </Button>
             </DialogFooter>
