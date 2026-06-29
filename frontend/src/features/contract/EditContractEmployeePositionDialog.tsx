@@ -199,7 +199,7 @@ export const EditContractEmployeePositionDialog = ({ open, position, projectStar
             <DialogFooter>
               <DialogCancelButton onClick={handleClose} />
               <Button type="button" disabled={!form.formState.isValid} onClick={() => form.handleSubmit(handleSubmit)()}>
-                {Texts.continueAction}
+                {Texts.confirm}
               </Button>
             </DialogFooter>
           </form>
