@@ -1,161 +1,143 @@
-# Návod k nasazení
+# Návod k nasazení (Deployment Guide)
 
-Tento návod popisuje nasazení aplikace Výkazy z pohledu samotného repozitáře. Neřeší instalaci Linux serveru, nastavení DNS, firewallu ani správu infrastruktury. Předpokládá se, že na cílovém serveru už funguje Docker Compose a že veřejná doména je připravená.
+Tento dokument popisuje proces nasazení webové aplikace Výkazy (Timesheets) z pohledu samotného zdrojového kódu a poskytnuté Docker konfigurace. Návod předpokládá, že na cílovém serveru je již nainstalován Docker a Docker Compose a je zajištěna připravená veřejná doména. Správa samotného serveru (OS, firewall atd.) není předmětem tohoto dokumentu.
 
-## Co se spouští
+## Architektura kontejnerů
 
-Produkční nasazení používá soubor `docker-compose.prod.yml`.
+Aplikace je rozdělena do několika mikroslužeb, které společně komunikují v uzavřené vnitřní síti Dockeru. Zde je přehled architektury:
 
-| Služba | Účel |
-| --- | --- |
-| `timesheets.database` | PostgreSQL databáze. Data jsou uložená v Docker volume `timesheets_db`. |
-| `timesheets.backend` | ASP.NET Core API na interním portu `5000`. Při startu aplikuje databázové migrace. |
-| `timesheets.frontend` | Sestavený React frontend obsluhovaný nginxem uvnitř kontejneru. |
-| `timesheets.nginx` | Veřejná reverse proxy. Směruje frontend, API, autentizaci a notifikace. |
-| `timesheets.certbot` | Vydání a obnova Let's Encrypt certifikátu pro doménu z `PUBLIC_HOST`. |
+```mermaid
+flowchart TD
+    Client([Webový prohlížeč]) --> Nginx
 
-Image se staví lokálně ze zdrojového kódu v repozitáři. Výjimkou je databáze, která používá hotový image `postgres:17-alpine`.
+    subgraph Docker Prostředí
+        Nginx[timesheets.nginx<br/>Reverse Proxy]
+        Certbot[timesheets.certbot<br/>Let's Encrypt]
+        Frontend[timesheets.frontend<br/>React App]
+        Backend[timesheets.backend<br/>ASP.NET Core API]
+        Database[(timesheets.database<br/>PostgreSQL)]
 
-## 1. Stažení aplikace
+        Nginx <--> |80, 443| Client
+        Nginx --> |Statické soubory| Frontend
+        Nginx --> |API Volání| Backend
+        Backend --> |5432| Database
+        Nginx -.-> |Ověření domény| Certbot
+    end
 
-Na serveru naklonujte repozitář:
+    subgraph Docker Volumes
+        CertVolume[(Certifikáty)]
+        DbVolume[(Data databáze)]
+    end
+
+    Certbot --> CertVolume
+    Nginx --> CertVolume
+    Database --> DbVolume
+```
+
+### Jednotlivé služby:
+- **`timesheets.nginx`**: Hlavní vstupní bod. Slouží jako reverse proxy, zpracovává HTTPS komunikaci a směruje provoz na frontend nebo backend.
+- **`timesheets.frontend`**: Kontejner obsahující produkční build React aplikace obsluhovaný přes nginx (interně).
+- **`timesheets.backend`**: ASP.NET Core API na interním portu 5000. Při startu automaticky řeší nezbytné databázové migrace.
+- **`timesheets.database`**: Databáze PostgreSQL 17. Data jsou bezpečně uložena v perzistentním Docker volume (`timesheets_db`).
+- **`timesheets.certbot`**: Služba pro automatické vystavení a obnovu bezplatných SSL certifikátů.
+
+---
+
+## 1. Příprava repozitáře
+
+Nejprve stáhněte zdrojové kódy na cílový server:
 
 ```bash
 git clone https://github.com/ondrejsvorc/Timesheets.git
 cd Timesheets
 ```
 
-Pokud se nasazuje jiná větev než `main`, přepněte ji podle jejího názvu:
-
+Pokud aplikace nemá běžet z hlavní větve (`main`), přepněte na požadovanou větev:
 ```bash
-git checkout [nazev-vetve]
+git checkout <nazev-vetve>
 ```
 
-## 2. Vytvoření `.env`
+## 2. Konfigurace prostředí (.env)
 
-Soubor `.env` obsahuje konfiguraci konkrétního nasazení. Necommituje se do Gitu, protože obsahuje hesla a tajné klíče.
+Klíčovým krokem je vytvoření souboru `.env`, který obsahuje produkční proměnné prostředí. Tento soubor se kvůli bezpečnosti (hesla a tajné klíče) nikdy necommituje do gitu.
 
-Vytvořte ho ze vzoru:
-
+Vytvořte soubor ze šablony:
 ```bash
 cp .env.example .env
 nano .env
 ```
 
-Význam proměnných:
+**Doplňte tyto zásadní proměnné:**
+- `POSTGRES_PASSWORD`: Silné heslo k databázi (uživatel postgres). *Následně ho po prvním spuštění neměňte, pokud neprovádíte řízenou migraci.*
+- `PUBLIC_HOST`: Vaše produkční doména (např. `vykazy.mojedomena.cz`) **bez** `https://`.
+- `LETSENCRYPT_EMAIL`: Váš e-mail pro notifikace ohledně SSL certifikátů.
+- `AUTHENTICATION__CLIENTID`: Klientské ID získávané od OpenID Connect poskytovatele identity.
+- `AUTHENTICATION__CLIENTSECRET`: Tajný klíč (secret) od poskytovatele identity.
+- `ADMINISTRATION__ROLEMANAGERPERSONALNUMBERS__0`: Osobní číslo prvního uživatele, který dostane oprávnění spravovat systémové role (lze přidat další pomocí `...__1`, `...__2`).
 
-| Proměnná | Význam |
-| --- | --- |
-| `POSTGRES_PASSWORD` | Heslo databázového uživatele `postgres`. Po prvním spuštění ho neměňte bez řízené migrace databáze. |
-| `PUBLIC_HOST` | Veřejná doména aplikace bez `https://`. Používá ji nginx i certbot. |
-| `LETSENCRYPT_EMAIL` | E-mail pro registraci a obnovu Let's Encrypt certifikátu. |
-| `AUTHENTICATION__CLIENTID` | Identifikátor OIDC klienta získaný od poskytovatele identity. Nemusí být stejný jako `PUBLIC_HOST`. |
-| `AUTHENTICATION__CLIENTSECRET` | Tajný klíč OIDC klienta. |
-| `AUTHENTICATION__METADATAADDRESS` | Adresa OIDC metadata dokumentu. Výchozí hodnota míří na UJEP IdP. |
-| `AUTHENTICATION__ISSUER` | Očekávaný issuer OIDC poskytovatele. |
-| `ADMINISTRATION__ROLEMANAGERPERSONALNUMBERS__0` | Osobní číslo prvního uživatele, který může spravovat globální role. Další správci se přidávají jako `...__1`, `...__2` atd. |
-
-Po vytvoření omezte práva k souboru:
-
+Pro maximální bezpečnost zamezte čtení tohoto souboru ostatním uživatelům na serveru:
 ```bash
 chmod 600 .env
 ```
 
-Soubor `.env` obsahuje databázové heslo a OIDC secret. Práva `600` zajistí, že ho může číst a upravovat pouze vlastník souboru, ne ostatní uživatelé serveru.
+## 3. Sestavení a spuštění (První nasazení)
 
-## 3. Kontrola konfigurace
+Produkční konfigurace je definována v souboru `docker-compose.prod.yml`.
 
-Před spuštěním nechte Docker Compose složit výslednou konfiguraci:
-
+Nejprve můžete zkontrolovat, zda v souboru `.env` nechybí nějaká povinná hodnota a konfigurace je validní:
 ```bash
 docker compose -f docker-compose.prod.yml config
 ```
 
-Pokud chybí povinná proměnná, příkaz skončí chybou. V takovém případě opravte `.env` a spusťte kontrolu znovu.
-
-## 4. Spuštění aplikace
-
-Sestavte image a spusťte kontejnery:
-
+Sestavte Docker images z lokálního kódu a spusťte všechny kontejnery na pozadí:
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Zkontrolujte stav:
+**Užitečné příkazy pro kontrolu stavu:**
+- Výpis běžících kontejnerů: `docker compose -f docker-compose.prod.yml ps`
+- Sledování logů aplikace (pro ukončení stiskněte Ctrl+C): `docker compose -f docker-compose.prod.yml logs -f`
 
-```bash
-docker compose -f docker-compose.prod.yml ps
+Aplikace je nyní nasazena. Můžete ji ověřit zadáním vaší domény do prohlížeče.
+
+## 4. Aktualizace (Nasazení nové verze)
+
+Při vydání aktualizace (např. po mergi nové funkce) je proces nasazení přímočarý.
+
+```mermaid
+sequenceDiagram
+    participant Admin as Správce Serveru
+    participant Server as Produkční Server
+    participant Git as GitHub
+    participant Docker as Docker Compose
+
+    Admin->>Server: Připojení na server
+    Server->>Git: git pull --ff-only
+    Git-->>Server: Změny staženy
+    Admin->>Server: docker compose up -d --build
+    Server->>Docker: Sestavení nových obrazů a restart
+    Docker-->>Server: Nové kontejnery běží
+    Server-->>Admin: Hotovo
 ```
 
-Zobrazte logy:
+**Postup v příkazech:**
 
-```bash
-docker compose -f docker-compose.prod.yml logs -f
-```
+1. Přejděte do složky s projektem:
+   ```bash
+   cd Timesheets
+   ```
+2. Stáhněte nejnovější úpravy z repozitáře:
+   ```bash
+   git pull --ff-only
+   ```
+3. *[Doporučeno] Vytvořte rychlou zálohu databáze:*
+   ```bash
+   mkdir -p backups
+   docker compose -f docker-compose.prod.yml exec -T timesheets.database pg_dump -U postgres -d timesheets -Fc > "backups/db_$(date +%Y%m%d).dump"
+   ```
+4. Sestavte a spusťte novou verzi (staré kontejnery budou automaticky nahrazeny bez výpadku zachovaných dat):
+   ```bash
+   docker compose -f docker-compose.prod.yml up -d --build
+   ```
 
-Při prvním startu backend automaticky aplikuje databázové migrace. Testovací data se v produkčním režimu nevkládají.
-
-## 5. Ověření nasazení
-
-Ověřte API:
-
-```bash
-curl -fsS https://nasazena-aplikace.cz/api/health
-```
-
-Očekávaný výstup:
-
-```text
-Healthy
-```
-
-Potom otevřete aplikaci v prohlížeči:
-
-```text
-https://nasazena-aplikace.cz/
-```
-
-Ověřte přihlášení přes OIDC a přístup prvního správce systému.
-
-## 6. Nasazení nové verze
-
-Přejděte do adresáře aplikace:
-
-```bash
-cd Timesheets
-```
-
-Stáhněte poslední změny:
-
-```bash
-git pull --ff-only
-```
-
-Před deployem vytvořte zálohu databáze:
-
-```bash
-mkdir -p backups
-docker compose -f docker-compose.prod.yml exec -T timesheets.database \
-  pg_dump -U postgres -d timesheets -Fc \
-  > "backups/timesheets_$(date +%Y%m%d_%H%M%S).dump"
-```
-
-Nasaďte novou verzi:
-
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
-Ověřte stav:
-
-```bash
-docker compose -f docker-compose.prod.yml ps
-curl -fsS https://vykazy.ujep.cz/api/health
-```
-
-## 7. Důležité poznámky
-
-- `.env` nikdy necommitujte.
-- `POSTGRES_PASSWORD` po vytvoření databázového volume neměňte bez řízeného postupu.
-- Nepoužívejte `docker compose down -v`, pokud nechcete smazat databázi a uložené certifikáty.
-- Doména se nemění v nginx šablonách, ale pouze přes `PUBLIC_HOST` v `.env`.
+Backend kontejner si při startu opět automaticky zkontroluje a případně aplikuje nové databázové změny (migrace). Z vaší strany nejsou potřeba žádné další kroky.
