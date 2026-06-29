@@ -22,11 +22,18 @@ internal static class TimesheetWorkflow
 
     public static bool IsValidProjectTransition(Guid from, Guid to) => (from, to) switch
     {
-        (Guid f, Guid t) when f == DraftStatusId && t == ApprovedStatusId => true,
+        (Guid f, Guid t) when f == DraftStatusId && t == SubmittedStatusId => true,
+        (Guid f, Guid t) when f == SubmittedStatusId && t == ApprovedStatusId => true,
+        (Guid f, Guid t) when f == SubmittedStatusId && t == DraftStatusId => true,
         (Guid f, Guid t) when f == ApprovedStatusId && t == DraftStatusId => true,
         (Guid f, Guid t) when f == t => true,
         _ => false
     };
 
-    public static string ResolveProjectDisplayStatus(Guid projectStatusId) => projectStatusId == ApprovedStatusId ? ApprovedStatusName : DraftStatusName;
+    public static string ResolveProjectDisplayStatus(Guid projectStatusId) => projectStatusId switch
+    {
+        Guid id when id == SubmittedStatusId => SubmittedStatusName,
+        Guid id when id == ApprovedStatusId => ApprovedStatusName,
+        _ => DraftStatusName
+    };
 }

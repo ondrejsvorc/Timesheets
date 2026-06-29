@@ -138,9 +138,10 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             attendanceTimesheet.TimesheetStatusId = targetStatus.Id;
             attendanceTimesheet.UpdatedAt = DateTime.UtcNow;
 
-            if (targetStatus.Id == TimesheetWorkflow.SubmittedStatusId && attendanceTimesheet.SubmittedAt is null)
+            if (targetStatus.Id == TimesheetWorkflow.SubmittedStatusId)
             {
-                attendanceTimesheet.SubmittedAt = DateTime.UtcNow;
+                attendanceTimesheet.SubmittedAt ??= DateTime.UtcNow;
+                await SubmitProjectStatusesAsync(scope, user.EmployeeId, request.Comment, dbContext, cancellationToken);
             }
             else if (targetStatus.Id == TimesheetWorkflow.ApprovedStatusId)
             {
@@ -383,6 +384,29 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
                 ProjectTimesheetId = projectTimesheet.Id,
                 FromStatusId = previousStatusId,
                 ToStatusId = TimesheetWorkflow.DraftStatusId,
+                ChangedByEmployeeId = changedByEmployeeId,
+                Comment = comment,
+            });
+        }
+    }
+
+    private static async Task SubmitProjectStatusesAsync(CombinedTimesheetScope scope, Guid changedByEmployeeId, string? comment, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        List<Data.Models.ProjectTimesheet> projectTimesheets = await dbContext.ProjectTimesheets
+            .Where(timesheet => scope.ProjectTimesheetLabels.Keys.Contains(timesheet.Id) && timesheet.TimesheetStatusId == TimesheetWorkflow.DraftStatusId)
+            .ToListAsync(cancellationToken);
+
+        foreach (Data.Models.ProjectTimesheet projectTimesheet in projectTimesheets)
+        {
+            Guid previousStatusId = projectTimesheet.TimesheetStatusId;
+            projectTimesheet.TimesheetStatusId = TimesheetWorkflow.SubmittedStatusId;
+            projectTimesheet.UpdatedAt = DateTime.UtcNow;
+            dbContext.TimesheetStatusHistories.Add(new TimesheetStatusHistory
+            {
+                Id = Guid.CreateVersion7(),
+                ProjectTimesheetId = projectTimesheet.Id,
+                FromStatusId = previousStatusId,
+                ToStatusId = TimesheetWorkflow.SubmittedStatusId,
                 ChangedByEmployeeId = changedByEmployeeId,
                 Comment = comment,
             });

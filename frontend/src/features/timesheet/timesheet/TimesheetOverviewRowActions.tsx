@@ -30,7 +30,7 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
     timesheetContractId: item.contractId ?? undefined,
     timesheetProjectId: item.projectId ?? undefined,
   });
-  const canApprove = showActions && canManagePart && item.status === Texts.statusInProgress;
+  const canApprove = showActions && canManagePart && item.status === Texts.statusPendingApproval;
   const canReturn = showActions && canManagePart && item.status === Texts.statusApproved;
 
   const changeProjectStatus = async (action: TimesheetStatusAction, comment: string, signal: AbortSignal) => {

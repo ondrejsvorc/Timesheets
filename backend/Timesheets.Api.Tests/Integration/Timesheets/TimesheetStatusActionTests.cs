@@ -23,7 +23,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             AttendanceTimesheet setupAttendance = await setupContext.AttendanceTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecAttendanceTimesheetId);
             ProjectTimesheet setupProject = await setupContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId);
             setupAttendance.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
-            setupProject.TimesheetStatusId = TestTimesheetStatusIds.Draft;
+            setupProject.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
             setupProject.LockedAt = null;
             setupProject.LockedBy = null;
             await setupContext.SaveChangesAsync();
@@ -51,7 +51,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             AttendanceTimesheet attendance = await setupContext.AttendanceTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecAttendanceTimesheetId);
             ProjectTimesheet project = await setupContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId);
             attendance.TimesheetStatusId = TestTimesheetStatusIds.Draft;
-            project.TimesheetStatusId = TestTimesheetStatusIds.Draft;
+            project.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
             project.LockedAt = null;
             project.LockedBy = null;
             await setupContext.SaveChangesAsync();
@@ -124,8 +124,10 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         Guid statusId = await assertionContext.AttendanceTimesheets.Where(timesheet => timesheet.Id == attendanceTimesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
+        Guid projectStatusId = await assertionContext.ProjectTimesheets.Where(timesheet => timesheet.Id == projectTimesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
         Notification notification = await assertionContext.Notifications.AsNoTracking().SingleAsync(item => item.EmployeeId == SeededTestData.MarieEmployeeId && item.Message.Contains("2039"));
         Assert.Equal(TestTimesheetStatusIds.Submitted, statusId);
+        Assert.Equal(TestTimesheetStatusIds.Submitted, projectStatusId);
         Assert.Contains("Jan Novák", notification.Message);
     }
 
@@ -223,7 +225,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     [Fact]
     public async Task ProjectManager_CanApproveManagedProjectPart()
     {
-        WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Draft);
+        WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Submitted);
         string managerPersonalNumber = "pm-" + TestIdentifiers.Suffix(17);
         Employee manager = await TestEmployeeFactory.CreateAsync(Factory.Services, managerPersonalNumber, "Project Manager");
         using (IServiceScope scope = CreateScope())
@@ -248,7 +250,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     [Fact]
     public async Task Employee_CannotApproveProjectPart()
     {
-        WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Draft);
+        WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Submitted);
         UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.ProjectTimesheetId]);
 
         HttpStatusCode statusCode = await PutStatusAsAsync(workflow.EmployeePersonalNumber, request);
@@ -259,7 +261,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     [Fact]
     public async Task FinalApproval_RequiresApprovedProjectParts()
     {
-        WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Draft);
+        WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Submitted);
         UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.AttendanceTimesheetId]);
 
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
