@@ -59,6 +59,37 @@ public class AttendanceSpreadsheetTests
         });
     }
 
+    [Fact]
+    public void Read_HtmlExcelExport_ReturnsCorrectTimesheet()
+    {
+        string filePath = Path.Combine("Unit", "TestData", "valid_attendance_html.xls");
+        using FileStream stream = File.OpenRead(filePath);
+        AttendanceTimesheet result = AttendanceSpreadsheet.Read(stream);
+
+        Assert.Multiple(() =>
+        {
+            Assert.Equal("15710", result.EmployeePersonalNumber);
+            Assert.Equal("Nováková Petra", result.EmployeeName);
+            Assert.Equal(0.5m, result.Workload);
+            Assert.Equal(2026, result.Year);
+            Assert.Equal(1, result.Month);
+            Assert.Equal(31, result.Days.Count);
+        });
+
+        AttendanceDay firstDay = result.Days[0];
+        Assert.Multiple(() =>
+        {
+            Assert.Equal(new DateTime(2026, 1, 1), firstDay.Date);
+            Assert.Equal(new TimeSpan(7, 30, 0), firstDay.ClockIn);
+            Assert.Equal(new TimeSpan(15, 30, 0), firstDay.ClockOut);
+            Assert.Equal(new TimeSpan(11, 30, 0), firstDay.BreakStart);
+            Assert.Equal(new TimeSpan(12, 0, 0), firstDay.BreakEnd);
+            Assert.Equal(2, firstDay.Schedules.Count);
+        });
+
+        Assert.Equal("DOV", result.Days[1].OtherInterruption);
+    }
+
     [Theory]
     [InlineData("8:00", 8, 0)]
     [InlineData("08:00", 8, 0)]
@@ -131,6 +162,24 @@ public class AttendanceSpreadsheetTests
             Assert.Equal(string.Empty, result.EmployeePersonalNumber);
             Assert.Equal(2024, result.Year);
             Assert.Equal(10, result.Month);
+            Assert.Equal(31, result.DaysInMonth);
+        });
+    }
+
+    [Fact]
+    public void ReadMetadata_HtmlExcelExport_ReturnsCorrectMetadata()
+    {
+        string filePath = Path.Combine("Unit", "TestData", "valid_attendance_html.xls");
+        using FileStream stream = File.OpenRead(filePath);
+        AttendanceTimesheetMetadata result = AttendanceSpreadsheet.ReadMetadata(stream);
+
+        Assert.Multiple(() =>
+        {
+            Assert.Equal("15710", result.EmployeePersonalNumber);
+            Assert.Equal("Nováková Petra", result.EmployeeName);
+            Assert.Equal(0.5m, result.Workload);
+            Assert.Equal(2026, result.Year);
+            Assert.Equal(1, result.Month);
             Assert.Equal(31, result.DaysInMonth);
         });
     }

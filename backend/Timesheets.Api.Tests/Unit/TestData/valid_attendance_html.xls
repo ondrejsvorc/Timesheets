@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="application/vnd.ms-excel; charset=utf-8">
+    <title>Pracovni vykaz osoby: 15710 - 2026-01 - 01.01.2026 - 01.02.2026</title>
+  </head>
+  <body>
+    <table border="1" class="zaznamy nepritomnostiUjep export pracovniVykazTisk">
+      <tr>
+        <h1>15710&nbsp;Nov&aacute;kov&aacute;&nbsp;Petra</h1>
+        <th colspan="11">Nov&aacute;kov&aacute;&nbsp;Petra, v obdob&iacute;&nbsp;01.01.2026&nbsp;-&nbsp;01.02.2026&nbsp;<b>c.0 prac. 53224 - 50%;&nbsp;</b></th>
+      </tr>
+      <tr>
+        <th>Den</th>
+        <th>Prichod</th>
+        <th>Odchod</th>
+        <th>Zacatek prestavky</th>
+        <th>Konec prestavky</th>
+        <th>Jine preruseni (uvazek)</th>
+        <th>Celkem od - do bez prestavky na jidlo</th>
+        <th>Denni povinnost v hod</th>
+        <th>Odpracovany cas v noci (0-6h)</th>
+        <th>Cas - Rozvrhove akce STAG</th>
+        <th>Kdy - Rozvrhove akce STAG</th>
+      </tr>
+      <tr>
+        <td>01.01.2026 Ctvrtek</td>
+        <td>7:30</td>
+        <td>15:30</td>
+        <td>11:30</td>
+        <td>12:00</td>
+        <td></td>
+        <td>7,50</td>
+        <td>4,00</td>
+        <td>0,00</td>
+        <td>08:00-10:00, 11:00-12:00</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>02.01.2026 Patek</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>DOV</td>
+        <td>0,00</td>
+        <td>4,00</td>
+        <td>0,00</td>
+        <td></td>
+        <td></td>
+      </tr>
+    </table>
+  </body>
+</html>
