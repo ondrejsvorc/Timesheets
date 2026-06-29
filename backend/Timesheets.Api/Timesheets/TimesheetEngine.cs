@@ -50,7 +50,7 @@ public sealed record TimesheetTotals(decimal WorkedHours, decimal HoursObligatio
 
 public sealed record TimesheetEvaluation(bool HasErrors, IReadOnlyList<TimesheetIssue> Issues, IReadOnlyList<DayIssue> DayIssues, IReadOnlyList<TimesheetDayEvaluation> Days, TimesheetTotals Totals);
 
-internal sealed record ProjectDateRange(DateTime StartDate, DateTime? EndDate)
+public sealed record ProjectDateRange(DateTime StartDate, DateTime? EndDate)
 {
     public bool Includes(DateTime date)
     {
@@ -61,14 +61,14 @@ internal sealed record ProjectDateRange(DateTime StartDate, DateTime? EndDate)
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value.Date : DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
 }
 
-internal sealed record LoadedTimesheet(Data.Models.AttendanceTimesheet Timesheet, Guid? EmployeeTypeId, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
+public sealed record LoadedTimesheet(Data.Models.AttendanceTimesheet Timesheet, Guid? EmployeeTypeId, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
 
-internal sealed record ProjectColumn(Guid Id, decimal Workload, bool Locked, ProjectDateRange Range)
+public sealed record ProjectColumn(Guid Id, decimal Workload, bool Locked, ProjectDateRange Range)
 {
     public bool IsActiveOn(DateTime date) => Range.Includes(date);
 }
 
-internal sealed class EditableTimesheetDay
+public sealed class EditableTimesheetDay
 {
     public required DateTime Date { get; init; }
     public required TimeSpan? ClockIn { get; set; }
@@ -84,9 +84,9 @@ internal sealed class EditableTimesheetDay
     public required Dictionary<Guid, bool> ProjectHoursFixed { get; init; }
 }
 
-internal sealed record EditableTimesheet(IReadOnlyList<EditableTimesheetDay> Days, IReadOnlyList<ProjectColumn> Projects);
+public sealed record EditableTimesheet(IReadOnlyList<EditableTimesheetDay> Days, IReadOnlyList<ProjectColumn> Projects);
 
-internal static class TimesheetEngine
+public static class TimesheetEngine
 {
     public static async Task<LoadedTimesheet?> LoadAsync(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -235,11 +235,11 @@ internal static class TimesheetEngine
             return new TimesheetDayEvaluation(Day: day.Date.Day, WorkedHours: combinedDay.WorkedHours, NightHours: nightHours, AllocatedHours: combinedDay.AllocatedHours, Balance: balance, HasBusinessTrip: businessTrip, HasCoreOnlyInterruption: false, HasProportionalInterruption: proportional);
         }).ToList();
 
-        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWeekday(day.Date));
+        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday));
         List<TimesheetProjectTotal> projectTotals = sheet.Projects.Select(project =>
         {
             decimal hours = TimesheetLogic.Normalize(sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id)));
-            decimal obligation = TimesheetLogic.Normalize(sheet.Days.Count(day => TimesheetLogic.IsWeekday(day.Date) && project.IsActiveOn(day.Date)) * 8m * project.Workload);
+            decimal obligation = TimesheetLogic.Normalize(sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday) && project.IsActiveOn(day.Date)) * 8m * project.Workload);
             return new TimesheetProjectTotal(ProjectId: project.Id, Hours: hours, Obligation: obligation);
         }).ToList();
 

@@ -960,13 +960,13 @@ public sealed class AllocateTimesheet : IEndpoint
 
     private static decimal CalculateProjectMonthlyTarget(EditableTimesheet sheet, ProjectColumn project)
     {
-        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWeekday(day.Date) && project.IsActiveOn(day.Date));
+        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday) && project.IsActiveOn(day.Date));
         return TimesheetLogic.Normalize(fundedDays * 8m * project.Workload);
     }
 
     private static decimal CalculateCoreMonthlyTarget(EditableTimesheet sheet, decimal totalWorkload)
     {
-        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWeekday(day.Date));
+        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday));
         decimal total = TimesheetLogic.Normalize(fundedDays * 8m * totalWorkload);
         return TimesheetLogic.Normalize(total - sheet.Projects.Sum(project => CalculateProjectMonthlyTarget(sheet, project)));
     }
