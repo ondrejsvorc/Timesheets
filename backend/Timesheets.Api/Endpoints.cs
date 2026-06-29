@@ -115,6 +115,7 @@ public static class Endpoints
         var endpoints = app.MapGroup("/notifications").WithTags("Notifications");
         endpoints.MapEndpoint<GetEmployeeNotifications>();
         endpoints.MapEndpoint<MarkNotificationAsRead>();
+        endpoints.MapEndpoint<MarkAllNotificationsAsRead>();
         app.MapHub<NotificationHub>("/notifications/hub");
     }
 

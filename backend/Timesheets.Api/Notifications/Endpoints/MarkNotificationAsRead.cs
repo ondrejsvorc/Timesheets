@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http.HttpResults;
+using Timesheets.Api.Auth;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
 
@@ -12,10 +13,10 @@ public class MarkNotificationAsRead : IEndpoint
 
     public sealed record Response(bool Success);
 
-    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound>> Handle(Guid id, AppDbContext dbContext, ICurrentUser currentUser, CancellationToken cancellationToken)
     {
         Notification? notification = await dbContext.Notifications.FindAsync([id], cancellationToken);
-        if (notification is null)
+        if (notification is null || notification.EmployeeId != currentUser.EmployeeId)
         {
             return TypedResults.NotFound();
         }
