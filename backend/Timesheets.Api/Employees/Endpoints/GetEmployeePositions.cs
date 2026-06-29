@@ -46,19 +46,19 @@ public sealed class GetEmployeePositions : IEndpoint
         List<EmployeePositionItem> positions = await dbContext.ContractEmployees
             .AsNoTracking()
             .Where(e => e.EmployeeId == id)
-            .OrderBy(e => e.ContractPosition.Contract.Project.Name)
-            .ThenBy(e => e.ContractPosition.Contract.RegistrationNumber)
+            .OrderBy(e => e.Contract.Project.Name)
+            .ThenBy(e => e.Contract.RegistrationNumber)
             .ThenBy(e => e.StartDate)
             .Select(e => new EmployeePositionItem(
                 e.Id,
-                e.ContractPosition.Contract.Project.Id,
-                e.ContractPosition.Contract.Project.Name,
-                e.ContractPosition.Contract.Project.StartDate,
-                e.ContractPosition.Contract.Project.EndDate,
-                e.ContractPosition.Contract.Id,
-                e.ContractPosition.Contract.RegistrationNumber,
-                e.ContractPosition.Code,
-                e.ContractPosition.Name,
+                e.Contract.Project.Id,
+                e.Contract.Project.Name,
+                e.Contract.Project.StartDate,
+                e.Contract.Project.EndDate,
+                e.Contract.Id,
+                e.Contract.RegistrationNumber,
+                e.PositionCode,
+                e.Position,
                 e.Workload,
                 e.StartDate,
                 e.EndDate
