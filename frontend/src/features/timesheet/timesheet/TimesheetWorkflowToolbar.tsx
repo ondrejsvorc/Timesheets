@@ -25,6 +25,7 @@ export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, on
   const revalidator = useRevalidator();
   const [activeWorkflow, setActiveWorkflow] = useState<TimesheetWorkflowAction | null>(null);
   const [submitBlockedOpen, setSubmitBlockedOpen] = useState(false);
+  const [submitBlockedEvaluation, setSubmitBlockedEvaluation] = useState<TimesheetEvaluation | null>(null);
 
   const employeeId = searchParams.get("employeeId") ?? "";
   const periodLabel = formatMonthYear(overview.month, overview.year);
@@ -60,6 +61,7 @@ export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, on
       case "submit": {
         const saved = await onSave(signal);
         if (saved.hasErrors) {
+          setSubmitBlockedEvaluation(saved);
           setSubmitBlockedOpen(true);
           throw new Error(Texts.workflowSubmitBlockedDescription);
         }
@@ -125,7 +127,25 @@ export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, on
         </div>
       </div>
       <TimesheetWorkflowConfirmDialog action={activeWorkflow} periodLabel={periodLabel} onClose={() => setActiveWorkflow(null)} onConfirm={handleWorkflowConfirm} />
-      <MessageAlertDialog open={submitBlockedOpen} title={Texts.workflowSubmitBlockedTitle} description={Texts.workflowSubmitBlockedDescription} onClose={() => setSubmitBlockedOpen(false)} />
+      <MessageAlertDialog
+        open={submitBlockedOpen}
+        title={Texts.workflowSubmitBlockedTitle}
+        description={formatSubmitBlockedDescription(submitBlockedEvaluation)}
+        onClose={() => setSubmitBlockedOpen(false)}
+      />
     </>
   );
+};
+
+const formatSubmitBlockedDescription = (evaluation: TimesheetEvaluation | null) => {
+  const reasons = [
+    ...new Set(
+      evaluation?.issues.filter((issue) => issue.type === "error").map((issue) => (issue.code === "ERR-COM-02" || issue.code === "ERR-COM-03" ? "Celková doba za měsíc" : issue.message)) ?? [],
+    ),
+  ];
+  if (reasons.length === 0) {
+    return Texts.workflowSubmitBlockedDescription;
+  }
+
+  return `${Texts.workflowSubmitBlockedDescription} ${reasons.length === 1 ? "Důvod" : "Důvody"}: ${reasons.join(", ")}.`;
 };
