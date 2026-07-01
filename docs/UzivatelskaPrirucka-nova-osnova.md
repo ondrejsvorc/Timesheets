@@ -53,60 +53,80 @@ Pro odhlášení klikněte na ikonu profilu a v zobrazené nabídce zvolte možn
 
 Modul Projekty slouží ke správě univerzitních projektů. Projekt představuje nejvyšší organizační celek, pod který jsou následně zařazeny jednotlivé zakázky. U každého projektu lze evidovat základní identifikační údaje, dobu jeho platnosti a odpovědné osoby.
 
-![Stránka Projekty](./images/v-01-00-94-projekty-sipka-navbar.png)
+![Stránka Projekty](./images/v-01-00-20-projekty-sipka-navbar.png)
 
 ### Vytvoření projektu
 
-![Tlačítko vytvořit projekt](./images/v-01-00-91-projekty-sipka-vytvorit.png)
-![Dialog pro vytvoření nového projektu](./images/v-01-00-01-projekty-modal-vytvorit.png)
+![Stránka Projekty - Tlačítko Vytvořit projekt](./images/v-01-00-21-projekty-sipka-vytvorit.png)
+![Dialog pro vytvoření nového projektu](./images/v-01-00-05-projekty-modal-vytvorit.png)
 
 ### Úprava projektu
 
-![Stránka projekty- otevření nabídky](./images/v-01-00-92-projekty-sipka-nabidka.png)
-![Stránka Projekty - nabídka akcí pro daný projekt](./images/v-01-00-00-projekty-nabidka.png)
-![Dialog pro úpravu projektu](./images/v-01-00-02-projekty-modal-upravit.png)
+![Stránka Projekty - otevření nabídky](./images/v-01-00-23-projekty-sipka-tri_tecky.png)
+![Stránka Projekty - nabídka - upravit](./images/v-01-00-24-projekty-sipka-upravit.png)
+![Dialog pro úpravu projektu](./images/v-01-00-06-projekty-modal-upravit.png)
 
 ### Přidání manažera projektu
 
-![Rozkliknutí detailu projektu](./images/v-01-00-93-projekty-sipka-projekt.png)
-![Stránka detailu projektu - překliknutí záložky](./images/v-01-01-92-projekt-zakazky-sipka-zalozka-pr.manazeri.png)
-![Stránka detailu projektu - záložka Manažeři projektu](./images/v-01-02-00-projekt-pr.manazeri.png)
-![Dialog pro přidání projektového manažera](./images/v-01-02-01-projekt-pr.manazeri-modal-pridat.png)
+![Rozkliknutí detailu projektu](./images/v-01-00-22-projekty-sipka-projekt.png)
+![Stránka detailu projektu - překliknutí záložky](./images/v-01-01-24-projekt-zakazky-zalozka-manazeri_projektu.png)
+![Stránka detailu projektu - záložka Manažeři projektu](./images/v-01-02-20-projekt-manazeri_projektu-sipka-vytvorit.png)
+![Dialog pro přidání projektového manažera](./images/v-01-02-00-projekt-manazeri_projektu-modal-pridat.png)
+
+### Archivace projektu
+
+![Stránka Projekty - otevření nabídky](./images/v-01-00-23-projekty-sipka-tri_tecky.png)
+![Stránka Projekty - nabídka - archivovat](./images/v-01-00-25-projekty-sipka-archivovat.png)
+
+### Obnovení projektu z archivu
+
+![Stránka Projekty - filtrovat projekty - archivované](./images/v-01-00-27-projekty-sipka-filtr_archovovane.png)
+![Stránka Projekty - nabídka archivovaného projektu](./images/v-01-00-28-projekty-sipka-archovovane_obnovit.png)
+
+### Smazání projektu
+
+![Stránka Projekty - otevření nabídky](./images/v-01-00-23-projekty-sipka-tri_tecky.png)
+![Stránka Projekty - nabídka - smazat](./images/v-01-00-26-projekty-sipka-smazat.png)
+
 
 ## Zakázky
 
 Modul Zakázky představují dílčí části projektů, ke kterým jsou přiřazováni zaměstnanci a ve kterých následně vykazují odpracovaný čas. Každá zakázka je vždy součástí konkrétního projektu a může mít vlastního manažera odpovědného za schvalování vykázané práce.
 
-![Rozkliknutí detailu projektu](./images/v-01-00-93-projekty-sipka-projekt.png)
+![Rozkliknutí detailu projektu](./images/v-01-00-22-projekty-sipka-projekt.png)
 ![Stránka detailu projektu - záložka Zakázky](./images/v-01-01-00-projekt-zakazky.png)
 
 ### Vytvoření zakázky
 
-![Tlačítko vytvořit zakázku](./images/v-01-01-91-projekt-zakazky-sipka-vytvorit.png)
-![Dialog pro vytvoření nové zakázky](./images/v-01-01-01-projekt-zakazky-modal-pridat.png)
+![Tlačítko vytvořit zakázku](./images/v-01-01-20-projekt-zakazky-sipka-vytvorit.png)
+![Dialog pro vytvoření nové zakázky](./images/v-01-01-01-projekt-zakazka-modal-pridat.png)
 
 ### Úprava zakázky
 
-![Stránka detailu projektu - záložka Zakázky - tlačítko upravit](./images/v-01-01-95-projekt-zakazky-sipka-upravit_zakazku.png)
+![Stránka detailu projektu - záložka Zakázky - tlačítko upravit](./images/v-01-01-21-projekt-zakazky-sipka-upravit.png)
 ![Dialog pro upravení zakázky](./images/v-01-01-02-projekt-zakazka-modal-upravit.png)
 
 ### Přidání manažera zakázky
 
-![Stránka detailu projektu - překliknutí záložky](./images/v-01-01-93-projekt-zakazky-sipka-zalozka-zak.manazeri.png)
-![Stránka detailu projektu - záložka Manažeři zakázek](./images/v-01-03-00-projekt-zak.manazeri.png)
-![Dialog pro přidaní manažera zakázky](./images/v-01-03-01-projekt-zak.manazeri-modal-pridat.png)
+![Stránka detailu projektu - překliknutí záložky](./images/v-01-01-25-projekt-zakazky-sipka-zalozka-manazeri_zakazek.png)
+![Stránka detailu projektu - záložka Manažeři zakázek](./images/v-01-03-20-projekt-manazeri_zakazek-sipka-vytvorit.png)
+![Dialog pro přidaní manažera zakázky](./images/v-01-03-00-projekt-manazeri_zakazek-modal-pridat.png)
 
 ### Přidání zaměstnance do zakázky (vytvoření pracovní pozice zaměstnance)
 
-![Rozkliknutí detailu dané zakázky](./images/v-01-01-94-projekt-zakazky-sipka-zakazka.png)
+![Rozkliknutí detailu dané zakázky](./images/v-01-01-23-projekt-zakazky-sipka-detail.png)
 ![Stránka detailu zakázky - překliknutí záložky](./images/v-02-00-91-zakazka-vykazy-sipka-zalozka_zamestnanci.png)
-![Stránka detailu zakázky - záložka Zaměstnanci](./images/v-02-01-92-zakazka-zamestnanci-sipka-vytvorit.png)
+![Stránka detailu zakázky - záložka Zaměstnanci](./images/v-02-01-20-zakazka-zamestnanci-sipka-pridat.png)
 ![Dialog pro přidání pozice v zakázce](./images/v-02-01-01-zakazka-zamestnanci-modal-pridat.png)
 
 ### Úprava pozice zaměstnance v zakázce
 
-![Stránka detailu zakázky - záložka Zaměstnanci](./images/v-02-01-93-zakazka-zamestnanci-sipka-upravit.png)
-![Dialog pro úpravu pocize v zakázce](./images/v-02-01-02-zakazka-zamestnanci-modal-upravit_pozici.png)
+![Stránka detailu zakázky - záložka Zaměstnanci](./images/v-02-01-21-zakazka-zamestnanci-sipka-upravit.png)
+![Dialog pro úpravu pocize v zakázce](./images/v-02-01-02-zakazka-zamestnanci-modal-upravit.png)
+
+### Smazání pozice zaměstnance v zakázce
+
+![Stránka detailu zakázky - záložka Zaměstnanci](./images/v-02-01-22-zakazka-zamestnanci-sipka-smazat.png)
 
 ## Zaměstnanci
 
@@ -144,7 +164,7 @@ Modul Docházka slouží k nahrání docházkových dat exportovaných ze systé
 ![Export docházky z IMIS - krok 1](./images/v-imis-01.png)
 ![Export docházky z IMIS - krok 2](./images/v-imis-02.png)
 ![Export docházky z IMIS - krok 3](./images/v-imis-03.png)
-Příklad exportu docházky za měsíc duben 2026. Pokud není datum vylněn, exportuje se automaticky aktuální měsíc.
+Příklad exportu docházky za měsíc duben 2026. Pokud není datum vylněn, exportuje se automaticky aktuální měsíc. Datum pro export měsíční docházky je potřeba zadat vždy od 1. daného měsíce do 1. následujícího měsíce, nikoliv od 1. do 31. téhož měsíce.
 
 ### Nahrání docházky z IMIS
 V současné době není aplikace propojena se systémem IMIS. Docházku je proto nutné nejprve exportovat ze systému IMIS a následně ji nahrát do aplikace Výkazy.
@@ -156,7 +176,27 @@ V současné době není aplikace propojena se systémem IMIS. Docházku je prot
 
 Modul Výkazy slouží k evidenci, úpravám a schvalování pracovních výkazů zaměstnanců. Uživatel zde může sledovat stav jednotlivých výkazů, doplňovat vykázanou práci a pracovat s připomínkami vzniklými během schvalovacího procesu.
 
+### Zobrazení výkazu
+
+1) Přes zaměstnance
+
+2) Přes zakázku - TODO po úpravě
+
+#### Popis funkionalit na stránce s výkazem
+
 ### Úprava výkazu
+
+#### Chybové hlášky
+Chybové hlášky jsou dvojí závažnosti:
+- červené – výstražné,
+- žluté – upozorňující.
+
+S červenými hláškami nelze výkaz odeslat ke schváleni, s žlutými je odeslání již možné. Chybové hlášky mohou být pro konkrétní buňky nebo pro celé řádky výkazu.
+
+#### Generování hodnot
+
+#### Zkopírování odpracovaných hodin v projektu
+Systém nabízí funkci pro jedduché a rychlé zkopírování hodnot v sloupci projektové činnosti pro přednesení těchto hodnot například do dokumentu pro výkaz projektové činnosti.
 
 ### Odeslání výkazu ke schválení
 
@@ -164,7 +204,7 @@ Modul Výkazy slouží k evidenci, úpravám a schvalování pracovních výkaz�
 
 ### Vrácení výkazu k přepracování
 
-### Historie schvalování
+### Historie schvalování a komentářová sekce
 
 ## Otázky a odpovědi
 
@@ -191,6 +231,11 @@ Příklad: zaměstnanec má celkový úvazek `1,0`. Může mít současně `0,4`
 Ano, ale pouze pokud daná pozice nemá navázané výkazy ve stavu *Ke schválení* nebo *Schválený*. Pokud takové výkazy existují, odebrání není povoleno.
 
 Příklad: zaměstnanec má na zakázce pozici za březen 2026 a březnový výkaz je již schválený. Pozici nelze odebrat, protože by se tím narušil již schválený výkaz.
+
+**Lze nahrát docházku naráz za více měsíců?**
+
+Nahrát docházku za více měsíců lze pouze formou "jeden měsíc = jeden soubor". Dialog pro nahrání docházky umožňuje přiložit více souborů.
+
 
 **Kdo může výkaz schválit?**
 
