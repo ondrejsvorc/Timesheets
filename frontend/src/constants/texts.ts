@@ -254,4 +254,6 @@ export const Texts = {
   noContractNumber: "Bez čísla zakázky",
   fillMissingHoursInTimesheet: "Doplnit chybějící hodiny v celém výkazu",
   fillRemainingHoursEmptyOnly: "Doplnit zbývající hodiny jen do prázdných polí",
+  lockProjectCell: "Uzamknout buňku",
+  unlockProjectCell: "Odemknout buňku",
 };

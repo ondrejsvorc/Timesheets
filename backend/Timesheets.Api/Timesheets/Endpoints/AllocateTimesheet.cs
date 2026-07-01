@@ -29,7 +29,8 @@ public sealed class AllocateTimesheet : IEndpoint
             .WithSummary("Allocate Timesheet Edit")
             .WithRequestValidation<TimesheetEditRequest>();
 
-    public sealed record DayResponse(DateTime Date, int?[] Work, int?[] Break, decimal CoreHours, IReadOnlyDictionary<Guid, decimal> ProjectHours);
+    public sealed record ProjectCell(decimal Hours, bool Locked);
+    public sealed record DayResponse(DateTime Date, int?[] Work, int?[] Break, decimal CoreHours, IReadOnlyDictionary<Guid, ProjectCell> ProjectCells);
     public sealed record Response(IReadOnlyList<DayResponse> Days, TimesheetEvaluation Evaluation);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromQuery] int? day, [FromBody] TimesheetEditRequest request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
@@ -124,7 +125,11 @@ public sealed class AllocateTimesheet : IEndpoint
                 Work: [ConvertToMinutes(day.ClockIn), ConvertToMinutes(day.ClockOut)],
                 Break: [ConvertToMinutes(day.BreakStart), ConvertToMinutes(day.BreakEnd)],
                 CoreHours: day.CoreHours,
-                ProjectHours: day.ProjectHours))
+                ProjectCells: sheet.Projects.ToDictionary(
+                    project => project.Id,
+                    project => new ProjectCell(
+                        day.ProjectHours.GetValueOrDefault(project.Id),
+                        day.ProjectHoursFixed.GetValueOrDefault(project.Id)))))
             .ToList();
         return new Response(Days: allocation, Evaluation: TimesheetEngine.Evaluate(loaded, sheet));
     }

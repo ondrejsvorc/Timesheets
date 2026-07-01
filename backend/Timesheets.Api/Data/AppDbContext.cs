@@ -533,6 +533,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .IsRequired()
             .HasPrecision(5, 2);
 
+        builder.Property(pd => pd.HoursLocked)
+            .IsRequired()
+            .HasDefaultValue(false);
+
         builder.Property(pd => pd.IsHoliday)
             .IsRequired()
             .HasDefaultValue(false);

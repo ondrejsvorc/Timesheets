@@ -57,18 +57,55 @@ internal static class TimesheetInterruptionHours
         decimal projectWorkload = activeProjects.Sum(project => project.Workload);
         decimal coreWorkload = Math.Max(0m, totalWorkload - projectWorkload);
         decimal allocated = 0m;
-        day.CoreHours = TimesheetLogic.Normalize(capacity * coreWorkload / totalWorkload);
-        allocated += day.CoreHours;
+        if (day.CoreHoursFixed)
+        {
+            allocated += day.CoreHours;
+        }
 
         foreach (ProjectColumn project in projects.Where(project => !project.IsActiveOn(day.Date)))
+        {
+            if (day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+            {
+                allocated += day.ProjectHours.GetValueOrDefault(project.Id);
+            }
+            else
+            {
+                day.ProjectHours[project.Id] = 0m;
+            }
+        }
+
+        foreach (ProjectColumn project in activeProjects.Where(project => day.ProjectHoursFixed.GetValueOrDefault(project.Id)))
+        {
+            allocated += day.ProjectHours.GetValueOrDefault(project.Id);
+        }
+
+        List<ProjectColumn> mutableProjects = activeProjects.Where(project => !day.ProjectHoursFixed.GetValueOrDefault(project.Id)).ToList();
+        if (!day.CoreHoursFixed)
+        {
+            day.CoreHours = 0m;
+        }
+        foreach (ProjectColumn project in mutableProjects)
         {
             day.ProjectHours[project.Id] = 0m;
         }
 
-        for (int index = 0; index < activeProjects.Count; index++)
+        decimal mutableWorkload = (day.CoreHoursFixed ? 0m : coreWorkload) + mutableProjects.Sum(project => project.Workload);
+        decimal remaining = TimesheetLogic.Normalize(Math.Max(0m, capacity - allocated));
+        if (mutableWorkload <= 0m || remaining <= 0m)
         {
-            ProjectColumn project = activeProjects[index];
-            decimal hours = index == activeProjects.Count - 1 ? TimesheetLogic.Normalize(capacity - allocated) : TimesheetLogic.Normalize(capacity * project.Workload / totalWorkload);
+            return;
+        }
+
+        if (!day.CoreHoursFixed)
+        {
+            day.CoreHours = TimesheetLogic.Normalize(remaining * coreWorkload / mutableWorkload);
+            allocated += day.CoreHours;
+        }
+
+        for (int index = 0; index < mutableProjects.Count; index++)
+        {
+            ProjectColumn project = mutableProjects[index];
+            decimal hours = index == mutableProjects.Count - 1 ? TimesheetLogic.Normalize(Math.Max(0m, capacity - allocated)) : TimesheetLogic.Normalize(remaining * project.Workload / mutableWorkload);
             day.ProjectHours[project.Id] = hours;
             allocated += hours;
         }

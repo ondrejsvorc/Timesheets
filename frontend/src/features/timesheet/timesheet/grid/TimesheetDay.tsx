@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Lock, Sparkles, Unlock } from "lucide-react";
 import { useCallback, useMemo } from "react";
 import { SmartDecimalInput } from "@/components/shared/inputs/SmartDecimalInput";
 import { SmartTimeInput } from "@/components/shared/inputs/SmartTimeInput";
@@ -73,7 +73,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
   const isWeekendOrHoliday = day.isWeekend || day.isHoliday;
   const shouldLockByInterruption = Boolean(evaluation?.hasCoreOnlyInterruption || evaluation?.hasProportionalInterruption);
   const coreLocked = shouldLockByInterruption;
-  const allocatedInputHours = (day.coreHours ?? 0) + Object.values(day.projectHours).reduce((sum, hours) => sum + hours, 0);
+  const allocatedInputHours = (day.coreHours ?? 0) + Object.values(day.projectCells).reduce((sum, cell) => sum + cell.hours, 0);
   const canGenerateAttendance = tracksAttendance && issues.some((issue) => issue.code === "ERR-ATT-13") && (day.attendance.schedules.length > 0 || allocatedInputHours > 0);
   const stagMissing = !tracksAttendance && issues.some((issue) => issue.code === "ERR-ALL-02") ? roundHours(calculateStagHours(day) - (day.coreHours ?? 0)) : 0;
   const displayBalance = stagMissing > 0 ? Math.max(balance, stagMissing) : balance;
@@ -196,26 +196,48 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
       </div>
       {projects.map((project) => {
         const active = project.activeDays[dayIndex] ?? true;
-        const locked = project.locked || shouldLockByInterruption || !active;
+        const cell = day.projectCells[project.id] ?? { hours: 0, locked: false };
+        const systemLocked = project.locked || shouldLockByInterruption || !active;
+        const locked = systemLocked || cell.locked;
+        const lockLabel = cell.locked ? Texts.unlockProjectCell : Texts.lockProjectCell;
         return (
           <div key={project.id} className={cellClass}>
             <ValidationField validations={fieldIssues(`project:${project.id}`)}>
-              <LockableField locked={locked}>
-                <HoursToHumanTooltip hours={day.projectHours[project.id] ?? 0}>
-                  <SmartDecimalInput
-                    value={Number(day.projectHours[project.id] ?? 0)}
-                    onChange={(value) =>
-                      update((draft) => {
-                        draft.projectHours[project.id] = value ?? 0;
-                      })
-                    }
-                    commitOnChange
-                    precision={2}
-                    disabled={locked}
-                    className="h-8 w-20 max-w-full text-right tabular-nums"
-                  />
-                </HoursToHumanTooltip>
-              </LockableField>
+              <div className="flex w-full items-center justify-end gap-1">
+                <LockableField locked={systemLocked}>
+                  <HoursToHumanTooltip hours={cell.hours}>
+                    <SmartDecimalInput
+                      value={Number(cell.hours)}
+                      onChange={(value) =>
+                        update((draft) => {
+                          const current = draft.projectCells[project.id] ?? { hours: 0, locked: false };
+                          draft.projectCells[project.id] = { ...current, hours: value ?? 0 };
+                        })
+                      }
+                      commitOnChange
+                      precision={2}
+                      disabled={locked}
+                      className="h-8 w-20 max-w-full text-right tabular-nums"
+                    />
+                  </HoursToHumanTooltip>
+                </LockableField>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  disabled={systemLocked}
+                  className={cn("h-7 w-7 shrink-0", cell.locked ? "text-primary" : "text-slate-500")}
+                  onClick={() =>
+                    update((draft) => {
+                      const current = draft.projectCells[project.id] ?? { hours: 0, locked: false };
+                      draft.projectCells[project.id] = { ...current, locked: !current.locked };
+                    })
+                  }
+                  title={lockLabel}
+                  aria-label={lockLabel}
+                >
+                  {cell.locked || systemLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                </Button>
+              </div>
             </ValidationField>
           </div>
         );

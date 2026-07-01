@@ -55,6 +55,26 @@ public class TimesheetLockTests : BaseIntegrationTest
         Assert.Equal(1m, Assert.Single(stored.Days).CoreHours);
     }
 
+    [Fact]
+    public async Task UpdateTimesheet_ProjectCellLockIsPersisted()
+    {
+        DateTime date = new(2035, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid contractEmployeeId = Guid.CreateVersion7();
+        Guid projectTimesheetId = Guid.CreateVersion7();
+        await SeedTimesheetsAsync(attendanceTimesheetId, contractEmployeeId, projectTimesheetId, date, locked: false);
+
+        TimesheetEditRequest request = CreateDraft(contractEmployeeId, date, hours: 9m, hoursLocked: true);
+        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using IServiceScope assertionScope = CreateScope();
+        AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        ProjectDay stored = await assertionContext.ProjectDays.AsNoTracking().SingleAsync(day => day.ProjectTimesheetId == projectTimesheetId);
+        Assert.Equal(9m, stored.Hours);
+        Assert.True(stored.HoursLocked);
+    }
+
     private async Task SeedTimesheetsAsync(Guid attendanceTimesheetId, Guid contractEmployeeId, Guid projectTimesheetId, DateTime date, bool locked = true)
     {
         using IServiceScope scope = CreateScope();
@@ -67,10 +87,10 @@ public class TimesheetLockTests : BaseIntegrationTest
         await dbContext.SaveChangesAsync();
     }
 
-    private static TimesheetEditRequest CreateDraft(Guid contractEmployeeId, DateTime date, decimal hours, decimal coreHours = 0m)
+    private static TimesheetEditRequest CreateDraft(Guid contractEmployeeId, DateTime date, decimal hours, decimal coreHours = 0m, bool hoursLocked = false)
     {
         TimesheetDayEdit attendanceDay = new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: coreHours, Description: null, Schedules: []);
-        ProjectColumnEdit project = new(ContractEmployeeId: contractEmployeeId, Days: [new ProjectDayEdit(Date: date, Hours: hours)]);
+        ProjectColumnEdit project = new(ContractEmployeeId: contractEmployeeId, Days: [new ProjectDayEdit(Date: date, Hours: hours, HoursLocked: hoursLocked)]);
         return new TimesheetEditRequest(Days: [attendanceDay], Projects: [project]);
     }
 }

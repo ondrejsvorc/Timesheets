@@ -214,6 +214,7 @@ public sealed class ProjectDay
     public Guid ProjectTimesheetId { get; set; }
     public DateTime Date { get; set; }
     public decimal Hours { get; set; }
+    public bool HoursLocked { get; set; }
     public bool IsHoliday { get; set; }
     public decimal Workload { get; set; }
     public decimal HoursObligation { get; set; }

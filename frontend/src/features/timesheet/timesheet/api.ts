@@ -1,5 +1,5 @@
 import { ApiUrl, customFetch, withDelay } from "@/constants/api";
-import type { TimeRange, Timesheet, TimesheetData, TimesheetEvaluation, TimesheetIssue } from "../Timesheet";
+import type { ProjectCell, TimeRange, Timesheet, TimesheetData, TimesheetEvaluation, TimesheetIssue } from "../Timesheet";
 import type { TimesheetComment } from "./comments/Comment";
 
 interface CompactProjectDefinition {
@@ -17,7 +17,7 @@ interface CompactDayItem {
   work: [number | null, number | null];
   break: [number | null, number | null];
   coreHours: number;
-  projectHours: number[];
+  projectCells: ProjectCell[];
   isHoliday: boolean;
   isWeekend: boolean;
   note?: string | null;
@@ -80,7 +80,7 @@ interface DraftDay {
 
 interface DraftProject {
   contractEmployeeId: string;
-  days: Array<{ date: string; hours: number; hoursFixed?: boolean }>;
+  days: Array<{ date: string; hours: number; hoursLocked?: boolean }>;
 }
 
 interface TimesheetDraft {
@@ -113,7 +113,7 @@ interface ApiAllocationDay {
   work: [number | null, number | null];
   break: [number | null, number | null];
   coreHours: number;
-  projectHours: Record<string, number>;
+  projectCells: Record<string, ProjectCell>;
 }
 
 interface ApiAllocation {
@@ -132,7 +132,7 @@ interface AllocationDay {
   breakStart: string;
   breakEnd: string;
   coreHours: number;
-  projectHours: Record<string, number>;
+  projectCells: Record<string, ProjectCell>;
 }
 
 export interface TimesheetCommentAuthor {
@@ -217,8 +217,8 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
   }));
 
   const days = response.days.map((day) => {
-    const projectHours = projects.reduce<Record<string, number>>((acc, project, index) => {
-      acc[project.id] = day.projectHours[index] ?? 0;
+    const projectCells = projects.reduce<Record<string, ProjectCell>>((acc, project, index) => {
+      acc[project.id] = day.projectCells[index] ?? { hours: 0, locked: false };
       return acc;
     }, {});
 
@@ -233,7 +233,7 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
         schedules: mapCompactSchedules(day.schedules),
       },
       coreHours: day.coreHours > 0 ? day.coreHours : null,
-      projectHours,
+      projectCells,
       isHoliday: day.isHoliday,
       isWeekend: day.isWeekend,
     };
@@ -297,11 +297,11 @@ const buildTimesheetDraft = (timesheet: Timesheet): TimesheetDraft => {
         contractEmployeeId: project.id,
         days: timesheet.days.map((day, index) => {
           const active = project.activeDays[index] ?? true;
-          const hours = active ? (day.projectHours[project.id] ?? 0) : 0;
+          const cell = day.projectCells[project.id] ?? { hours: 0, locked: false };
           return {
             date: dayDate(timesheet.year, timesheet.month, index + 1),
-            hours,
-            hoursFixed: active && hours > 0,
+            hours: active ? cell.hours : 0,
+            hoursLocked: active && cell.locked,
           };
         }),
       };
@@ -408,7 +408,7 @@ export const allocateTimesheet = async (timesheet: Timesheet, day?: number): Pro
       breakStart: minutesToTime(day.break?.[0]),
       breakEnd: minutesToTime(day.break?.[1]),
       coreHours: day.coreHours,
-      projectHours: day.projectHours,
+      projectCells: day.projectCells,
     })),
     evaluation: mapTimesheetEvaluation(allocation.evaluation),
   };

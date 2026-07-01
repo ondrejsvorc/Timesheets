@@ -36,7 +36,7 @@ export const TimesheetGrid = ({ timesheet, evaluation, readOnly = false, onUpdat
 
   const copyProjectColumn = async (projectId: string) => {
     const lines = timesheet.days.map((day) => {
-      const hours = day.projectHours[projectId] ?? 0;
+      const hours = day.projectCells[projectId]?.hours ?? 0;
       return formatHours(hours);
     });
 

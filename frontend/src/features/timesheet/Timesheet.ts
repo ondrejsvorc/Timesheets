@@ -26,11 +26,16 @@ export interface ProjectDefinition {
   activeDays: boolean[];
 }
 
+export interface ProjectCell {
+  hours: number;
+  locked: boolean;
+}
+
 export interface TimesheetDay {
   date: string;
   attendance: Attendance;
   coreHours: number | null;
-  projectHours: Record<string, number>;
+  projectCells: Record<string, ProjectCell>;
   isHoliday: boolean;
   isWeekend: boolean;
 }

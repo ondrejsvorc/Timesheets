@@ -46,17 +46,44 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
 
         AllocateTimesheet.DayResponse doctor = allocation!.Days.Single(day => day.Date == firstDate);
         Assert.Equal(4m, doctor.CoreHours);
-        Assert.Equal(2m, doctor.ProjectHours[firstAssignmentId]);
-        Assert.Equal(2m, doctor.ProjectHours[secondAssignmentId]);
+        Assert.Equal(2m, doctor.ProjectCells[firstAssignmentId].Hours);
+        Assert.Equal(2m, doctor.ProjectCells[secondAssignmentId].Hours);
 
         AllocateTimesheet.DayResponse proportional = allocation.Days.Single(day => day.Date == firstDate.AddDays(1));
         Assert.Equal(4m, proportional.CoreHours);
-        Assert.Equal(2m, proportional.ProjectHours[firstAssignmentId]);
-        Assert.Equal(2m, proportional.ProjectHours[secondAssignmentId]);
+        Assert.Equal(2m, proportional.ProjectCells[firstAssignmentId].Hours);
+        Assert.Equal(2m, proportional.ProjectCells[secondAssignmentId].Hours);
 
         AllocateTimesheet.DayResponse businessTrip = allocation.Days.Single(day => day.Date == firstDate.AddDays(2));
         Assert.Equal(0m, businessTrip.CoreHours);
-        Assert.All(businessTrip.ProjectHours.Values, hours => Assert.Equal(0m, hours));
+        Assert.All(businessTrip.ProjectCells.Values, cell => Assert.Equal(0m, cell.Hours));
+    }
+
+    [Fact]
+    public async Task AllocateTimesheet_KeepsLockedProjectCellDuringProportionalInterruption()
+    {
+        DateTime date = new(2036, 8, 2, 0, 0, 0, DateTimeKind.Utc);
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid firstAssignmentId = Guid.CreateVersion7();
+        Guid secondAssignmentId = Guid.CreateVersion7();
+        await SeedAsync(attendanceTimesheetId, firstAssignmentId, secondAssignmentId, date);
+
+        TimesheetEditRequest request = new(
+            Days: [Day(date, "D")],
+            Projects:
+            [
+                new ProjectColumnEdit(firstAssignmentId, [new ProjectDayEdit(date, 5m, HoursLocked: true)]),
+                new ProjectColumnEdit(secondAssignmentId, [new ProjectDayEdit(date, 0m)])
+            ]);
+
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=2", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+        Assert.NotNull(allocation);
+        AllocateTimesheet.DayResponse day = allocation!.Days.Single(day => day.Date == date);
+        Assert.Equal(5m, day.ProjectCells[firstAssignmentId].Hours);
+        Assert.True(day.ProjectCells[firstAssignmentId].Locked);
     }
 
     [Fact]
@@ -89,7 +116,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Assert.NotNull(allocation);
         AllocateTimesheet.DayResponse day = allocation!.Days.Single();
         Assert.Equal(2m, day.CoreHours);
-        Assert.Equal(6m, day.ProjectHours[assignmentId]);
+        Assert.Equal(6m, day.ProjectCells[assignmentId].Hours);
     }
 
     [Fact]
@@ -113,7 +140,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Assert.Equal(new int?[] { 480, 990 }, day.Work);
         Assert.Equal(new int?[] { 720, 750 }, day.Break);
         Assert.Equal(4m, day.CoreHours);
-        Assert.Equal(4m, day.ProjectHours[assignmentId]);
+        Assert.Equal(4m, day.ProjectCells[assignmentId].Hours);
     }
 
     [Fact]
@@ -139,18 +166,18 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         int weekdays = dates.Count(TimesheetLogic.IsWeekday);
         decimal expectedColumnTotal = TimesheetLogic.Normalize(weekdays * 8m * 0.5m);
         Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation!.Days.Sum(day => day.CoreHours)));
-        Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectHours[assignmentId])));
+        Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectCells[assignmentId].Hours)));
 
-        AllocateTimesheet.DayResponse[] activeDays = allocation.Days.Where(day => TimesheetLogic.IsWeekday(day.Date) && TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours[assignmentId]) > 0m).ToArray();
+        AllocateTimesheet.DayResponse[] activeDays = allocation.Days.Where(day => TimesheetLogic.IsWeekday(day.Date) && TimesheetLogic.Normalize(day.CoreHours + day.ProjectCells[assignmentId].Hours) > 0m).ToArray();
         Assert.NotEmpty(activeDays);
         Assert.True(activeDays.Length < weekdays);
         foreach (AllocateTimesheet.DayResponse day in activeDays)
         {
-            Assert.InRange(TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours[assignmentId]), 6m, 12m);
+            Assert.InRange(TimesheetLogic.Normalize(day.CoreHours + day.ProjectCells[assignmentId].Hours), 6m, 12m);
         }
 
         IEnumerable<decimal> generatedCells = allocation.Days
-            .SelectMany(day => new[] { day.CoreHours, day.ProjectHours[assignmentId] })
+            .SelectMany(day => new[] { day.CoreHours, day.ProjectCells[assignmentId].Hours })
             .Where(hours => hours > 0m);
         Assert.All(generatedCells, hours => Assert.True(hours >= 1m, $"Generated cell is shorter than 1 hour: {hours}"));
     }
@@ -187,7 +214,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         int weekdays = dates.Count(TimesheetLogic.IsWeekday);
         decimal expectedColumnTotal = TimesheetLogic.Normalize(weekdays * 8m * 0.05m);
         Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation!.Days.Sum(day => day.CoreHours)));
-        Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectHours[assignmentId])));
+        Assert.Equal(expectedColumnTotal, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectCells[assignmentId].Hours)));
     }
 
     [Fact]
@@ -236,7 +263,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             Assert.NotNull(allocation);
 
             Assert.Equal(88m, TimesheetLogic.Normalize(allocation!.Days.Sum(day => day.CoreHours)));
-            Assert.Equal(88m, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectHours[assignmentId])));
+            Assert.Equal(88m, TimesheetLogic.Normalize(allocation.Days.Sum(day => day.ProjectCells[assignmentId].Hours)));
         }
     }
 
@@ -510,7 +537,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
 
             AllocateTimesheet.DayResponse interruption = allocation.Days.Single(day => day.Date == interruptionDate);
             Assert.Equal(4m, interruption.CoreHours);
-            Assert.Equal(4m, interruption.ProjectHours[assignmentId]);
+            Assert.Equal(4m, interruption.ProjectCells[assignmentId].Hours);
             AssertGeneratedNonAcademicCellsStayWithinBounds(allocation, interruptionDate);
         }
     }
@@ -524,7 +551,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
 
         TimesheetEditRequest request = new(
             Days: [new TimesheetDayEdit(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 1.83m, Description: null, Schedules: [new TimeRange(new TimeSpan(16, 0, 0), new TimeSpan(16, 50, 0))], CoreHoursFixed: true)],
-            Projects: [new ProjectColumnEdit(assignmentId, [new ProjectDayEdit(date, 3m, HoursFixed: true)])]);
+            Projects: [new ProjectColumnEdit(assignmentId, [new ProjectDayEdit(date, 3m, HoursLocked: true)])]);
 
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=2", request);
 
@@ -533,7 +560,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Assert.NotNull(allocation);
         AllocateTimesheet.DayResponse day = allocation!.Days.Single();
         Assert.Equal(1.83m, day.CoreHours);
-        Assert.Equal(3m, day.ProjectHours[assignmentId]);
+        Assert.Equal(3m, day.ProjectCells[assignmentId].Hours);
+        Assert.True(day.ProjectCells[assignmentId].Locked);
     }
 
     [Fact]
@@ -623,7 +651,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
                 continue;
             }
 
-            decimal total = TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
+            decimal total = TimesheetLogic.Normalize(day.CoreHours + day.ProjectCells.Values.Sum(cell => cell.Hours));
             if (total > 0m)
             {
                 Assert.InRange(total, 6m, 12m);
@@ -633,7 +661,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
                 Assert.InRange(day.CoreHours, 6m, 12m);
             }
 
-            foreach (decimal hours in day.ProjectHours.Values.Where(hours => hours > 0m))
+            foreach (decimal hours in day.ProjectCells.Values.Select(cell => cell.Hours).Where(hours => hours > 0m))
             {
                 Assert.InRange(hours, 6m, 12m);
             }
@@ -645,8 +673,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        ContractEmployee firstAssignment = Assignment(firstAssignmentId, "INT-1", "Interruption 1", firstDate);
-        ContractEmployee secondAssignment = Assignment(secondAssignmentId, "INT-2", "Interruption 2", firstDate);
+        ContractEmployee firstAssignment = Assignment(firstAssignmentId, "INT-1", $"Interruption 1 {firstAssignmentId}", firstDate);
+        ContractEmployee secondAssignment = Assignment(secondAssignmentId, "INT-2", $"Interruption 2 {secondAssignmentId}", firstDate);
         dbContext.ContractEmployees.AddRange(firstAssignment, secondAssignment);
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = firstDate.Year, Month = firstDate.Month, Workload = 1m });
         dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet

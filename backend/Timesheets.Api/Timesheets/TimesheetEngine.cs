@@ -8,7 +8,7 @@ namespace Timesheets.Api.Timesheets;
 
 public sealed record TimesheetDayEdit(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal CoreHours, string? Description, IReadOnlyList<TimeRange>? Schedules, bool CoreHoursFixed = false);
 
-public sealed record ProjectDayEdit(DateTime Date, decimal Hours, bool HoursFixed = false);
+public sealed record ProjectDayEdit(DateTime Date, decimal Hours, bool HoursLocked = false);
 
 public sealed record ProjectColumnEdit(Guid ContractEmployeeId, IReadOnlyList<ProjectDayEdit> Days);
 
@@ -156,13 +156,14 @@ public static class TimesheetEngine
                         projectUpdate = null;
                     }
 
-                    decimal persisted = projectState.IsActiveOn(day.Date)
-                        ? project.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date)?.Hours ?? 0m
-                        : 0m;
+                    Data.Models.ProjectDay? persistedDay = projectState.IsActiveOn(day.Date)
+                        ? project.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date)
+                        : null;
+                    decimal persisted = persistedDay?.Hours ?? 0m;
                     ProjectDayEdit? projectDayUpdate = projectUpdate?.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date);
                     decimal hours = projectDayUpdate?.Hours ?? persisted;
                     projectHours[project.ContractEmployeeId] = TimesheetLogic.Normalize(hours);
-                    projectHoursFixed[project.ContractEmployeeId] = projectState.IsActiveOn(day.Date) && (projectDayUpdate?.HoursFixed ?? false);
+                    projectHoursFixed[project.ContractEmployeeId] = projectState.IsActiveOn(day.Date) && (projectDayUpdate?.HoursLocked ?? persistedDay?.HoursLocked ?? false);
                 }
 
                 return new EditableTimesheetDay
@@ -191,7 +192,7 @@ public static class TimesheetEngine
         TimesheetDayEdit[] days = loaded.Timesheet.Days.Select(day => new TimesheetDayEdit(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, CoreHours: day.CoreHours, Description: day.Description, Schedules: ParseSchedules(day.Schedules))).ToArray();
         ProjectColumnEdit[] projects = loaded.Projects.Select(project =>
         {
-            ProjectDayEdit[] projectDays = project.Days.Select(day => new ProjectDayEdit(Date: day.Date, Hours: day.Hours)).ToArray();
+            ProjectDayEdit[] projectDays = project.Days.Select(day => new ProjectDayEdit(Date: day.Date, Hours: day.Hours, HoursLocked: day.HoursLocked)).ToArray();
             return new ProjectColumnEdit(ContractEmployeeId: project.ContractEmployeeId, Days: projectDays);
         }).ToArray();
         return new TimesheetEditRequest(Days: days, Projects: projects);
@@ -295,6 +296,7 @@ public static class TimesheetEngine
                 foreach (Data.Models.ProjectDay day in project.Days.Where(day => !range.Includes(day.Date)))
                 {
                     day.Hours = 0m;
+                    day.HoursLocked = false;
                 }
             }
 
@@ -317,6 +319,7 @@ public static class TimesheetEngine
                 {
                     bool active = loaded.ProjectRanges.TryGetValue(project.ContractEmployeeId, out range) && range.Includes(projectDay.Date);
                     day.Hours = active ? TimesheetLogic.Normalize(projectDay.Hours) : 0m;
+                    day.HoursLocked = active && projectDay.HoursLocked;
                 }
             }
         }
@@ -343,7 +346,7 @@ public static class TimesheetEngine
             Days: sheet.Days.Select(day => new TimesheetDayEdit(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.CoreHours, day.Description, day.Schedules)).ToList(),
             Projects: sheet.Projects.Select(project => new ProjectColumnEdit(
                 project.Id,
-                sheet.Days.Select(day => new ProjectDayEdit(day.Date, day.ProjectHours.GetValueOrDefault(project.Id))).ToList())).ToList());
+                sheet.Days.Select(day => new ProjectDayEdit(day.Date, day.ProjectHours.GetValueOrDefault(project.Id), day.ProjectHoursFixed.GetValueOrDefault(project.Id))).ToList())).ToList());
         ApplyEdits(loaded, request);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
