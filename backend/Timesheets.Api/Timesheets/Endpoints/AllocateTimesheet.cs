@@ -97,6 +97,10 @@ public sealed class AllocateTimesheet : IEndpoint
         {
             return;
         }
+        if (ApplyLockedProjectDayAttendance(day, sheet.Projects))
+        {
+            return;
+        }
 
         Dictionary<Guid, decimal> projectTargets = CalculateProjectMonthlyRemainders(sheet);
         decimal coreTarget = CalculateCoreMonthlyRemainder(sheet, loaded.TotalWorkload);
@@ -108,6 +112,10 @@ public sealed class AllocateTimesheet : IEndpoint
     {
         EditableTimesheetDay? day = sheet.Days.SingleOrDefault(day => day.Date.Day == dayNumber);
         if (day is null)
+        {
+            return;
+        }
+        if (HasLockedProjectHours(day))
         {
             return;
         }
@@ -137,6 +145,10 @@ public sealed class AllocateTimesheet : IEndpoint
     private static void FillDayFromMonthlyTargets(EditableTimesheetDay day, IReadOnlyList<ProjectColumn> projects, decimal totalWorkload, bool tracksAttendance, ref decimal coreTarget, Dictionary<Guid, decimal> projectTargets)
     {
         if (TimesheetInterruptions.HasBusinessTripInterruption(day.Description))
+        {
+            return;
+        }
+        if (HasLockedProjectHours(day))
         {
             return;
         }
@@ -225,7 +237,7 @@ public sealed class AllocateTimesheet : IEndpoint
             TimesheetInterruptionHours.ApplyToDayState(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance: false);
         }
 
-        foreach (EditableTimesheetDay day in sheet.Days.Where(day => !day.CoreHoursFixed && !TimesheetInterruptions.SkipAllocationRules(day.Description)))
+        foreach (EditableTimesheetDay day in sheet.Days.Where(day => !day.CoreHoursFixed && !TimesheetInterruptions.SkipAllocationRules(day.Description) && !HasLockedProjectHours(day)))
         {
             decimal stagMissing = TimesheetLogic.Normalize(TimesheetLogic.CalculateStagHours(day.Schedules) - day.CoreHours);
             if (stagMissing > 0m)
@@ -246,6 +258,7 @@ public sealed class AllocateTimesheet : IEndpoint
             .Where(day =>
                 CanAllocateAcademicDay(day) &&
                 !TimesheetInterruptions.SkipAllocationRules(day.Description) &&
+                !HasLockedProjectHours(day) &&
                 CanDayReceiveHours(day, sheet.Projects))
             .ToList();
         if (candidates.Count == 0)
@@ -420,6 +433,39 @@ public sealed class AllocateTimesheet : IEndpoint
 
     private static decimal CalculateDayTotal(EditableTimesheetDay day) => TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
 
+    private static bool HasLockedProjectHours(EditableTimesheetDay day) =>
+        day.ProjectHoursFixed.Any(item => item.Value && day.ProjectHours.GetValueOrDefault(item.Key) > 0m);
+
+    private static bool ApplyLockedProjectDayAttendance(EditableTimesheetDay day, IReadOnlyList<ProjectColumn> projects)
+    {
+        if (!HasLockedProjectHours(day) || TimesheetInterruptions.SkipAllocationRules(day.Description))
+        {
+            return false;
+        }
+
+        if (!day.CoreHoursFixed)
+        {
+            day.CoreHours = 0m;
+        }
+
+        foreach (ProjectColumn project in projects)
+        {
+            if (!day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+            {
+                day.ProjectHours[project.Id] = 0m;
+            }
+        }
+
+        decimal work = CalculateDayTotal(day);
+        if (work > 12m)
+        {
+            throw new InvalidOperationException($"Locked day {day.Date:yyyy-MM-dd} has {work:F2} h, expected at most 12 h.");
+        }
+
+        SetGeneratedAttendance(day, work);
+        return true;
+    }
+
     private static void ResetGeneratedAllocations(EditableTimesheet sheet)
     {
         foreach (EditableTimesheetDay day in sheet.Days)
@@ -441,7 +487,7 @@ public sealed class AllocateTimesheet : IEndpoint
 
     private static void ApplyNonAcademicInterruptions(EditableTimesheet sheet, decimal totalWorkload)
     {
-        foreach (EditableTimesheetDay day in sheet.Days.Where(day => TimesheetInterruptions.HasProportionalInterruption(day.Description)))
+        foreach (EditableTimesheetDay day in sheet.Days.Where(day => TimesheetInterruptions.HasProportionalInterruption(day.Description) && !HasLockedProjectHours(day)))
         {
             if (TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd) <= 0m)
             {
@@ -631,6 +677,10 @@ public sealed class AllocateTimesheet : IEndpoint
         foreach (EditableTimesheetDay day in sheet.Days)
         {
             if (day.IsHoliday || TimesheetInterruptions.SkipAllocationRules(day.Description))
+            {
+                continue;
+            }
+            if (HasLockedProjectHours(day))
             {
                 continue;
             }

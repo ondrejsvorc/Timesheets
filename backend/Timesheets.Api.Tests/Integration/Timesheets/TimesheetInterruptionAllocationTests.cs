@@ -143,6 +143,38 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Assert.Equal(4m, day.ProjectCells[assignmentId].Hours);
     }
 
+    [Theory]
+    [InlineData(9, 6, 840, null, null)]
+    [InlineData(10, 8, 990, 720, 750)]
+    public async Task AllocateTimesheet_MatchesAttendanceToLockedProjectCell(int month, int lockedHours, int expectedClockOut, int? expectedBreakStart, int? expectedBreakEnd)
+    {
+        DateTime date = new(2036, month, 2, 0, 0, 0, DateTimeKind.Utc);
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
+        decimal workload = lockedHours / 8m;
+        await SeedSingleDayAsync(attendanceTimesheetId, date, NonAcademicEmployeeTypeId, assignmentId, totalWorkload: workload, assignmentWorkload: workload);
+
+        TimeSpan originalClockOut = lockedHours == 6 ? new TimeSpan(16, 0, 0) : new TimeSpan(17, 30, 0);
+        TimesheetEditRequest request = new(
+            Days:
+            [
+                new TimesheetDayEdit(Date: date, ClockIn: new TimeSpan(8, 0, 0), ClockOut: originalClockOut, BreakStart: new TimeSpan(12, 0, 0), BreakEnd: new TimeSpan(12, 30, 0), CoreHours: 0m, Description: null, Schedules: [])
+            ],
+            Projects: [new ProjectColumnEdit(assignmentId, [new ProjectDayEdit(date, lockedHours, HoursLocked: true)])]);
+
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=2", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+        Assert.NotNull(allocation);
+        AllocateTimesheet.DayResponse day = allocation!.Days.Single();
+        Assert.Equal(new int?[] { 480, expectedClockOut }, day.Work);
+        Assert.Equal(new int?[] { expectedBreakStart, expectedBreakEnd }, day.Break);
+        Assert.Equal(0m, day.CoreHours);
+        Assert.Equal(lockedHours, day.ProjectCells[assignmentId].Hours);
+        Assert.True(day.ProjectCells[assignmentId].Locked);
+    }
+
     [Fact]
     public async Task AllocateTimesheet_FillsAcademicMonthWithinTargetsAndDailyBounds()
     {
@@ -696,13 +728,13 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         await dbContext.SaveChangesAsync();
     }
 
-    private async Task SeedSingleDayAsync(Guid attendanceTimesheetId, DateTime date, Guid employeeTypeId, Guid? assignmentId, decimal assignmentWorkload = 0.5m)
+    private async Task SeedSingleDayAsync(Guid attendanceTimesheetId, DateTime date, Guid employeeTypeId, Guid? assignmentId, decimal assignmentWorkload = 0.5m, decimal totalWorkload = 1m)
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         Employee employee = await dbContext.Employees.SingleAsync(employee => employee.Id == SeededTestData.JanNovakEmployeeId);
         employee.EmployeeTypeId = employeeTypeId;
-        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = date.Year, Month = date.Month, Workload = 1m });
+        dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = date.Year, Month = date.Month, Workload = totalWorkload });
         dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
         {
             Id = attendanceTimesheetId,
