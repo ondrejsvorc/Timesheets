@@ -8,8 +8,8 @@ import { MessageAlertDialog } from "@/components/shared/dialogs/MessageAlertDial
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
-import type { Timesheet, TimesheetEvaluation } from "../Timesheet";
 import { type GetCombinedTimesheetOverviewResponse, type TimesheetStatusAction, updateCombinedTimesheetStatus } from "./api";
+import type { Timesheet, TimesheetEvaluation } from "./Timesheet";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
 
 interface TimesheetWorkflowToolbarProps {

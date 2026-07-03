@@ -2,7 +2,7 @@ import { Copy, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Texts } from "@/constants/texts";
-import type { CoreDefinition, ProjectDefinition } from "../../Timesheet";
+import type { CoreDefinition, ProjectDefinition } from "../Timesheet";
 
 interface TimesheetHeaderProps {
   readOnly?: boolean;

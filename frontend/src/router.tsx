@@ -25,8 +25,8 @@ import { ProjectManagers } from "./features/project/ProjectManagers";
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
-import { getCombinedTimesheet, getCombinedTimesheetOverview, getTimesheetComments } from "./features/timesheet/timesheet/api";
-import { TimesheetPage, type TimesheetPageData } from "./features/timesheet/timesheet/TimesheetPage";
+import { getCombinedTimesheet, getCombinedTimesheetOverview, getTimesheetComments } from "./features/timesheet/api";
+import { TimesheetPage, type TimesheetPageData } from "./features/timesheet/TimesheetPage";
 
 const requireProjectId = (params: Params) => {
   if (!params.id) {

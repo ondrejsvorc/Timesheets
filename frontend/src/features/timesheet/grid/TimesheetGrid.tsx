@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/common";
 import { formatHours } from "@/utils/format";
-import type { Timesheet, TimesheetDay, TimesheetEvaluation } from "../../Timesheet";
+import type { Timesheet, TimesheetDay, TimesheetEvaluation } from "../Timesheet";
 import { TimesheetBody } from "./TimesheetBody";
 import { TimesheetFooter } from "./TimesheetFooter";
 import { TimesheetHeader } from "./TimesheetHeader";

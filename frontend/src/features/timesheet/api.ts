@@ -1,6 +1,6 @@
 import { ApiUrl, customFetch, withDelay } from "@/constants/api";
-import type { ProjectCell, TimeRange, Timesheet, TimesheetData, TimesheetEvaluation, TimesheetIssue } from "../Timesheet";
 import type { TimesheetComment } from "./comments/Comment";
+import type { ProjectCell, TimeRange, Timesheet, TimesheetData, TimesheetEvaluation, TimesheetIssue } from "./Timesheet";
 
 interface CompactProjectDefinition {
   id: string;

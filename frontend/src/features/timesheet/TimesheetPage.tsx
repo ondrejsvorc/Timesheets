@@ -14,11 +14,11 @@ import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { GetEmployeeResponse } from "@/features/employee/api";
 import { cn } from "@/utils/common";
 import { formatWorkload } from "@/utils/format";
-import type { Timesheet, TimesheetData, TimesheetDay, TimesheetEvaluation } from "../Timesheet";
 import { allocateTimesheet, type GetCombinedTimesheetOverviewResponse, reviewTimesheet, updateTimesheet } from "./api";
 import type { TimesheetComment } from "./comments/Comment";
 import { TimesheetComments } from "./comments/TimesheetComments";
 import { TimesheetGrid } from "./grid/TimesheetGrid";
+import type { Timesheet, TimesheetData, TimesheetDay, TimesheetEvaluation } from "./Timesheet";
 import { TimesheetsOverview } from "./TimesheetsOverview";
 import { TimesheetWorkflowToolbar } from "./TimesheetWorkflowToolbar";
 

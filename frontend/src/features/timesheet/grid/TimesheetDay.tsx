@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/common";
 import { formatHours } from "@/utils/format";
-import type { ProjectDefinition as Project, TimesheetDayEvaluation, TimesheetDay as TimesheetDayModel, TimesheetIssue } from "../../Timesheet";
+import type { ProjectDefinition as Project, TimesheetDayEvaluation, TimesheetDay as TimesheetDayModel, TimesheetIssue } from "../Timesheet";
 import { Interruption } from "./Interruption";
 import { LockableField } from "./LockableField";
 import { StagSchedule } from "./StagSchedule";

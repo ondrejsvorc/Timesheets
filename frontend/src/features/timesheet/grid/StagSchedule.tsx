@@ -1,5 +1,5 @@
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
-import type { TimeRange } from "../../Timesheet";
+import type { TimeRange } from "../Timesheet";
 
 /** Predefined 50-minute slots from 07:00 to 21:00 (07:00–07:50, 08:00–08:50, …, 21:00–21:50). */
 const STAG_SCHEDULE_INTERVAL_OPTIONS: MultiSelectComboBoxItem[] = (() => {

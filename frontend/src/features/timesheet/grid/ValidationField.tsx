@@ -2,7 +2,7 @@ import { AlertCircle, AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/utils/common";
-import type { TimesheetIssue } from "../../Timesheet";
+import type { TimesheetIssue } from "../Timesheet";
 
 interface ValidationFieldProps {
   validations: TimesheetIssue[];
