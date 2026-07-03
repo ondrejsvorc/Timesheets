@@ -8,7 +8,6 @@ import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBa
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
-import { ActionDropdownMenu, EditAction } from "@/components/shared/menus/ActionDropdownMenu";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -282,7 +281,6 @@ const TimesheetsByMonth = ({ months, isLoading }: TimesheetsByMonthProps) => {
                       <TableHead>{Texts.position}</TableHead>
                       <TableHead>{Texts.timesheetStatus}</TableHead>
                       <TableHead>{Texts.workload}</TableHead>
-                      <TableHead>{Texts.actions}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -312,11 +310,6 @@ function TimesheetItemRow({ item }: TimesheetItemRowProps) {
         <TimesheetStatusBadge status={item.status} />
       </TableCell>
       <TableCell>{formatWorkloadPercent(item.workload)}</TableCell>
-      <TableCell>
-        <ActionDropdownMenu>
-          <EditAction onClick={() => {}} />
-        </ActionDropdownMenu>
-      </TableCell>
     </TableRow>
   );
 }
@@ -374,7 +367,6 @@ const TimesheetsByEmployee = ({ employees, isLoading }: TimesheetsByEmployeeProp
                           <TableHead>{Texts.position}</TableHead>
                           <TableHead>{Texts.timesheetStatus}</TableHead>
                           <TableHead>{Texts.workload}</TableHead>
-                          <TableHead>{Texts.actions}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
