@@ -78,16 +78,15 @@ public sealed class GetContractTimesheets : IEndpoint
 
         bool canViewAllTimesheets = await user.CanViewAllContractTimesheetsAsync(id, cancellationToken);
 
-        IQueryable<AttendanceTimesheet> query = dbContext.AttendanceTimesheets
+        IQueryable<ProjectTimesheet> query = dbContext.ProjectTimesheets
             .AsNoTracking()
+            .Where(timesheet => timesheet.ContractId == id)
             .Where(timesheet => timesheet.Year > request.FromYear || (timesheet.Year == request.FromYear && timesheet.Month >= request.FromMonth))
             .Where(timesheet => timesheet.Year < request.ToYear || (timesheet.Year == request.ToYear && timesheet.Month <= request.ToMonth))
-            .Where(timesheet => dbContext.ContractEmployees
-                .Any(contractEmployee =>
-                    contractEmployee.ContractId == id
-                    && contractEmployee.EmployeeId == timesheet.EmployeeId
-                    && contractEmployee.StartDate <= new DateTime(timesheet.Year, timesheet.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddDays(-1)
-                    && (contractEmployee.EndDate == null || contractEmployee.EndDate >= new DateTime(timesheet.Year, timesheet.Month, 1, 0, 0, 0, DateTimeKind.Utc))));
+            .Where(timesheet => dbContext.AttendanceTimesheets.Any(attendance =>
+                attendance.EmployeeId == timesheet.EmployeeId
+                && attendance.Year == timesheet.Year
+                && attendance.Month == timesheet.Month));
 
         if (!canViewAllTimesheets)
         {
@@ -100,27 +99,30 @@ public sealed class GetContractTimesheets : IEndpoint
         }
 
         var items = await query
-            .Select(timesheet => new
-            {
-                timesheet.Id,
-                timesheet.EmployeeId,
-                timesheet.Year,
-                timesheet.Month,
-                timesheet.TimesheetStatusId,
-                Status = timesheet.TimesheetStatus.Name,
-                timesheet.Employee.PersonalNumber,
-                FullName = EmployeeNameFormatter.Format(timesheet.Employee.TitleBefore, timesheet.Employee.FullName, timesheet.Employee.TitleAfter),
-                EmployeeType = timesheet.Employee.EmployeeType.Name,
-                ContractEmployee = dbContext.ContractEmployees
-                    .Where(employee => employee.ContractId == id)
-                    .Where(employee => employee.EmployeeId == timesheet.EmployeeId)
-                    .Where(employee =>
-                        employee.StartDate <= new DateTime(timesheet.Year, timesheet.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddDays(-1)
-                        && (employee.EndDate == null || employee.EndDate >= new DateTime(timesheet.Year, timesheet.Month, 1, 0, 0, 0, DateTimeKind.Utc)))
-                    .OrderByDescending(employee => employee.StartDate)
-                    .Select(employee => new { employee.PositionCode, employee.Position, employee.Workload })
-                    .FirstOrDefault()
-            })
+            .Join(
+                dbContext.ContractEmployees.AsNoTracking(),
+                timesheet => timesheet.ContractEmployeeId,
+                contractEmployee => contractEmployee.Id,
+                (timesheet, contractEmployee) => new { timesheet, contractEmployee })
+            .Join(
+                dbContext.Employees.AsNoTracking(),
+                x => x.timesheet.EmployeeId,
+                employee => employee.Id,
+                (x, employee) => new
+                {
+                    x.timesheet.Id,
+                    x.timesheet.EmployeeId,
+                    x.timesheet.Year,
+                    x.timesheet.Month,
+                    x.timesheet.TimesheetStatusId,
+                    Status = x.timesheet.TimesheetStatus.Name,
+                    x.timesheet.Workload,
+                    x.contractEmployee.PositionCode,
+                    x.contractEmployee.Position,
+                    employee.PersonalNumber,
+                    FullName = EmployeeNameFormatter.Format(employee.TitleBefore, employee.FullName, employee.TitleAfter),
+                    EmployeeType = employee.EmployeeType.Name,
+                })
             .ToListAsync(cancellationToken);
 
         if (items.Count == 0)
@@ -134,9 +136,9 @@ public sealed class GetContractTimesheets : IEndpoint
                 item.EmployeeId,
                 item.Year,
                 item.Month,
-                item.ContractEmployee!.PositionCode,
-                item.ContractEmployee!.Position,
-                item.ContractEmployee!.Workload,
+                item.PositionCode,
+                item.Position,
+                item.Workload,
                 item.TimesheetStatusId,
                 item.Status
             ))
@@ -149,7 +151,7 @@ public sealed class GetContractTimesheets : IEndpoint
                 item.FullName,
                 item.EmployeeType
             ))
-            .Distinct()
+            .DistinctBy(item => item.Id)
             .ToList();
 
         return TypedResults.Ok(new Response(employees, timesheets));

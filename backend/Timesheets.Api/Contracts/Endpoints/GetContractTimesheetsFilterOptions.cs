@@ -34,19 +34,14 @@ public sealed class GetContractTimesheetsFilterOptions : IEndpoint
             return TypedResults.NotFound();
         }
 
-        var baseQuery = dbContext.AttendanceTimesheets
+        var baseQuery = dbContext.ProjectTimesheets
             .AsNoTracking()
-            .SelectMany(
-                timesheet => dbContext.ContractEmployees
-                    .AsNoTracking()
-                    .Where(contractEmployee => contractEmployee.ContractId == id)
-                    .Where(contractEmployee => contractEmployee.EmployeeId == timesheet.EmployeeId)
-                    .Where(contractEmployee =>
-                        contractEmployee.StartDate <= new DateTime(timesheet.Year, timesheet.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1).AddDays(-1)
-                        && (contractEmployee.EndDate == null || contractEmployee.EndDate >= new DateTime(timesheet.Year, timesheet.Month, 1, 0, 0, 0, DateTimeKind.Utc))
-                    ),
-                (timesheet, _) => new { timesheet.Year, timesheet.Month, Status = timesheet.TimesheetStatus.Name }
-            );
+            .Where(timesheet => timesheet.ContractId == id)
+            .Where(timesheet => dbContext.AttendanceTimesheets.Any(attendance =>
+                attendance.EmployeeId == timesheet.EmployeeId
+                && attendance.Year == timesheet.Year
+                && attendance.Month == timesheet.Month))
+            .Select(timesheet => new { timesheet.Year, timesheet.Month, Status = timesheet.TimesheetStatus.Name });
 
         var rows = await baseQuery
             .Distinct()
