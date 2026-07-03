@@ -1,4 +1,4 @@
-import type { CurrentUserPermissions } from "./api/getCurrentUserPermissions";
+import type { CurrentUserPermissions } from "./api";
 import { isAtLeast, UserRole } from "./userRole";
 
 export const UiAction = {

@@ -34,7 +34,6 @@ public static class Endpoints
         }
 
         endpoints.MapEndpoint<GetCurrentUser>();
-        endpoints.MapEndpoint<GetCurrentUserPermissions>();
     }
 
     private static void MapProtectedApiEndpoints(this WebApplication app)

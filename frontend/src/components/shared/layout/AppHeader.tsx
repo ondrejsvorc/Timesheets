@@ -1,5 +1,6 @@
 import { Bell, User } from "lucide-react";
 import { Link, useRouteLoaderData } from "react-router";
+import type { CurrentUser } from "@/auth/api";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
@@ -9,12 +10,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { BaseUrl } from "@/constants/api";
 import { Routes } from "@/constants/routes";
 import { Texts } from "../../../constants/texts";
-import type { RootLoaderData } from "../../../router";
 
 export const AppHeader = () => {
   const handleNotificationsClick = () => {};
-  const rootData = useRouteLoaderData("root") as RootLoaderData | undefined;
-  const currentUser = rootData?.currentUser ?? null;
+  const currentUser = useRouteLoaderData("root") as CurrentUser | undefined;
   const canNavProjects = useCan(UiAction.nav.projects);
   const canNavEmployees = useCan(UiAction.nav.employees);
   const canNavMyTimesheets = useCan(UiAction.nav.myTimesheets);

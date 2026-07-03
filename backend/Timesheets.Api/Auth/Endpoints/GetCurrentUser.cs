@@ -1,4 +1,5 @@
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Timesheets.Api.Administration;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
@@ -12,16 +13,28 @@ public sealed class GetCurrentUser : IEndpoint
         app.MapGet("/currentUser", Handle)
            .WithSummary("Get Currently Authenticated User");
 
+    public sealed record PermissionsResponse(
+        UserRole Role,
+        IReadOnlyList<Guid> ProjectManagerOf,
+        IReadOnlyList<Guid> ContractManagerOf,
+        IReadOnlyList<Guid> EmployeeOnContractIds,
+        IReadOnlyList<Guid> VisibleProjectIds,
+        IReadOnlyList<Guid> VisibleContractIds);
+
     public sealed record Response(
         Guid Id,
         string FullName,
         string? EmployeeType,
         string PersonalNumber,
         string? TitleBefore,
-        string? TitleAfter
-    );
+        string? TitleAfter,
+        PermissionsResponse Permissions);
 
-    private static async Task<IResult> Handle(HttpContext httpContext, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<IResult> Handle(
+        HttpContext httpContext,
+        AppDbContext dbContext,
+        IOptions<AdministrationOptions> administrationOptions,
+        CancellationToken cancellationToken)
     {
         if (!httpContext.User.IsAuthenticated())
         {
@@ -34,13 +47,22 @@ public sealed class GetCurrentUser : IEndpoint
             return Results.NotFound("Employee not found.");
         }
 
+        UserPermissions permissions = await UserPermissionsLoader.LoadAsync(employee, dbContext, administrationOptions, cancellationToken);
+
         Response response = new(
             Id: employee.Id,
             FullName: EmployeeNameFormatter.Format(employee.TitleBefore, employee.FullName, employee.TitleAfter),
             EmployeeType: employee.EmployeeTypeId == null ? null : employee.EmployeeType?.Name,
             PersonalNumber: employee.PersonalNumber,
             TitleBefore: employee.TitleBefore,
-            TitleAfter: employee.TitleAfter);
+            TitleAfter: employee.TitleAfter,
+            Permissions: new PermissionsResponse(
+                Role: permissions.Role,
+                ProjectManagerOf: permissions.ProjectManagerOf,
+                ContractManagerOf: permissions.ContractManagerOf,
+                EmployeeOnContractIds: permissions.EmployeeOnContractIds,
+                VisibleProjectIds: permissions.VisibleProjectIds,
+                VisibleContractIds: permissions.VisibleContractIds));
 
         return Results.Ok(response);
     }

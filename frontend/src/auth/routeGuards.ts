@@ -1,68 +1,46 @@
 import { redirect } from "react-router";
-import { BaseUrl, fetchWithAuth, goToLogin, onSessionExpired } from "@/constants/api";
+import { onSessionExpired } from "@/constants/api";
 import { Routes } from "@/constants/routes";
-import type { CurrentUser } from "@/router";
-import { type CurrentUserPermissions, getCurrentUserPermissions } from "./api/getCurrentUserPermissions";
+import { type CurrentUser, getCurrentUser } from "./api";
 import { can, UiAction, type UiActionId, type UiContext } from "./uiPermissions";
 
-export interface AuthContext {
-  permissions: CurrentUserPermissions | null;
-  currentUser: CurrentUser | null;
-}
+let cachedUser: CurrentUser | null = null;
+let userRequest: Promise<CurrentUser | null> | null = null;
 
-let cachedAuth: AuthContext | null = null;
-let authRequest: Promise<AuthContext> | null = null;
-
-const fetchAuthContext = async (): Promise<AuthContext> => {
-  const [permissions, userResponse] = await Promise.all([getCurrentUserPermissions().catch(() => null), fetchWithAuth(`${BaseUrl}/auth/currentUser`)]);
-
-  if (userResponse.status === 401) {
-    goToLogin();
-    return new Promise(() => {});
+export const loadCurrentUser = async (): Promise<CurrentUser | null> => {
+  if (cachedUser) {
+    return cachedUser;
   }
 
-  const currentUser = userResponse.ok ? ((await userResponse.json()) as CurrentUser) : null;
-  return { permissions, currentUser };
-};
-
-export const loadAuthContext = async (): Promise<AuthContext> => {
-  if (cachedAuth) {
-    return cachedAuth;
+  if (userRequest) {
+    return userRequest;
   }
 
-  if (authRequest) {
-    return authRequest;
-  }
-
-  authRequest = fetchAuthContext()
-    .then((auth) => {
-      cachedAuth = auth;
-      return auth;
+  userRequest = getCurrentUser()
+    .then((user) => {
+      cachedUser = user;
+      return user;
     })
     .finally(() => {
-      authRequest = null;
+      userRequest = null;
     });
 
-  return authRequest;
+  return userRequest;
 };
 
-export const resetAuthContext = () => {
-  cachedAuth = null;
-  authRequest = null;
+export const resetCurrentUser = () => {
+  cachedUser = null;
+  userRequest = null;
 };
 
-onSessionExpired(resetAuthContext);
+onSessionExpired(resetCurrentUser);
 
-export const resolveHomePath = (auth: AuthContext): string => {
-  if (can(auth.permissions, auth.currentUser?.id, UiAction.nav.projects)) {
+export const resolveHomePath = (user: CurrentUser): string => {
+  if (can(user.permissions, user.id, UiAction.nav.projects)) {
     return Routes.projects();
   }
 
-  if (auth.currentUser) {
-    return Routes.employee(auth.currentUser.id);
-  }
-
-  return `/redirecting?returnTo=${encodeURIComponent("/")}`;
+  return Routes.employee(user.id);
 };
 
 const loginRedirectPath = (request?: Request): string => {
@@ -70,19 +48,19 @@ const loginRedirectPath = (request?: Request): string => {
   return `/redirecting?returnTo=${encodeURIComponent(returnTo)}`;
 };
 
-const defaultFallback = (auth: AuthContext, request?: Request): string => {
-  if (auth.currentUser) {
-    return Routes.employee(auth.currentUser.id);
+const defaultFallback = (user: CurrentUser | null, request?: Request): string => {
+  if (user) {
+    return Routes.employee(user.id);
   }
 
   return loginRedirectPath(request);
 };
 
-export const denyUnless = async (action: UiActionId, context: UiContext = {}, request?: Request): Promise<AuthContext> => {
-  const auth = await loadAuthContext();
+export const denyUnless = async (action: UiActionId, context: UiContext = {}, request?: Request): Promise<CurrentUser> => {
+  const user = await loadCurrentUser();
 
-  if (!can(auth.permissions, auth.currentUser?.id, action, context)) {
-    const target = defaultFallback(auth, request);
+  if (!user || !can(user.permissions, user.id, action, context)) {
+    const target = defaultFallback(user, request);
     const pathname = request ? new URL(request.url).pathname : null;
     if (pathname && pathname === target) {
       throw redirect(loginRedirectPath(request));
@@ -90,5 +68,5 @@ export const denyUnless = async (action: UiActionId, context: UiContext = {}, re
     throw redirect(target);
   }
 
-  return auth;
+  return user;
 };

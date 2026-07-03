@@ -1,7 +1,7 @@
 import { createBrowserRouter, type Params, redirect } from "react-router";
 import { App } from "./App";
-import type { CurrentUserPermissions } from "./auth/api/getCurrentUserPermissions";
-import { denyUnless, loadAuthContext, resolveHomePath } from "./auth/routeGuards";
+import type { CurrentUser } from "./auth/api";
+import { denyUnless, loadCurrentUser, resolveHomePath } from "./auth/routeGuards";
 import { can, UiAction } from "./auth/uiPermissions";
 import { ErrorPage } from "./components/shared/errors/ErrorPage";
 import { LoadingScreen } from "./components/shared/layout/LoadingScreen";
@@ -29,40 +29,26 @@ import { ProjectsPage } from "./features/projects/ProjectsPage";
 import { getCombinedTimesheet, getCombinedTimesheetOverview, getTimesheetComments } from "./features/timesheet/timesheet/api";
 import { TimesheetPage, type TimesheetPageData } from "./features/timesheet/timesheet/TimesheetPage";
 
-export type CurrentUser = {
-  id: string;
-  fullName: string;
-  employeeType: string | null;
-  personalNumber: string;
-  titleBefore: string | null;
-  titleAfter: string | null;
-};
-
-export type RootLoaderData = {
-  currentUser: CurrentUser | null;
-  permissions: CurrentUserPermissions | null;
-};
-
-const requireAuth = async ({ request }: { request: Request }): Promise<RootLoaderData> => {
+const requireAuth = async ({ request }: { request: Request }): Promise<CurrentUser> => {
   const url = new URL(request.url);
   const returnTo = url.pathname + url.search;
 
-  let auth: Awaited<ReturnType<typeof loadAuthContext>>;
+  let user: CurrentUser | null;
   try {
-    auth = await loadAuthContext();
+    user = await loadCurrentUser();
   } catch {
     throw redirect(`/redirecting?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
-  if (!auth.currentUser) {
+  if (!user) {
     throw redirect(`/redirecting?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
   if (url.pathname === "/" || url.pathname === "") {
-    throw redirect(resolveHomePath(auth));
+    throw redirect(resolveHomePath(user));
   }
 
-  return auth;
+  return user;
 };
 
 const redirectToLogin = ({ request }: { request: Request }) => {
@@ -175,9 +161,9 @@ export const router = createBrowserRouter([
             element: <ContractTimesheets />,
             loader: async ({ params, request }) => {
               const { projectId, contractId } = requireContractParams(params);
-              const auth = await loadAuthContext();
-              if (!can(auth.permissions, auth.currentUser?.id, UiAction.timesheet.listContract, { contractId, projectId })) {
-                if (can(auth.permissions, auth.currentUser?.id, UiAction.contractEmployees.view, { contractId })) {
+              const user = await loadCurrentUser();
+              if (!user || !can(user.permissions, user.id, UiAction.timesheet.listContract, { contractId, projectId })) {
+                if (user && can(user.permissions, user.id, UiAction.contractEmployees.view, { contractId })) {
                   throw redirect(Routes.contractEmployees(projectId, contractId));
                 }
                 await denyUnless(UiAction.timesheet.listContract, { contractId, projectId }, request);

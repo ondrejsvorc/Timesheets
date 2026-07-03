@@ -1,16 +1,16 @@
 import { Outlet, useRouteLoaderData } from "react-router";
 import { Toaster } from "sonner";
+import type { CurrentUser } from "./auth/api";
 import { RoleViewProvider } from "./auth/RoleViewContext";
 import { RoleViewBanner } from "./components/shared/dev/RoleViewBanner";
 import { AppFooter } from "./components/shared/layout/AppFooter";
 import { AppHeader } from "./components/shared/layout/AppHeader";
-import type { RootLoaderData } from "./router";
 
 export const App = () => {
-  const rootData = useRouteLoaderData("root") as RootLoaderData | undefined;
+  const currentUser = useRouteLoaderData("root") as CurrentUser | undefined;
 
   return (
-    <RoleViewProvider actualPermissions={rootData?.permissions ?? null}>
+    <RoleViewProvider currentUser={currentUser ?? null}>
       <div className="min-h-screen flex flex-col bg-background">
         <AppHeader />
         <RoleViewBanner />

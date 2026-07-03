@@ -1,4 +1,4 @@
-import type { CurrentUserPermissions } from "./api/getCurrentUserPermissions";
+import type { CurrentUserPermissions } from "./api";
 import { UserRole } from "./userRole";
 
 export type RoleViewMode = "actual" | "employee" | "globalManager" | "projectManager" | "contractManager" | "roleManager";
