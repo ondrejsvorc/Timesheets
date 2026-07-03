@@ -1,4 +1,4 @@
-import { compareIds } from "@/utils/compareIds";
+import { compareIds } from "@/utils/common";
 import type { ProjectManagerItem } from "../api";
 
 export interface PendingDelete {

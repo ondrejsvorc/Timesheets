@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/cn";
-import { formatWorkloadPercent } from "@/utils/formatWorkload";
+import { formatWorkloadPercent } from "@/utils/format";
 import {
   buildEmployeesView,
   buildMonthsView,

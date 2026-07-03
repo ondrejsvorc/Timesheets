@@ -11,8 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
 import { getEmployees } from "@/features/employees/api";
-import { parseCalendarDate } from "@/utils/calendarDate";
-import { isWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/workloadPercentForm";
+import { fromDateOnlyIso, isWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/format";
 import { addContractEmployee, type EmployeeItem as ContractEmployeeItem, getAddContractEmployeeImpact } from "./api";
 
 type AddEmployeeToContractFormValues = z.infer<ReturnType<typeof createSchema>>;
@@ -21,10 +20,10 @@ const normalize = (value: string) => value.trim().replace(/\s+/g, " ").toLowerCa
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
 const intervalsOverlapInclusive = (aStart: string, aEnd: string | null | undefined, bStart: string, bEnd: string | null | undefined) => {
-  const aS = parseCalendarDate(aStart).getTime();
-  const aE = aEnd ? parseCalendarDate(aEnd).getTime() : Number.POSITIVE_INFINITY;
-  const bS = parseCalendarDate(bStart).getTime();
-  const bE = bEnd ? parseCalendarDate(bEnd).getTime() : Number.POSITIVE_INFINITY;
+  const aS = fromDateOnlyIso(aStart).getTime();
+  const aE = aEnd ? fromDateOnlyIso(aEnd).getTime() : Number.POSITIVE_INFINITY;
+  const bS = fromDateOnlyIso(bStart).getTime();
+  const bE = bEnd ? fromDateOnlyIso(bEnd).getTime() : Number.POSITIVE_INFINITY;
   return aS <= bE && bS <= aE;
 };
 
@@ -42,10 +41,10 @@ const createSchema = (existing: ContractEmployeeItem[], projectStartDate: string
       endDate: z.string().optional(),
     })
     .superRefine((values, ctx) => {
-      const start = parseCalendarDate(values.startDate);
-      const end = values.endDate ? parseCalendarDate(values.endDate) : null;
-      const projectStart = parseCalendarDate(projectStartDate);
-      const projectEnd = projectEndDate ? parseCalendarDate(projectEndDate) : null;
+      const start = fromDateOnlyIso(values.startDate);
+      const end = values.endDate ? fromDateOnlyIso(values.endDate) : null;
+      const projectStart = fromDateOnlyIso(projectStartDate);
+      const projectEnd = projectEndDate ? fromDateOnlyIso(projectEndDate) : null;
 
       if (start < projectStart) {
         ctx.addIssue({
@@ -256,9 +255,9 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
                           value={field.value}
                           clearable={name !== "startDate" && !projectEndDate}
                           disabledDate={(date) => {
-                            const beforeProject = date < parseCalendarDate(projectStartDate);
-                            const afterProject = projectEndDate ? date > parseCalendarDate(projectEndDate) : false;
-                            const outsideSelectedRange = name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false;
+                            const beforeProject = date < fromDateOnlyIso(projectStartDate);
+                            const afterProject = projectEndDate ? date > fromDateOnlyIso(projectEndDate) : false;
+                            const outsideSelectedRange = name === "startDate" ? (endDate ? date >= fromDateOnlyIso(endDate) : false) : startDate ? date <= fromDateOnlyIso(startDate) : false;
                             return beforeProject || afterProject || outsideSelectedRange;
                           }}
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}

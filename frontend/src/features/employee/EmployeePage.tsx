@@ -7,9 +7,9 @@ import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/
 import { TabbedOutlet } from "@/components/shared/layout/TabbedOutlet";
 import { Routes } from "@/constants/routes";
 import { useBackFromLocationState } from "@/hooks/useBackFromLocationState";
-import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
 import type { GetEmployeeResponse } from "./api";
 import { EmployeeTabs } from "./EmployeeTabs";
+import { resolveEmployeeTypeName } from "./employeeType";
 
 export const EmployeePage = () => {
   const { promise } = useLoaderData() as {

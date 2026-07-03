@@ -11,8 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
-import { parseCalendarDate } from "@/utils/calendarDate";
-import { isWorkloadPercentInRange, workloadFractionToPercent, workloadPercentToFraction } from "@/utils/workloadPercentForm";
+import { fromDateOnlyIso, isWorkloadPercentInRange, workloadFractionToPercent, workloadPercentToFraction } from "@/utils/format";
 import type { PositionItem, UpdateContractEmployeeRequest } from "./api";
 
 type EditPositionFormValues = z.infer<ReturnType<typeof createSchema>>;
@@ -31,10 +30,10 @@ const createSchema = (position: PositionItem, projectStartDate: string, projectE
       endDate: z.string().optional(),
     })
     .superRefine((values, ctx) => {
-      const start = parseCalendarDate(values.startDate);
-      const end = values.endDate ? parseCalendarDate(values.endDate) : null;
-      const projectStart = parseCalendarDate(projectStartDate);
-      const projectEnd = projectEndDate ? parseCalendarDate(projectEndDate) : null;
+      const start = fromDateOnlyIso(values.startDate);
+      const end = values.endDate ? fromDateOnlyIso(values.endDate) : null;
+      const projectStart = fromDateOnlyIso(projectStartDate);
+      const projectEnd = projectEndDate ? fromDateOnlyIso(projectEndDate) : null;
 
       if (start < projectStart) {
         ctx.addIssue({
@@ -175,9 +174,9 @@ export const EditContractEmployeePositionDialog = ({ open, position, projectStar
                           value={field.value}
                           clearable={name !== "startDate" && !projectEndDate}
                           disabledDate={(date) => {
-                            const beforeProject = date < parseCalendarDate(projectStartDate);
-                            const afterProject = projectEndDate ? date > parseCalendarDate(projectEndDate) : false;
-                            const outsideSelectedRange = name === "startDate" ? (endDate ? date >= parseCalendarDate(endDate) : false) : startDate ? date <= parseCalendarDate(startDate) : false;
+                            const beforeProject = date < fromDateOnlyIso(projectStartDate);
+                            const afterProject = projectEndDate ? date > fromDateOnlyIso(projectEndDate) : false;
+                            const outsideSelectedRange = name === "startDate" ? (endDate ? date >= fromDateOnlyIso(endDate) : false) : startDate ? date <= fromDateOnlyIso(startDate) : false;
                             return beforeProject || afterProject || outsideSelectedRange;
                           }}
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}

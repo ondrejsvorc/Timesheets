@@ -1,7 +1,7 @@
 import { redirect } from "react-router";
 import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import { Texts } from "@/constants/texts";
-import { formatDate } from "@/utils/formatDate";
+import { formatDate } from "@/utils/format";
 
 export interface AddContractEmployeeRequest {
   employeeId: string;

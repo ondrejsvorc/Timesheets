@@ -1,6 +1,6 @@
 import { EmployeeTypeAcademicId } from "@/constants/api";
 import { Texts } from "@/constants/texts";
-import { compareIds } from "./compareIds";
+import { compareIds } from "@/utils/common";
 
 export const resolveEmployeeTypeName = (employeeTypeId: string | null): string => {
   if (employeeTypeId == null) {

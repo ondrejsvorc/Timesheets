@@ -4,9 +4,8 @@ import { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { formatCalendarDateForApi, parseCalendarDate } from "@/utils/calendarDate";
 import { cn } from "@/utils/cn";
-import { formatDate } from "@/utils/formatDate";
+import { formatDate, fromDateOnlyIso, toDateOnlyIso } from "@/utils/format";
 
 interface DatePickerProps {
   value?: string | null;
@@ -18,7 +17,7 @@ interface DatePickerProps {
 
 export const DatePicker = ({ value, disabled, clearable = true, disabledDate, onChange }: DatePickerProps) => {
   const [open, setOpen] = useState(false);
-  const selected = useMemo(() => (value ? parseCalendarDate(value) : undefined), [value]);
+  const selected = useMemo(() => (value ? fromDateOnlyIso(value) : undefined), [value]);
   const label = formatDate(value);
 
   const handleSelect = useCallback(
@@ -29,12 +28,12 @@ export const DatePicker = ({ value, disabled, clearable = true, disabledDate, on
         return;
       }
       if (value) {
-        const current = parseCalendarDate(value);
+        const current = fromDateOnlyIso(value);
         if (current.toDateString() === date.toDateString()) {
           return;
         }
       }
-      onChange(formatCalendarDateForApi(date));
+      onChange(toDateOnlyIso(date));
       setOpen(false);
     },
     [onChange, value],

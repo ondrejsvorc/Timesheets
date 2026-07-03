@@ -2,8 +2,8 @@ import { EmptyState } from "@/components/shared/data/EmptyState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
+import { resolveEmployeeTypeName } from "@/features/employee/employeeType";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
-import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
 import type { EmployeeItem } from "./api";
 
 interface EmployeesTableProps {

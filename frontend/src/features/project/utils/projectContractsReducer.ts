@@ -1,4 +1,4 @@
-import { listCrudAdd, listCrudDelete, listCrudUpdate } from "@/utils/listCrudReducer";
+import { listCrudAdd, listCrudDelete, listCrudUpdate } from "@/utils/common";
 import type { ProjectContractItem } from "../api";
 
 export type ProjectContractsAction = { type: "add"; contract: ProjectContractItem } | { type: "edit"; contract: ProjectContractItem } | { type: "delete"; contractId: string };

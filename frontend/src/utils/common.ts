@@ -1,4 +1,9 @@
-import { compareIds } from "@/utils/compareIds";
+export const compareIds = (a: string | null | undefined, b: string | null | undefined): boolean => {
+  if (!a || !b) {
+    return false;
+  }
+  return a.toLowerCase() === b.toLowerCase();
+};
 
 export const listCrudAdd = <TItem extends { id: string }>(draft: TItem[], item: TItem) => {
   draft.push(item);

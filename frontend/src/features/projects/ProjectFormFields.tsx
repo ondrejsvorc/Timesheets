@@ -6,7 +6,7 @@ import { DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
-import { parseCalendarDate } from "@/utils/calendarDate";
+import { fromDateOnlyIso } from "@/utils/format";
 
 export const projectFormSchema = z.object({
   name: z.string().min(1),
@@ -77,7 +77,7 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
                   {Texts.startDate} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <DatePicker value={field.value} clearable disabledDate={(date) => (endDate ? date >= parseCalendarDate(endDate) : false)} onChange={(next) => field.onChange(next ?? "")} />
+                  <DatePicker value={field.value} clearable disabledDate={(date) => (endDate ? date >= fromDateOnlyIso(endDate) : false)} onChange={(next) => field.onChange(next ?? "")} />
                 </FormControl>
               </FormItem>
             )}
@@ -90,7 +90,7 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
               <FormItem className="flex flex-col">
                 <FormLabel>{Texts.endDate}</FormLabel>
                 <FormControl>
-                  <DatePicker value={field.value} clearable disabledDate={(date) => (startDate ? date <= parseCalendarDate(startDate) : false)} onChange={(next) => field.onChange(next)} />
+                  <DatePicker value={field.value} clearable disabledDate={(date) => (startDate ? date <= fromDateOnlyIso(startDate) : false)} onChange={(next) => field.onChange(next)} />
                 </FormControl>
               </FormItem>
             )}
