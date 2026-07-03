@@ -6,7 +6,7 @@ import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/common";
 import { formatDate, formatDateDisplay, isDateInRange, padDateDisplay, parseDateDisplay, toDateOnlyIso } from "@/utils/format";
 
-type DateInputProps = Omit<ComponentProps<typeof MaskedInput>, "value" | "onChange" | "mask"> & {
+type DateInputProps = Omit<ComponentProps<typeof MaskedInput>, "value" | "onChange" | "mask" | "min" | "max"> & {
   value?: string | null;
   onChange: (next: string | undefined) => void;
   min?: Date;
