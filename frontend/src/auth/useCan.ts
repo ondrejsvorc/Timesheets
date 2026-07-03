@@ -1,11 +1,10 @@
-import { useRouteLoaderData } from "react-router";
-import type { CurrentUser } from "./api";
+import { useCurrentUser } from "./CurrentUserContext";
 import { useEffectivePermissions } from "./RoleViewContext";
 import { can, type UiActionId, type UiContext } from "./uiPermissions";
 
 export const useCan = (action: UiActionId, context: UiContext = {}): boolean => {
   const { permissions } = useEffectivePermissions();
-  const currentUser = useRouteLoaderData("root") as CurrentUser | undefined;
+  const currentUser = useCurrentUser();
 
-  return can(permissions, currentUser?.id, action, context);
+  return can(permissions, currentUser.id, action, context);
 };

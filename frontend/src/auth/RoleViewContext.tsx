@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import type { CurrentUser, CurrentUserPermissions } from "./api";
+import type { CurrentUserPermissions } from "./api";
+import { useCurrentUser } from "./CurrentUserContext";
 import { applyRoleViewOverride, isRoleViewOverridden, loadRoleViewState, type RoleViewState, saveRoleViewState } from "./roleView";
 
 interface RoleViewContextValue {
@@ -13,13 +14,12 @@ interface RoleViewContextValue {
 const RoleViewContext = createContext<RoleViewContextValue | null>(null);
 
 interface RoleViewProviderProps {
-  currentUser: CurrentUser | null;
   children: React.ReactNode;
 }
 
-export const RoleViewProvider = ({ currentUser, children }: RoleViewProviderProps) => {
+export const RoleViewProvider = ({ children }: RoleViewProviderProps) => {
+  const actualPermissions = useCurrentUser().permissions;
   const [roleView, setRoleViewState] = useState<RoleViewState>(loadRoleViewState);
-  const actualPermissions = currentUser?.permissions ?? null;
 
   const setRoleView = useCallback((next: RoleViewState) => {
     setRoleViewState(next);

@@ -1,7 +1,7 @@
 import { Bell, User } from "lucide-react";
-import { Link, useRouteLoaderData } from "react-router";
-import type { CurrentUser } from "@/auth/api";
+import { Link } from "react-router";
 import { Can } from "@/auth/Can";
+import { useCurrentUser } from "@/auth/CurrentUserContext";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { RoleViewSwitcher } from "@/components/shared/dev/RoleViewSwitcher";
@@ -13,11 +13,11 @@ import { Texts } from "../../../constants/texts";
 
 export const AppHeader = () => {
   const handleNotificationsClick = () => {};
-  const currentUser = useRouteLoaderData("root") as CurrentUser | undefined;
+  const currentUser = useCurrentUser();
   const canNavProjects = useCan(UiAction.nav.projects);
   const canNavEmployees = useCan(UiAction.nav.employees);
   const canNavMyTimesheets = useCan(UiAction.nav.myTimesheets);
-  const homeRoute = canNavProjects ? Routes.projects() : currentUser ? Routes.employee(currentUser.id) : Routes.projects();
+  const homeRoute = canNavProjects ? Routes.projects() : Routes.employee(currentUser.id);
 
   const handleLogout = () => {
     window.location.assign(`${BaseUrl}/auth/logout`);
@@ -43,7 +43,7 @@ export const AppHeader = () => {
               {Texts.employees}
             </Link>
           )}
-          {canNavMyTimesheets && currentUser && (
+          {canNavMyTimesheets && (
             <Link to={Routes.employee(currentUser.id)} className="px-4 py-2 text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent rounded-md transition-all">
               {Texts.myTimesheets}
             </Link>
@@ -71,7 +71,7 @@ export const AppHeader = () => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>{currentUser?.fullName ?? Texts.user}</DropdownMenuLabel>
+              <DropdownMenuLabel>{currentUser.fullName}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 onSelect={(event) => {

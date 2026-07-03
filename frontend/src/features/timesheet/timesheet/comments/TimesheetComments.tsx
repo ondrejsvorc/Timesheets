@@ -1,7 +1,7 @@
 import { Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
-import { useRevalidator, useRouteLoaderData } from "react-router";
-import type { CurrentUser } from "@/auth/api";
+import { useRevalidator } from "react-router";
+import { useCurrentUser } from "@/auth/CurrentUserContext";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Button } from "@/components/ui/button";
@@ -25,8 +25,7 @@ interface TimesheetCommentsProps {
 
 export const TimesheetComments = ({ scope, comments }: TimesheetCommentsProps) => {
   const revalidator = useRevalidator();
-  const currentUser = useRouteLoaderData("root") as CurrentUser | undefined;
-  const currentUserId = currentUser?.id;
+  const currentUserId = useCurrentUser().id;
   const MAX_COMMENT_LENGTH = 500;
   const [draft, setDraft] = useState("");
   const [isSending, setIsSending] = useState(false);
