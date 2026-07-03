@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 import { formatWorkloadPercent } from "@/utils/format";
 import {
   buildEmployeesView,

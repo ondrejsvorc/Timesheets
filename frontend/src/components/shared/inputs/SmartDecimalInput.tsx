@@ -1,6 +1,6 @@
 import { startTransition, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 
 const DECIMAL_PATTERN = /^\d*(,\d*)?$/;
 

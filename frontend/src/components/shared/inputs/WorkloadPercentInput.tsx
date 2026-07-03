@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 
 type WorkloadPercentInputProps = Omit<ComponentProps<typeof Input>, "type">;
 

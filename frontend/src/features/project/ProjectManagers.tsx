@@ -8,12 +8,12 @@ import { AddButton, DeleteButton } from "@/components/shared/buttons/ActionButto
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
+import { createFilterControls } from "@/components/shared/layout/createFilterControls";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
-import { createFilterControls } from "@/utils/createFilterControls";
 import { AddProjectManagerDialog } from "./AddProjectManagerDialog";
 import { type GetProjectManagersResponse, type ProjectManagerItem, removeProjectManager } from "./api";
 import { type ProjectManagersFilterCriteria, useProjectManagersFilter } from "./hooks/useProjectManagersFilter";

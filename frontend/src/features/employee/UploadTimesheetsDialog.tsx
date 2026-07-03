@@ -7,7 +7,7 @@ import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/but
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 import { detectTimesheetImport, type ImportResult, importTimesheet, type TimesheetDetectionResult } from "./api";
 
 interface UploadTimesheetsDialogProps {

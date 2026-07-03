@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { useNavigateFrom } from "@/hooks/useNavigateFrom";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 import { formatDate } from "@/utils/format";
 import { archiveProject, deleteProject, type ProjectItem, unarchiveProject } from "./api";
 import { UpdateProjectDialog } from "./UpdateProjectDialog";

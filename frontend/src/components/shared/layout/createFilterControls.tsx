@@ -5,7 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 
 export const createFilterControls = <TFilter extends { query: string }>() => {
   const FilterSearchInput = ({ placeholder }: { placeholder?: string }) => {

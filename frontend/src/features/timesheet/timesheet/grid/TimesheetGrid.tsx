@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 import type { Timesheet, TimesheetDay, TimesheetEvaluation } from "../../Timesheet";
 import { formatHours } from "../../timesheetFormat";
 import { TimesheetBody } from "./TimesheetBody";

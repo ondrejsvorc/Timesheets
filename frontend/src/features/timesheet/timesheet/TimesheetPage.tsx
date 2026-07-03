@@ -12,7 +12,7 @@ import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { GetEmployeeResponse } from "@/features/employee/api";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 import type { Timesheet, TimesheetData, TimesheetDay, TimesheetEvaluation } from "../Timesheet";
 import { formatWorkload } from "../timesheetFormat";
 import { allocateTimesheet, type GetCombinedTimesheetOverviewResponse, reviewTimesheet, updateTimesheet } from "./api";

@@ -3,7 +3,7 @@ import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 
 export const ProjectTabs = () => {
   const { id } = useParams();

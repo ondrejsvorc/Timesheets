@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { parseApiErrorMessage } from "@/constants/api";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 import { BusyButton } from "../buttons/BusyButton";
 import { DialogCancelButton } from "../buttons/DialogButtons";
 

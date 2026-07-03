@@ -1,5 +1,5 @@
 import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 import type { ProjectDefinition, TimesheetTotals } from "../../Timesheet";
 import { formatHours } from "../../timesheetFormat";
 

@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 
 const statusClassName = (status: string) => {
   switch (status) {

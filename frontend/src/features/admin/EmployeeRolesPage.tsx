@@ -6,6 +6,7 @@ import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
+import { createFilterControls } from "@/components/shared/layout/createFilterControls";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,7 +16,6 @@ import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import type { EmployeeItem, GetEmployeesResponse } from "@/features/employees/api";
 import { type EmployeesFilterCriteria, useEmployeesFilter } from "@/features/employees/hooks/useEmployeesFilters";
-import { createFilterControls } from "@/utils/createFilterControls";
 import { updateEmployeeGlobalManager } from "./api";
 
 const EmployeeRolesPageContentLazy = lazy(async () => ({

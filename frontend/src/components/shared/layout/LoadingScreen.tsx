@@ -1,6 +1,6 @@
 import { Spinner } from "@/components/ui/spinner";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 
 type LoadingScreenProps = {
   message?: string;

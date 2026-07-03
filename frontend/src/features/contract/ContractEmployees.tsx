@@ -6,10 +6,10 @@ import { AddButton, DeleteButton, EditButton } from "@/components/shared/buttons
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
+import { createFilterControls } from "@/components/shared/layout/createFilterControls";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
-import { createFilterControls } from "@/utils/createFilterControls";
 import { formatDate, formatWorkloadPercent } from "@/utils/format";
 import { AddEmployeeDialog } from "./AddEmployeeDialog";
 import { deleteContractEmployee, type EmployeeItem, type GetContractEmployeesResponse, type PositionItem, type UpdateContractEmployeeRequest } from "./api";

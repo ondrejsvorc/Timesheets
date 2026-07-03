@@ -5,7 +5,7 @@ import { SmartTimeInput } from "@/components/shared/inputs/SmartTimeInput";
 import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 import type { ProjectDefinition as Project, TimesheetDayEvaluation, TimesheetDay as TimesheetDayModel, TimesheetIssue } from "../../Timesheet";
 import { formatHours } from "../../timesheetFormat";
 import { Interruption } from "./Interruption";

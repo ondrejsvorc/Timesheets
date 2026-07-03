@@ -1,4 +1,4 @@
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 import type { ProjectDefinition as Project, TimesheetDay, TimesheetEvaluation } from "../../Timesheet";
 import { TimesheetDay as TimesheetDayRow } from "./TimesheetDay";
 
