@@ -48,6 +48,21 @@ const loginRedirectPath = (request?: Request): string => {
   return `/redirecting?returnTo=${encodeURIComponent(returnTo)}`;
 };
 
+export const ensureAuthenticated = async (request: Request): Promise<CurrentUser> => {
+  try {
+    const user = await loadCurrentUser();
+    if (!user) {
+      throw redirect(loginRedirectPath(request));
+    }
+    return user;
+  } catch (error) {
+    if (error instanceof Response) {
+      throw error;
+    }
+    throw redirect(loginRedirectPath(request));
+  }
+};
+
 const defaultFallback = (user: CurrentUser | null, request?: Request): string => {
   if (user) {
     return Routes.employee(user.id);
