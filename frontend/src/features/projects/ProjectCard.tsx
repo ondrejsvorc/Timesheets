@@ -9,7 +9,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { useNavigateFrom } from "@/hooks/useNavigateFrom";
+import { useGo } from "@/hooks/useGo";
 import { cn } from "@/utils/common";
 import { formatDate } from "@/utils/format";
 import { archiveProject, deleteProject, type ProjectItem, unarchiveProject } from "./api";
@@ -29,14 +29,14 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
   const endDate = formatDate(project.endDate);
   const dateRange = project.startDate && project.endDate ? `${startDate} – ${endDate}` : formatDate(project.startDate);
   const status = getProjectStatus(project);
-  const navigate = useNavigateFrom();
+  const go = useGo();
 
   return (
     <>
       <Card
         className="cursor-pointer group hover:border-primary/20 transition-all duration-200"
         onClick={() => {
-          navigate(Routes.project(project.id));
+          go.forward(Routes.project(project.id));
         }}
       >
         <CardHeader>

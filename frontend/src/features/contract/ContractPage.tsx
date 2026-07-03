@@ -6,7 +6,7 @@ import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { TabbedOutlet } from "@/components/shared/layout/TabbedOutlet";
 import { Routes } from "@/constants/routes";
-import { useBackFromLocationState } from "@/hooks/useBackFromLocationState";
+import { useGo } from "@/hooks/useGo";
 import type { GetProjectContractResponse } from "./api";
 import { ContractTabs } from "./ContractTabs";
 
@@ -30,11 +30,11 @@ export const ContractPage = () => {
 const ContractPageHeader = () => {
   const contract = useAsyncValue() as GetProjectContractResponse;
   const { id: projectId } = useParams<{ id: string }>();
-  const handleBack = useBackFromLocationState(() => Routes.project(projectId ?? ""));
+  const go = useGo();
 
   return (
     <>
-      <PageHeader leading={<BackButton onClick={handleBack} />}>
+      <PageHeader leading={<BackButton onClick={go.back(() => Routes.project(projectId ?? ""))} />}>
         <PageTitle>{contract.name}</PageTitle>
         <PageSubtitle>{contract.registrationNumber}</PageSubtitle>
       </PageHeader>

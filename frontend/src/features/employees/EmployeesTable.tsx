@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { resolveEmployeeTypeName } from "@/features/employee/employeeType";
-import { useNavigateFrom } from "@/hooks/useNavigateFrom";
+import { useGo } from "@/hooks/useGo";
 import type { EmployeeItem } from "./api";
 
 interface EmployeesTableProps {
@@ -40,10 +40,10 @@ interface EmployeeRowProps {
 }
 
 export const EmployeeRow = ({ employee }: EmployeeRowProps) => {
-  const navigate = useNavigateFrom();
+  const go = useGo();
 
   return (
-    <TableRow className="cursor-pointer" onClick={() => navigate(Routes.employee(employee.id))}>
+    <TableRow className="cursor-pointer" onClick={() => go.forward(Routes.employee(employee.id))}>
       <TableCell>{employee.personalNumber ?? Texts.dash}</TableCell>
       <TableCell>{employee.fullName}</TableCell>
       <TableCell>{resolveEmployeeTypeName(employee.employeeTypeId)}</TableCell>

@@ -13,7 +13,7 @@ import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { useNavigateFrom } from "@/hooks/useNavigateFrom";
+import { useGo } from "@/hooks/useGo";
 import { AddContractManagerDialog } from "./AddContractManagerDialog";
 import { type GetProjectContractsManagersResponse, type ProjectContractManagerItem, removeContractManager } from "./api";
 import type { ContractsFilterCriteria } from "./hooks/useContractsFilter";
@@ -114,12 +114,12 @@ interface ContractManagerRowProps {
 }
 
 export const ContractManagerRow = ({ manager, dispatch }: ContractManagerRowProps) => {
-  const navigate = useNavigateFrom();
+  const go = useGo();
   const { id: projectId } = useParams<{ id: string }>();
   const canRemove = useCan(UiAction.contractManagers.remove, { projectId: projectId ?? undefined });
 
   return (
-    <TableRow className="cursor-pointer" onClick={() => navigate(Routes.employee(manager.employeeId))}>
+    <TableRow className="cursor-pointer" onClick={() => go.forward(Routes.employee(manager.employeeId))}>
       <TableCell>{manager.contractRegistrationNumber || Texts.dash}</TableCell>
       <TableCell>{manager.employeePersonalNumber}</TableCell>
       <TableCell>{manager.employeeFullName}</TableCell>

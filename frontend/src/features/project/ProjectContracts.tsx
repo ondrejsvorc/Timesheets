@@ -12,7 +12,7 @@ import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { useNavigateFrom } from "@/hooks/useNavigateFrom";
+import { useGo } from "@/hooks/useGo";
 import { AddContractDialog } from "./AddContractDialog";
 import type { GetProjectContractsResponse, ProjectContractItem } from "./api";
 import { ContractDeleteDialog } from "./ContractDeleteDialog";
@@ -128,13 +128,13 @@ interface ContractRowProps {
 }
 
 export const ContractRow = ({ contract, onEdit, onDelete }: ContractRowProps) => {
-  const navigate = useNavigateFrom();
+  const go = useGo();
   const projectId = useParams().id;
   const canEdit = useCan(UiAction.contracts.edit, { projectId, contractId: contract.id });
   const canDelete = useCan(UiAction.contracts.delete, { projectId, contractId: contract.id });
 
   return (
-    <TableRow className="cursor-pointer" onClick={() => projectId && navigate(Routes.contract(projectId, contract.id))}>
+    <TableRow className="cursor-pointer" onClick={() => projectId && go.forward(Routes.contract(projectId, contract.id))}>
       <TableCell>{contract.registrationNumber}</TableCell>
       <TableCell>{contract.name}</TableCell>
       <TableCell>

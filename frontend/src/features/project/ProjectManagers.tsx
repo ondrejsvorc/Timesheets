@@ -13,7 +13,7 @@ import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { useNavigateFrom } from "@/hooks/useNavigateFrom";
+import { useGo } from "@/hooks/useGo";
 import { AddProjectManagerDialog } from "./AddProjectManagerDialog";
 import { type GetProjectManagersResponse, type ProjectManagerItem, removeProjectManager } from "./api";
 import { type ProjectManagersFilterCriteria, useProjectManagersFilter } from "./hooks/useProjectManagersFilter";
@@ -112,12 +112,12 @@ interface ProjectManagerRowProps {
 }
 
 export const ProjectManagerRow = ({ manager, dispatch }: ProjectManagerRowProps) => {
-  const navigate = useNavigateFrom();
+  const go = useGo();
   const { id: projectId } = useParams<{ id: string }>();
   const canRemove = useCan(UiAction.projectManagers.remove, { projectId: projectId ?? undefined });
 
   return (
-    <TableRow className="cursor-pointer" onClick={() => navigate(Routes.employee(manager.employeeId))}>
+    <TableRow className="cursor-pointer" onClick={() => go.forward(Routes.employee(manager.employeeId))}>
       <TableCell>{manager.employeePersonalNumber}</TableCell>
       <TableCell>{manager.employeeFullName}</TableCell>
       <TableCell>
