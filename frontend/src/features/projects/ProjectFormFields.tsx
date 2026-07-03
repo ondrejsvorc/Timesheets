@@ -1,12 +1,12 @@
 import type { UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
-import { DatePicker } from "@/components/shared/inputs/DatePicker";
+import { DateInput } from "@/components/shared/inputs/DateInput";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
-import { fromDateOnlyIso } from "@/utils/format";
+import { dateFieldBounds } from "@/utils/format";
 
 export const projectFormSchema = z.object({
   name: z.string().min(1),
@@ -77,7 +77,7 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
                   {Texts.startDate} <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <DatePicker value={field.value} clearable disabledDate={(date) => (endDate ? date >= fromDateOnlyIso(endDate) : false)} onChange={(next) => field.onChange(next ?? "")} />
+                  <DateInput value={field.value} {...dateFieldBounds("startDate", { endDate })} onChange={(next) => field.onChange(next ?? "")} />
                 </FormControl>
               </FormItem>
             )}
@@ -90,7 +90,7 @@ export const ProjectFormFields = ({ form, onSubmit, onCancel }: ProjectFormField
               <FormItem className="flex flex-col">
                 <FormLabel>{Texts.endDate}</FormLabel>
                 <FormControl>
-                  <DatePicker value={field.value} clearable disabledDate={(date) => (startDate ? date <= fromDateOnlyIso(startDate) : false)} onChange={(next) => field.onChange(next)} />
+                  <DateInput value={field.value} {...dateFieldBounds("endDate", { startDate })} onChange={(next) => field.onChange(next)} />
                 </FormControl>
               </FormItem>
             )}

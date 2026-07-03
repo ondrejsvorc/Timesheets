@@ -7,7 +7,7 @@ type MaskedInputProps = Omit<React.ComponentProps<typeof Input>, "onChange" | "v
   onChange?: (value: string) => void;
 };
 
-const maskGroups = (value: string, groups: number[], separator: string) => {
+export const maskGroups = (value: string, groups: number[], separator: string) => {
   const digits = value.replace(/\D/g, "").slice(
     0,
     groups.reduce((sum, group) => sum + group, 0),
@@ -28,6 +28,7 @@ const maskGroups = (value: string, groups: number[], separator: string) => {
 };
 
 export const maskContractRegistrationNumber = (value: string) => maskGroups(value, [5, 2, 4, 2], " ");
+export const maskDate = (value: string) => maskGroups(value, [2, 2, 4], ".");
 export const contractRegistrationNumberPattern = /^\d{5} \d{2} \d{4} \d{2}$/;
 
 export const MaskedInput = ({ value, mask, onChange, ...props }: MaskedInputProps) => {

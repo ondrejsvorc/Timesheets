@@ -1,6 +1,8 @@
-import { format, parseISO } from "date-fns";
+import { addDays, format, max as maxDate, min as minDate, parseISO, startOfDay, subDays } from "date-fns";
 import { cs } from "date-fns/locale";
 import { Texts } from "@/constants/texts";
+
+export const DATE_DISPLAY_PATTERN = /^\d{2}\.\d{2}\.\d{4}$/;
 
 export const toDateOnlyIso = (date: Date): string => `${format(date, "yyyy-MM-dd")}T00:00:00.000Z`;
 export const fromDateOnlyIso = (value: string): Date => {
@@ -15,6 +17,57 @@ export const formatDate = (iso: string | null | undefined): string => {
   } catch {
     return Texts.dash;
   }
+};
+
+export const formatDateDisplay = (iso: string | null | undefined): string => {
+  if (!iso) return "";
+  try {
+    const date = fromDateOnlyIso(iso);
+    return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}`;
+  } catch {
+    return "";
+  }
+};
+
+export const padDateDisplay = (text: string): string => {
+  const parts = text.split(".");
+  if (parts.length !== 3 || !parts[2]?.match(/^\d{1,4}$/)) return text;
+  const [day, month, year] = parts;
+  if (!/^\d{1,2}$/.test(day) || !/^\d{1,2}$/.test(month)) return text;
+  return `${day.padStart(2, "0")}.${month.padStart(2, "0")}.${year.padStart(4, "0").slice(0, 4)}`;
+};
+
+export const isRealCalendarDate = (day: number, month: number, year: number): boolean => {
+  if (month < 1 || month > 12 || day < 1 || year < 1 || year > 9999) return false;
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+};
+
+export const parseDateDisplay = (text: string): Date | null => {
+  const padded = padDateDisplay(text.trim());
+  if (!DATE_DISPLAY_PATTERN.test(padded)) return null;
+  const [day, month, year] = padded.split(".").map(Number);
+  if (!isRealCalendarDate(day, month, year)) return null;
+  return new Date(year, month - 1, day);
+};
+
+export const isDateInRange = (date: Date, min?: Date, max?: Date): boolean => {
+  const value = startOfDay(date).getTime();
+  if (min && value < startOfDay(min).getTime()) return false;
+  if (max && value > startOfDay(max).getTime()) return false;
+  return true;
+};
+
+export const dateFieldBounds = (field: "startDate" | "endDate", opts: { projectStart?: Date; projectEnd?: Date; startDate?: string; endDate?: string }): { min?: Date; max?: Date } => {
+  const { projectStart, projectEnd, startDate, endDate } = opts;
+
+  if (field === "startDate") {
+    const maxCandidates = [projectEnd, endDate ? subDays(startOfDay(fromDateOnlyIso(endDate)), 1) : undefined].filter((d): d is Date => d !== undefined);
+    return { min: projectStart, max: maxCandidates.length > 0 ? minDate(maxCandidates) : undefined };
+  }
+
+  const minCandidates = [projectStart, startDate ? addDays(startOfDay(fromDateOnlyIso(startDate)), 1) : undefined].filter((d): d is Date => d !== undefined);
+  return { min: minCandidates.length > 0 ? maxDate(minCandidates) : undefined, max: projectEnd };
 };
 
 const formatPercentFromFraction = (fraction: number): string =>

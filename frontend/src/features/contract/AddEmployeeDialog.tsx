@@ -1,17 +1,18 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { startOfDay } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
-import { DatePicker } from "@/components/shared/inputs/DatePicker";
+import { DateInput } from "@/components/shared/inputs/DateInput";
 import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
 import { getEmployees } from "@/features/employees/api";
-import { fromDateOnlyIso, isWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/format";
+import { dateFieldBounds, fromDateOnlyIso, isWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/format";
 import { addContractEmployee, type EmployeeItem as ContractEmployeeItem, getAddContractEmployeeImpact } from "./api";
 
 type AddEmployeeToContractFormValues = z.infer<ReturnType<typeof createSchema>>;
@@ -251,15 +252,14 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
                     <FormItem className="flex flex-col">
                       <FormLabel>{name === "startDate" ? Texts.startDateRequiredLabel : Texts.endDateLabel}</FormLabel>
                       <FormControl>
-                        <DatePicker
+                        <DateInput
                           value={field.value}
-                          clearable={name !== "startDate" && !projectEndDate}
-                          disabledDate={(date) => {
-                            const beforeProject = date < fromDateOnlyIso(projectStartDate);
-                            const afterProject = projectEndDate ? date > fromDateOnlyIso(projectEndDate) : false;
-                            const outsideSelectedRange = name === "startDate" ? (endDate ? date >= fromDateOnlyIso(endDate) : false) : startDate ? date <= fromDateOnlyIso(startDate) : false;
-                            return beforeProject || afterProject || outsideSelectedRange;
-                          }}
+                          {...dateFieldBounds(name, {
+                            projectStart: startOfDay(fromDateOnlyIso(projectStartDate)),
+                            projectEnd: projectEndDate ? startOfDay(fromDateOnlyIso(projectEndDate)) : undefined,
+                            startDate,
+                            endDate,
+                          })}
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />
                       </FormControl>

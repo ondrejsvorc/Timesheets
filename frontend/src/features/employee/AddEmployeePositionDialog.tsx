@@ -1,10 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { startOfDay } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/buttons/DialogButtons";
 import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox";
-import { DatePicker } from "@/components/shared/inputs/DatePicker";
+import { DateInput } from "@/components/shared/inputs/DateInput";
 import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
 import { addContractEmployee } from "@/features/contract/api";
 import { getContractCatalog, getProjectCatalog, type ProjectCatalogItem } from "@/features/employees/api";
-import { fromDateOnlyIso, isWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/format";
+import { dateFieldBounds, fromDateOnlyIso, isWorkloadPercentInRange, workloadPercentToFraction } from "@/utils/format";
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
 type AddEmployeePositionFormValues = z.infer<ReturnType<typeof createSchema>>;
@@ -240,15 +241,14 @@ export const AddEmployeePositionDialog = ({ open, employeeId, onClose, onSaved }
                     <FormItem className="flex flex-col">
                       <FormLabel>{name === "startDate" ? Texts.startDateRequiredLabel : Texts.endDateLabel}</FormLabel>
                       <FormControl>
-                        <DatePicker
+                        <DateInput
                           value={field.value}
-                          clearable={name !== "startDate" && !selectedProject?.endDate}
-                          disabledDate={(date) => {
-                            const beforeProject = selectedProject ? date < fromDateOnlyIso(selectedProject.startDate) : false;
-                            const afterProject = selectedProject?.endDate ? date > fromDateOnlyIso(selectedProject.endDate) : false;
-                            const outsideSelectedRange = name === "startDate" ? (endDate ? date >= fromDateOnlyIso(endDate) : false) : startDate ? date <= fromDateOnlyIso(startDate) : false;
-                            return beforeProject || afterProject || outsideSelectedRange;
-                          }}
+                          {...dateFieldBounds(name, {
+                            projectStart: selectedProject ? startOfDay(fromDateOnlyIso(selectedProject.startDate)) : undefined,
+                            projectEnd: selectedProject?.endDate ? startOfDay(fromDateOnlyIso(selectedProject.endDate)) : undefined,
+                            startDate,
+                            endDate,
+                          })}
                           onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
                         />
                       </FormControl>
