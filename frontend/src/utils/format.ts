@@ -2,7 +2,7 @@ import { addDays, format, max as maxDate, min as minDate, parseISO, startOfDay, 
 import { cs } from "date-fns/locale";
 import { Texts } from "@/constants/texts";
 
-export const DATE_DISPLAY_PATTERN = /^\d{2}\.\d{2}\.\d{4}$/;
+export const DATE_DISPLAY_PATTERN = /^\d{1,2}\. \d{1,2}\. \d{4}$/;
 
 export const toDateOnlyIso = (date: Date): string => `${format(date, "yyyy-MM-dd")}T00:00:00.000Z`;
 export const fromDateOnlyIso = (value: string): Date => {
@@ -22,19 +22,16 @@ export const formatDate = (iso: string | null | undefined): string => {
 export const formatDateDisplay = (iso: string | null | undefined): string => {
   if (!iso) return "";
   try {
-    const date = fromDateOnlyIso(iso);
-    return `${String(date.getDate()).padStart(2, "0")}.${String(date.getMonth() + 1).padStart(2, "0")}.${date.getFullYear()}`;
+    return format(parseISO(iso), "d. M. yyyy", { locale: cs });
   } catch {
     return "";
   }
 };
 
 export const padDateDisplay = (text: string): string => {
-  const parts = text.split(".");
-  if (parts.length !== 3 || !parts[2]?.match(/^\d{1,4}$/)) return text;
-  const [day, month, year] = parts;
-  if (!/^\d{1,2}$/.test(day) || !/^\d{1,2}$/.test(month)) return text;
-  return `${day.padStart(2, "0")}.${month.padStart(2, "0")}.${year.padStart(4, "0").slice(0, 4)}`;
+  const date = parseDateDisplay(text);
+  if (date) return formatDateDisplay(toDateOnlyIso(date));
+  return text;
 };
 
 export const isRealCalendarDate = (day: number, month: number, year: number): boolean => {
@@ -44,9 +41,11 @@ export const isRealCalendarDate = (day: number, month: number, year: number): bo
 };
 
 export const parseDateDisplay = (text: string): Date | null => {
-  const padded = padDateDisplay(text.trim());
-  if (!DATE_DISPLAY_PATTERN.test(padded)) return null;
-  const [day, month, year] = padded.split(".").map(Number);
+  const match = text.trim().match(/^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})$/);
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
   if (!isRealCalendarDate(day, month, year)) return null;
   return new Date(year, month - 1, day);
 };

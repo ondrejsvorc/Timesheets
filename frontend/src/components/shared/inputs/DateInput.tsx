@@ -26,7 +26,7 @@ const formatRangeLabel = (min?: Date, max?: Date) => {
   return Texts.dateRangeHint.replace("{min}", formatDate(toDateOnlyIso(min))).replace("{max}", formatDate(toDateOnlyIso(max)));
 };
 
-export const DateInput = ({ value, onChange, min, max, disabled, placeholder = "dd.MM.yyyy", className, ...props }: DateInputProps) => {
+export const DateInput = ({ value, onChange, min, max, disabled, placeholder = "1. 1. 2026", className, ...props }: DateInputProps) => {
   const [draft, setDraft] = useState(() => formatDateDisplay(value));
   const [touched, setTouched] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -50,7 +50,7 @@ export const DateInput = ({ value, onChange, min, max, disabled, placeholder = "
         return;
       }
       onChange(toDateOnlyIso(date));
-      setDraft(padded);
+      setDraft(formatDateDisplay(toDateOnlyIso(date)));
     },
     [max, min, onChange],
   );
