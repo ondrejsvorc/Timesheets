@@ -1,7 +1,7 @@
 import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
 import { cn } from "@/utils/common";
+import { formatHours } from "@/utils/format";
 import type { ProjectDefinition, TimesheetTotals } from "../../Timesheet";
-import { formatHours } from "../../timesheetFormat";
 
 interface TimesheetFooterProps {
   readOnly?: boolean;

@@ -3,7 +3,7 @@ import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBa
 import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageHeader";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
-import { formatWorkload } from "../timesheetFormat";
+import { formatWorkload } from "@/utils/format";
 import type { CombinedTimesheetMonthSummary, GetCombinedTimesheetOverviewResponse } from "./api";
 import { TimesheetOverviewRowActions } from "./TimesheetOverviewRowActions";
 

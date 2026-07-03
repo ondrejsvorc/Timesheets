@@ -46,3 +46,9 @@ export const isWorkloadPercentInRange = (value: string, min: number, max: number
 
 export const workloadPercentToFraction = (value: string): number => Number(normalizeWorkloadPercentInput(value)) / 100;
 export const workloadFractionToPercent = (fraction: number): string => formatPercentFromFraction(fraction);
+export const formatWorkload = (fraction: number): string => `${workloadFractionToPercent(fraction)} %`;
+
+export const formatHours = (value: number): string => {
+  const rounded = Number(value.toFixed(2));
+  return (Object.is(rounded, -0) ? 0 : rounded).toString().replace(".", ",");
+};
