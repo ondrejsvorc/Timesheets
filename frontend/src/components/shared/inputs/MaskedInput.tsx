@@ -27,8 +27,92 @@ export const maskGroups = (value: string, groups: number[], separator: string) =
   return /\D$/.test(value) && lastGroupComplete && digits.length < groups.reduce((sum, group) => sum + group, 0) ? `${masked}${separator}` : masked;
 };
 
+type DatePart = { value: string; digitsRead: number; isComplete: boolean; autoSkip: boolean };
+
+const parseDayPart = (digits: string): DatePart => {
+  if (!digits) return { value: "", digitsRead: 0, isComplete: false, autoSkip: false };
+
+  const firstDigit = digits[0];
+  if (firstDigit >= "4" && firstDigit <= "9") {
+    return { value: `0${firstDigit}`, digitsRead: 1, isComplete: true, autoSkip: true };
+  }
+
+  if (digits.length === 1) {
+    return { value: firstDigit, digitsRead: 1, isComplete: false, autoSkip: false };
+  }
+
+  const secondDigit = digits[1];
+  if (firstDigit === "3" && secondDigit > "1") {
+    return { value: "3", digitsRead: 1, isComplete: false, autoSkip: false };
+  }
+
+  const day = Number(`${firstDigit}${secondDigit}`);
+  if (day === 0) {
+    return { value: "01", digitsRead: 2, isComplete: true, autoSkip: false };
+  }
+  if (day > 31) {
+    return { value: `0${firstDigit}`, digitsRead: 1, isComplete: true, autoSkip: true };
+  }
+
+  return { value: `${firstDigit}${secondDigit}`, digitsRead: 2, isComplete: true, autoSkip: false };
+};
+
+const parseMonthPart = (digits: string): DatePart => {
+  if (!digits) return { value: "", digitsRead: 0, isComplete: false, autoSkip: false };
+
+  const firstDigit = digits[0];
+  if (firstDigit >= "3" && firstDigit <= "9") {
+    return { value: `0${firstDigit}`, digitsRead: 1, isComplete: true, autoSkip: true };
+  }
+  if (firstDigit === "2") {
+    return { value: "02", digitsRead: 1, isComplete: true, autoSkip: true };
+  }
+
+  if (digits.length === 1) {
+    return { value: firstDigit, digitsRead: 1, isComplete: false, autoSkip: false };
+  }
+
+  const secondDigit = digits[1];
+  if (firstDigit === "1" && secondDigit > "2") {
+    return { value: "1", digitsRead: 1, isComplete: false, autoSkip: false };
+  }
+
+  const month = Number(`${firstDigit}${secondDigit}`);
+  if (month === 0) {
+    return { value: "01", digitsRead: 2, isComplete: true, autoSkip: false };
+  }
+  if (month > 12) {
+    return { value: `0${firstDigit}`, digitsRead: 1, isComplete: true, autoSkip: true };
+  }
+
+  return { value: `${firstDigit}${secondDigit}`, digitsRead: 2, isComplete: true, autoSkip: false };
+};
+
+const trailingDot = (part: DatePart, hasNextPart: boolean) => (part.autoSkip || hasNextPart ? "." : "");
+
+export const maskSmartDate = (value: string): string => {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (!digits) return "";
+
+  const day = parseDayPart(digits);
+  let offset = day.digitsRead;
+
+  if (offset >= digits.length) {
+    return `${day.value}${trailingDot(day, false)}`;
+  }
+
+  const month = parseMonthPart(digits.slice(offset));
+  offset += month.digitsRead;
+
+  if (offset >= digits.length) {
+    return `${day.value}.${month.value}${trailingDot(month, false)}`;
+  }
+
+  return `${day.value}.${month.value}.${digits.slice(offset, offset + 4)}`;
+};
+
 export const maskContractRegistrationNumber = (value: string) => maskGroups(value, [5, 2, 4, 2], " ");
-export const maskDate = (value: string) => maskGroups(value, [2, 2, 4], ".");
+export const maskDate = maskSmartDate;
 export const contractRegistrationNumberPattern = /^\d{5} \d{2} \d{4} \d{2}$/;
 
 export const MaskedInput = ({ value, mask, onChange, ...props }: MaskedInputProps) => {
