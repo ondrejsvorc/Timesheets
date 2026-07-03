@@ -90,6 +90,17 @@ const parseMonthPart = (digits: string): DatePart => {
 
 const trailingDot = (part: DatePart, hasNextPart: boolean) => (part.autoSkip || hasNextPart ? "." : "");
 
+const formatYearPart = (digits: string): { value: string; digitsRead: number } => {
+  if (!digits) return { value: "", digitsRead: 0 };
+  if (digits.length === 1) {
+    return { value: digits === "2" ? "20" : digits, digitsRead: 1 };
+  }
+  const digitsRead = Math.min(digits.length, 4);
+  return { value: digits.slice(0, 4), digitsRead };
+};
+
+const preserveTrailingDot = (value: string, formatted: string) => (value.endsWith(".") && !formatted.endsWith(".") ? `${formatted}.` : formatted);
+
 export const maskSmartDate = (value: string): string => {
   const digits = value.replace(/\D/g, "").slice(0, 8);
   if (!digits) return "";
@@ -98,17 +109,18 @@ export const maskSmartDate = (value: string): string => {
   let offset = day.digitsRead;
 
   if (offset >= digits.length) {
-    return `${day.value}${trailingDot(day, false)}`;
+    return preserveTrailingDot(value, `${day.value}${trailingDot(day, false)}`);
   }
 
   const month = parseMonthPart(digits.slice(offset));
   offset += month.digitsRead;
 
   if (offset >= digits.length) {
-    return `${day.value}.${month.value}${trailingDot(month, false)}`;
+    return preserveTrailingDot(value, `${day.value}.${month.value}${trailingDot(month, false)}`);
   }
 
-  return `${day.value}.${month.value}.${digits.slice(offset, offset + 4)}`;
+  const year = formatYearPart(digits.slice(offset));
+  return `${day.value}.${month.value}.${year.value}`;
 };
 
 export const maskContractRegistrationNumber = (value: string) => maskGroups(value, [5, 2, 4, 2], " ");
