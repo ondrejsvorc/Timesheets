@@ -109,11 +109,13 @@ internal sealed class NonAcademicTimesheetAllocator
             return false;
         }
 
-        if (!day.CoreHoursFixed)
-        {
-            day.CoreHours = 0m;
-        }
+        DistributeLockedProjectDay(day);
+        return true;
+    }
 
+    /// <summary>Locked project cells stay fixed; existing attendance is never shortened — surplus goes to core.</summary>
+    private void DistributeLockedProjectDay(EditableTimesheetDay day)
+    {
         foreach (ProjectColumn project in _sheet.Projects)
         {
             if (!day.ProjectHoursFixed.GetValueOrDefault(project.Id))
@@ -122,14 +124,30 @@ internal sealed class NonAcademicTimesheetAllocator
             }
         }
 
-        decimal work = day.TotalHours();
-        if (work > 12m)
+        decimal projectHours = TimesheetLogic.Normalize(_sheet.Projects.Sum(project => day.ProjectHours.GetValueOrDefault(project.Id)));
+        decimal worked = day.WorkedHours();
+
+        if (worked <= 0m && projectHours > 0m)
         {
-            throw new InvalidOperationException($"Locked day {day.Date:yyyy-MM-dd} has {work:F2} h, expected at most 12 h.");
+            _attendance.Set(day, projectHours);
+            worked = projectHours;
+        }
+        else if (worked + 0.009m < projectHours)
+        {
+            _attendance.RaiseToAtLeast(day, projectHours);
+            worked = day.WorkedHours();
         }
 
-        _attendance.Set(day, work);
-        return true;
+        if (!day.CoreHoursFixed)
+        {
+            day.CoreHours = TimesheetLogic.Normalize(Math.Max(0m, worked - projectHours));
+        }
+
+        decimal total = day.TotalHours();
+        if (total > 12m)
+        {
+            throw new InvalidOperationException($"Locked day {day.Date:yyyy-MM-dd} has {total:F2} h, expected at most 12 h.");
+        }
     }
 
     private void GenerateDayAttendanceIfMissing(EditableTimesheetDay day)
@@ -163,6 +181,12 @@ internal sealed class NonAcademicTimesheetAllocator
 
     private void SyncDayAttendance(EditableTimesheetDay day, bool monthRegenerate = false)
     {
+        if (day.HasLockedProjectHours() && !TimesheetInterruptions.SkipAllocationRules(day.Description))
+        {
+            DistributeLockedProjectDay(day);
+            return;
+        }
+
         decimal needed = day.TotalHours();
         if (needed <= 0m)
         {

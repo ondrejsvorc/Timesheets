@@ -144,9 +144,9 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Theory]
-    [InlineData(9, 6, 840, null, null)]
-    [InlineData(10, 8, 990, 720, 750)]
-    public async Task AllocateTimesheet_MatchesAttendanceToLockedProjectCell(int month, int lockedHours, int expectedClockOut, int? expectedBreakStart, int? expectedBreakEnd)
+    [InlineData(9, 6, 960, 720, 750, 1.5)]
+    [InlineData(10, 8, 1050, 720, 750, 1)]
+    public async Task AllocateTimesheet_PreservesAttendanceWhenLockedProjectIsBelowWorkedHours(int month, int lockedHours, int expectedClockOut, int? expectedBreakStart, int? expectedBreakEnd, decimal expectedCoreHours)
     {
         DateTime date = new(2036, month, 2, 0, 0, 0, DateTimeKind.Utc);
         Guid attendanceTimesheetId = Guid.CreateVersion7();
@@ -170,9 +170,37 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AllocateTimesheet.DayResponse day = allocation!.Days.Single();
         Assert.Equal(new int?[] { 480, expectedClockOut }, day.Work);
         Assert.Equal(new int?[] { expectedBreakStart, expectedBreakEnd }, day.Break);
-        Assert.Equal(0m, day.CoreHours);
+        Assert.Equal(expectedCoreHours, day.CoreHours);
         Assert.Equal(lockedHours, day.ProjectCells[assignmentId].Hours);
         Assert.True(day.ProjectCells[assignmentId].Locked);
+    }
+
+    [Fact]
+    public async Task AllocateTimesheet_RaisesAttendanceWhenLockedProjectExceedsWorkedHours()
+    {
+        DateTime date = new(2036, 11, 5, 0, 0, 0, DateTimeKind.Utc);
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
+        await SeedSingleDayAsync(attendanceTimesheetId, date, NonAcademicEmployeeTypeId, assignmentId);
+
+        TimesheetEditRequest request = new(
+            Days:
+            [
+                new TimesheetDayEdit(Date: date, ClockIn: new TimeSpan(8, 0, 0), ClockOut: new TimeSpan(14, 0, 0), BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: null, Schedules: [])
+            ],
+            Projects: [new ProjectColumnEdit(assignmentId, [new ProjectDayEdit(date, 8m, HoursLocked: true)])]);
+
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate?day=5", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+        Assert.NotNull(allocation);
+        AllocateTimesheet.DayResponse day = allocation!.Days.Single();
+        Assert.Equal(new int?[] { 480, 990 }, day.Work);
+        Assert.Equal(new int?[] { 720, 750 }, day.Break);
+        Assert.Equal(0m, day.CoreHours);
+        Assert.Equal(8m, day.ProjectCells[assignmentId].Hours);
+        Assert.True(day.AttendanceAdjusted);
     }
 
     [Fact]
