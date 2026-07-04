@@ -40,7 +40,7 @@ export const TimesheetFooter = ({ readOnly = false, tracksAttendance, projects, 
       <div />
       {tracksAttendance && (
         <>
-          <div className={cell}>
+          <div className={cn(cell, totals.workedHours > totals.hoursObligation ? "text-red-600" : "text-blue-800")}>
             <Total value={totals.workedHours} obligation={totals.hoursObligation} />
           </div>
           <div />
