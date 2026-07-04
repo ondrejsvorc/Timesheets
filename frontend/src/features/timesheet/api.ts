@@ -114,6 +114,7 @@ interface ApiAllocationDay {
   break: [number | null, number | null];
   coreHours: number;
   projectCells: Record<string, ProjectCell>;
+  attendanceAdjusted: boolean;
 }
 
 interface ApiAllocation {
@@ -133,6 +134,7 @@ interface AllocationDay {
   breakEnd: string;
   coreHours: number;
   projectCells: Record<string, ProjectCell>;
+  attendanceAdjusted: boolean;
 }
 
 export interface TimesheetCommentAuthor {
@@ -409,6 +411,7 @@ export const allocateTimesheet = async (timesheet: Timesheet, day?: number): Pro
       breakEnd: minutesToTime(day.break?.[1]),
       coreHours: day.coreHours,
       projectCells: day.projectCells,
+      attendanceAdjusted: day.attendanceAdjusted,
     })),
     evaluation: mapTimesheetEvaluation(allocation.evaluation),
   };

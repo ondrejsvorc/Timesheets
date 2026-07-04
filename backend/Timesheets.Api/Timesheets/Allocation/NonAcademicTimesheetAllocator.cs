@@ -16,8 +16,9 @@ internal sealed class NonAcademicTimesheetAllocator
     public void AllocateMonth()
     {
         ResetGeneratedAllocations();
+        ClearRegeneratedAttendance();
         ApplyProportionalInterruptions();
-        MonthlyTargets targets = MonthlyTargets.Remainders(_sheet, _totalWorkload);
+        MonthlyTargets targets = MonthlyTargets.NonAcademicRemainders(_sheet, _totalWorkload);
         GeneratedCellPacker packer = new(_sheet);
         foreach (ProjectColumn project in _sheet.Projects.OrderByDescending(project => targets.Project(project.Id)))
         {
@@ -25,7 +26,8 @@ internal sealed class NonAcademicTimesheetAllocator
         }
 
         packer.Place(projectId: null, targets.Core);
-        RebuildAttendanceFromAllocation();
+        SyncAttendanceFromAllocation();
+        TopUpMonthlyWorkedHours();
         EnsureMonthTargets();
     }
 
@@ -41,9 +43,10 @@ internal sealed class NonAcademicTimesheetAllocator
             return;
         }
 
-        MonthlyTargets targets = MonthlyTargets.Remainders(_sheet, _totalWorkload);
+        MonthlyTargets targets = MonthlyTargets.NonAcademicRemainders(_sheet, _totalWorkload);
         GenerateDayAttendanceIfMissing(day);
         new DayTargetFiller(_sheet.Projects, _totalWorkload, tracksAttendance: true, targets).Fill(day);
+        SyncDayAttendance(day);
     }
 
     private void ResetGeneratedAllocations()
@@ -57,10 +60,12 @@ internal sealed class NonAcademicTimesheetAllocator
 
             foreach (ProjectColumn project in _sheet.Projects)
             {
-                if (!day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+                if (day.ProjectHoursFixed.GetValueOrDefault(project.Id))
                 {
-                    day.ProjectHours[project.Id] = 0m;
+                    continue;
                 }
+
+                day.ProjectHours[project.Id] = day.ProjectFloor(project.Id);
             }
         }
     }
@@ -69,12 +74,31 @@ internal sealed class NonAcademicTimesheetAllocator
     {
         foreach (EditableTimesheetDay day in _sheet.Days.Where(day => TimesheetInterruptions.HasProportionalInterruption(day.Description) && !day.HasLockedProjectHours()))
         {
-            if (TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd) <= 0m)
+            if (day.WorkedHours() <= 0m)
             {
                 _attendance.Set(day, TimesheetLogic.Normalize(8m * _totalWorkload));
             }
 
             TimesheetInterruptionHours.ApplyToDayState(day, _sheet.Projects, _totalWorkload, tracksAttendance: true);
+        }
+    }
+
+    private void ClearRegeneratedAttendance()
+    {
+        foreach (EditableTimesheetDay day in _sheet.Days)
+        {
+            if (TimesheetInterruptions.SkipAllocationRules(day.Description)
+                || day.HasLockedProjectHours()
+                || HasOvernightAttendance(day))
+            {
+                continue;
+            }
+
+            day.ClockIn = null;
+            day.ClockOut = null;
+            day.BreakStart = null;
+            day.BreakEnd = null;
+            day.AttendanceAdjusted = false;
         }
     }
 
@@ -94,7 +118,7 @@ internal sealed class NonAcademicTimesheetAllocator
         {
             if (!day.ProjectHoursFixed.GetValueOrDefault(project.Id))
             {
-                day.ProjectHours[project.Id] = 0m;
+                day.ProjectHours[project.Id] = day.ProjectFloor(project.Id);
             }
         }
 
@@ -110,7 +134,12 @@ internal sealed class NonAcademicTimesheetAllocator
 
     private void GenerateDayAttendanceIfMissing(EditableTimesheetDay day)
     {
-        if (TimesheetInterruptions.SkipAllocationRules(day.Description) || TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd) > 0m)
+        if (TimesheetInterruptions.SkipAllocationRules(day.Description))
+        {
+            return;
+        }
+
+        if (day.WorkedHours() > 0m)
         {
             return;
         }
@@ -124,38 +153,93 @@ internal sealed class NonAcademicTimesheetAllocator
         _attendance.Set(day, TimesheetLogic.Normalize(8m * _totalWorkload));
     }
 
-    private void RebuildAttendanceFromAllocation()
+    private void SyncAttendanceFromAllocation()
     {
         foreach (EditableTimesheetDay day in _sheet.Days)
         {
-            decimal work = day.TotalHours();
-            if (work <= 0m)
+            SyncDayAttendance(day, monthRegenerate: true);
+        }
+    }
+
+    private void SyncDayAttendance(EditableTimesheetDay day, bool monthRegenerate = false)
+    {
+        decimal needed = day.TotalHours();
+        if (needed <= 0m)
+        {
+            return;
+        }
+
+        if (needed > 12m)
+        {
+            throw new InvalidOperationException($"Generated day {day.Date:yyyy-MM-dd} has {needed:F2} h, expected at most 12 h.");
+        }
+
+        if (monthRegenerate && !HasOvernightAttendance(day))
+        {
+            _attendance.Set(day, needed);
+            return;
+        }
+
+        _attendance.RaiseToAtLeast(day, needed);
+    }
+
+    private static bool HasOvernightAttendance(EditableTimesheetDay day) =>
+        day.ClockIn is not null && day.ClockOut is not null && day.ClockOut < day.ClockIn;
+
+    private void TopUpMonthlyWorkedHours()
+    {
+        decimal target = MonthlyTargets.TotalTarget(_sheet, _totalWorkload);
+        decimal allocated = TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.TotalHours()));
+        if (allocated + 0.009m < target)
+        {
+            return;
+        }
+
+        decimal deficit = TimesheetLogic.Normalize(target - _sheet.Days.Sum(day => day.WorkedHours()));
+        if (deficit <= 0.01m)
+        {
+            return;
+        }
+
+        foreach (EditableTimesheetDay day in _sheet.Days
+            .Where(day => !TimesheetInterruptions.SkipAllocationRules(day.Description))
+            .OrderBy(_ => Random.Shared.Next()))
+        {
+            if (deficit <= 0.01m)
             {
-                day.ClockIn = null;
-                day.ClockOut = null;
-                day.BreakStart = null;
-                day.BreakEnd = null;
+                break;
+            }
+
+            decimal worked = day.WorkedHours();
+            decimal headroom = TimesheetLogic.Normalize(12m - worked);
+            if (headroom <= 0.01m)
+            {
                 continue;
             }
 
-            if (work > 12m)
-            {
-                throw new InvalidOperationException($"Generated day {day.Date:yyyy-MM-dd} has {work:F2} h, expected at most 12 h.");
-            }
-
-            _attendance.Set(day, work);
+            decimal add = Math.Min(deficit, headroom);
+            _attendance.RaiseToAtLeast(day, TimesheetLogic.Normalize(worked + add));
+            deficit = TimesheetLogic.Normalize(deficit - add);
         }
     }
 
     private void EnsureMonthTargets()
     {
         List<string> errors = [];
-        decimal worked = TimesheetLogic.Normalize(_sheet.Days.Sum(day => TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd)));
-        MonthlyTargets.AppendMismatch(errors, "worked", worked, MonthlyTargets.TotalTarget(_sheet, _totalWorkload));
-        MonthlyTargets.AppendMismatch(errors, "core", TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.CoreHours)), MonthlyTargets.CoreTarget(_sheet, _totalWorkload));
+        decimal worked = TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.WorkedHours()));
+        decimal totalTarget = MonthlyTargets.TotalTarget(_sheet, _totalWorkload);
+        decimal core = TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.CoreHours));
+        decimal coreTarget = MonthlyTargets.NonAcademicCoreTarget(_sheet, _totalWorkload);
+
+        MonthlyTargets.AppendMinimum(errors, "worked", worked, totalTarget);
+        MonthlyTargets.AppendCoreTolerance(errors, core, coreTarget);
         foreach (ProjectColumn project in _sheet.Projects)
         {
-            MonthlyTargets.AppendMismatch(errors, $"project {project.Id}", TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))), MonthlyTargets.ProjectTarget(_sheet, project));
+            MonthlyTargets.AppendMismatch(
+                errors,
+                $"project {project.Id}",
+                TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))),
+                MonthlyTargets.NonAcademicProjectTarget(_sheet, project));
         }
 
         foreach (EditableTimesheetDay day in _sheet.Days.Where(day => !TimesheetInterruptions.SkipAllocationRules(day.Description)))
@@ -198,6 +282,7 @@ internal sealed class NonAcademicTimesheetAllocator
             .Distinct()
             .OrderBy(value => value)
             .ToArray();
+        private static readonly decimal[] HalfHourValues = HourValues.Where(IsHalfHourIncrement).ToArray();
         private static readonly HashSet<int> HourCents = HourValues.Select(ToCents).ToHashSet();
 
         private readonly HumanHours _humanHours = new();
@@ -210,9 +295,10 @@ internal sealed class NonAcademicTimesheetAllocator
                 return;
             }
 
-            foreach (int count in CandidateCellCounts(target))
+            decimal[] hourValues = projectId is null ? HourValues : HalfHourValues;
+            foreach (int count in CandidateCellCounts(target, hourValues))
             {
-                IReadOnlyList<decimal> amounts = SplitAmounts(target, count);
+                IReadOnlyList<decimal> amounts = SplitAmounts(target, count, hourValues);
                 List<(EditableTimesheetDay Day, decimal Amount)>? placements = TryPlanPlacements(projectId, amounts);
                 if (placements is null)
                 {
@@ -223,7 +309,7 @@ internal sealed class NonAcademicTimesheetAllocator
                 {
                     if (projectId is Guid id)
                     {
-                        day.ProjectHours[id] = TimesheetLogic.Normalize(day.ProjectHours.GetValueOrDefault(id) + amount);
+                        day.AddProjectHours(id, amount);
                     }
                     else
                     {
@@ -237,7 +323,9 @@ internal sealed class NonAcademicTimesheetAllocator
             throw new InvalidOperationException($"Cannot place generated hours {target:F2} for {(projectId.HasValue ? $"project {projectId}" : "core")} into 6-12 h cells.");
         }
 
-        private static IEnumerable<int> CandidateCellCounts(decimal target)
+        private static bool IsHalfHourIncrement(decimal value) => ToCents(value) % 50 == 0;
+
+        private static IEnumerable<int> CandidateCellCounts(decimal target, decimal[] hourValues)
         {
             int min = (int)Math.Ceiling(target / 12m);
             int max = (int)Math.Floor(target / 6m);
@@ -262,10 +350,10 @@ internal sealed class NonAcademicTimesheetAllocator
             }
         }
 
-        private IReadOnlyList<decimal> SplitAmounts(decimal target, int count)
+        private IReadOnlyList<decimal> SplitAmounts(decimal target, int count, decimal[] hourValues)
         {
             target = TimesheetLogic.Normalize(target);
-            if (!CanSplitAmount(target, count))
+            if (!CanSplitAmount(target, count, hourValues))
             {
                 return [];
             }
@@ -283,8 +371,8 @@ internal sealed class NonAcademicTimesheetAllocator
                 }
 
                 decimal preferred = rest == 0 ? remaining : _humanHours.RandomDayHours();
-                decimal? amount = HourValues
-                    .Where(value => value >= min && value <= max && CanSplitAmount(TimesheetLogic.Normalize(remaining - value), rest))
+                decimal? amount = hourValues
+                    .Where(value => value >= min && value <= max && CanSplitAmount(TimesheetLogic.Normalize(remaining - value), rest, hourValues))
                     .OrderBy(value => Math.Abs(value - preferred))
                     .ThenBy(_ => Random.Shared.Next())
                     .Cast<decimal?>()
@@ -301,7 +389,7 @@ internal sealed class NonAcademicTimesheetAllocator
             return remaining == 0m ? amounts : [];
         }
 
-        private static bool CanSplitAmount(decimal total, int count)
+        private static bool CanSplitAmount(decimal total, int count, decimal[] hourValues)
         {
             int cents = ToCents(total);
             if (count == 0)
@@ -318,10 +406,9 @@ internal sealed class NonAcademicTimesheetAllocator
 
             if (count == 1)
             {
-                return HourCents.Contains(cents);
+                return hourValues.Select(ToCents).Contains(cents);
             }
 
-            // Two or more minute-based 6-12 h values can compose every cent value in range except these edge cents.
             return cents != min + 1 && cents != max - 1;
         }
 

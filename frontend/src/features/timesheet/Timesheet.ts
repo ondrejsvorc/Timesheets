@@ -38,6 +38,7 @@ export interface TimesheetDay {
   projectCells: Record<string, ProjectCell>;
   isHoliday: boolean;
   isWeekend: boolean;
+  attendanceAdjusted?: boolean;
 }
 
 export interface Timesheet {

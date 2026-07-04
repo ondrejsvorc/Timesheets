@@ -2,10 +2,30 @@ namespace Timesheets.Api.Timesheets.Allocation;
 
 internal static class AllocationDayExtensions
 {
+    public const decimal CoreToleranceHours = 2m;
+
     public static decimal TotalHours(this EditableTimesheetDay day) => TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
 
     public static bool HasLockedProjectHours(this EditableTimesheetDay day) =>
         day.ProjectHoursFixed.Any(item => item.Value && day.ProjectHours.GetValueOrDefault(item.Key) > 0m);
+
+    public static decimal ProjectFloor(this EditableTimesheetDay day, Guid projectId) =>
+        day.ProjectHoursFloor.GetValueOrDefault(projectId);
+
+    public static void SetProjectHours(this EditableTimesheetDay day, Guid projectId, decimal hours)
+    {
+        decimal floor = day.ProjectFloor(projectId);
+        day.ProjectHours[projectId] = HumanHours.RoundToHalfHour(Math.Max(floor, hours));
+    }
+
+    public static void AddProjectHours(this EditableTimesheetDay day, Guid projectId, decimal amount)
+    {
+        decimal current = day.ProjectHours.GetValueOrDefault(projectId);
+        day.SetProjectHours(projectId, current + amount);
+    }
+
+    public static decimal WorkedHours(this EditableTimesheetDay day) =>
+        TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
 }
 
 /// <summary>Monthly allocation goals and the hours still missing towards them.</summary>
@@ -36,6 +56,19 @@ internal sealed class MonthlyTargets
             project => project.Id,
             project => TimesheetLogic.Normalize(Math.Max(0m, ProjectTarget(sheet, project) - sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))))));
 
+    /// <summary>Non-academic targets: project goals rounded to half hours, the rounding difference absorbed by core so the total stays exact.</summary>
+    public static MonthlyTargets NonAcademicRemainders(EditableTimesheet sheet, decimal totalWorkload) => new(
+        TimesheetLogic.Normalize(Math.Max(0m, NonAcademicCoreTarget(sheet, totalWorkload) - sheet.Days.Sum(day => day.CoreHours))),
+        sheet.Projects.ToDictionary(
+            project => project.Id,
+            project => TimesheetLogic.Normalize(Math.Max(0m, NonAcademicProjectTarget(sheet, project) - sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))))));
+
+    public static decimal NonAcademicProjectTarget(EditableTimesheet sheet, ProjectColumn project) =>
+        HumanHours.RoundToHalfHour(ProjectTarget(sheet, project));
+
+    public static decimal NonAcademicCoreTarget(EditableTimesheet sheet, decimal totalWorkload) =>
+        TimesheetLogic.Normalize(TotalTarget(sheet, totalWorkload) - sheet.Projects.Sum(project => NonAcademicProjectTarget(sheet, project)));
+
     public static decimal ProjectTarget(EditableTimesheet sheet, ProjectColumn project)
     {
         int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday) && project.IsActiveOn(day.Date));
@@ -57,6 +90,22 @@ internal sealed class MonthlyTargets
         if (TimesheetLogic.HasUnequalHours(actual, expected))
         {
             errors.Add($"{label} {actual:F2}/{expected:F2}");
+        }
+    }
+
+    public static void AppendMinimum(List<string> errors, string label, decimal actual, decimal minimum)
+    {
+        if (actual + 0.009m < minimum)
+        {
+            errors.Add($"{label} {actual:F2}/{minimum:F2}");
+        }
+    }
+
+    public static void AppendCoreTolerance(List<string> errors, decimal actual, decimal expected, decimal tolerance = AllocationDayExtensions.CoreToleranceHours)
+    {
+        if (actual + 0.009m < expected - tolerance || actual > expected + tolerance + 0.009m)
+        {
+            errors.Add($"core {actual:F2}/{expected:F2}");
         }
     }
 }
@@ -116,16 +165,41 @@ internal sealed class AttendanceGenerator
 {
     public void Set(EditableTimesheetDay day, decimal work)
     {
-        TimeSpan start = new(8, 0, 0);
+        Apply(day, work, preserveStart: false);
+    }
+
+    /// <summary>Raises attendance to at least <paramref name="work"/> hours without lowering existing values.</summary>
+    public bool RaiseToAtLeast(EditableTimesheetDay day, decimal work)
+    {
+        work = TimesheetLogic.Normalize(work);
+        if (work <= 0m)
+        {
+            return false;
+        }
+
+        decimal current = day.WorkedHours();
+        if (current >= work - 0.009m)
+        {
+            return false;
+        }
+
+        Apply(day, work, preserveStart: current > 0m && day.ClockIn is not null);
+        day.AttendanceAdjusted = true;
+        return true;
+    }
+
+    private static void Apply(EditableTimesheetDay day, decimal work, bool preserveStart)
+    {
+        TimeSpan start = preserveStart && day.ClockIn is not null ? day.ClockIn.Value : new TimeSpan(8, 0, 0);
         bool needsBreak = work > 6m;
         int breakMinutes = needsBreak ? 30 : 0;
         day.ClockIn = start;
         day.ClockOut = start.Add(TimeSpan.FromMinutes((double)(work * 60m) + breakMinutes));
         if (needsBreak)
         {
-            TimeSpan breakStart = start.Add(TimeSpan.FromHours(4));
+            TimeSpan breakStart = preserveStart && day.BreakStart is not null ? day.BreakStart.Value : start.Add(TimeSpan.FromHours(4));
             day.BreakStart = breakStart;
-            day.BreakEnd = breakStart.Add(TimeSpan.FromMinutes(30));
+            day.BreakEnd = preserveStart && day.BreakEnd is not null ? day.BreakEnd : breakStart.Add(TimeSpan.FromMinutes(30));
         }
         else
         {
@@ -223,7 +297,7 @@ internal sealed class DayTargetFiller(IReadOnlyList<ProjectColumn> projects, dec
         foreach (ProjectColumn project in projects)
         {
             bool fixedHours = day.ProjectHoursFixed.GetValueOrDefault(project.Id);
-            if (project.IsActiveOn(day.Date) && !project.Locked && !fixedHours && day.ProjectHours.GetValueOrDefault(project.Id) == 0 && targets.Project(project.Id) > 0)
+            if (project.IsActiveOn(day.Date) && !project.Locked && !fixedHours && day.ProjectHours.GetValueOrDefault(project.Id) <= day.ProjectFloor(project.Id) && targets.Project(project.Id) > 0)
             {
                 projectRemaining.Add((project.Id, targets.Project(project.Id)));
             }
@@ -239,7 +313,7 @@ internal sealed class DayTargetFiller(IReadOnlyList<ProjectColumn> projects, dec
             decimal maxValue = Math.Min(target, left);
             decimal value = PreferGeneratedCellHours(TimesheetLogic.Normalize(amount * target / totalRemaining), maxValue);
             left -= value;
-            day.ProjectHours[projectId] = value;
+            day.SetProjectHours(projectId, value);
             targets.ConsumeProject(projectId, value);
         }
 
@@ -258,7 +332,7 @@ internal sealed class DayTargetFiller(IReadOnlyList<ProjectColumn> projects, dec
             }
 
             decimal value = Math.Min(targets.Project(projectId), left);
-            day.ProjectHours[projectId] += value;
+            day.AddProjectHours(projectId, value);
             targets.ConsumeProject(projectId, value);
             left -= value;
         }

@@ -14,12 +14,21 @@ public sealed class CombinedTimesheetReviewerTests
     private static AttendanceTimesheet EmptyAttendance(int year, int month) => new("1", "Test", 1, year, month, []);
 
     [Fact]
-    public void Review_flags_unbalanced_day()
+    public void Review_flags_unbalanced_day_when_allocation_is_short()
     {
         CombinedTimesheet combined = new(2026, 6, 1, [Day(2, worked: 8, core: 4, projects: 2)]);
         TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6), tracksAttendance: true);
         Assert.True(review.HasErrors);
         Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ALL-01" && issue.Field == "balance");
+    }
+
+    [Fact]
+    public void Review_warns_when_allocation_exceeds_attendance()
+    {
+        CombinedTimesheet combined = new(2026, 6, 1, [Day(2, worked: 8, core: 10, projects: 0)]);
+        TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, EmptyAttendance(2026, 6), tracksAttendance: true);
+        Assert.Contains(review.DayIssues, issue => issue.Code == "WAR-ALL-05" && issue.Field == "balance");
+        Assert.DoesNotContain(review.DayIssues, issue => issue.Type == IssueType.Error);
     }
 
     [Fact]

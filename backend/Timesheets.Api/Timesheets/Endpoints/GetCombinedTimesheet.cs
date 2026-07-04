@@ -179,7 +179,14 @@ public sealed class GetCombinedTimesheet : IEndpoint
                         CoreHours = coreHours,
                         CoreHoursFixed = false,
                         ProjectHours = projects.ToDictionary(project => Guid.Parse(project.Id), project => projectCellsArray[projectIndexById[project.Id]].Hours),
-                        ProjectHoursFixed = projects.ToDictionary(project => Guid.Parse(project.Id), project => projectCellsArray[projectIndexById[project.Id]].Locked)
+                        ProjectHoursFixed = projects.ToDictionary(project => Guid.Parse(project.Id), project => projectCellsArray[projectIndexById[project.Id]].Locked),
+                        ProjectHoursFloor = projects.ToDictionary(
+                            project => Guid.Parse(project.Id),
+                            project =>
+                            {
+                                var cell = projectCellsArray[projectIndexById[project.Id]];
+                                return cell.Locked && cell.Hours > 0m ? cell.Hours : 0m;
+                            })
                     };
                     TimesheetInterruptionHours.ApplyToDayState(dayState, projectStates, totalWorkload, tracksAttendance);
                     coreHours = dayState.CoreHours;

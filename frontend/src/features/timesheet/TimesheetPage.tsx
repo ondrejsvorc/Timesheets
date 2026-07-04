@@ -133,6 +133,7 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
           target.attendance.breakEnd = allocated.breakEnd;
           target.coreHours = allocated.coreHours || null;
           target.projectCells = allocated.projectCells;
+          target.attendanceAdjusted = allocated.attendanceAdjusted;
         });
       });
       setEvaluation(allocation.evaluation);

@@ -21,13 +21,14 @@ public sealed class TimesheetEngineEvaluationTests
     }
 
     [Fact]
-    public void Evaluate_reports_overtime_against_holiday_adjusted_monthly_obligation()
+    public void Evaluate_allows_overtime_against_holiday_adjusted_monthly_obligation()
     {
         TimesheetEvaluation evaluation = EvaluateJanuary2026(date => TimesheetLogic.IsWeekday(date) ? 8m : 0m);
 
         Assert.Equal(176m, evaluation.Totals.AllocatedHours);
         Assert.Equal(168m, evaluation.Totals.HoursObligation);
-        Assert.Contains(evaluation.Issues, issue => issue.Code == "ERR-COM-02");
+        Assert.DoesNotContain(evaluation.Issues, issue => issue.Code == "ERR-COM-02");
+        Assert.DoesNotContain(evaluation.Issues, issue => issue.Code == "ERR-COM-03");
     }
 
     private static TimesheetEvaluation EvaluateJanuary2026(Func<DateTime, decimal> coreHours)

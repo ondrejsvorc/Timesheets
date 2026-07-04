@@ -70,7 +70,7 @@ internal static class TimesheetInterruptionHours
             }
             else
             {
-                day.ProjectHours[project.Id] = 0m;
+                day.ProjectHours[project.Id] = day.ProjectHoursFloor.GetValueOrDefault(project.Id);
             }
         }
 
@@ -86,7 +86,7 @@ internal static class TimesheetInterruptionHours
         }
         foreach (ProjectColumn project in mutableProjects)
         {
-            day.ProjectHours[project.Id] = 0m;
+            day.ProjectHours[project.Id] = day.ProjectHoursFloor.GetValueOrDefault(project.Id);
         }
 
         decimal mutableWorkload = (day.CoreHoursFixed ? 0m : coreWorkload) + mutableProjects.Sum(project => project.Workload);
@@ -105,9 +105,12 @@ internal static class TimesheetInterruptionHours
         for (int index = 0; index < mutableProjects.Count; index++)
         {
             ProjectColumn project = mutableProjects[index];
-            decimal hours = index == mutableProjects.Count - 1 ? TimesheetLogic.Normalize(Math.Max(0m, capacity - allocated)) : TimesheetLogic.Normalize(remaining * project.Workload / mutableWorkload);
-            day.ProjectHours[project.Id] = hours;
-            allocated += hours;
+            decimal floor = day.ProjectHoursFloor.GetValueOrDefault(project.Id);
+            decimal hours = index == mutableProjects.Count - 1
+                ? TimesheetLogic.Normalize(Math.Max(floor, Math.Max(0m, capacity - allocated)))
+                : TimesheetLogic.Normalize(Math.Max(floor, remaining * project.Workload / mutableWorkload));
+            day.ProjectHours[project.Id] = TimesheetLogic.Normalize(Math.Round(hours * 2m, MidpointRounding.AwayFromZero) / 2m);
+            allocated += day.ProjectHours[project.Id];
         }
     }
 }

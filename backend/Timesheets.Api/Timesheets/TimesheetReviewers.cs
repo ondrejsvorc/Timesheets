@@ -97,16 +97,33 @@ public sealed class CombinedTimesheetReviewer
 
     private static IEnumerable<DayIssue> ReviewBalance(CombinedDay day)
     {
-        if (day.SkipAllocationRules || !day.HasAttendanceFilled || day.WorkedHours > TimesheetLimits.MaxWorkShiftHours || !TimesheetLogic.HasUnequalHours(day.WorkedHours, day.AllocatedHours))
+        if (day.SkipAllocationRules || !day.HasAttendanceFilled || day.WorkedHours > TimesheetLimits.MaxWorkShiftHours)
         {
             yield break;
         }
 
-        decimal balance = TimesheetLogic.Round(day.WorkedHours - day.AllocatedHours);
-        string description = balance > 0
-            ? $"Chybí rozdělení: docházka {day.WorkedHours:F2} h, kmen+projekty {day.AllocatedHours:F2} h."
-            : $"Přesah rozdělení: kmen+projekty {day.AllocatedHours:F2} h, docházka {day.WorkedHours:F2} h.";
-        yield return new DayIssue("ERR-ALL-01", IssueType.Error, description, day.Date.Day, "balance");
+        if (TimesheetLogic.HasUnequalHours(day.WorkedHours, day.AllocatedHours))
+        {
+            decimal balance = TimesheetLogic.Round(day.WorkedHours - day.AllocatedHours);
+            if (balance > 0m)
+            {
+                yield return new DayIssue(
+                    "ERR-ALL-01",
+                    IssueType.Error,
+                    $"Chybí rozdělení: docházka {day.WorkedHours:F2} h, kmen+projekty {day.AllocatedHours:F2} h.",
+                    day.Date.Day,
+                    "balance");
+            }
+            else
+            {
+                yield return new DayIssue(
+                    "WAR-ALL-05",
+                    IssueType.Warning,
+                    $"Přesah rozdělení: kmen+projekty {day.AllocatedHours:F2} h, docházka {day.WorkedHours:F2} h. Upravte projektové hodiny, nebo natáhněte docházku.",
+                    day.Date.Day,
+                    "balance");
+            }
+        }
     }
 
     private static IEnumerable<DayIssue> ReviewStag(CombinedDay day, bool tracksAttendance)
@@ -138,11 +155,7 @@ public sealed class CombinedTimesheetReviewer
 
     private static IEnumerable<TimesheetIssue> ReviewMonthlyHours(CombinedTimesheet timesheet)
     {
-        if (timesheet.TotalHours > timesheet.TotalHoursObligation)
-        {
-            yield return new TimesheetIssue("ERR-COM-02", IssueType.Error, "Celková pracovní doba za měsíc přesahuje pracovní povinnost.");
-        }
-        else if (timesheet.TotalHours < timesheet.TotalHoursObligation)
+        if (timesheet.TotalHours + 0.009m < timesheet.TotalHoursObligation)
         {
             yield return new TimesheetIssue("ERR-COM-03", IssueType.Error, "Celková pracovní doba za měsíc je nižší než pracovní povinnost.");
         }

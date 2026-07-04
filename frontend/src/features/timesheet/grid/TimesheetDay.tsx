@@ -78,6 +78,8 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
   const stagMissing = !tracksAttendance && issues.some((issue) => issue.code === "ERR-ALL-02") ? roundHours(calculateStagHours(day) - (day.coreHours ?? 0)) : 0;
   const displayBalance = stagMissing > 0 ? Math.max(balance, stagMissing) : balance;
   const canAllocateRow = displayBalance > 0 || canGenerateAttendance;
+  const attendanceAdjustedClass = day.attendanceAdjusted ? "bg-amber-50 ring-1 ring-inset ring-amber-300" : "";
+  const balanceTone = displayBalance === 0 ? "bg-green-50 text-green-600" : displayBalance > 0 ? "bg-red-50 text-red-500" : "bg-amber-50 text-amber-700";
 
   return (
     <div className={cn("grid grid-cols-subgrid col-[1/-1] border-b border-border/50", isWeekendOrHoliday && "bg-slate-100")}>
@@ -88,49 +90,53 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
       </div>
       {tracksAttendance && (
         <>
-          <div className={cellClass}>
+          <div className={cn(cellClass, attendanceAdjustedClass)}>
             <ValidationField validations={fieldIssues("clockIn")}>
               <SmartTimeInput
                 value={day.attendance.clockIn}
                 onChange={(value) =>
                   update((draft) => {
                     draft.attendance.clockIn = value;
+                    draft.attendanceAdjusted = false;
                   })
                 }
               />
             </ValidationField>
           </div>
-          <div className={cellClass}>
+          <div className={cn(cellClass, attendanceAdjustedClass)}>
             <ValidationField validations={fieldIssues("clockOut")}>
               <SmartTimeInput
                 value={day.attendance.clockOut}
                 onChange={(value) =>
                   update((draft) => {
                     draft.attendance.clockOut = value;
+                    draft.attendanceAdjusted = false;
                   })
                 }
               />
             </ValidationField>
           </div>
-          <div className={cellClass}>
+          <div className={cn(cellClass, attendanceAdjustedClass)}>
             <ValidationField validations={fieldIssues("breakStart")}>
               <SmartTimeInput
                 value={day.attendance.breakStart}
                 onChange={(value) =>
                   update((draft) => {
                     draft.attendance.breakStart = value;
+                    draft.attendanceAdjusted = false;
                   })
                 }
               />
             </ValidationField>
           </div>
-          <div className={cellClass}>
+          <div className={cn(cellClass, attendanceAdjustedClass)}>
             <ValidationField validations={fieldIssues("breakEnd")}>
               <SmartTimeInput
                 value={day.attendance.breakEnd}
                 onChange={(value) =>
                   update((draft) => {
                     draft.attendance.breakEnd = value;
+                    draft.attendanceAdjusted = false;
                   })
                 }
               />
@@ -211,11 +217,12 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
                       onChange={(value) =>
                         update((draft) => {
                           const current = draft.projectCells[project.id] ?? { hours: 0, locked: false };
-                          draft.projectCells[project.id] = { ...current, hours: value ?? 0 };
+                          const hours = value === null ? 0 : Math.round(value * 2) / 2;
+                          draft.projectCells[project.id] = { ...current, hours };
                         })
                       }
                       commitOnChange
-                      precision={2}
+                      precision={1}
                       disabled={locked}
                       className="h-8 w-20 max-w-full text-right tabular-nums"
                     />
@@ -249,7 +256,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
           </HoursToHumanTooltip>
         </ValidationField>
       </div>
-      <div className={cn(cellClass, numericCellClass, cellLastClass, displayBalance === 0 ? "bg-green-50 text-green-600" : "bg-red-50 text-red-500")}>
+      <div className={cn(cellClass, numericCellClass, cellLastClass, balanceTone)}>
         <ValidationField validations={fieldIssues("balance")}>
           <div className="w-full flex items-center justify-end gap-2">
             <div className="w-full text-right font-bold tabular-nums">{formatHours(displayBalance)}</div>

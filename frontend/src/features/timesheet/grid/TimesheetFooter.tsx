@@ -22,6 +22,10 @@ const Total = ({ value, obligation }: { value: number; obligation: number }) => 
   </>
 );
 
+const CORE_TOLERANCE_HOURS = 2;
+
+const isHoursMatch = (value: number, target: number) => Math.abs(value - target) < 0.01;
+
 export const TimesheetFooter = ({ readOnly = false, tracksAttendance, projects, totals }: TimesheetFooterProps) => {
   const cell = "min-w-0 flex items-center justify-end whitespace-nowrap tabular-nums text-[12px] uppercase tracking-wider px-2";
   const centered = "min-w-0 flex items-center justify-center whitespace-nowrap tabular-nums text-[12px] uppercase tracking-wider px-2";
@@ -40,14 +44,21 @@ export const TimesheetFooter = ({ readOnly = false, tracksAttendance, projects, 
       <div />
       {tracksAttendance && (
         <>
-          <div className={cn(cell, totals.workedHours > totals.hoursObligation ? "text-red-600" : "text-blue-800")}>
+          <div className={cn(cell, totals.workedHours + 0.009 < totals.hoursObligation ? "text-red-600" : "text-blue-800")}>
             <Total value={totals.workedHours} obligation={totals.hoursObligation} />
           </div>
           <div />
         </>
       )}
       {!tracksAttendance && <div />}
-      <div className={cn(centered, totals.coreHours > totals.coreHoursObligation ? "text-red-600" : "text-blue-800")}>
+      <div
+        className={cn(
+          centered,
+          totals.coreHours + 0.009 < totals.coreHoursObligation - CORE_TOLERANCE_HOURS || totals.coreHours > totals.coreHoursObligation + CORE_TOLERANCE_HOURS + 0.009
+            ? "text-red-600"
+            : "text-blue-800",
+        )}
+      >
         <Total value={totals.coreHours} obligation={totals.coreHoursObligation} />
       </div>
       {projects.map((project) => {
@@ -55,7 +66,7 @@ export const TimesheetFooter = ({ readOnly = false, tracksAttendance, projects, 
         const hours = total?.hours ?? 0;
         const obligation = total?.obligation ?? 0;
         return (
-          <div key={project.id} className={cn(centered, hours > obligation ? "text-red-600" : "text-blue-800")}>
+          <div key={project.id} className={cn(centered, !isHoursMatch(hours, obligation) ? "text-red-600" : "text-blue-800")}>
             <Total value={hours} obligation={obligation} />
           </div>
         );

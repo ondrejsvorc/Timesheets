@@ -3,6 +3,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
 using Timesheets.Api.Employees;
+using Timesheets.Api.Timesheets.Allocation;
 
 namespace Timesheets.Api.Timesheets;
 
@@ -32,9 +33,14 @@ public sealed class TimesheetEditRequestValidator : AbstractValidator<TimesheetE
         {
             project.RuleFor(value => value.Days).Must(HaveUniqueDates);
             project.RuleForEach(value => value.Days).ChildRules(day =>
-                day.RuleFor(value => value.Hours).InclusiveBetween(0m, 12m));
+            {
+                day.RuleFor(value => value.Hours).InclusiveBetween(0m, 12m);
+                day.RuleFor(value => value.Hours).Must(IsHalfHourIncrement).When(value => value.Hours > 0m);
+            });
         });
     }
+
+    private static bool IsHalfHourIncrement(decimal hours) => Math.Round(hours * 2m, MidpointRounding.AwayFromZero) % 1m == 0m;
 
     private static bool IsTimeOfDay(TimeSpan? value) => value is null || value >= TimeSpan.Zero && value < TimeSpan.FromDays(1);
     private static bool HaveUniqueDates(IEnumerable<TimesheetDayEdit> days) => days.Select(day => DateOnly.FromDateTime(day.Date)).Distinct().Count() == days.Count();
@@ -82,6 +88,10 @@ public sealed class EditableTimesheetDay
     public required bool CoreHoursFixed { get; init; }
     public required Dictionary<Guid, decimal> ProjectHours { get; init; }
     public required Dictionary<Guid, bool> ProjectHoursFixed { get; init; }
+    public required Dictionary<Guid, decimal> ProjectHoursFloor { get; init; }
+
+    /// <summary>Set when the generator raised the user's attendance to cover allocated hours.</summary>
+    public bool AttendanceAdjusted { get; set; }
 }
 
 public sealed record EditableTimesheet(IReadOnlyList<EditableTimesheetDay> Days, IReadOnlyList<ProjectColumn> Projects);
@@ -146,6 +156,7 @@ public static class TimesheetEngine
                 TimesheetDayEdit? update = days.GetValueOrDefault(date);
                 Dictionary<Guid, decimal> projectHours = [];
                 Dictionary<Guid, bool> projectHoursFixed = [];
+                Dictionary<Guid, decimal> projectHoursFloor = [];
 
                 foreach (Data.Models.ProjectTimesheet project in loaded.Projects)
                 {
@@ -164,6 +175,8 @@ public static class TimesheetEngine
                     decimal hours = projectDayUpdate?.Hours ?? persisted;
                     projectHours[project.ContractEmployeeId] = TimesheetLogic.Normalize(hours);
                     projectHoursFixed[project.ContractEmployeeId] = projectState.IsActiveOn(day.Date) && (projectDayUpdate?.HoursLocked ?? persistedDay?.HoursLocked ?? false);
+                    bool projectFixed = projectHoursFixed[project.ContractEmployeeId];
+                    projectHoursFloor[project.ContractEmployeeId] = projectFixed && hours > 0m ? TimesheetLogic.Normalize(hours) : 0m;
                 }
 
                 return new EditableTimesheetDay
@@ -179,7 +192,8 @@ public static class TimesheetEngine
                     CoreHours = TimesheetLogic.Normalize(update is null ? day.CoreHours : update.CoreHours),
                     CoreHoursFixed = update?.CoreHoursFixed ?? false,
                     ProjectHours = projectHours,
-                    ProjectHoursFixed = projectHoursFixed
+                    ProjectHoursFixed = projectHoursFixed,
+                    ProjectHoursFloor = projectHoursFloor
                 };
             })
             .ToList();
@@ -222,8 +236,19 @@ public static class TimesheetEngine
         }).ToList();
 
         CombinedTimesheet combined = new(Year: loaded.Timesheet.Year, Month: loaded.Timesheet.Month, CoreWorkload: loaded.CoreWorkload, Days: combinedDays);
+        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday));
+        List<TimesheetProjectTotal> projectTotals = sheet.Projects.Select(project =>
+        {
+            decimal hours = TimesheetLogic.Normalize(sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id)));
+            decimal obligation = TimesheetLogic.Normalize(sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday) && project.IsActiveOn(day.Date)) * 8m * project.Workload);
+            return new TimesheetProjectTotal(ProjectId: project.Id, Hours: hours, Obligation: obligation);
+        }).ToList();
+
+        decimal hoursObligation = TimesheetLogic.Normalize(fundedDays * 8m * loaded.TotalWorkload);
+        TimesheetTotals totals = new(WorkedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.WorkedHours)), HoursObligation: hoursObligation, AllocatedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.AllocatedHours)), CoreHours: TimesheetLogic.Normalize(sheet.Days.Sum(day => day.CoreHours)), CoreHoursObligation: TimesheetLogic.Normalize(hoursObligation - projectTotals.Sum(project => project.Obligation)), Projects: projectTotals);
+
         TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, attendance, tracksAttendance);
-        IReadOnlyList<TimesheetIssue> issues = review.Issues.ToArray();
+        IReadOnlyList<TimesheetIssue> issues = review.Issues.Concat(ReviewProjectTotals(projectTotals)).Concat(ReviewCoreTolerance(totals)).ToArray();
         IReadOnlyList<DayIssue> dayIssues = review.DayIssues.ToArray();
 
         List<TimesheetDayEvaluation> days = sheet.Days.Zip(combinedDays).Select(pair =>
@@ -236,18 +261,33 @@ public static class TimesheetEngine
             return new TimesheetDayEvaluation(Day: day.Date.Day, WorkedHours: combinedDay.WorkedHours, NightHours: nightHours, AllocatedHours: combinedDay.AllocatedHours, Balance: balance, HasBusinessTrip: businessTrip, HasCoreOnlyInterruption: false, HasProportionalInterruption: proportional);
         }).ToList();
 
-        int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday));
-        List<TimesheetProjectTotal> projectTotals = sheet.Projects.Select(project =>
+        return new TimesheetEvaluation(HasErrors: issues.Any(issue => issue.Type is IssueType.Error) || dayIssues.Any(issue => issue.Type is IssueType.Error), Issues: issues, DayIssues: dayIssues, Days: days, Totals: totals);
+    }
+
+    private static IEnumerable<TimesheetIssue> ReviewProjectTotals(IReadOnlyList<TimesheetProjectTotal> projectTotals)
+    {
+        foreach (TimesheetProjectTotal project in projectTotals)
         {
-            decimal hours = TimesheetLogic.Normalize(sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id)));
-            decimal obligation = TimesheetLogic.Normalize(sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday) && project.IsActiveOn(day.Date)) * 8m * project.Workload);
-            return new TimesheetProjectTotal(ProjectId: project.Id, Hours: hours, Obligation: obligation);
-        }).ToList();
+            if (TimesheetLogic.HasUnequalHours(project.Hours, project.Obligation))
+            {
+                yield return new TimesheetIssue(
+                    "ERR-COM-06",
+                    IssueType.Error,
+                    $"Projektová část nesedí s cílem ({project.Hours:F2}/{project.Obligation:F2} h).");
+            }
+        }
+    }
 
-        decimal hoursObligation = TimesheetLogic.Normalize(fundedDays * 8m * loaded.TotalWorkload);
-        TimesheetTotals totals = new(WorkedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.WorkedHours)), HoursObligation: hoursObligation, AllocatedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.AllocatedHours)), CoreHours: TimesheetLogic.Normalize(sheet.Days.Sum(day => day.CoreHours)), CoreHoursObligation: TimesheetLogic.Normalize(hoursObligation - projectTotals.Sum(project => project.Obligation)), Projects: projectTotals);
-
-        return new TimesheetEvaluation(HasErrors: review.HasErrors, Issues: issues, DayIssues: dayIssues, Days: days, Totals: totals);
+    private static IEnumerable<TimesheetIssue> ReviewCoreTolerance(TimesheetTotals totals)
+    {
+        decimal tolerance = AllocationDayExtensions.CoreToleranceHours;
+        if (totals.CoreHours + 0.009m < totals.CoreHoursObligation - tolerance || totals.CoreHours > totals.CoreHoursObligation + tolerance + 0.009m)
+        {
+            yield return new TimesheetIssue(
+                "WAR-COM-03",
+                IssueType.Warning,
+                $"Kmen se liší od cíle ({totals.CoreHours:F2}/{totals.CoreHoursObligation:F2} h, tolerance ±{tolerance:F0} h).");
+        }
     }
 
     public static bool HasInactiveProjectHours(LoadedTimesheet loaded, TimesheetEditRequest request)
