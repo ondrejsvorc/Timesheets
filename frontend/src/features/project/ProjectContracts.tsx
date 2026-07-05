@@ -13,12 +13,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { useGo } from "@/hooks/useGo";
+import { type ListCrudAction, listCrudReducer } from "@/utils/listCrudReducer";
 import { AddContractDialog } from "./AddContractDialog";
 import type { GetProjectContractsResponse, ProjectContractItem } from "./api";
 import { ContractDeleteDialog } from "./ContractDeleteDialog";
 import { EditContractDialog } from "./EditContractDialog";
 import { type ContractsFilterCriteria, useContractsFilter } from "./hooks/useContractsFilter";
-import { type ProjectContractsAction, projectContractsReducer } from "./utils/projectContractsReducer";
 
 export const ProjectContracts = () => {
   const { promise } = useLoaderData() as {
@@ -37,7 +37,7 @@ const { FilterSearchInput } = createFilterControls<ContractsFilterCriteria>();
 const ProjectContractsContent = () => {
   const { id: projectId } = useParams<{ id: string }>();
   const response = useAsyncValue() as GetProjectContractsResponse;
-  const [state, dispatch] = useImmerReducer(projectContractsReducer, response.projectContracts);
+  const [state, dispatch] = useImmerReducer(listCrudReducer<ProjectContractItem>, response.projectContracts);
   const { filter, setFilter, filtered } = useContractsFilter(state);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const canAddContract = useCan(UiAction.contracts.add, { projectId: projectId ?? undefined });
@@ -53,7 +53,7 @@ const ProjectContractsContent = () => {
         projectId={projectId ?? ""}
         onClose={() => setIsAddOpen(false)}
         onSaved={(contract) => {
-          dispatch({ type: "add", contract });
+          dispatch({ type: "add", item: contract });
           setIsAddOpen(false);
         }}
       />
@@ -63,7 +63,7 @@ const ProjectContractsContent = () => {
 
 interface ContractsTableProps {
   contracts: ProjectContractItem[];
-  dispatch: Dispatch<ProjectContractsAction>;
+  dispatch: Dispatch<ListCrudAction<ProjectContractItem>>;
 }
 
 export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => {
@@ -100,7 +100,7 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
           contract={contractToEdit}
           onClose={() => setContractToEdit(null)}
           onSaved={(updatedContract) => {
-            dispatch({ type: "edit", contract: updatedContract });
+            dispatch({ type: "update", item: updatedContract });
             setContractToEdit(null);
           }}
         />
@@ -112,7 +112,7 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
           contractId={contractToDelete.id}
           onClose={() => setContractToDelete(null)}
           onDeleted={() => {
-            dispatch({ type: "delete", contractId: contractToDelete.id });
+            dispatch({ type: "delete", id: contractToDelete.id });
             setContractToDelete(null);
           }}
         />

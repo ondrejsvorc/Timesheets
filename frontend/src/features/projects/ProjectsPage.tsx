@@ -10,11 +10,11 @@ import { createFilterControls } from "@/components/shared/layout/createFilterCon
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Texts } from "@/constants/texts";
+import { type ListCrudAction, listCrudReducer } from "@/utils/listCrudReducer";
 import { AddProjectDialog } from "./AddProjectDialog";
 import type { GetProjectsResponse, ProjectItem } from "./api";
 import { type ProjectsFilterCriteria, useProjectsFilter } from "./hooks/useProjectsFilter";
 import { ProjectCard } from "./ProjectCard";
-import { type ProjectsAction, projectsReducer } from "./utils/projectsReducer";
 
 export const ProjectsPage = () => {
   const { promise } = useLoaderData() as { promise: Promise<GetProjectsResponse> };
@@ -40,7 +40,7 @@ const projectStatusFilterOptions = [
 
 const ProjectsPageContent = () => {
   const response = useAsyncValue() as GetProjectsResponse;
-  const [state, dispatch] = useImmerReducer(projectsReducer, response.projects);
+  const [state, dispatch] = useImmerReducer(listCrudReducer<ProjectItem>, response.projects);
   const { filter, setFilter, filtered } = useProjectsFilter(state);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
@@ -63,7 +63,7 @@ const ProjectsPageContent = () => {
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onSaved={(project) => {
-          dispatch({ type: "add", project });
+          dispatch({ type: "add", item: project });
           setIsAddOpen(false);
         }}
       />
@@ -71,7 +71,7 @@ const ProjectsPageContent = () => {
   );
 };
 
-const ProjectCards = ({ projects, dispatch }: { projects: ProjectItem[]; dispatch: Dispatch<ProjectsAction> }) => {
+const ProjectCards = ({ projects, dispatch }: { projects: ProjectItem[]; dispatch: Dispatch<ListCrudAction<ProjectItem>> }) => {
   if (projects.length === 0) {
     return <EmptyState />;
   }
@@ -79,7 +79,7 @@ const ProjectCards = ({ projects, dispatch }: { projects: ProjectItem[]; dispatc
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map((project) => (
-        <ProjectCard key={project.id} project={project} onUpdate={(project) => dispatch({ type: "update", project })} onDelete={(projectId) => dispatch({ type: "delete", projectId })} />
+        <ProjectCard key={project.id} project={project} onUpdate={(project) => dispatch({ type: "update", item: project })} onDelete={(projectId) => dispatch({ type: "delete", id: projectId })} />
       ))}
     </div>
   );
