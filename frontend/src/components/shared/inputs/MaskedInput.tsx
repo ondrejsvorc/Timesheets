@@ -135,6 +135,23 @@ export const maskContractRegistrationNumber = (value: string) => maskGroups(valu
 export const maskDate = maskSmartDate;
 export const contractRegistrationNumberPattern = /^\d{5} \d{2} \d{4} \d{2}$/;
 
-export const MaskedInput = ({ value, mask, onChange, ...props }: MaskedInputProps) => {
-  return <Input {...props} value={mask(value ?? "")} onChange={(event) => onChange?.(mask(event.currentTarget.value))} />;
+export const MaskedInput = ({ value, mask, onChange, onKeyDown, ...props }: MaskedInputProps) => {
+  const maskedValue = mask(value ?? "");
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Backspace" && !event.metaKey && !event.ctrlKey) {
+      const input = event.currentTarget;
+      if (input.selectionStart === input.selectionEnd && input.selectionStart === maskedValue.length) {
+        const digits = (value ?? "").replace(/\D/g, "");
+        if (digits.length > 0) {
+          event.preventDefault();
+          const nextDigits = digits.slice(0, -1);
+          onChange?.(nextDigits ? mask(nextDigits) : "");
+        }
+      }
+    }
+    onKeyDown?.(event);
+  };
+
+  return <Input {...props} value={maskedValue} onChange={(event) => onChange?.(mask(event.currentTarget.value))} onKeyDown={handleKeyDown} />;
 };
