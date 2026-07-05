@@ -1,10 +1,12 @@
 import type * as React from "react";
+import { useLayoutEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 
 type MaskedInputProps = Omit<React.ComponentProps<typeof Input>, "onChange" | "value"> & {
   value?: string;
   mask: (value: string) => string;
   onChange?: (value: string) => void;
+  maxDigits?: number;
 };
 
 export const maskGroups = (value: string, groups: number[], separator: string) => {
@@ -135,23 +137,91 @@ export const maskContractRegistrationNumber = (value: string) => maskGroups(valu
 export const maskDate = maskSmartDate;
 export const contractRegistrationNumberPattern = /^\d{5} \d{2} \d{4} \d{2}$/;
 
-export const MaskedInput = ({ value, mask, onChange, onKeyDown, ...props }: MaskedInputProps) => {
+const digitIndexFromCursor = (formatted: string, cursor: number) => {
+  let count = 0;
+  for (let i = 0; i < Math.min(cursor, formatted.length); i++) {
+    if (/\d/.test(formatted[i])) count++;
+  }
+  return count;
+};
+
+const cursorFromDigitIndex = (formatted: string, digitIndex: number) => {
+  if (digitIndex <= 0) return 0;
+  let count = 0;
+  for (let i = 0; i < formatted.length; i++) {
+    if (/\d/.test(formatted[i])) {
+      count++;
+      if (count === digitIndex) return i + 1;
+    }
+  }
+  return formatted.length;
+};
+
+export const MaskedInput = ({ value, mask, onChange, onKeyDown, maxDigits, ...props }: MaskedInputProps) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pendingCursor = useRef<number | null>(null);
   const maskedValue = mask(value ?? "");
+  const digits = (value ?? "").replace(/\D/g, "");
+
+  useLayoutEffect(() => {
+    if (pendingCursor.current === null || !inputRef.current) return;
+    const cursor = pendingCursor.current;
+    pendingCursor.current = null;
+    inputRef.current.setSelectionRange(cursor, cursor);
+  }, [value]);
+
+  const applyDigits = (nextDigits: string, cursorDigitIndex: number) => {
+    const nextMasked = nextDigits ? mask(nextDigits) : "";
+    pendingCursor.current = cursorFromDigitIndex(nextMasked, cursorDigitIndex);
+    onChange?.(nextMasked);
+  };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Backspace" && !event.metaKey && !event.ctrlKey) {
+    if (maxDigits !== undefined && !event.metaKey && !event.ctrlKey && !event.altKey) {
       const input = event.currentTarget;
-      if (input.selectionStart === input.selectionEnd && input.selectionStart === maskedValue.length) {
-        const digits = (value ?? "").replace(/\D/g, "");
-        if (digits.length > 0) {
-          event.preventDefault();
-          const nextDigits = digits.slice(0, -1);
-          onChange?.(nextDigits ? mask(nextDigits) : "");
+      const selStart = input.selectionStart ?? 0;
+      const selEnd = input.selectionEnd ?? 0;
+      const startDigit = digitIndexFromCursor(maskedValue, selStart);
+      const endDigit = digitIndexFromCursor(maskedValue, selEnd);
+
+      if (/^\d$/.test(event.key)) {
+        event.preventDefault();
+        const nextDigits = (digits.slice(0, startDigit) + event.key + digits.slice(endDigit)).slice(0, maxDigits);
+        applyDigits(nextDigits, Math.min(startDigit + 1, nextDigits.length));
+        onKeyDown?.(event);
+        return;
+      }
+
+      if (event.key === "Backspace") {
+        event.preventDefault();
+        const removeFrom = startDigit === endDigit ? startDigit - 1 : startDigit;
+        if (removeFrom < 0 && endDigit === 0) {
+          onChange?.("");
+          onKeyDown?.(event);
+          return;
         }
+        const nextDigits = digits.slice(0, Math.max(0, removeFrom)) + digits.slice(endDigit);
+        applyDigits(nextDigits, Math.max(0, removeFrom));
+        onKeyDown?.(event);
+        return;
+      }
+
+      if (event.key === "Delete") {
+        event.preventDefault();
+        if (startDigit === endDigit && startDigit >= digits.length) {
+          onKeyDown?.(event);
+          return;
+        }
+        const removeFrom = startDigit;
+        const removeTo = startDigit === endDigit ? startDigit + 1 : endDigit;
+        applyDigits(digits.slice(0, removeFrom) + digits.slice(removeTo), removeFrom);
+        onKeyDown?.(event);
+        return;
       }
     }
+
     onKeyDown?.(event);
   };
 
-  return <Input {...props} value={maskedValue} onChange={(event) => onChange?.(mask(event.currentTarget.value))} onKeyDown={handleKeyDown} />;
+  return <Input ref={inputRef} {...props} value={maskedValue} onChange={(event) => onChange?.(mask(event.currentTarget.value))} onKeyDown={handleKeyDown} />;
 };

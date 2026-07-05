@@ -4,15 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MaskedInput, maskDate } from "@/components/shared/inputs/MaskedInput";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/common";
-import { formatDate, formatDateDisplay, isDateInRange, padDateDisplay, parseDateDisplay, toDateOnlyIso } from "@/utils/format";
+import { formatDate, formatDateDisplay, isDateInRange, parseDateDisplay, toDateOnlyIso } from "@/utils/format";
 
-type DateInputProps = Omit<ComponentProps<typeof MaskedInput>, "value" | "onChange" | "mask" | "min" | "max"> & {
+type DateInputProps = Omit<ComponentProps<typeof MaskedInput>, "value" | "onChange" | "mask" | "min" | "max" | "placeholder" | "maxDigits"> & {
   value?: string | null;
   onChange: (next: string | undefined) => void;
   min?: Date;
   max?: Date;
   disabled?: boolean;
-  placeholder?: string;
 };
 
 const normalizeDate = (value: string) => {
@@ -26,14 +25,13 @@ const formatRangeLabel = (min?: Date, max?: Date) => {
   return Texts.dateRangeHint.replace("{min}", formatDate(toDateOnlyIso(min))).replace("{max}", formatDate(toDateOnlyIso(max)));
 };
 
-export const DateInput = ({ value, onChange, min, max, disabled, placeholder = "1. 1. 2026", className, ...props }: DateInputProps) => {
+export const DateInput = ({ value, onChange, min, max, disabled, className, ...props }: DateInputProps) => {
   const [draft, setDraft] = useState(() => formatDateDisplay(value));
   const [touched, setTouched] = useState(false);
-  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
-    if (!focused) setDraft(formatDateDisplay(value));
-  }, [value, focused]);
+    setDraft(formatDateDisplay(value));
+  }, [value]);
 
   const commitDraft = useCallback(
     (raw: string) => {
@@ -43,10 +41,8 @@ export const DateInput = ({ value, onChange, min, max, disabled, placeholder = "
         setDraft("");
         return;
       }
-      const padded = padDateDisplay(trimmed);
-      const date = parseDateDisplay(padded);
+      const date = parseDateDisplay(trimmed);
       if (!date || !isDateInRange(date, min, max)) {
-        setDraft(padded);
         return;
       }
       onChange(toDateOnlyIso(date));
@@ -56,7 +52,6 @@ export const DateInput = ({ value, onChange, min, max, disabled, placeholder = "
   );
 
   const handleBlur = useCallback(() => {
-    setFocused(false);
     setTouched(true);
     commitDraft(draft);
   }, [commitDraft, draft]);
@@ -65,8 +60,7 @@ export const DateInput = ({ value, onChange, min, max, disabled, placeholder = "
     if (!touched) return null;
     const trimmed = draft.trim();
     if (!trimmed) return null;
-    const padded = padDateDisplay(trimmed);
-    const date = parseDateDisplay(padded);
+    const date = parseDateDisplay(trimmed);
     if (!date) return Texts.invalidDate;
     if (!isDateInRange(date, min, max)) {
       const minLabel = min ? formatDate(toDateOnlyIso(min)) : Texts.dash;
@@ -86,14 +80,13 @@ export const DateInput = ({ value, onChange, min, max, disabled, placeholder = "
           {...props}
           value={draft}
           mask={normalizeDate}
+          maxDigits={8}
           disabled={disabled}
-          placeholder={placeholder}
           inputMode="numeric"
           autoComplete="off"
           aria-invalid={validationError ? true : props["aria-invalid"]}
           className={cn("w-full pr-9 tabular-nums", className)}
           onFocus={(event) => {
-            setFocused(true);
             props.onFocus?.(event);
           }}
           onBlur={(event) => {
