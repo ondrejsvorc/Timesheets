@@ -42,10 +42,7 @@ const { FilterSearchInput } = createFilterControls<ContractsFilterCriteria>();
 const ProjectContractsManagersContent = () => {
   const { id: projectId } = useParams<{ id: string }>();
   const response = useAsyncValue() as GetProjectContractsManagersResponse;
-  const [state, dispatch] = useImmerReducer(
-    contractsManagersReducer,
-    listCrudState<ProjectContractManagerItem, { contractId: string; employeeId: string }>(response.managers),
-  );
+  const [state, dispatch] = useImmerReducer(contractsManagersReducer, listCrudState<ProjectContractManagerItem, { contractId: string; employeeId: string }>(response.managers));
   const [isAddOpen, setIsAddOpen] = useState(false);
   const { filter, setFilter, filtered } = useContractsManagersFilter(state.items);
   const canAddManager = useCan(UiAction.contractManagers.add, { projectId: projectId ?? undefined });
