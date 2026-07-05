@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type Dispatch } from "react";
 import { useAsyncValue, useLoaderData } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { Can } from "@/auth/Can";
@@ -14,12 +14,10 @@ import { AddProjectDialog } from "./AddProjectDialog";
 import type { GetProjectsResponse, ProjectItem } from "./api";
 import { type ProjectsFilterCriteria, useProjectsFilter } from "./hooks/useProjectsFilter";
 import { ProjectCard } from "./ProjectCard";
-import { projectsReducer } from "./utils/projectsReducer";
+import { projectsReducer, type ProjectsAction } from "./utils/projectsReducer";
 
 export const ProjectsPage = () => {
-  const { promise } = useLoaderData() as {
-    promise: Promise<GetProjectsResponse>;
-  };
+  const { promise } = useLoaderData() as { promise: Promise<GetProjectsResponse> };
 
   return (
     <>
@@ -34,7 +32,6 @@ export const ProjectsPage = () => {
 };
 
 const { FilterSearchInput, FilterSelect } = createFilterControls<ProjectsFilterCriteria>();
-
 const projectStatusFilterOptions = [
   { value: "active", label: Texts.activeOnly },
   { value: "archived", label: Texts.archivedOnly },
@@ -46,9 +43,6 @@ const ProjectsPageContent = () => {
   const [state, dispatch] = useImmerReducer(projectsReducer, response.projects);
   const { filter, setFilter, filtered } = useProjectsFilter(state);
   const [isAddOpen, setIsAddOpen] = useState(false);
-
-  const handleUpdate = (project: ProjectItem) => dispatch({ type: "update", project });
-  const handleDelete = (projectId: string) => dispatch({ type: "delete", projectId });
 
   return (
     <>
@@ -64,15 +58,7 @@ const ProjectsPageContent = () => {
         <FilterSearchInput placeholder={Texts.search} />
         <FilterSelect field="status" options={projectStatusFilterOptions} />
       </FilterBar>
-      {filtered.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map((project) => (
-            <ProjectCard key={project.id} project={project} onUpdate={handleUpdate} onDelete={handleDelete} />
-          ))}
-        </div>
-      )}
+      <ProjectCards projects={filtered} dispatch={dispatch} />
       <AddProjectDialog
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
@@ -82,5 +68,19 @@ const ProjectsPageContent = () => {
         }}
       />
     </>
+  );
+};
+
+const ProjectCards = ({ projects, dispatch }: { projects: ProjectItem[]; dispatch: Dispatch<ProjectsAction> }) => {
+  if (projects.length === 0) {
+    return <EmptyState />;
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {projects.map((project) => (
+        <ProjectCard key={project.id} project={project} onUpdate={(project) => dispatch({ type: "update", project })} onDelete={(projectId) => dispatch({ type: "delete", projectId })} />
+      ))}
+    </div>
   );
 };
