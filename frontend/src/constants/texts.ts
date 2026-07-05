@@ -200,7 +200,7 @@ export const Texts = {
   employeeAlreadyHasPositionOverlap: "Zaměstnanec už má tuto pozici na zakázce v překrývajícím se období.",
   startDateRequiredLabel: "Datum začátku *",
   endDateLabel: "Datum ukončení",
-  invalidDate: "Zadejte platné datum (např. 1. 1. 2026).",
+  invalidDate: "Zadejte platné datum.",
   dateOutOfRange: "Datum je mimo povolený rozsah ({min} – {max}).",
   dateRangeHint: "Povolený rozsah: {min} – {max}",
   timesheets: "Výkazy",
