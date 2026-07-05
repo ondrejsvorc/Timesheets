@@ -65,15 +65,7 @@ public sealed class CreateProject : IEndpoint
             return TypedResults.BadRequest("Projekt s tímto Id nebo názvem už existuje.");
         }
 
-        ProjectItem projectItem = new(
-            project.Id,
-            project.Name,
-            project.RegistrationNumber,
-            project.StartDate,
-            project.EndDate,
-            project.ArchivedAt,
-            ContractCount: 0
-        );
+        ProjectItem projectItem = new(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, 0, project.Status);
 
         return TypedResults.Created($"/projects/{project.Id}", new Response(projectItem));
     }

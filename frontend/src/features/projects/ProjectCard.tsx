@@ -12,9 +12,8 @@ import { Texts } from "@/constants/texts";
 import { useGo } from "@/hooks/useGo";
 import { cn } from "@/utils/common";
 import { formatDate } from "@/utils/format";
-import { archiveProject, deleteProject, type ProjectItem, unarchiveProject } from "./api";
+import { archiveProject, deleteProject, type ProjectItem, type ProjectStatus, unarchiveProject } from "./api";
 import { UpdateProjectDialog } from "./UpdateProjectDialog";
-import { getProjectStatus } from "./utils/getProjectStatus";
 
 interface ProjectCardProps {
   project: ProjectItem;
@@ -28,7 +27,7 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
   const startDate = formatDate(project.startDate);
   const endDate = formatDate(project.endDate);
   const dateRange = project.startDate && project.endDate ? `${startDate} - ${endDate}` : formatDate(project.startDate);
-  const status = getProjectStatus(project);
+  const status: ProjectStatus = project.status;
   const go = useGo();
 
   return (

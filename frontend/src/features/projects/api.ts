@@ -1,5 +1,7 @@
 import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 
+export type ProjectStatus = "active" | "inactive" | "archived";
+
 export interface ProjectItem {
   id: string;
   name: string;
@@ -8,6 +10,7 @@ export interface ProjectItem {
   endDate?: string | null;
   archivedAt?: string | null;
   contractCount: number;
+  status: ProjectStatus;
 }
 
 export interface GetProjectsResponse {

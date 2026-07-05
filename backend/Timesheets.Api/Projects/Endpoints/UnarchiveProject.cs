@@ -40,13 +40,6 @@ public sealed class UnarchiveProject : IEndpoint
 
         int contractCount = await dbContext.Contracts.CountAsync(c => c.ProjectId == id, cancellationToken);
 
-        return TypedResults.Ok(new Response(new ProjectItem(
-            project.Id,
-            project.Name,
-            project.RegistrationNumber,
-            project.StartDate,
-            project.EndDate,
-            project.ArchivedAt,
-            contractCount)));
+        return TypedResults.Ok(new Response(new ProjectItem(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, contractCount, project.Status)));
     }
 }

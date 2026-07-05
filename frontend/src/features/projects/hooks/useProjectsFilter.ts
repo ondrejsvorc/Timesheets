@@ -1,6 +1,5 @@
 import { type FilterCriteria, useFilter } from "@/hooks/useFilter";
 import type { ProjectItem } from "../api";
-import { getProjectStatus } from "../utils/getProjectStatus";
 
 export type ProjectStatusFilter = "active" | "archived" | "all";
 
@@ -23,7 +22,7 @@ export const useProjectsFilter = (items: ProjectItem[]) =>
         if (filter.status === "all") {
           return true;
         }
-        return getProjectStatus(item) === filter.status;
+        return item.status === filter.status;
       },
     ],
   });

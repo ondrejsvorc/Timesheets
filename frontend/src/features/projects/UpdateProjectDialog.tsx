@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { FormDialog } from "@/components/shared/dialogs/FormDialog";
 import { Texts } from "@/constants/texts";
 import { type ProjectItem, updateProject } from "./api";
-import { ProjectFormFields, type ProjectFormValues, projectFormSchema } from "./ProjectFormFields";
+import { ProjectFormFields, type ProjectFormValues, projectFormDefaultValues, projectFormSchema } from "./ProjectFormFields";
 
 interface UpdateProjectDialogProps {
   open: boolean;
@@ -20,12 +20,12 @@ const projectToFormValues = (project: ProjectItem): ProjectFormValues => ({
 });
 
 export const UpdateProjectDialog = ({ open, project, onClose, onSaved }: UpdateProjectDialogProps) => {
+  const defaultValues = project ? projectToFormValues(project) : projectFormDefaultValues;
+  const form = useForm<ProjectFormValues>({ defaultValues, resolver: zodResolver(projectFormSchema), mode: "onChange" });
+
   if (!project) {
     return null;
   }
-
-  const defaultValues = projectToFormValues(project);
-  const form = useForm<ProjectFormValues>({ defaultValues, resolver: zodResolver(projectFormSchema), mode: "onChange" });
 
   const handleSubmit = async (values: ProjectFormValues, signal: AbortSignal) => {
     const response = await updateProject(project.id, values, signal);

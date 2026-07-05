@@ -16,7 +16,7 @@ public sealed class GetProjects : IEndpoint
 
     private static async Task<Results<Ok<Response>, UnauthorizedHttpResult>> Handle(AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
-        IQueryable<Data.Models.Project> query = dbContext.Projects.AsNoTracking();
+        IQueryable<Project> query = dbContext.Projects.AsNoTracking();
 
         if (!user.IsGlobalManagerRole())
         {
@@ -29,15 +29,7 @@ public sealed class GetProjects : IEndpoint
         }
 
         List<ProjectItem> projects = await query
-            .Select(p => new ProjectItem(
-                p.Id,
-                p.Name,
-                p.RegistrationNumber,
-                p.StartDate,
-                p.EndDate,
-                p.ArchivedAt,
-                p.Contracts.Count
-            ))
+            .Select(p => new ProjectItem(p.Id, p.Name, p.RegistrationNumber, p.StartDate, p.EndDate, p.ArchivedAt, p.Contracts.Count, p.Status))
             .ToListAsync(cancellationToken);
 
         return TypedResults.Ok(new Response(projects));

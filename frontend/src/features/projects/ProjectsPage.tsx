@@ -1,4 +1,4 @@
-import { useState, type Dispatch } from "react";
+import { type Dispatch, useState } from "react";
 import { useAsyncValue, useLoaderData } from "react-router";
 import { useImmerReducer } from "use-immer";
 import { Can } from "@/auth/Can";
@@ -14,7 +14,7 @@ import { AddProjectDialog } from "./AddProjectDialog";
 import type { GetProjectsResponse, ProjectItem } from "./api";
 import { type ProjectsFilterCriteria, useProjectsFilter } from "./hooks/useProjectsFilter";
 import { ProjectCard } from "./ProjectCard";
-import { projectsReducer, type ProjectsAction } from "./utils/projectsReducer";
+import { type ProjectsAction, projectsReducer } from "./utils/projectsReducer";
 
 export const ProjectsPage = () => {
   const { promise } = useLoaderData() as { promise: Promise<GetProjectsResponse> };

@@ -1,6 +1,6 @@
 namespace Timesheets.Api.Data.Models;
 
-public sealed class Project
+public sealed partial class Project
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;

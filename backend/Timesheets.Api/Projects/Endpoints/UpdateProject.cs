@@ -82,14 +82,7 @@ public sealed class UpdateProject : IEndpoint
         ProjectItem? project = await dbContext.Projects
             .AsNoTracking()
             .Where(p => p.Id == id)
-            .Select(p => new ProjectItem(
-                p.Id,
-                p.Name,
-                p.RegistrationNumber,
-                p.StartDate,
-                p.EndDate,
-                p.ArchivedAt,
-                p.Contracts.Count))
+            .Select(p => new ProjectItem(p.Id, p.Name, p.RegistrationNumber, p.StartDate, p.EndDate, p.ArchivedAt, p.Contracts.Count, p.Status))
             .FirstOrDefaultAsync(cancellationToken);
 
         return project is null ? TypedResults.NotFound() : TypedResults.Ok(new Response(project));
