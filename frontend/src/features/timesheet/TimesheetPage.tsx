@@ -12,6 +12,7 @@ import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import type { GetEmployeeResponse } from "@/features/employee/api";
+import { resolveEmployeeTypeName } from "@/features/employee/employeeType";
 import { cn } from "@/utils/common";
 import { formatWorkload } from "@/utils/format";
 import { allocateTimesheet, type GetCombinedTimesheetOverviewResponse, reviewTimesheet, updateTimesheet } from "./api";
@@ -45,13 +46,14 @@ const TimesheetPageLoaded = () => {
   const [searchParams] = useSearchParams();
   const employeeId = searchParams.get("employeeId") ?? "";
 
+  const employeeType = resolveEmployeeTypeName(employee.employee.employeeTypeId);
+  const subtitleParts = [employeeType, `${formatMonthYear(overview.month, overview.year)} (${formatWorkload(overview.summary.totalWorkload)})`].filter((part) => part.length > 0);
+
   return (
     <>
       <PageHeader leading={<BackButton onClick={() => navigate(Routes.employee(employee.employee.id))} />}>
         <PageTitle>{employee.employee.fullName}</PageTitle>
-        <PageSubtitle>
-          {formatMonthYear(overview.month, overview.year)} ({formatWorkload(overview.summary.totalWorkload)})
-        </PageSubtitle>
+        <PageSubtitle>{subtitleParts.join(" · ")}</PageSubtitle>
       </PageHeader>
       <TimesheetsOverview overview={overview} />
       <TimesheetEditor key={timesheetData.timesheet.id} initialData={timesheetData} overview={overview} />
