@@ -16,7 +16,6 @@ export const projectFormSchema = z.object({
 });
 
 export type ProjectFormValues = z.infer<typeof projectFormSchema>;
-
 export const projectFormDefaultValues: ProjectFormValues = {
   name: "",
   registrationNumber: "",

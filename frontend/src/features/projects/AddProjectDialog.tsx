@@ -12,16 +12,7 @@ interface AddProjectDialogProps {
 }
 
 export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogProps) => {
-  const form = useForm<ProjectFormValues>({
-    defaultValues: projectFormDefaultValues,
-    resolver: zodResolver(projectFormSchema),
-    mode: "onChange",
-  });
-
-  const handleClose = () => {
-    form.reset(projectFormDefaultValues);
-    onClose();
-  };
+  const form = useForm<ProjectFormValues>({ defaultValues: projectFormDefaultValues, resolver: zodResolver(projectFormSchema), mode: "onChange" });
 
   const handleSubmit = async (values: ProjectFormValues, signal: AbortSignal) => {
     const request: CreateProjectRequest = {
@@ -33,6 +24,11 @@ export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogPro
     const response = await createProject(request, signal);
     onSaved(response.project);
     form.reset(projectFormDefaultValues);
+  };
+
+  const handleClose = () => {
+    form.reset(projectFormDefaultValues);
+    onClose();
   };
 
   return (

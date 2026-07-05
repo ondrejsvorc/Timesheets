@@ -27,7 +27,7 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const startDate = formatDate(project.startDate);
   const endDate = formatDate(project.endDate);
-  const dateRange = project.startDate && project.endDate ? `${startDate} – ${endDate}` : formatDate(project.startDate);
+  const dateRange = project.startDate && project.endDate ? `${startDate} - ${endDate}` : formatDate(project.startDate);
   const status = getProjectStatus(project);
   const go = useGo();
 
