@@ -15,7 +15,7 @@ import { Texts } from "@/constants/texts";
 import { dateFieldBounds, fromDateOnlyIso, isWorkloadPercentInRange, workloadFractionToPercent, workloadPercentToFraction } from "@/utils/format";
 import type { PositionItem, UpdateContractEmployeeRequest } from "./api";
 
-type EditPositionFormValues = z.infer<ReturnType<typeof createSchema>>;
+type UpdatePositionFormValues = z.infer<ReturnType<typeof createSchema>>;
 
 const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
 const createSchema = (position: PositionItem, projectStartDate: string, projectEndDate: string | null) =>
@@ -68,7 +68,7 @@ const createSchema = (position: PositionItem, projectStartDate: string, projectE
       }
     });
 
-interface EditContractEmployeePositionDialogProps {
+interface UpdateEmployeePositionDialogProps {
   open: boolean;
   position: PositionItem;
   projectStartDate: string;
@@ -77,10 +77,10 @@ interface EditContractEmployeePositionDialogProps {
   onContinue: (request: UpdateContractEmployeeRequest) => void;
 }
 
-export const EditContractEmployeePositionDialog = ({ open, position, projectStartDate, projectEndDate, onClose, onContinue }: EditContractEmployeePositionDialogProps) => {
+export const UpdateEmployeePositionDialog = ({ open, position, projectStartDate, projectEndDate, onClose, onContinue }: UpdateEmployeePositionDialogProps) => {
   const resolver = useMemo(() => zodResolver(createSchema(position, projectStartDate, projectEndDate)), [position, projectEndDate, projectStartDate]);
 
-  const form = useForm<EditPositionFormValues>({
+  const form = useForm<UpdatePositionFormValues>({
     resolver,
     mode: "onChange",
     defaultValues: {
@@ -100,7 +100,7 @@ export const EditContractEmployeePositionDialog = ({ open, position, projectStar
     onClose();
   };
 
-  const handleSubmit = (values: EditPositionFormValues) => {
+  const handleSubmit = (values: UpdatePositionFormValues) => {
     onContinue({
       positionCode: values.positionCode.trim(),
       position: values.positionName.trim(),

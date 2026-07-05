@@ -13,9 +13,9 @@ import { Texts } from "@/constants/texts";
 import { formatDate, formatWorkloadPercent } from "@/utils/format";
 import { AddEmployeeDialog } from "./AddEmployeeDialog";
 import { deleteContractEmployee, type EmployeeItem, type GetContractEmployeesResponse, type PositionItem, type UpdateContractEmployeeRequest } from "./api";
-import { ContractEmployeeUpdateDialog } from "./ContractEmployeeUpdateDialog";
-import { EditContractEmployeePositionDialog } from "./EditContractEmployeePositionDialog";
 import { type ContractEmployeesFilterCriteria, useContractEmployeesFilter } from "./hooks/useContractEmployeesFilter";
+import { UpdateContractEmployeeDialog } from "./UpdateContractEmployeeDialog";
+import { UpdateEmployeePositionDialog } from "./UpdateEmployeePositionDialog";
 
 export const ContractEmployees = () => {
   const { promise } = useLoaderData() as {
@@ -74,7 +74,7 @@ const ContractEmployeesContent = () => {
       )}
 
       {positionToEdit && (
-        <EditContractEmployeePositionDialog
+        <UpdateEmployeePositionDialog
           open
           position={positionToEdit.position}
           projectStartDate={response.projectStartDate}
@@ -92,7 +92,7 @@ const ContractEmployeesContent = () => {
       )}
 
       {pendingUpdate && (
-        <ContractEmployeeUpdateDialog
+        <UpdateContractEmployeeDialog
           contractId={pendingUpdate.contractId}
           contractEmployeeId={pendingUpdate.contractEmployeeId}
           request={pendingUpdate.request}

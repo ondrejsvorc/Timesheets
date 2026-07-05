@@ -3,7 +3,7 @@ import { ConsequenceDialog } from "@/components/shared/dialogs/ConsequenceDialog
 import { Texts } from "@/constants/texts";
 import { type ContractEmployeeUpdateImpactResponse, formatUpdateImpactConsequences, getContractEmployeeUpdateImpact, type UpdateContractEmployeeRequest, updateContractEmployee } from "./api";
 
-interface ContractEmployeeUpdateDialogProps {
+interface UpdateContractEmployeeDialogProps {
   contractId: string;
   contractEmployeeId: string;
   request: UpdateContractEmployeeRequest;
@@ -11,7 +11,7 @@ interface ContractEmployeeUpdateDialogProps {
   onSaved: () => void;
 }
 
-export const ContractEmployeeUpdateDialog = ({ contractId, contractEmployeeId, request, onClose, onSaved }: ContractEmployeeUpdateDialogProps) => {
+export const UpdateContractEmployeeDialog = ({ contractId, contractEmployeeId, request, onClose, onSaved }: UpdateContractEmployeeDialogProps) => {
   const [impact, setImpact] = useState<ContractEmployeeUpdateImpactResponse | null>(null);
   const [loading, setLoading] = useState(true);
 

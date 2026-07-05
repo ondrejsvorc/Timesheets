@@ -12,14 +12,10 @@ import type { GetEmployeesResponse } from "./api";
 import { EmployeesTable } from "./EmployeesTable";
 import { type EmployeesFilterCriteria, useEmployeesFilter } from "./hooks/useEmployeesFilters";
 
-const EmployeesPageContentLazy = lazy(async () => ({
-  default: EmployeesPageContent,
-}));
+const EmployeesPageContentLazy = lazy(async () => ({ default: EmployeesPageContent }));
 
 export const EmployeesPage = () => {
-  const { promise } = useLoaderData() as {
-    promise: Promise<GetEmployeesResponse>;
-  };
+  const { promise } = useLoaderData() as { promise: Promise<GetEmployeesResponse> };
   const canListEmployees = useCan(UiAction.employees.list);
 
   if (!canListEmployees) {
