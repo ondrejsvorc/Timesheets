@@ -1,11 +1,10 @@
 namespace Timesheets.Api.Timesheets.Allocation;
 
-/// <summary>Generates attendance-tracking (non-academic) timesheets: 6-12 h cells, attendance rebuilt from allocation.</summary>
+/// <summary>Generates attendance-tracking (non-academic) allocations from existing attendance only.</summary>
 internal sealed class NonAcademicTimesheetAllocator
 {
     private readonly EditableTimesheet _sheet;
     private readonly decimal _totalWorkload;
-    private readonly AttendanceGenerator _attendance = new();
 
     public NonAcademicTimesheetAllocator(LoadedTimesheet loaded, EditableTimesheet sheet)
     {
@@ -16,19 +15,17 @@ internal sealed class NonAcademicTimesheetAllocator
     public void AllocateMonth()
     {
         ResetGeneratedAllocations();
-        ClearRegeneratedAttendance();
-        ApplyProportionalInterruptions();
-        MonthlyTargets targets = MonthlyTargets.NonAcademicRemainders(_sheet, _totalWorkload);
-        GeneratedCellPacker packer = new(_sheet);
-        foreach (ProjectColumn project in _sheet.Projects.OrderByDescending(project => targets.Project(project.Id)))
+        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => day.HasLockedProjectHours()))
         {
-            packer.Place(project.Id, targets.Project(project.Id));
+            DistributeLockedProjectDay(day);
         }
 
-        packer.Place(projectId: null, targets.Core);
-        SyncAttendanceFromAllocation();
-        TopUpMonthlyWorkedHours();
-        EnsureMonthTargets();
+        MonthlyTargets targets = MonthlyTargets.NonAcademicCapacityRemainders(_sheet, AvailableMonthCapacity());
+        DayTargetFiller filler = new(_sheet.Projects, _totalWorkload, tracksAttendance: true, targets);
+        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => AvailableDayCapacity(day) > 0m))
+        {
+            filler.Fill(day);
+        }
     }
 
     public void AllocateDay(int dayNumber)
@@ -38,15 +35,14 @@ internal sealed class NonAcademicTimesheetAllocator
         {
             return;
         }
-        if (ApplyLockedProjectDayAttendance(day))
+        if (day.HasLockedProjectHours())
         {
+            DistributeLockedProjectDay(day);
             return;
         }
 
-        MonthlyTargets targets = MonthlyTargets.NonAcademicRemainders(_sheet, _totalWorkload);
-        GenerateDayAttendanceIfMissing(day);
+        MonthlyTargets targets = MonthlyTargets.NonAcademicCapacityRemainders(_sheet, AvailableMonthCapacity());
         new DayTargetFiller(_sheet.Projects, _totalWorkload, tracksAttendance: true, targets).Fill(day);
-        SyncDayAttendance(day);
     }
 
     private void ResetGeneratedAllocations()
@@ -60,60 +56,14 @@ internal sealed class NonAcademicTimesheetAllocator
 
             foreach (ProjectColumn project in _sheet.Projects)
             {
-                if (day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+                if (!day.ProjectHoursFixed.GetValueOrDefault(project.Id))
                 {
-                    continue;
+                    day.ProjectHours[project.Id] = day.ProjectFloor(project.Id);
                 }
-
-                day.ProjectHours[project.Id] = day.ProjectFloor(project.Id);
             }
         }
     }
 
-    private void ApplyProportionalInterruptions()
-    {
-        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => TimesheetInterruptions.HasProportionalInterruption(day.Description) && !day.HasLockedProjectHours()))
-        {
-            if (day.WorkedHours() <= 0m)
-            {
-                _attendance.Set(day, TimesheetLogic.Normalize(8m * _totalWorkload));
-            }
-
-            TimesheetInterruptionHours.ApplyToDayState(day, _sheet.Projects, _totalWorkload, tracksAttendance: true);
-        }
-    }
-
-    private void ClearRegeneratedAttendance()
-    {
-        foreach (EditableTimesheetDay day in _sheet.Days)
-        {
-            if (TimesheetInterruptions.SkipAllocationRules(day.Description)
-                || day.HasLockedProjectHours()
-                || HasOvernightAttendance(day))
-            {
-                continue;
-            }
-
-            day.ClockIn = null;
-            day.ClockOut = null;
-            day.BreakStart = null;
-            day.BreakEnd = null;
-            day.AttendanceAdjusted = false;
-        }
-    }
-
-    private bool ApplyLockedProjectDayAttendance(EditableTimesheetDay day)
-    {
-        if (!day.HasLockedProjectHours() || TimesheetInterruptions.SkipAllocationRules(day.Description))
-        {
-            return false;
-        }
-
-        DistributeLockedProjectDay(day);
-        return true;
-    }
-
-    /// <summary>Locked project cells stay fixed; existing attendance is never shortened — surplus goes to core.</summary>
     private void DistributeLockedProjectDay(EditableTimesheetDay day)
     {
         foreach (ProjectColumn project in _sheet.Projects)
@@ -124,387 +74,18 @@ internal sealed class NonAcademicTimesheetAllocator
             }
         }
 
-        decimal projectHours = TimesheetLogic.Normalize(_sheet.Projects.Sum(project => day.ProjectHours.GetValueOrDefault(project.Id)));
-        decimal worked = day.WorkedHours();
-
-        if (worked <= 0m && projectHours > 0m)
-        {
-            _attendance.Set(day, projectHours);
-            worked = projectHours;
-        }
-        else if (worked + 0.009m < projectHours)
-        {
-            _attendance.RaiseToAtLeast(day, projectHours);
-            worked = day.WorkedHours();
-        }
-
         if (!day.CoreHoursFixed)
         {
-            day.CoreHours = TimesheetLogic.Normalize(Math.Max(0m, worked - projectHours));
-        }
-
-        decimal total = day.TotalHours();
-        if (total > 12m)
-        {
-            throw new InvalidOperationException($"Locked day {day.Date:yyyy-MM-dd} has {total:F2} h, expected at most 12 h.");
+            decimal projectHours = TimesheetLogic.Normalize(_sheet.Projects.Sum(project => day.ProjectHours.GetValueOrDefault(project.Id)));
+            day.CoreHours = TimesheetLogic.Normalize(Math.Max(0m, AvailableDayCapacity(day) - projectHours));
         }
     }
 
-    private void GenerateDayAttendanceIfMissing(EditableTimesheetDay day)
-    {
-        if (TimesheetInterruptions.SkipAllocationRules(day.Description))
-        {
-            return;
-        }
+    private decimal AvailableMonthCapacity() =>
+        TimesheetLogic.Normalize(_sheet.Days.Sum(AvailableDayCapacity));
 
-        if (day.WorkedHours() > 0m)
-        {
-            return;
-        }
-
-        if (TimesheetLogic.CalculateStagHours(day.Schedules) > 0m || day.TotalHours() > 0m)
-        {
-            _attendance.GenerateIfMissing(day);
-            return;
-        }
-
-        _attendance.Set(day, TimesheetLogic.Normalize(8m * _totalWorkload));
-    }
-
-    private void SyncAttendanceFromAllocation()
-    {
-        foreach (EditableTimesheetDay day in _sheet.Days)
-        {
-            SyncDayAttendance(day, monthRegenerate: true);
-        }
-    }
-
-    private void SyncDayAttendance(EditableTimesheetDay day, bool monthRegenerate = false)
-    {
-        if (day.HasLockedProjectHours() && !TimesheetInterruptions.SkipAllocationRules(day.Description))
-        {
-            DistributeLockedProjectDay(day);
-            return;
-        }
-
-        decimal needed = day.TotalHours();
-        if (needed <= 0m)
-        {
-            return;
-        }
-
-        if (needed > 12m)
-        {
-            throw new InvalidOperationException($"Generated day {day.Date:yyyy-MM-dd} has {needed:F2} h, expected at most 12 h.");
-        }
-
-        if (monthRegenerate && !HasOvernightAttendance(day))
-        {
-            _attendance.Set(day, needed);
-            return;
-        }
-
-        _attendance.RaiseToAtLeast(day, needed);
-    }
-
-    private static bool HasOvernightAttendance(EditableTimesheetDay day) =>
-        day.ClockIn is not null && day.ClockOut is not null && day.ClockOut < day.ClockIn;
-
-    private void TopUpMonthlyWorkedHours()
-    {
-        decimal target = MonthlyTargets.TotalTarget(_sheet, _totalWorkload);
-        decimal allocated = TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.TotalHours()));
-        if (allocated + 0.009m < target)
-        {
-            return;
-        }
-
-        decimal deficit = TimesheetLogic.Normalize(target - _sheet.Days.Sum(day => day.WorkedHours()));
-        if (deficit <= 0.01m)
-        {
-            return;
-        }
-
-        foreach (EditableTimesheetDay day in _sheet.Days
-            .Where(day => !TimesheetInterruptions.SkipAllocationRules(day.Description))
-            .OrderBy(_ => Random.Shared.Next()))
-        {
-            if (deficit <= 0.01m)
-            {
-                break;
-            }
-
-            decimal worked = day.WorkedHours();
-            decimal headroom = TimesheetLogic.Normalize(12m - worked);
-            if (headroom <= 0.01m)
-            {
-                continue;
-            }
-
-            decimal add = Math.Min(deficit, headroom);
-            _attendance.RaiseToAtLeast(day, TimesheetLogic.Normalize(worked + add));
-            deficit = TimesheetLogic.Normalize(deficit - add);
-        }
-    }
-
-    private void EnsureMonthTargets()
-    {
-        List<string> errors = [];
-        decimal worked = TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.WorkedHours()));
-        decimal totalTarget = MonthlyTargets.TotalTarget(_sheet, _totalWorkload);
-        decimal core = TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.CoreHours));
-        decimal coreTarget = MonthlyTargets.NonAcademicCoreTarget(_sheet, _totalWorkload);
-
-        MonthlyTargets.AppendMinimum(errors, "worked", worked, totalTarget);
-        MonthlyTargets.AppendCoreTolerance(errors, core, coreTarget);
-        foreach (ProjectColumn project in _sheet.Projects)
-        {
-            MonthlyTargets.AppendMismatch(
-                errors,
-                $"project {project.Id}",
-                TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))),
-                MonthlyTargets.NonAcademicProjectTarget(_sheet, project));
-        }
-
-        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => !TimesheetInterruptions.SkipAllocationRules(day.Description)))
-        {
-            decimal total = day.TotalHours();
-            if (total > 0m && (total < 6m || total > 12m))
-            {
-                errors.Add($"day {day.Date:yyyy-MM-dd} total {total:F2}/6-12");
-            }
-            if (day.CoreHours > 0m && (day.CoreHours < 6m || day.CoreHours > 12m))
-            {
-                errors.Add($"day {day.Date:yyyy-MM-dd} core {day.CoreHours:F2}/6-12");
-            }
-            foreach (ProjectColumn project in _sheet.Projects)
-            {
-                decimal hours = day.ProjectHours.GetValueOrDefault(project.Id);
-                if (hours > 0m && (hours < 6m || hours > 12m))
-                {
-                    errors.Add($"day {day.Date:yyyy-MM-dd} project {project.Id} {hours:F2}/6-12");
-                }
-            }
-        }
-
-        if (errors.Count > 0)
-        {
-            throw new InvalidOperationException("Generated non-academic timesheet missed targets: " + string.Join("; ", errors));
-        }
-    }
-
-    /// <summary>Bin-packs a monthly target into minute-representable 6-12 h day cells.</summary>
-    private sealed class GeneratedCellPacker(EditableTimesheet sheet)
-    {
-        private const int MinMinutes = 6 * 60;
-        private const int MaxMinutes = 12 * 60;
-        private const int MinHourCents = 6 * 100;
-        private const int MaxHourCents = 12 * 100;
-        private static readonly decimal[] HourValues = Enumerable
-            .Range(MinMinutes, MaxMinutes - MinMinutes + 1)
-            .Select(MinutesToHours)
-            .Distinct()
-            .OrderBy(value => value)
-            .ToArray();
-        private static readonly decimal[] HalfHourValues = HourValues.Where(IsHalfHourIncrement).ToArray();
-        private static readonly HashSet<int> HourCents = HourValues.Select(ToCents).ToHashSet();
-
-        private readonly HumanHours _humanHours = new();
-
-        public void Place(Guid? projectId, decimal target)
-        {
-            target = TimesheetLogic.Normalize(target);
-            if (target <= 0m)
-            {
-                return;
-            }
-
-            decimal[] hourValues = projectId is null ? HourValues : HalfHourValues;
-            foreach (int count in CandidateCellCounts(target, hourValues))
-            {
-                IReadOnlyList<decimal> amounts = SplitAmounts(target, count, hourValues);
-                List<(EditableTimesheetDay Day, decimal Amount)>? placements = TryPlanPlacements(projectId, amounts);
-                if (placements is null)
-                {
-                    continue;
-                }
-
-                foreach ((EditableTimesheetDay day, decimal amount) in placements)
-                {
-                    if (projectId is Guid id)
-                    {
-                        day.AddProjectHours(id, amount);
-                    }
-                    else
-                    {
-                        day.CoreHours = TimesheetLogic.Normalize(day.CoreHours + amount);
-                    }
-                }
-
-                return;
-            }
-
-            throw new InvalidOperationException($"Cannot place generated hours {target:F2} for {(projectId.HasValue ? $"project {projectId}" : "core")} into 6-12 h cells.");
-        }
-
-        private static bool IsHalfHourIncrement(decimal value) => ToCents(value) % 50 == 0;
-
-        private static IEnumerable<int> CandidateCellCounts(decimal target, decimal[] hourValues)
-        {
-            int min = (int)Math.Ceiling(target / 12m);
-            int max = (int)Math.Floor(target / 6m);
-            if (max < min)
-            {
-                throw new InvalidOperationException($"Cannot split generated target {target:F2} into 6-12 h cells.");
-            }
-
-            int preferred = Math.Clamp((int)Math.Round(target / 8m, MidpointRounding.AwayFromZero), min, max);
-            yield return preferred;
-
-            for (int offset = 1; preferred - offset >= min || preferred + offset <= max; offset++)
-            {
-                if (preferred + offset <= max)
-                {
-                    yield return preferred + offset;
-                }
-                if (preferred - offset >= min)
-                {
-                    yield return preferred - offset;
-                }
-            }
-        }
-
-        private IReadOnlyList<decimal> SplitAmounts(decimal target, int count, decimal[] hourValues)
-        {
-            target = TimesheetLogic.Normalize(target);
-            if (!CanSplitAmount(target, count, hourValues))
-            {
-                return [];
-            }
-
-            List<decimal> amounts = [];
-            decimal remaining = target;
-            for (int index = 0; index < count; index++)
-            {
-                int rest = count - index - 1;
-                decimal min = Math.Max(6m, TimesheetLogic.Normalize(remaining - 12m * rest));
-                decimal max = Math.Min(12m, TimesheetLogic.Normalize(remaining - 6m * rest));
-                if (min > max)
-                {
-                    return [];
-                }
-
-                decimal preferred = rest == 0 ? remaining : _humanHours.RandomDayHours();
-                decimal? amount = hourValues
-                    .Where(value => value >= min && value <= max && CanSplitAmount(TimesheetLogic.Normalize(remaining - value), rest, hourValues))
-                    .OrderBy(value => Math.Abs(value - preferred))
-                    .ThenBy(_ => Random.Shared.Next())
-                    .Cast<decimal?>()
-                    .FirstOrDefault();
-                if (amount is null)
-                {
-                    return [];
-                }
-
-                amounts.Add(amount.Value);
-                remaining = TimesheetLogic.Normalize(remaining - amount.Value);
-            }
-
-            return remaining == 0m ? amounts : [];
-        }
-
-        private static bool CanSplitAmount(decimal total, int count, decimal[] hourValues)
-        {
-            int cents = ToCents(total);
-            if (count == 0)
-            {
-                return cents == 0;
-            }
-
-            int min = MinHourCents * count;
-            int max = MaxHourCents * count;
-            if (cents < min || cents > max)
-            {
-                return false;
-            }
-
-            if (count == 1)
-            {
-                return hourValues.Select(ToCents).Contains(cents);
-            }
-
-            return cents != min + 1 && cents != max - 1;
-        }
-
-        private List<(EditableTimesheetDay Day, decimal Amount)>? TryPlanPlacements(Guid? projectId, IReadOnlyList<decimal> amounts)
-        {
-            Dictionary<EditableTimesheetDay, decimal> planned = [];
-            List<(EditableTimesheetDay Day, decimal Amount)> placements = [];
-
-            foreach (decimal amount in amounts.OrderByDescending(value => value))
-            {
-                EditableTimesheetDay? day = EligibleDays(projectId)
-                    .Select(day => new
-                    {
-                        Day = day,
-                        Free = TimesheetLogic.Normalize(12m - day.TotalHours() - planned.GetValueOrDefault(day))
-                    })
-                    .Where(candidate => candidate.Free >= amount && IsRepresentableAttendanceHours(candidate.Day.TotalHours() + planned.GetValueOrDefault(candidate.Day) + amount))
-                    .OrderBy(candidate => TimesheetLogic.Normalize(candidate.Free - amount))
-                    .ThenBy(candidate => TimesheetLogic.IsWeekday(candidate.Day.Date) ? 0 : 1)
-                    .ThenBy(_ => Random.Shared.Next())
-                    .Select(candidate => candidate.Day)
-                    .FirstOrDefault();
-
-                if (day is null)
-                {
-                    return null;
-                }
-
-                planned[day] = TimesheetLogic.Normalize(planned.GetValueOrDefault(day) + amount);
-                placements.Add((day, amount));
-            }
-
-            return placements;
-        }
-
-        private IEnumerable<EditableTimesheetDay> EligibleDays(Guid? projectId)
-        {
-            foreach (EditableTimesheetDay day in sheet.Days)
-            {
-                if (day.IsHoliday || TimesheetInterruptions.SkipAllocationRules(day.Description))
-                {
-                    continue;
-                }
-                if (day.HasLockedProjectHours())
-                {
-                    continue;
-                }
-
-                if (projectId is null)
-                {
-                    if (!day.CoreHoursFixed)
-                    {
-                        yield return day;
-                    }
-                    continue;
-                }
-
-                ProjectColumn project = sheet.Projects.Single(project => project.Id == projectId.Value);
-                if (project.IsActiveOn(day.Date) && !project.Locked && !day.ProjectHoursFixed.GetValueOrDefault(project.Id))
-                {
-                    yield return day;
-                }
-            }
-        }
-
-        private static bool IsRepresentableAttendanceHours(decimal hours) =>
-            !TimesheetLogic.HasUnequalHours(MinutesToHours(ToRoundedMinutes(hours)), hours);
-
-        private static decimal MinutesToHours(int minutes) => TimesheetLogic.Normalize(minutes / 60m);
-
-        private static int ToRoundedMinutes(decimal hours) => (int)Math.Round(hours * 60m, MidpointRounding.AwayFromZero);
-
-        private static int ToCents(decimal hours) => (int)Math.Round(TimesheetLogic.Normalize(hours) * 100m, MidpointRounding.AwayFromZero);
-    }
+    private decimal AvailableDayCapacity(EditableTimesheetDay day) =>
+        TimesheetInterruptions.HasBusinessTripInterruption(day.Description)
+            ? 0m
+            : TimesheetInterruptionHours.DayCapacity(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.Description, _totalWorkload, tracksAttendance: true, day.Schedules);
 }

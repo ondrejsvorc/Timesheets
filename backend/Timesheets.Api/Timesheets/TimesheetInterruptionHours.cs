@@ -15,7 +15,7 @@ internal static class TimesheetInterruptionHours
                 }
             }
 
-            return string.IsNullOrWhiteSpace(description) ? 0m : TimesheetLogic.Normalize(8m * totalWorkload);
+            return 0m;
         }
 
         if (TimesheetLogic.IsWeekday(date) || !string.IsNullOrWhiteSpace(description))

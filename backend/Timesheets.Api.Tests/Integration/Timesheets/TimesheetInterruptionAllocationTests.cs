@@ -120,7 +120,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task AllocateTimesheet_GeneratesNonAcademicAttendanceAndAllocationWhenMissing()
+    public async Task AllocateTimesheet_DoesNotGenerateNonAcademicAttendanceWhenMissing()
     {
         DateTime date = new(2036, 3, 3, 0, 0, 0, DateTimeKind.Utc);
         Guid attendanceTimesheetId = Guid.CreateVersion7();
@@ -137,10 +137,10 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
         AllocateTimesheet.DayResponse day = allocation!.Days.Single();
-        Assert.Equal(new int?[] { 480, 990 }, day.Work);
-        Assert.Equal(new int?[] { 720, 750 }, day.Break);
-        Assert.Equal(4m, day.CoreHours);
-        Assert.Equal(4m, day.ProjectCells[assignmentId].Hours);
+        Assert.Equal(new int?[] { null, null }, day.Work);
+        Assert.Equal(new int?[] { null, null }, day.Break);
+        Assert.Equal(0m, day.CoreHours);
+        Assert.Equal(0m, day.ProjectCells[assignmentId].Hours);
     }
 
     [Theory]
@@ -176,7 +176,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task AllocateTimesheet_RaisesAttendanceWhenLockedProjectExceedsWorkedHours()
+    public async Task AllocateTimesheet_DoesNotRaiseAttendanceWhenLockedProjectExceedsWorkedHours()
     {
         DateTime date = new(2036, 11, 5, 0, 0, 0, DateTimeKind.Utc);
         Guid attendanceTimesheetId = Guid.CreateVersion7();
@@ -196,11 +196,11 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
         AllocateTimesheet.DayResponse day = allocation!.Days.Single();
-        Assert.Equal(new int?[] { 480, 990 }, day.Work);
-        Assert.Equal(new int?[] { 720, 750 }, day.Break);
+        Assert.Equal(new int?[] { 480, 840 }, day.Work);
+        Assert.Equal(new int?[] { null, null }, day.Break);
         Assert.Equal(0m, day.CoreHours);
         Assert.Equal(8m, day.ProjectCells[assignmentId].Hours);
-        Assert.True(day.AttendanceAdjusted);
+        Assert.False(day.AttendanceAdjusted);
     }
 
     [Fact]
@@ -328,7 +328,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task AllocateTimesheet_ReachesNonAcademicAttendanceAndProjectTargets()
+    public async Task AllocateTimesheet_UsesExistingNonAcademicAttendanceAndProjectTargets()
     {
         int year = 2045;
         int month = 1;
@@ -339,19 +339,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         DateTime[] dates = MonthDates(year, month);
 
         TimesheetEditRequest request = new(
-            Days: dates.Select(date =>
-            {
-                bool filled = TimesheetLogic.IsWeekday(date) && date.Day <= 15;
-                return new TimesheetDayEdit(
-                    Date: date,
-                    ClockIn: filled ? new TimeSpan(8, 0, 0) : TimeSpan.Zero,
-                    ClockOut: filled ? new TimeSpan(16, 0, 0) : TimeSpan.Zero,
-                    BreakStart: TimeSpan.Zero,
-                    BreakEnd: TimeSpan.Zero,
-                    CoreHours: 0m,
-                    Description: null,
-                    Schedules: []);
-            }).ToArray(),
+            Days: dates.Select(date => ExistingWorkdayAttendance(date)).ToArray(),
             Projects:
             [
                 new ProjectColumnEdit(firstAssignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray()),
@@ -375,7 +363,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task AllocateTimesheet_DoesNotBreakOvernightAttendanceWhenCompletingNonAcademicMonth()
+    public async Task AllocateTimesheet_UsesOvernightAttendanceWithoutChangingIt()
     {
         int year = 2051;
         int month = 1;
@@ -408,10 +396,12 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
 
-        Assert.True(allocation!.Evaluation.Totals.WorkedHours >= 176m);
-        Assert.Equal(44m, allocation.Evaluation.Totals.CoreHours);
-        Assert.Equal(44m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
-        Assert.Equal(88m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
+        Assert.Equal(9m, allocation!.Evaluation.Totals.WorkedHours);
+        Assert.Equal(0m, allocation.Evaluation.Totals.CoreHours);
+        Assert.Equal(3m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
+        Assert.Equal(6m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
+        AllocateTimesheet.DayResponse overnight = allocation.Days.Single(day => day.Date == overnightDate);
+        Assert.Equal(new int?[] { 1320, 420 }, overnight.Work);
         AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
     }
 
@@ -427,15 +417,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         DateTime[] dates = MonthDates(year, month);
 
         TimesheetEditRequest request = new(
-            Days: dates.Select(date => new TimesheetDayEdit(
-                Date: date,
-                ClockIn: TimesheetLogic.IsWeekday(date) ? new TimeSpan(7, 0, 0) : new TimeSpan(17, 25, 0),
-                ClockOut: TimesheetLogic.IsWeekday(date) ? new TimeSpan(18, 30, 0) : new TimeSpan(17, 27, 0),
-                BreakStart: TimesheetLogic.IsWeekday(date) ? new TimeSpan(10, 45, 0) : TimeSpan.Zero,
-                BreakEnd: TimesheetLogic.IsWeekday(date) ? new TimeSpan(11, 15, 0) : TimeSpan.Zero,
-                CoreHours: date.Day % 3 == 0 ? 5m : 0m,
-                Description: null,
-                Schedules: [])).ToArray(),
+            Days: dates.Select(date => ExistingWorkdayAttendance(date, coreHours: date.Day % 3 == 0 ? 5m : 0m)).ToArray(),
             Projects:
             [
                 new ProjectColumnEdit(firstAssignmentId, dates.Select(date => new ProjectDayEdit(date, date.Day % 2 == 0 ? 2m : 0m)).ToArray()),
@@ -459,7 +441,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task AllocateTimesheet_GeneratesNonAcademicCoreOnlyMonth()
+    public async Task AllocateTimesheet_GeneratesNonAcademicCoreOnlyMonthFromExistingAttendance()
     {
         int year = 2056;
         int month = 1;
@@ -469,7 +451,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         decimal expected = dates.Count(TimesheetLogic.IsWeekday) * 8m;
 
         TimesheetEditRequest request = new(
-            Days: dates.Select(date => new TimesheetDayEdit(date, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0m, null, [])).ToArray(),
+            Days: dates.Select(date => ExistingWorkdayAttendance(date)).ToArray(),
             Projects: []);
 
         for (int attempt = 0; attempt < 25; attempt++)
@@ -501,7 +483,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         decimal total = dates.Count(TimesheetLogic.IsWeekday) * 8m;
 
         TimesheetEditRequest request = new(
-            Days: dates.Select(date => new TimesheetDayEdit(date, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0m, null, [])).ToArray(),
+            Days: dates.Select(date => ExistingWorkdayAttendance(date)).ToArray(),
             Projects:
             [
                 new ProjectColumnEdit(firstAssignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray()),
@@ -540,7 +522,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         decimal projectTarget = HalfHour(total * 0.1075m);
 
         TimesheetEditRequest request = new(
-            Days: dates.Select(date => new TimesheetDayEdit(date, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0m, null, [])).ToArray(),
+            Days: dates.Select(date => ExistingWorkdayAttendance(date)).ToArray(),
             Projects: [new ProjectColumnEdit(assignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())]);
 
         for (int attempt = 0; attempt < 25; attempt++)
@@ -559,6 +541,35 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task AllocateTimesheet_DoesNotFailWhenLockedProjectsLeaveTinyRemainder()
+    {
+        int year = 2063;
+        int month = 3;
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
+        await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(assignmentId, 0.10m)]);
+        DateTime[] dates = MonthDates(year, month);
+        DateTime[] workdays = dates.Where(TimesheetLogic.IsWeekday).Take(2).ToArray();
+
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => new TimesheetDayEdit(date, null, null, null, null, 0m, null, [])).ToArray(),
+            Projects:
+            [
+                new ProjectColumnEdit(assignmentId, dates.Select(date =>
+                    date == workdays[0] ? new ProjectDayEdit(date, 5m, HoursLocked: true) :
+                    date == workdays[1] ? new ProjectDayEdit(date, 8m, HoursLocked: true) :
+                    new ProjectDayEdit(date, 0m)).ToArray())
+            ]);
+
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+        Assert.NotNull(allocation);
+        Assert.Equal(13m, TimesheetLogic.Normalize(allocation!.Days.Sum(day => day.ProjectCells[assignmentId].Hours)));
+    }
+
+    [Fact]
     public async Task AllocateTimesheet_GeneratesNonAcademicMonthWithProportionalInterruption()
     {
         int year = 2062;
@@ -572,15 +583,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         decimal columnTarget = TimesheetLogic.Normalize(total * 0.5m);
 
         TimesheetEditRequest request = new(
-            Days: dates.Select(date => new TimesheetDayEdit(
-                Date: date,
-                ClockIn: TimeSpan.Zero,
-                ClockOut: TimeSpan.Zero,
-                BreakStart: TimeSpan.Zero,
-                BreakEnd: TimeSpan.Zero,
-                CoreHours: 0m,
-                Description: date == interruptionDate ? "D" : null,
-                Schedules: [])).ToArray(),
+            Days: dates.Select(date => ExistingWorkdayAttendance(date, description: date == interruptionDate ? "D" : null)).ToArray(),
             Projects: [new ProjectColumnEdit(assignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())]);
 
         for (int attempt = 0; attempt < 25; attempt++)
@@ -625,7 +628,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task AllocateTimesheet_GeneratesMissingAttendanceFromStag()
+    public async Task AllocateTimesheet_DoesNotGenerateMissingNonAcademicAttendanceFromStag()
     {
         DateTime date = new(2036, 6, 2, 0, 0, 0, DateTimeKind.Utc);
         Guid attendanceTimesheetId = Guid.CreateVersion7();
@@ -641,9 +644,9 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
         AllocateTimesheet.DayResponse day = allocation!.Days.Single();
-        Assert.Equal(new int?[] { 1010, 1070 }, day.Work);
+        Assert.Equal(new int?[] { null, null }, day.Work);
         Assert.Equal(new int?[] { null, null }, day.Break);
-        Assert.Equal(1m, day.CoreHours);
+        Assert.Equal(0m, day.CoreHours);
     }
 
     [Fact]
@@ -681,7 +684,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task AllocateTimesheet_GeneratesMissingAttendanceWithBreak()
+    public async Task AllocateTimesheet_DoesNotGenerateMissingNonAcademicAttendanceWithBreak()
     {
         DateTime date = new(2036, 7, 2, 0, 0, 0, DateTimeKind.Utc);
         Guid attendanceTimesheetId = Guid.CreateVersion7();
@@ -697,8 +700,9 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
         Assert.NotNull(allocation);
         AllocateTimesheet.DayResponse day = allocation!.Days.Single();
-        Assert.Equal(new int?[] { 420, 870 }, day.Work);
-        Assert.Equal(new int?[] { 660, 690 }, day.Break);
+        Assert.Equal(new int?[] { null, null }, day.Work);
+        Assert.Equal(new int?[] { null, null }, day.Break);
+        Assert.Equal(7m, day.CoreHours);
     }
 
     private static void AssertGeneratedNonAcademicCellsStayWithinBounds(AllocateTimesheet.Response allocation, params DateTime[] ignoredDates)
@@ -714,19 +718,21 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             decimal total = TimesheetLogic.Normalize(day.CoreHours + day.ProjectCells.Values.Sum(cell => cell.Hours));
             if (total > 0m)
             {
-                Assert.InRange(total, 6m, 12m);
-            }
-            if (day.CoreHours > 0m)
-            {
-                Assert.InRange(day.CoreHours, 6m, 12m);
+                decimal worked = ResponseWorkedHours(day);
+                Assert.True(total <= Math.Min(12m, worked) + 0.009m, $"Generated total {total} exceeds attendance {worked} on {day.Date:yyyy-MM-dd}");
             }
 
             foreach (decimal hours in day.ProjectCells.Values.Select(cell => cell.Hours).Where(hours => hours > 0m))
             {
-                Assert.InRange(hours, 6m, 12m);
+                Assert.Equal(hours, HalfHour(hours));
             }
         }
     }
+
+    private static decimal ResponseWorkedHours(AllocateTimesheet.DayResponse day) =>
+        TimesheetLogic.CalculateWorkedHoursFromAttendance(ToTime(day.Work[0]), ToTime(day.Work[1]), ToTime(day.Break[0]), ToTime(day.Break[1]));
+
+    private static TimeSpan? ToTime(int? minutes) => minutes.HasValue ? TimeSpan.FromMinutes(minutes.Value) : null;
 
     private async Task SeedAsync(Guid attendanceTimesheetId, Guid firstAssignmentId, Guid secondAssignmentId, DateTime firstDate)
     {
@@ -876,6 +882,11 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     private static decimal HalfHour(decimal value) => TimesheetLogic.Normalize(Math.Round(value * 2m, MidpointRounding.AwayFromZero) / 2m);
+
+    private static TimesheetDayEdit ExistingWorkdayAttendance(DateTime date, decimal coreHours = 0m, string? description = null, IReadOnlyList<TimeRange>? schedules = null) =>
+        TimesheetLogic.IsWeekday(date)
+            ? new TimesheetDayEdit(date, new TimeSpan(8, 0, 0), new TimeSpan(16, 0, 0), null, null, coreHours, description, schedules ?? [])
+            : new TimesheetDayEdit(date, null, null, null, null, coreHours, description, schedules ?? []);
 
     private static ContractEmployee Assignment(Guid id, string code, string position, DateTime date, decimal workload = 0.25m, DateTime? endDate = null) => new()
     {
