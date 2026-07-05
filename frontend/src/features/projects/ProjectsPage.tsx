@@ -5,14 +5,15 @@ import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { AddButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { createFilterControls } from "@/components/shared/layout/createFilterControls";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Texts } from "@/constants/texts";
-import { type ListCrudAction, listCrudReducer } from "@/utils/listCrudReducer";
+import { type ListCrudAction, listCrudReducer, listCrudState } from "@/utils/listCrudReducer";
 import { AddProjectDialog } from "./AddProjectDialog";
-import type { GetProjectsResponse, ProjectItem } from "./api";
+import { deleteProject, type GetProjectsResponse, type ProjectItem } from "./api";
 import { type ProjectsFilterCriteria, useProjectsFilter } from "./hooks/useProjectsFilter";
 import { ProjectCard } from "./ProjectCard";
 
@@ -40,8 +41,8 @@ const projectStatusFilterOptions = [
 
 const ProjectsPageContent = () => {
   const response = useAsyncValue() as GetProjectsResponse;
-  const [state, dispatch] = useImmerReducer(listCrudReducer<ProjectItem>, response.projects);
-  const { filter, setFilter, filtered } = useProjectsFilter(state);
+  const [state, dispatch] = useImmerReducer(listCrudReducer, listCrudState(response.projects));
+  const { filter, setFilter, filtered } = useProjectsFilter(state.items);
   const [isAddOpen, setIsAddOpen] = useState(false);
 
   return (
@@ -67,6 +68,17 @@ const ProjectsPageContent = () => {
           setIsAddOpen(false);
         }}
       />
+      <ConfirmationDialog
+        open={state.pendingDelete !== null}
+        onCancel={() => dispatch({ type: "cancelDelete" })}
+        onConfirm={async (_event, signal) => {
+          if (!state.pendingDelete) return;
+          await deleteProject(state.pendingDelete, signal);
+          if (!signal.aborted) {
+            dispatch({ type: "confirmDelete" });
+          }
+        }}
+      />
     </>
   );
 };
@@ -79,7 +91,12 @@ const ProjectCards = ({ projects, dispatch }: { projects: ProjectItem[]; dispatc
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {projects.map((project) => (
-        <ProjectCard key={project.id} project={project} onUpdate={(project) => dispatch({ type: "update", item: project })} onDelete={(projectId) => dispatch({ type: "delete", id: projectId })} />
+        <ProjectCard
+          key={project.id}
+          project={project}
+          onUpdate={(project) => dispatch({ type: "update", item: project })}
+          onRequestDelete={(projectId) => dispatch({ type: "requestDelete", key: projectId })}
+        />
       ))}
     </div>
   );

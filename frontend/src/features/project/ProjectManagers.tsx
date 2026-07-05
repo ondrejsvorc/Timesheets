@@ -14,10 +14,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { useGo } from "@/hooks/useGo";
+import { compareIds } from "@/utils/common";
+import { createListCrudReducer, type ListCrudAction, listCrudState } from "@/utils/listCrudReducer";
 import { AddProjectManagerDialog } from "./AddProjectManagerDialog";
 import { type GetProjectManagersResponse, type ProjectManagerItem, removeProjectManager } from "./api";
 import { type ProjectManagersFilterCriteria, useProjectManagersFilter } from "./hooks/useProjectManagersFilter";
-import { type ProjectManagersAction, projectManagersReducer } from "./utils/projectManagersReducer";
+
+const projectManagersReducer = createListCrudReducer<ProjectManagerItem, { employeeId: string }>((m, key) => compareIds(m.employeeId, key.employeeId));
 
 export const ProjectManagers = () => {
   const { promise } = useLoaderData() as {
@@ -36,12 +39,9 @@ const { FilterSearchInput } = createFilterControls<ProjectManagersFilterCriteria
 const ProjectManagersContent = () => {
   const { id: projectId } = useParams<{ id: string }>();
   const response = useAsyncValue() as GetProjectManagersResponse;
-  const [state, dispatch] = useImmerReducer(projectManagersReducer, {
-    managers: response.managers,
-    pendingDelete: null,
-  });
+  const [state, dispatch] = useImmerReducer(projectManagersReducer, listCrudState<ProjectManagerItem, { employeeId: string }>(response.managers));
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const { filter, setFilter, filtered } = useProjectManagersFilter(state.managers);
+  const { filter, setFilter, filtered } = useProjectManagersFilter(state.items);
   const canAddManager = useCan(UiAction.projectManagers.add, { projectId: projectId ?? undefined });
 
   return (
@@ -52,11 +52,11 @@ const ProjectManagersContent = () => {
       <ProjectManagersTable managers={filtered} dispatch={dispatch} />
       <AddProjectManagerDialog
         projectId={projectId ?? ""}
-        existingManagers={state.managers}
+        existingManagers={state.items}
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onSaved={(manager) => {
-          dispatch({ type: "add", projectManager: manager });
+          dispatch({ type: "add", item: manager });
           setIsAddOpen(false);
         }}
       />
@@ -65,8 +65,7 @@ const ProjectManagersContent = () => {
         onCancel={() => dispatch({ type: "cancelDelete" })}
         onConfirm={async (_event, signal) => {
           if (!state.pendingDelete || !projectId) return;
-          const { employeeId } = state.pendingDelete;
-          await removeProjectManager(projectId, employeeId, signal);
+          await removeProjectManager(projectId, state.pendingDelete.employeeId, signal);
           if (!signal.aborted) {
             dispatch({ type: "confirmDelete" });
           }
@@ -78,7 +77,7 @@ const ProjectManagersContent = () => {
 
 interface ProjectManagersTableProps {
   managers: ProjectManagerItem[];
-  dispatch: Dispatch<ProjectManagersAction>;
+  dispatch: Dispatch<ListCrudAction<ProjectManagerItem, { employeeId: string }>>;
 }
 
 export const ProjectManagersTable = ({ managers, dispatch }: ProjectManagersTableProps) => {
@@ -108,7 +107,7 @@ export const ProjectManagersTable = ({ managers, dispatch }: ProjectManagersTabl
 
 interface ProjectManagerRowProps {
   manager: ProjectManagerItem;
-  dispatch: Dispatch<ProjectManagersAction>;
+  dispatch: Dispatch<ListCrudAction<ProjectManagerItem, { employeeId: string }>>;
 }
 
 export const ProjectManagerRow = ({ manager, dispatch }: ProjectManagerRowProps) => {
@@ -125,10 +124,7 @@ export const ProjectManagerRow = ({ manager, dispatch }: ProjectManagerRowProps)
           <DeleteButton
             onClick={(e) => {
               e.stopPropagation();
-              dispatch({
-                type: "requestDelete",
-                employeeId: manager.employeeId,
-              });
+              dispatch({ type: "requestDelete", key: { employeeId: manager.employeeId } });
             }}
           />
         )}

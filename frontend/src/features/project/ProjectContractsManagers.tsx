@@ -14,11 +14,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { useGo } from "@/hooks/useGo";
+import { compareIds } from "@/utils/common";
+import { createListCrudReducer, type ListCrudAction, listCrudState } from "@/utils/listCrudReducer";
 import { AddContractManagerDialog } from "./AddContractManagerDialog";
 import { type GetProjectContractsManagersResponse, type ProjectContractManagerItem, removeContractManager } from "./api";
 import type { ContractsFilterCriteria } from "./hooks/useContractsFilter";
 import { useContractsManagersFilter } from "./hooks/useContractsManagersFilter";
-import { type ContractsManagersAction, contractsManagersReducer } from "./utils/contractsManagersReducer";
+
+const contractsManagersReducer = createListCrudReducer<ProjectContractManagerItem, { contractId: string; employeeId: string }>(
+  (m, key) => compareIds(m.contractId, key.contractId) && compareIds(m.employeeId, key.employeeId),
+);
 
 export const ProjectContractsManagers = () => {
   const { promise } = useLoaderData() as {
@@ -37,12 +42,12 @@ const { FilterSearchInput } = createFilterControls<ContractsFilterCriteria>();
 const ProjectContractsManagersContent = () => {
   const { id: projectId } = useParams<{ id: string }>();
   const response = useAsyncValue() as GetProjectContractsManagersResponse;
-  const [state, dispatch] = useImmerReducer(contractsManagersReducer, {
-    managers: response.managers,
-    pendingDelete: null,
-  });
+  const [state, dispatch] = useImmerReducer(
+    contractsManagersReducer,
+    listCrudState<ProjectContractManagerItem, { contractId: string; employeeId: string }>(response.managers),
+  );
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const { filter, setFilter, filtered } = useContractsManagersFilter(state.managers);
+  const { filter, setFilter, filtered } = useContractsManagersFilter(state.items);
   const canAddManager = useCan(UiAction.contractManagers.add, { projectId: projectId ?? undefined });
 
   return (
@@ -53,11 +58,11 @@ const ProjectContractsManagersContent = () => {
       <ContractsManagersTable managers={filtered} dispatch={dispatch} />
       <AddContractManagerDialog
         projectId={projectId ?? ""}
-        existingManagers={state.managers}
+        existingManagers={state.items}
         open={isAddOpen}
         onClose={() => setIsAddOpen(false)}
         onSaved={(manager) => {
-          dispatch({ type: "add", contractManager: manager });
+          dispatch({ type: "add", item: manager });
           setIsAddOpen(false);
         }}
       />
@@ -79,7 +84,7 @@ const ProjectContractsManagersContent = () => {
 
 interface ContractsManagersTableProps {
   managers: ProjectContractManagerItem[];
-  dispatch: Dispatch<ContractsManagersAction>;
+  dispatch: Dispatch<ListCrudAction<ProjectContractManagerItem, { contractId: string; employeeId: string }>>;
 }
 
 export const ContractsManagersTable = ({ managers, dispatch }: ContractsManagersTableProps) => {
@@ -110,7 +115,7 @@ export const ContractsManagersTable = ({ managers, dispatch }: ContractsManagers
 
 interface ContractManagerRowProps {
   manager: ProjectContractManagerItem;
-  dispatch: Dispatch<ContractsManagersAction>;
+  dispatch: Dispatch<ListCrudAction<ProjectContractManagerItem, { contractId: string; employeeId: string }>>;
 }
 
 export const ContractManagerRow = ({ manager, dispatch }: ContractManagerRowProps) => {
@@ -128,11 +133,7 @@ export const ContractManagerRow = ({ manager, dispatch }: ContractManagerRowProp
           <DeleteButton
             onClick={(e) => {
               e.stopPropagation();
-              dispatch({
-                type: "requestDelete",
-                contractId: manager.contractId,
-                employeeId: manager.employeeId,
-              });
+              dispatch({ type: "requestDelete", key: { contractId: manager.contractId, employeeId: manager.employeeId } });
             }}
           />
         )}

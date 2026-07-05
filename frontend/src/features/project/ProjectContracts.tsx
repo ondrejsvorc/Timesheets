@@ -6,6 +6,7 @@ import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { ActionButtons, AddButton, DeleteButton, EditButton } from "@/components/shared/buttons/ActionButtons";
 import { EmptyState } from "@/components/shared/data/EmptyState";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { createFilterControls } from "@/components/shared/layout/createFilterControls";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
@@ -13,10 +14,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { useGo } from "@/hooks/useGo";
-import { type ListCrudAction, listCrudReducer } from "@/utils/listCrudReducer";
+import { type ListCrudAction, listCrudReducer, listCrudState } from "@/utils/listCrudReducer";
 import { AddContractDialog } from "./AddContractDialog";
-import type { GetProjectContractsResponse, ProjectContractItem } from "./api";
-import { ContractDeleteDialog } from "./ContractDeleteDialog";
+import { deleteProjectContract, type GetProjectContractsResponse, type ProjectContractItem } from "./api";
 import { EditContractDialog } from "./EditContractDialog";
 import { type ContractsFilterCriteria, useContractsFilter } from "./hooks/useContractsFilter";
 
@@ -37,8 +37,8 @@ const { FilterSearchInput } = createFilterControls<ContractsFilterCriteria>();
 const ProjectContractsContent = () => {
   const { id: projectId } = useParams<{ id: string }>();
   const response = useAsyncValue() as GetProjectContractsResponse;
-  const [state, dispatch] = useImmerReducer(listCrudReducer<ProjectContractItem>, response.projectContracts);
-  const { filter, setFilter, filtered } = useContractsFilter(state);
+  const [state, dispatch] = useImmerReducer(listCrudReducer, listCrudState(response.projectContracts));
+  const { filter, setFilter, filtered } = useContractsFilter(state.items);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const canAddContract = useCan(UiAction.contracts.add, { projectId: projectId ?? undefined });
 
@@ -57,6 +57,17 @@ const ProjectContractsContent = () => {
           setIsAddOpen(false);
         }}
       />
+      <ConfirmationDialog
+        open={state.pendingDelete !== null}
+        onCancel={() => dispatch({ type: "cancelDelete" })}
+        onConfirm={async (_event, signal) => {
+          if (!state.pendingDelete || !projectId) return;
+          await deleteProjectContract(projectId, state.pendingDelete, signal);
+          if (!signal.aborted) {
+            dispatch({ type: "confirmDelete" });
+          }
+        }}
+      />
     </>
   );
 };
@@ -67,9 +78,7 @@ interface ContractsTableProps {
 }
 
 export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => {
-  const { id: projectId } = useParams<{ id: string }>();
   const [contractToEdit, setContractToEdit] = useState<ProjectContractItem | null>(null);
-  const [contractToDelete, setContractToDelete] = useState<ProjectContractItem | null>(null);
 
   if (contracts.length === 0) {
     return <EmptyState />;
@@ -88,7 +97,7 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
           </TableHeader>
           <TableBody>
             {contracts.map((contract) => (
-              <ContractRow key={contract.id} contract={contract} onEdit={setContractToEdit} onDelete={setContractToDelete} />
+              <ContractRow key={contract.id} contract={contract} onEdit={setContractToEdit} onRequestDelete={(id) => dispatch({ type: "requestDelete", key: id })} />
             ))}
           </TableBody>
         </Table>
@@ -105,18 +114,6 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
           }}
         />
       )}
-
-      {contractToDelete && projectId && (
-        <ContractDeleteDialog
-          projectId={projectId}
-          contractId={contractToDelete.id}
-          onClose={() => setContractToDelete(null)}
-          onDeleted={() => {
-            dispatch({ type: "delete", id: contractToDelete.id });
-            setContractToDelete(null);
-          }}
-        />
-      )}
     </>
   );
 };
@@ -124,10 +121,10 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
 interface ContractRowProps {
   contract: ProjectContractItem;
   onEdit: (contract: ProjectContractItem) => void;
-  onDelete: (contract: ProjectContractItem) => void;
+  onRequestDelete: (contractId: string) => void;
 }
 
-export const ContractRow = ({ contract, onEdit, onDelete }: ContractRowProps) => {
+export const ContractRow = ({ contract, onEdit, onRequestDelete }: ContractRowProps) => {
   const go = useGo();
   const projectId = useParams().id;
   const canEdit = useCan(UiAction.contracts.edit, { projectId, contractId: contract.id });
@@ -152,7 +149,7 @@ export const ContractRow = ({ contract, onEdit, onDelete }: ContractRowProps) =>
               <DeleteButton
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDelete(contract);
+                  onRequestDelete(contract.id);
                 }}
               />
             )}

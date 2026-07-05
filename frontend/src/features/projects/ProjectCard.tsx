@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Can } from "@/auth/Can";
 import { UiAction } from "@/auth/uiPermissions";
 import { DeleteIcon, EditIcon } from "@/components/shared/buttons/ActionButtons";
-import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -12,18 +11,17 @@ import { Texts } from "@/constants/texts";
 import { useGo } from "@/hooks/useGo";
 import { cn } from "@/utils/common";
 import { formatDate } from "@/utils/format";
-import { archiveProject, deleteProject, type ProjectItem, type ProjectStatus, unarchiveProject } from "./api";
+import { archiveProject, type ProjectItem, type ProjectStatus, unarchiveProject } from "./api";
 import { UpdateProjectDialog } from "./UpdateProjectDialog";
 
 interface ProjectCardProps {
   project: ProjectItem;
   onUpdate: (project: ProjectItem) => void;
-  onDelete: (projectId: string) => void;
+  onRequestDelete: (projectId: string) => void;
 }
 
-export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) => {
+export const ProjectCard = ({ project, onUpdate, onRequestDelete }: ProjectCardProps) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const startDate = formatDate(project.startDate);
   const endDate = formatDate(project.endDate);
   const dateRange = project.startDate && project.endDate ? `${startDate} - ${endDate}` : formatDate(project.startDate);
@@ -73,7 +71,7 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
                     <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
-                        setIsConfirmOpen(true);
+                        onRequestDelete(project.id);
                       }}
                     >
                       <DeleteIcon />
@@ -115,19 +113,6 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
           setIsEditOpen(false);
         }}
       />
-      {isConfirmOpen && (
-        <ConfirmationDialog
-          open
-          onCancel={() => setIsConfirmOpen(false)}
-          onConfirm={async (_event, signal) => {
-            await deleteProject(project.id, signal);
-            if (!signal.aborted) {
-              onDelete(project.id);
-              setIsConfirmOpen(false);
-            }
-          }}
-        />
-      )}
     </>
   );
 };
