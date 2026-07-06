@@ -193,9 +193,9 @@ export const AddEmployeeDialog = ({ open, contractId, projectStartDate, projectE
               name="employeeId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{Texts.employees}</FormLabel>
+                  <FormLabel>{Texts.employee}</FormLabel>
                   <FormControl>
-                    <ComboBox value={field.value} items={employees} placeholder={Texts.employees} loading={employeesLoading} onChange={field.onChange} />
+                    <ComboBox value={field.value} items={employees} placeholder="" loading={employeesLoading} onChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
