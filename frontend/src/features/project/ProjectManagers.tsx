@@ -123,15 +123,17 @@ export const ProjectManagerRow = ({ manager, dispatch }: ProjectManagerRowProps)
       <TableCell className="truncate" title={manager.employeeFullName}>
         {manager.employeeFullName}
       </TableCell>
-      <TableCell className="text-right">
-        {canRemove && (
-          <DeleteButton
-            onClick={(e) => {
-              e.stopPropagation();
-              dispatch({ type: "requestDelete", key: { employeeId: manager.employeeId } });
-            }}
-          />
-        )}
+      <TableCell>
+        <div className="flex justify-end">
+          {canRemove && (
+            <DeleteButton
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: "requestDelete", key: { employeeId: manager.employeeId } });
+              }}
+            />
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );

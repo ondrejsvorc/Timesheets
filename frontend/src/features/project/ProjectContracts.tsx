@@ -138,27 +138,29 @@ export const ContractRow = ({ contract, onEdit, onRequestDelete }: ContractRowPr
       <TableCell className="truncate" title={contract.name}>
         {contract.name}
       </TableCell>
-      <TableCell className="text-right">
-        {(canEdit || canDelete) && (
-          <ActionButtons>
-            {canEdit && (
-              <EditButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(contract);
-                }}
-              />
-            )}
-            {canDelete && (
-              <DeleteButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRequestDelete(contract.id);
-                }}
-              />
-            )}
-          </ActionButtons>
-        )}
+      <TableCell>
+        <div className="flex justify-end">
+          {(canEdit || canDelete) && (
+            <ActionButtons>
+              {canEdit && (
+                <EditButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(contract);
+                  }}
+                />
+              )}
+              {canDelete && (
+                <DeleteButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRequestDelete(contract.id);
+                  }}
+                />
+              )}
+            </ActionButtons>
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );
