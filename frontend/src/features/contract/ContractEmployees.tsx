@@ -158,13 +158,13 @@ const EmployeeSection = ({ contractId, employee, onDeleteRequested, onEditReques
         <Table className="table-fixed w-full">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-32">{Texts.positionCode}</TableHead>
-              <TableHead>{Texts.position}</TableHead>
-              <TableHead className="w-24">{Texts.workload}</TableHead>
-              <TableHead className="w-28">{Texts.from}</TableHead>
-              <TableHead className="w-28">{Texts.to}</TableHead>
-              <TableHead className="w-24">{Texts.status}</TableHead>
-              <TableHead className="w-28">{Texts.actions}</TableHead>
+              <TableHead className="w-[13%]">{Texts.positionCode}</TableHead>
+              <TableHead className="w-[19%]">{Texts.position}</TableHead>
+              <TableHead className="w-[11%]">{Texts.workload}</TableHead>
+              <TableHead className="w-[13%]">{Texts.from}</TableHead>
+              <TableHead className="w-[13%]">{Texts.to}</TableHead>
+              <TableHead className="w-[13%]">{Texts.status}</TableHead>
+              <TableHead className="w-[18%] text-right">{Texts.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -193,15 +193,17 @@ const PositionRow = ({ contractId, position, onDeleteRequested, onEditRequested 
 
   return (
     <TableRow className="cursor-pointer">
-      <TableCell className="w-32 max-w-32 truncate whitespace-nowrap" title={position.positionCode ?? ""}>
+      <TableCell className="truncate" title={position.positionCode ?? ""}>
         {position.positionCode ?? Texts.dash}
       </TableCell>
-      <TableCell>{position.position ?? Texts.dash}</TableCell>
+      <TableCell className="truncate" title={position.position ?? ""}>
+        {position.position ?? Texts.dash}
+      </TableCell>
       <TableCell>{formatWorkloadPercent(position.workload)}</TableCell>
       <TableCell>{formatDate(position.startDate)}</TableCell>
       <TableCell>{formatDate(position.endDate) ?? Texts.dash}</TableCell>
       <TableCell>{position.isActive ? Texts.active : Texts.inactive}</TableCell>
-      <TableCell className="space-x-1">
+      <TableCell className="space-x-1 text-right">
         {canUpdate && (
           <EditButton
             onClick={() => {
