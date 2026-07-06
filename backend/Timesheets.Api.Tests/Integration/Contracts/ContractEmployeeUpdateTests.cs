@@ -140,7 +140,10 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     [Fact]
     public async Task UpdateImpact_MetadataOnly_WithNullStoredEnd_ReturnsNoDateConsequences()
     {
-        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        DateTime positionStart = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime positionEnd = new(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc);
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, positionStart, positionEnd);
+        DateTime projectEnd = positionEnd.AddYears(1);
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -149,7 +152,8 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
             await dbContext.SaveChangesAsync();
         }
 
-        ContractEmployeeUpdateRequest request = new("NEW-CODE", "Developer", 1.0m, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        // UI shows coalesced end (null stored → project end), not the original position end.
+        ContractEmployeeUpdateRequest request = new("NEW-CODE", "Developer", 1.0m, positionStart, projectEnd);
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}/update-impact", request);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
