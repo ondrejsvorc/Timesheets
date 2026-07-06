@@ -1,23 +1,17 @@
 import { X } from "lucide-react";
 import type { ComponentProps } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { MaskedInput, maskDate } from "@/components/shared/inputs/MaskedInput";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { Input } from "@/components/ui/input";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/common";
 import { formatDate, formatDateDisplay, isDateInRange, parseDateDisplay, toDateOnlyIso } from "@/utils/format";
 
-type DateInputProps = Omit<ComponentProps<typeof MaskedInput>, "value" | "onChange" | "mask" | "min" | "max" | "placeholder" | "maxDigits"> & {
+type DateInputProps = Omit<ComponentProps<typeof Input>, "value" | "onChange" | "min" | "max" | "type"> & {
   value?: string | null;
   onChange: (next: string | undefined) => void;
   min?: Date;
   max?: Date;
   disabled?: boolean;
-};
-
-const normalizeDate = (value: string) => {
-  const iso = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return maskDate(`${iso[3]}${iso[2]}${iso[1]}`);
-  return maskDate(value);
 };
 
 const formatRangeLabel = (min?: Date, max?: Date) => {
@@ -26,6 +20,7 @@ const formatRangeLabel = (min?: Date, max?: Date) => {
 };
 
 export const DateInput = ({ value, onChange, min, max, disabled, className, ...props }: DateInputProps) => {
+  const errorId = useId();
   const [draft, setDraft] = useState(() => formatDateDisplay(value));
   const [touched, setTouched] = useState(false);
 
@@ -76,24 +71,21 @@ export const DateInput = ({ value, onChange, min, max, disabled, className, ...p
   return (
     <div className="space-y-1">
       <div className="relative w-full">
-        <MaskedInput
+        <Input
           {...props}
+          type="text"
           value={draft}
-          mask={normalizeDate}
-          maxDigits={8}
           disabled={disabled}
           inputMode="numeric"
           autoComplete="off"
           aria-invalid={validationError ? true : props["aria-invalid"]}
+          aria-describedby={validationError ? errorId : undefined}
           className={cn("w-full pr-9 tabular-nums", className)}
-          onFocus={(event) => {
-            props.onFocus?.(event);
-          }}
           onBlur={(event) => {
             handleBlur();
             props.onBlur?.(event);
           }}
-          onChange={setDraft}
+          onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
@@ -119,7 +111,13 @@ export const DateInput = ({ value, onChange, min, max, disabled, className, ...p
           </button>
         ) : null}
       </div>
-      {validationError ? <p className="text-sm text-destructive">{validationError}</p> : rangeHint ? <p className="text-xs text-muted-foreground">{rangeHint}</p> : null}
+      {validationError ? (
+        <p id={errorId} className="text-sm text-destructive">
+          {validationError}
+        </p>
+      ) : rangeHint ? (
+        <p className="text-xs text-muted-foreground">{rangeHint}</p>
+      ) : null}
     </div>
   );
 };
