@@ -138,6 +138,31 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task UpdateImpact_MetadataOnly_WithNullStoredEnd_ReturnsNoDateConsequences()
+    {
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        using (IServiceScope scope = CreateScope())
+        {
+            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Data.Models.ContractEmployee? assignment = await dbContext.ContractEmployees.SingleAsync(assignment => assignment.Id == setup.ContractEmployeeId);
+            assignment.EndDate = null;
+            await dbContext.SaveChangesAsync();
+        }
+
+        ContractEmployeeUpdateRequest request = new("NEW-CODE", "Developer", 1.0m, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}/update-impact", request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        ContractEmployeeUpdateImpact? impact = await response.Content.ReadFromJsonAsync<ContractEmployeeUpdateImpact>();
+        Assert.NotNull(impact);
+        Assert.True(impact!.CanUpdate);
+        Assert.False(impact.CreatesNewAssignment);
+        Assert.Null(impact.CurrentAssignmentEndDate);
+        Assert.Equal(0, impact.NewTimesheetMonthCount);
+        Assert.Equal(0, impact.DraftTimesheetsOnOldAssignment);
+    }
+
+    [Fact]
     public async Task UpdateImpact_ExtendEnd_ReturnsNewMonths()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 6, 30, 0, 0, 0, DateTimeKind.Utc));

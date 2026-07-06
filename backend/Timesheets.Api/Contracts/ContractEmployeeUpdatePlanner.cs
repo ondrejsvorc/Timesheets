@@ -33,12 +33,12 @@ internal enum ContractEmployeeUpdateMode
 
 internal static class ContractEmployeeUpdatePlanner
 {
-    public static bool IsUnchanged(ContractEmployee existing, ContractEmployeeUpdateRequest request) =>
+    public static bool IsUnchanged(ContractEmployee existing, ContractEmployeeUpdateRequest request, DateTime? projectEndDate) =>
         existing.PositionCode == request.PositionCode
         && existing.Position == request.Position
         && existing.Workload == request.Workload
         && ContractEmployeeValidation.ToUtcDate(existing.StartDate) == ContractEmployeeValidation.ToUtcDate(request.StartDate)
-        && NullableDatesEqual(existing.EndDate, request.EndDate);
+        && EffectiveEndsEqual(existing.EndDate, request.EndDate, projectEndDate);
 
     public static async Task<ContractEmployeeUpdateImpact> PlanAsync(ContractEmployee existing, ContractEmployeeUpdateRequest request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -59,7 +59,9 @@ internal static class ContractEmployeeUpdatePlanner
             request = request with { EndDate = projectRange.EndDate };
         }
 
-        if (IsUnchanged(existing, request))
+        DateTime? projectEnd = projectRange.EndDate;
+
+        if (IsUnchanged(existing, request, projectEnd))
         {
             return Blocked("Nebyla zadána žádná změna.");
         }
@@ -83,21 +85,23 @@ internal static class ContractEmployeeUpdatePlanner
             && existing.Position == request.Position
             && existing.Workload == request.Workload;
 
+        bool endsChanged = !EffectiveEndsEqual(existing.EndDate, request.EndDate, projectEnd);
+
         if (newStart == existingStart)
         {
-            if (IsShorteningEnd(existingEnd, newEnd))
+            if (!endsChanged && !metadataSame)
+            {
+                return await PlanMetadataOnlyAsync(existing, dbContext, cancellationToken);
+            }
+
+            if (IsShorteningEnd(existingEnd, newEnd, projectEnd))
             {
                 return await PlanShortenEndAsync(existing, newEnd!.Value, dbContext, cancellationToken);
             }
 
-            if (IsExtendingEnd(existingEnd, newEnd))
+            if (IsExtendingEnd(existingEnd, newEnd, projectEnd))
             {
                 return await PlanExtendEndAsync(existing, newEnd, dbContext, cancellationToken);
-            }
-
-            if (!metadataSame)
-            {
-                return await PlanMetadataOnlyAsync(existing, dbContext, cancellationToken);
             }
         }
 
@@ -109,55 +113,47 @@ internal static class ContractEmployeeUpdatePlanner
         return await PlanSplitAsync(existing, newStart, newEnd ?? newStart, dbContext, cancellationToken);
     }
 
-    private static bool IsShorteningEnd(DateTime? existingEnd, DateTime? newEnd)
+    private static bool IsShorteningEnd(DateTime? existingEnd, DateTime? newEnd, DateTime? projectEnd)
     {
-        if (!newEnd.HasValue)
+        DateTime? effectiveExisting = EffectiveEnd(existingEnd, projectEnd);
+        DateTime? effectiveNew = EffectiveEnd(newEnd, projectEnd);
+        if (!effectiveNew.HasValue || !effectiveExisting.HasValue)
         {
             return false;
         }
 
-        if (!existingEnd.HasValue)
-        {
-            return true;
-        }
-
-        return newEnd.Value < existingEnd.Value;
+        return effectiveNew.Value < effectiveExisting.Value;
     }
 
-    private static bool IsExtendingEnd(DateTime? existingEnd, DateTime? newEnd)
+    private static bool IsExtendingEnd(DateTime? existingEnd, DateTime? newEnd, DateTime? projectEnd)
     {
-        if (existingEnd is null)
+        DateTime? effectiveExisting = EffectiveEnd(existingEnd, projectEnd);
+        DateTime? effectiveNew = EffectiveEnd(newEnd, projectEnd);
+        if (!effectiveNew.HasValue)
         {
-            return newEnd.HasValue;
+            return effectiveExisting.HasValue;
         }
 
-        if (!newEnd.HasValue)
+        if (!effectiveExisting.HasValue)
         {
-            return true;
+            return false;
         }
 
-        return newEnd.Value > existingEnd.Value;
+        return effectiveNew.Value > effectiveExisting.Value;
     }
 
-    private static async Task<ContractEmployeeUpdateImpact> PlanMetadataOnlyAsync(ContractEmployee existing, AppDbContext dbContext, CancellationToken cancellationToken)
-    {
-        (int draft, int submitted, int approved) = await CountTimesheetsOnAssignmentAsync(
-            existing.Id,
-            dbContext,
-            cancellationToken);
-
-        return new ContractEmployeeUpdateImpact(
+    private static Task<ContractEmployeeUpdateImpact> PlanMetadataOnlyAsync(ContractEmployee existing, AppDbContext dbContext, CancellationToken cancellationToken) =>
+        Task.FromResult(new ContractEmployeeUpdateImpact(
             CanUpdate: true,
             CreatesNewAssignment: false,
             BlockReason: null,
-            CurrentAssignmentEndDate: existing.EndDate,
+            CurrentAssignmentEndDate: null,
             NewAssignmentStartDate: null,
             NewTimesheetMonthCount: 0,
-            DraftTimesheetsOnOldAssignment: draft,
+            DraftTimesheetsOnOldAssignment: 0,
             DraftDaysToRemove: 0,
-            SubmittedTimesheetCount: submitted,
-            ApprovedTimesheetCount: approved);
-    }
+            SubmittedTimesheetCount: 0,
+            ApprovedTimesheetCount: 0));
 
     private static async Task<ContractEmployeeUpdateImpact> PlanShortenEndAsync(ContractEmployee existing, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -296,6 +292,16 @@ internal static class ContractEmployeeUpdatePlanner
             DraftDaysToRemove: 0,
             SubmittedTimesheetCount: 0,
             ApprovedTimesheetCount: 0);
+
+    private static DateTime? EffectiveEnd(DateTime? end, DateTime? projectEnd) =>
+        end.HasValue
+            ? ContractEmployeeValidation.ToUtcDate(end.Value)
+            : projectEnd.HasValue
+                ? ContractEmployeeValidation.ToUtcDate(projectEnd.Value)
+                : null;
+
+    private static bool EffectiveEndsEqual(DateTime? left, DateTime? right, DateTime? projectEnd) =>
+        EffectiveEnd(left, projectEnd) == EffectiveEnd(right, projectEnd);
 
     private static bool NullableDatesEqual(DateTime? left, DateTime? right)
     {

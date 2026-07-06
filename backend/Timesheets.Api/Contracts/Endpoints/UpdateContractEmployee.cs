@@ -174,7 +174,10 @@ public sealed class UpdateContractEmployee : IEndpoint
             existing.PositionCode = request.PositionCode;
             existing.Position = request.Position;
             existing.Workload = request.Workload;
-            existing.EndDate = impact.CurrentAssignmentEndDate;
+            if (impact.CurrentAssignmentEndDate.HasValue)
+            {
+                existing.EndDate = impact.CurrentAssignmentEndDate;
+            }
             if (impact.DraftDaysToRemove > 0 && impact.CurrentAssignmentEndDate.HasValue)
             {
                 await RemoveDraftProjectDaysOutsideRangeAsync(

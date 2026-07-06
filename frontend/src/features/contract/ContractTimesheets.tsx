@@ -275,12 +275,12 @@ const TimesheetsByMonth = ({ months, isLoading }: TimesheetsByMonthProps) => {
               {employee.timesheets.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{Texts.noItems}</p>
               ) : (
-                <Table>
+                <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{Texts.position}</TableHead>
-                      <TableHead>{Texts.timesheetStatus}</TableHead>
-                      <TableHead>{Texts.workload}</TableHead>
+                      <TableHead className="w-1/3">{Texts.position}</TableHead>
+                      <TableHead className="w-1/3">{Texts.timesheetStatus}</TableHead>
+                      <TableHead className="w-1/3">{Texts.workload}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -305,7 +305,9 @@ interface TimesheetItemRowProps {
 function TimesheetItemRow({ item }: TimesheetItemRowProps) {
   return (
     <TableRow>
-      <TableCell>{item.position}</TableCell>
+      <TableCell className="truncate" title={item.position}>
+        {item.position}
+      </TableCell>
       <TableCell>
         <TimesheetStatusBadge status={item.status} />
       </TableCell>
@@ -361,12 +363,12 @@ const TimesheetsByEmployee = ({ employees, isLoading }: TimesheetsByEmployeeProp
                         {formatMonthYear(monthGroup.month, monthGroup.year)}
                       </TimesheetMonthLink>
                     </div>
-                    <Table>
+                    <Table className="table-fixed w-full">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>{Texts.position}</TableHead>
-                          <TableHead>{Texts.timesheetStatus}</TableHead>
-                          <TableHead>{Texts.workload}</TableHead>
+                          <TableHead className="w-1/3">{Texts.position}</TableHead>
+                          <TableHead className="w-1/3">{Texts.timesheetStatus}</TableHead>
+                          <TableHead className="w-1/3">{Texts.workload}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
