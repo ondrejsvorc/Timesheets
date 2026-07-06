@@ -83,7 +83,7 @@ internal static class ContractEmployeeUpdatePlanner
             && existing.Position == request.Position
             && existing.Workload == request.Workload;
 
-        if (metadataSame && newStart == existingStart)
+        if (newStart == existingStart)
         {
             if (IsShorteningEnd(existingEnd, newEnd))
             {
@@ -93,6 +93,11 @@ internal static class ContractEmployeeUpdatePlanner
             if (IsExtendingEnd(existingEnd, newEnd))
             {
                 return await PlanExtendEndAsync(existing, newEnd, dbContext, cancellationToken);
+            }
+
+            if (!metadataSame)
+            {
+                return await PlanMetadataOnlyAsync(existing, dbContext, cancellationToken);
             }
         }
 
@@ -132,6 +137,26 @@ internal static class ContractEmployeeUpdatePlanner
         }
 
         return newEnd.Value > existingEnd.Value;
+    }
+
+    private static async Task<ContractEmployeeUpdateImpact> PlanMetadataOnlyAsync(ContractEmployee existing, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        (int draft, int submitted, int approved) = await CountTimesheetsOnAssignmentAsync(
+            existing.Id,
+            dbContext,
+            cancellationToken);
+
+        return new ContractEmployeeUpdateImpact(
+            CanUpdate: true,
+            CreatesNewAssignment: false,
+            BlockReason: null,
+            CurrentAssignmentEndDate: existing.EndDate,
+            NewAssignmentStartDate: null,
+            NewTimesheetMonthCount: 0,
+            DraftTimesheetsOnOldAssignment: draft,
+            DraftDaysToRemove: 0,
+            SubmittedTimesheetCount: submitted,
+            ApprovedTimesheetCount: approved);
     }
 
     private static async Task<ContractEmployeeUpdateImpact> PlanShortenEndAsync(ContractEmployee existing, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)

@@ -110,6 +110,34 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task UpdateImpact_MetadataOnly_ReturnsCanUpdate()
+    {
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        ContractEmployeeUpdateRequest request = new(TestIdentifiers.Position(1), "Senior Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}/update-impact", request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        ContractEmployeeUpdateImpact? impact = await response.Content.ReadFromJsonAsync<ContractEmployeeUpdateImpact>();
+        Assert.NotNull(impact);
+        Assert.True(impact!.CanUpdate);
+        Assert.False(impact.CreatesNewAssignment);
+    }
+
+    [Fact]
+    public async Task UpdateContractEmployee_MetadataOnly_UpdatesSameAssignment()
+    {
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        UpdateContractEmployee.Request request = new(TestIdentifiers.Position(1), "Senior Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}", request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        UpdateContractEmployee.Response? updated = await response.Content.ReadFromJsonAsync<UpdateContractEmployee.Response>();
+        Assert.NotNull(updated);
+        Assert.Equal(setup.ContractEmployeeId, updated!.Id);
+        Assert.Equal("Senior Developer", updated.Position);
+    }
+
+    [Fact]
     public async Task UpdateImpact_ExtendEnd_ReturnsNewMonths()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 6, 30, 0, 0, 0, DateTimeKind.Utc));

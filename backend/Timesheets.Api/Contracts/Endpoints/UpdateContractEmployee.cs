@@ -136,6 +136,44 @@ public sealed class UpdateContractEmployee : IEndpoint
         }
         else
         {
+            if (request.Position != existing.Position)
+            {
+                bool overlapping = await ContractEmployeeValidation.HasOverlappingSamePositionAsync(
+                    id,
+                    existing.EmployeeId,
+                    request.Position,
+                    ContractEmployeeValidation.ToUtcDate(existing.StartDate),
+                    updateRequest.EndDate,
+                    contractEmployeeId,
+                    dbContext,
+                    cancellationToken);
+
+                if (overlapping)
+                {
+                    return TypedResults.BadRequest("Zaměstnanec už má tuto pozici na zakázce v překrývajícím se období.");
+                }
+            }
+
+            if (request.Workload != existing.Workload)
+            {
+                string? workloadError = await ContractEmployeeValidation.ValidateMonthlyWorkloadAsync(
+                    existing.EmployeeId,
+                    request.Workload,
+                    ContractEmployeeValidation.ToUtcDate(existing.StartDate),
+                    updateRequest.EndDate,
+                    contractEmployeeId,
+                    dbContext,
+                    cancellationToken);
+
+                if (workloadError is not null)
+                {
+                    return TypedResults.BadRequest(workloadError);
+                }
+            }
+
+            existing.PositionCode = request.PositionCode;
+            existing.Position = request.Position;
+            existing.Workload = request.Workload;
             existing.EndDate = impact.CurrentAssignmentEndDate;
             if (impact.DraftDaysToRemove > 0 && impact.CurrentAssignmentEndDate.HasValue)
             {
