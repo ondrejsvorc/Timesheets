@@ -87,12 +87,12 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
   return (
     <>
       <div className="rounded-md border p-4">
-        <Table>
+        <Table className="table-fixed w-full">
           <TableHeader>
             <TableRow>
-              <TableHead>{Texts.contractId}</TableHead>
-              <TableHead>{Texts.contractName}</TableHead>
-              <TableHead>{Texts.actions}</TableHead>
+              <TableHead className="w-[22%]">{Texts.contractId}</TableHead>
+              <TableHead className="w-[60%]">{Texts.contractName}</TableHead>
+              <TableHead className="w-[18%] text-right">{Texts.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -132,9 +132,13 @@ export const ContractRow = ({ contract, onEdit, onRequestDelete }: ContractRowPr
 
   return (
     <TableRow className="cursor-pointer" onClick={() => projectId && go.forward(Routes.contract(projectId, contract.id))}>
-      <TableCell>{contract.registrationNumber}</TableCell>
-      <TableCell>{contract.name}</TableCell>
-      <TableCell>
+      <TableCell className="truncate" title={contract.registrationNumber}>
+        {contract.registrationNumber}
+      </TableCell>
+      <TableCell className="truncate" title={contract.name}>
+        {contract.name}
+      </TableCell>
+      <TableCell className="text-right">
         {(canEdit || canDelete) && (
           <ActionButtons>
             {canEdit && (

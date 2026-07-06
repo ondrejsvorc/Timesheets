@@ -72,30 +72,37 @@ export const PositionsTable = ({ positions }: PositionsTableProps) => {
 
   return (
     <div className="rounded-md border p-4">
-      <Table>
+      <Table className="table-fixed w-full">
         <TableHeader>
           <TableRow>
-            <TableHead>{Texts.position}</TableHead>
-            <TableHead>{Texts.workload}</TableHead>
-            <TableHead>{Texts.from}</TableHead>
-            <TableHead>{Texts.to}</TableHead>
-            <TableHead>{Texts.project}</TableHead>
-            <TableHead>{Texts.contractId}</TableHead>
+            <TableHead className="w-[22%]">{Texts.position}</TableHead>
+            <TableHead className="w-[10%]">{Texts.workload}</TableHead>
+            <TableHead className="w-[12%]">{Texts.from}</TableHead>
+            <TableHead className="w-[12%]">{Texts.to}</TableHead>
+            <TableHead className="w-[28%]">{Texts.project}</TableHead>
+            <TableHead className="w-[16%]">{Texts.contractId}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {positions.map((position) => (
-            <TableRow key={`${position.projectId}:${position.contractId}:${position.startDate}`}>
-              <TableCell>
-                {position.positionCode} · {position.position}
-              </TableCell>
-              <TableCell>{formatWorkloadPercent(position.workload)}</TableCell>
-              <TableCell>{formatDate(position.startDate)}</TableCell>
-              <TableCell>{formatDate(position.endDate)}</TableCell>
-              <TableCell>{position.projectName}</TableCell>
-              <TableCell>{position.contractRegistrationNumber || Texts.dash}</TableCell>
-            </TableRow>
-          ))}
+          {positions.map((position) => {
+            const positionLabel = `${position.positionCode} · ${position.position}`;
+            return (
+              <TableRow key={`${position.projectId}:${position.contractId}:${position.startDate}`}>
+                <TableCell className="truncate" title={positionLabel}>
+                  {positionLabel}
+                </TableCell>
+                <TableCell>{formatWorkloadPercent(position.workload)}</TableCell>
+                <TableCell>{formatDate(position.startDate)}</TableCell>
+                <TableCell>{formatDate(position.endDate)}</TableCell>
+                <TableCell className="truncate" title={position.projectName}>
+                  {position.projectName}
+                </TableCell>
+                <TableCell className="truncate" title={position.contractRegistrationNumber || Texts.dash}>
+                  {position.contractRegistrationNumber || Texts.dash}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

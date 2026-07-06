@@ -109,11 +109,11 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
         <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} onlyUnapproved={onlyUnapproved} onOnlyUnapprovedChange={setOnlyUnapproved} />
       </FilterBar>
       <div className="rounded-md border p-4">
-        <Table>
+        <Table className="table-fixed w-full">
           <TableHeader>
             <TableRow>
-              <TableHead>{Texts.month}</TableHead>
-              <TableHead>{Texts.timesheetStatus}</TableHead>
+              <TableHead className="w-1/2">{Texts.month}</TableHead>
+              <TableHead className="w-1/2">{Texts.timesheetStatus}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

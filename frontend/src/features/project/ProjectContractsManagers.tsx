@@ -91,13 +91,13 @@ export const ContractsManagersTable = ({ managers, dispatch }: ContractsManagers
 
   return (
     <div className="rounded-md border p-4">
-      <Table>
+      <Table className="table-fixed w-full">
         <TableHeader>
           <TableRow>
-            <TableHead>{Texts.contractId}</TableHead>
-            <TableHead>{Texts.personalNumber}</TableHead>
-            <TableHead>{Texts.fullName}</TableHead>
-            <TableHead>{Texts.actions}</TableHead>
+            <TableHead className="w-[18%]">{Texts.contractId}</TableHead>
+            <TableHead className="w-[16%]">{Texts.personalNumber}</TableHead>
+            <TableHead className="w-[46%]">{Texts.fullName}</TableHead>
+            <TableHead className="w-[20%] text-right">{Texts.actions}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -122,10 +122,16 @@ export const ContractManagerRow = ({ manager, dispatch }: ContractManagerRowProp
 
   return (
     <TableRow className="cursor-pointer" onClick={() => go.forward(Routes.employee(manager.employeeId))}>
-      <TableCell>{manager.contractRegistrationNumber || Texts.dash}</TableCell>
-      <TableCell>{manager.employeePersonalNumber}</TableCell>
-      <TableCell>{manager.employeeFullName}</TableCell>
-      <TableCell>
+      <TableCell className="truncate" title={manager.contractRegistrationNumber || Texts.dash}>
+        {manager.contractRegistrationNumber || Texts.dash}
+      </TableCell>
+      <TableCell className="truncate" title={manager.employeePersonalNumber}>
+        {manager.employeePersonalNumber}
+      </TableCell>
+      <TableCell className="truncate" title={manager.employeeFullName}>
+        {manager.employeeFullName}
+      </TableCell>
+      <TableCell className="text-right">
         {canRemove && (
           <DeleteButton
             onClick={(e) => {

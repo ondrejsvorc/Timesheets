@@ -17,12 +17,12 @@ export const EmployeesTable = ({ employees }: EmployeesTableProps) => {
 
   return (
     <div className="rounded-md border p-4">
-      <Table>
+      <Table className="table-fixed w-full">
         <TableHeader>
           <TableRow>
-            <TableHead>{Texts.personalNumber}</TableHead>
-            <TableHead>{Texts.fullName}</TableHead>
-            <TableHead>{Texts.employeeType}</TableHead>
+            <TableHead className="w-[22%]">{Texts.personalNumber}</TableHead>
+            <TableHead className="w-[53%]">{Texts.fullName}</TableHead>
+            <TableHead className="w-[25%]">{Texts.employeeType}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -44,9 +44,15 @@ export const EmployeeRow = ({ employee }: EmployeeRowProps) => {
 
   return (
     <TableRow className="cursor-pointer" onClick={() => go.forward(Routes.employee(employee.id))}>
-      <TableCell>{employee.personalNumber ?? Texts.dash}</TableCell>
-      <TableCell>{employee.fullName}</TableCell>
-      <TableCell>{resolveEmployeeTypeName(employee.employeeTypeId)}</TableCell>
+      <TableCell className="truncate" title={employee.personalNumber ?? Texts.dash}>
+        {employee.personalNumber ?? Texts.dash}
+      </TableCell>
+      <TableCell className="truncate" title={employee.fullName}>
+        {employee.fullName}
+      </TableCell>
+      <TableCell className="truncate" title={resolveEmployeeTypeName(employee.employeeTypeId)}>
+        {resolveEmployeeTypeName(employee.employeeTypeId)}
+      </TableCell>
     </TableRow>
   );
 };
