@@ -35,6 +35,7 @@ export const ProjectsPage = () => {
 const { FilterSearchInput, FilterSelect } = createFilterControls<ProjectsFilterCriteria>();
 const projectStatusFilterOptions = [
   { value: "active", label: Texts.activeOnly },
+  { value: "inactive", label: Texts.inactiveOnly },
   { value: "archived", label: Texts.archivedOnly },
   { value: "all", label: Texts.allProjects },
 ] as const;

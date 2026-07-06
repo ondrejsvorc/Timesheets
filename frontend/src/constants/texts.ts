@@ -27,6 +27,7 @@ export const Texts = {
   searchByNameOrId: "Hledat podle názvu nebo ID…",
   removeFilter: "Vymazat filtr",
   activeOnly: "Pouze aktivní",
+  inactiveOnly: "Pouze neaktivní",
   archivedOnly: "Pouze archivované",
   allProjects: "Všechny",
   copyProjectColumn: "Zkopírovat sloupec hodin",
