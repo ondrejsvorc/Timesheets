@@ -144,8 +144,11 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
   );
 
   return (
-    <div className={cn(isFullscreen && "fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background p-4 md:p-6")}>
-      <SubPageHeader actions={!hasWorkflowButtons && <FullscreenButton onClick={() => setIsFullscreen((current) => !current)} isFullscreen={isFullscreen} />}>
+    <div className={cn(isFullscreen && "fixed inset-0 z-[60] flex flex-col overflow-hidden bg-background px-4 pb-4 pt-2 md:px-6 md:pb-6 md:pt-2")}>
+      <SubPageHeader
+        className={isFullscreen ? "shrink-0 py-2" : undefined}
+        actions={!hasWorkflowButtons && <FullscreenButton onClick={() => setIsFullscreen((current) => !current)} isFullscreen={isFullscreen} />}
+      >
         <div className="flex items-center gap-2">
           <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
           <TimesheetStatusBadge status={overview.status} />

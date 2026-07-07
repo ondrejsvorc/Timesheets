@@ -8,6 +8,7 @@ import { MessageAlertDialog } from "@/components/shared/dialogs/MessageAlertDial
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
+import { cn } from "@/utils/common";
 import { type GetCombinedTimesheetOverviewResponse, type TimesheetStatusAction, updateCombinedTimesheetStatus } from "./api";
 import type { Timesheet, TimesheetEvaluation } from "./Timesheet";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
@@ -84,7 +85,7 @@ export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, on
 
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div className={cn("mb-6 flex flex-wrap items-center justify-between gap-3", isFullscreen && "mb-2 shrink-0")}>
         <div className="flex flex-wrap items-center gap-3">
           {isDraft && canSubmit && (
             <Button type="button" onClick={() => setActiveWorkflow("submit")}>
