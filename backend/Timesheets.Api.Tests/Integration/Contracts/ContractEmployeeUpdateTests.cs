@@ -124,6 +124,48 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task UpdateContractEmployee_WorkloadChange_SyncsExistingProjectTimesheets()
+    {
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
+            Factory.Services,
+            Client,
+            new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc),
+            workload: 0.5m);
+
+        using (IServiceScope scope = CreateScope())
+        {
+            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            decimal januaryWorkload = await dbContext.ProjectTimesheets.AsNoTracking()
+                .Where(timesheet => timesheet.ContractEmployeeId == setup.ContractEmployeeId)
+                .Where(timesheet => timesheet.Year == 2024 && timesheet.Month == 1)
+                .Select(timesheet => timesheet.Workload)
+                .SingleAsync();
+            Assert.Equal(0.5m, januaryWorkload);
+        }
+
+        UpdateContractEmployee.Request request = new(
+            TestIdentifiers.Position(1),
+            "Developer",
+            0.25m,
+            new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+            new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
+        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}", request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using (IServiceScope scope = CreateScope())
+        {
+            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            decimal januaryWorkload = await dbContext.ProjectTimesheets.AsNoTracking()
+                .Where(timesheet => timesheet.ContractEmployeeId == setup.ContractEmployeeId)
+                .Where(timesheet => timesheet.Year == 2024 && timesheet.Month == 1)
+                .Select(timesheet => timesheet.Workload)
+                .SingleAsync();
+            Assert.Equal(0.25m, januaryWorkload);
+        }
+    }
+
+    [Fact]
     public async Task UpdateContractEmployee_MetadataOnly_UpdatesSameAssignment()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));

@@ -290,7 +290,7 @@ public sealed class AttendanceTimesheetReviewer
                 decimal beforeBreak = HoursBetween(day.ClockIn.Value, day.BreakStart.Value);
                 if (beforeBreak < TimesheetLimits.MinHoursBeforeBreak)
                 {
-                    yield return Issue(day, "ERR-ATT-11", IssueType.Error, "Přestávka nejdřív po 4 h práce.", "breakStart");
+                    yield return Issue(day, "ERR-ATT-11", IssueType.Error, "Přestávka nejdříve po 4 h práce.", "breakStart");
                 }
                 if (!BreakIsInsideShift(day))
                 {

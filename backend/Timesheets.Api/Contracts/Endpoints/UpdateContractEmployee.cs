@@ -236,7 +236,21 @@ public sealed class UpdateContractEmployee : IEndpoint
 
         while (cursor <= last)
         {
-            await ProjectTimesheetInitializer.EnsureForAssignmentMonthAsync(contractEmployee, cursor.Year, cursor.Month, dbContext, holidaysFactory, cancellationToken);
+            Data.Models.ProjectTimesheet? existing = await dbContext.ProjectTimesheets
+                .FirstOrDefaultAsync(
+                    t => t.ContractEmployeeId == contractEmployee.Id && t.Year == cursor.Year && t.Month == cursor.Month,
+                    cancellationToken);
+
+            if (existing is null)
+            {
+                await ProjectTimesheetInitializer.EnsureForAssignmentMonthAsync(contractEmployee, cursor.Year, cursor.Month, dbContext, holidaysFactory, cancellationToken);
+            }
+            else
+            {
+                existing.Workload = contractEmployee.Workload;
+                existing.UpdatedAt = DateTime.UtcNow;
+            }
+
             cursor = cursor.AddMonths(1);
         }
     }
