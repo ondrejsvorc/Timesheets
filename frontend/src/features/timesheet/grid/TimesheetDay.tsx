@@ -77,7 +77,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
   const canGenerateAttendance = tracksAttendance && issues.some((issue) => issue.code === "ERR-ATT-13") && (day.attendance.schedules.length > 0 || allocatedInputHours > 0);
   const stagMissing = !tracksAttendance && issues.some((issue) => issue.code === "ERR-ALL-02") ? roundHours(calculateStagHours(day) - (day.coreHours ?? 0)) : 0;
   const displayBalance = stagMissing > 0 ? Math.max(balance, stagMissing) : balance;
-  const canAllocateRow = displayBalance > 0 || canGenerateAttendance;
+  const canAllocateRow = displayBalance !== 0 || canGenerateAttendance;
   const attendanceAdjustedClass = day.attendanceAdjusted ? "bg-amber-50 ring-1 ring-inset ring-amber-300" : "";
   const balanceTone = displayBalance === 0 ? "bg-green-50 text-green-600" : displayBalance > 0 ? "bg-red-50 text-red-500" : "bg-amber-50 text-amber-700";
 
