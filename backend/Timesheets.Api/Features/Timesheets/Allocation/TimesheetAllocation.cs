@@ -9,6 +9,22 @@ internal static class AllocationDayExtensions
     public static bool HasLockedProjectHours(this EditableTimesheetDay day) =>
         day.ProjectHoursFixed.Any(item => item.Value && day.ProjectHours.GetValueOrDefault(item.Key) > 0m);
 
+    public static void ResetGeneratedAllocations(this EditableTimesheetDay day, IReadOnlyList<ProjectColumn> projects)
+    {
+        if (!day.CoreHoursFixed)
+        {
+            day.CoreHours = 0m;
+        }
+
+        foreach (ProjectColumn project in projects)
+        {
+            if (!day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+            {
+                day.ProjectHours[project.Id] = day.ProjectFloor(project.Id);
+            }
+        }
+    }
+
     public static decimal ProjectFloor(this EditableTimesheetDay day, Guid projectId) =>
         day.ProjectHoursFloor.GetValueOrDefault(projectId);
 

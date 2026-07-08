@@ -55,6 +55,7 @@ internal sealed class AcademicTimesheetAllocator
             return;
         }
 
+        day.ResetGeneratedAllocations(_sheet.Projects);
         MonthlyTargets targets = MonthlyTargets.Remainders(_sheet, _totalWorkload);
         new DayTargetFiller(_sheet.Projects, _totalWorkload, tracksAttendance: false, targets).Fill(day);
     }

@@ -41,6 +41,7 @@ internal sealed class NonAcademicTimesheetAllocator
             return;
         }
 
+        day.ResetGeneratedAllocations(_sheet.Projects);
         MonthlyTargets targets = MonthlyTargets.NonAcademicCapacityRemainders(_sheet, AvailableMonthCapacity());
         new DayTargetFiller(_sheet.Projects, _totalWorkload, tracksAttendance: true, targets).Fill(day);
     }
