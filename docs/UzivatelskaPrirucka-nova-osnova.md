@@ -69,7 +69,7 @@ Modul Projekty slouží ke správě univerzitních projektů. Projekt představu
 ### Přidání manažera projektu
 
 ![Rozkliknutí detailu projektu](./images/v-01-00-22-projekty-sipka-projekt.png)
-![Stránka detailu projektu - překliknutí záložky](./images/v-01-01-24-projekt-zakazky-zalozka-manazeri_projektu.png)
+![Stránka detailu projektu - překliknutí záložky](./images/v-01-01-24-projekt-zakazky-sipka-zalozka-manazeri_projektu.png)
 ![Stránka detailu projektu - záložka Manažeři projektu](./images/v-01-02-20-projekt-manazeri_projektu-sipka-vytvorit.png)
 ![Dialog pro přidání projektového manažera](./images/v-01-02-00-projekt-manazeri_projektu-modal-pridat.png)
 
@@ -112,10 +112,20 @@ Modul Zakázky představují dílčí části projektů, ke kterým jsou přiřa
 ![Stránka detailu projektu - záložka Manažeři zakázek](./images/v-01-03-20-projekt-manazeri_zakazek-sipka-vytvorit.png)
 ![Dialog pro přidaní manažera zakázky](./images/v-01-03-00-projekt-manazeri_zakazek-modal-pridat.png)
 
+### Zobrazení detailu zakázky
+
+![Rozkliknutí detailu dané zakázky](./images/v-01-01-23-projekt-zakazky-sipka-detail.png)
+![Stránka pro detail zakáky - záložka Výkazy](./images/v-02-00-01-zakazka-vykazy-seskupeni1.png)
+
+#### Přehled výkazů v zakázce - změna seskupení
+
+![Stránka detailu dané zakázky - změna seskupení](./images/v-02-00-21-zakazka-vykazy-sipka-zmena_seskupeni.png)
+![Stránka detailu dané zakázky - seskupení 2](./images/v-02-00-01-zakazka-vykazy-seskupeni2.png)
+
 ### Přidání zaměstnance do zakázky (vytvoření pracovní pozice zaměstnance)
 
 ![Rozkliknutí detailu dané zakázky](./images/v-01-01-23-projekt-zakazky-sipka-detail.png)
-![Stránka detailu zakázky - překliknutí záložky](./images/v-02-00-91-zakazka-vykazy-sipka-zalozka_zamestnanci.png)
+![Stránka detailu zakázky - překliknutí záložky](./images/v-02-00-20-zakazka-vykazy-sipka-zalozka_zamestnanci.png)
 ![Stránka detailu zakázky - záložka Zaměstnanci](./images/v-02-01-20-zakazka-zamestnanci-sipka-pridat.png)
 ![Dialog pro přidání pozice v zakázce](./images/v-02-01-01-zakazka-zamestnanci-modal-pridat.png)
 
@@ -134,7 +144,7 @@ Modul Zaměstnanci slouží ke správě pracovních pozic zaměstnanců v jednot
 
 ### Přehled pracovních pozic
 
-![Rozkliknutí detailu daného zaměstnance](./images/v-03-00-91-zamestnanci-sipka-zamestnanec.png)
+![Rozkliknutí detailu daného zaměstnance](./images/v-03-00-20-zamestnanec-sipka-detail.png)
 ![Stránka detailu zaměstnanec - překliknutí záložky](./images/v-03-01-91-zamestnanec-detail-vykazy-sipka-pozice.png)
 
 ### Vytvoření pracovní pozice
@@ -169,7 +179,7 @@ Příklad exportu docházky za měsíc duben 2026. Pokud není datum vylněn, ex
 ### Nahrání docházky z IMIS
 V současné době není aplikace propojena se systémem IMIS. Docházku je proto nutné nejprve exportovat ze systému IMIS a následně ji nahrát do aplikace Výkazy.
 
-![Stránka Moje Výkazy / Detail zaměstnance](./images/v-03-01-92-zamestnanec-sipka-nahrat.png)
+![Stránka Moje Výkazy / Detail zaměstnance](./images/v-03-01-22-zamestnanec-sipka-nahrat.png)
 ![Dialog pro nahrání pracovní docházky](./images/v-03-01-01-zamestnanec-detail-vykazy-modal-nahrat_dochazku.png)
 
 ## Výkazy
@@ -179,12 +189,40 @@ Modul Výkazy slouží k evidenci, úpravám a schvalování pracovních výkaz�
 ### Zobrazení výkazu
 
 1) Přes zaměstnance
+![Stránka Zaměstnanci - zobrazení stránky detailu daného zaměstnance](./images/v-04-00-20-zamestnaneci-zamestnanec-sipka-zamestnanec.png)
+![Stránka detailu zaměstnance - záložka Výkazy - zobrazení kombinovaného výkazu pro daný měsíc](./images/v-04-00-21-zamestnanec-vykazy-sipka-detail_mesice.png)
+![Stránka pro kombinovaný výkaz](./images/v-04-01-00-vykaz-prehled.png)
 
-2) Přes zakázku - TODO po úpravě
+2) Přes zakázku – tento krok vychází ze zobrazení detailu zakázky (viz *Zakázky > Zobrazení detailu zakázky*)
 
-#### Popis funkionalit na stránce s výkazem
+    2.1 Seskupení dle měsíce a zaměstnance
+    ![Zobrazení stránky pro kombinovaný výkaz přes sekupení 1](./images/v-02-00-22-zakazka-vykazy-sipka-zobrazit_vykaz_seskupeni1.png)
+
+    2.2 Seskupení dle zaměstnance a měsíce
+    ![Zobrazení stránky pro kombinovaný výkaz přes sekupení 2](./images/v-02-00-23-zakazka-vykazy-sipka-zobrazit_vykaz_seskupeni2.png)
+
+
+### Zvětšení tabulky s kombinovaným výkazem
+
+![Stránka pro kombinovaný výkaz - tlačítko zvětšit](./images/v-04-01-20-vykaz-prehled-sipka-zvetsit.png)
 
 ### Úprava výkazu
+
+Níže na obrázku jsou popsány základní prvky a operace kombinovaného výkazu:
+
+1) Sloupec pro projektovou činnost – po najetí myší na název sloupce se zobrazí detailní informace (projekt, zakázka, úvazek)
+
+2) Zamykání buněk tabulky – ikona zámečku slouží pro uzamčení hodnoty buňky v tabulce. Takto zamčené buňky si při generování hodnot uchovají zadanou fixní hodnotu.
+
+3) Zkopírování odpracovaných hodin v projektu – kliknutím na ikonu kopírovat se zkopírují hodnoty celého sloupce (pro předenesní hodnot například do dokumentu pro výkaz projektové činnosti).
+
+4) Generování hodnot pro celý výkaz - kliknutím na ikonu generovat se vygenerují hodnoty pro celou tabulku výkazu.
+
+5) Generování hodnot pro jednotlivý řádek - kliknutím na ikonu generovat se vygenerují hodnoty pro daný řádek.
+
+6) Kontrolní součtový řádek – ve formátu *celkem vyplněných hodin / celkem hodin potřebných vyplnit*. Sloupce projektových činností je potřeba splnit přesně, u sloupce pro kmenový úvazek je povolen mírný přesah odpracovaných hodin (max 2 hod).
+
+![Kombinovaný výkaz - popis](./images/v-04-01-20-vykaz_zoom-sipka-popis.png)
 
 #### Chybové hlášky
 Chybové hlášky jsou dvojí závažnosti:
@@ -193,12 +231,14 @@ Chybové hlášky jsou dvojí závažnosti:
 
 S červenými hláškami nelze výkaz odeslat ke schváleni, s žlutými je odeslání již možné. Chybové hlášky mohou být pro konkrétní buňky nebo pro celé řádky výkazu.
 
-#### Generování hodnot
+### Uložení změn v kombinovaném výkazu
 
-#### Zkopírování odpracovaných hodin v projektu
-Systém nabízí funkci pro jedduché a rychlé zkopírování hodnot v sloupci projektové činnosti pro přednesení těchto hodnot například do dokumentu pro výkaz projektové činnosti.
+![Stránka pro kombinovaný výkaz - tlačítko Uložit změny](./images/v-04-01-22-vykaz-prehled-sipka-ulozit_zmeny.png)
 
 ### Odeslání výkazu ke schválení
+
+![Stránka pro kombinovaný výkaz - tlačítko Odeslat ke schválení](./images/v-04-01-21-vykaz-prehled-sipka-odeslat_ke_schvalenit.png)
+![Dialog pro odeslání výkazu ke schválení](./images/v-04-00-03-vykaz-modal-odeslat_ke%20schvaleni.png)
 
 ### Schválení výkazu
 
