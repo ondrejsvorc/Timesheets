@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using Timesheets.Api.Contracts.Endpoints;
 using Timesheets.Api.Data.Models;
-using Timesheets.Api.Projects.Endpoints;
+using Timesheets.Api.Features.Contracts.Endpoints;
+using Timesheets.Api.Features.Projects.Endpoints;
 
 namespace Timesheets.Api.Tests.Integration;
 

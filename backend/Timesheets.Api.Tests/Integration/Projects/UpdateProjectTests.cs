@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using Timesheets.Api.Projects.Endpoints;
+using Timesheets.Api.Features.Projects.Endpoints;
 using Xunit;
 
 namespace Timesheets.Api.Tests.Integration.Projects;

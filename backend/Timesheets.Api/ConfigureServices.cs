@@ -11,12 +11,12 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using Timesheets.Api.Administration;
-using Timesheets.Api.Auth;
+using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
-using Timesheets.Api.Notifications;
-using Timesheets.Api.Timesheets;
+using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Notifications;
+using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api;
 

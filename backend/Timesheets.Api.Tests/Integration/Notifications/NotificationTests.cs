@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
-using Timesheets.Api.Notifications.Endpoints;
+using Timesheets.Api.Features.Notifications.Endpoints;
 using Xunit;
 
 namespace Timesheets.Api.Tests.Integration.Notifications;

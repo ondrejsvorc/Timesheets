@@ -1,4 +1,4 @@
-using Timesheets.Api.Timesheets;
+using Timesheets.Api.Features.Timesheets;
 using Xunit;
 
 namespace Timesheets.Api.Tests.Unit;

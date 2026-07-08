@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
-using ProjectColumnEdit = Timesheets.Api.Timesheets.ProjectColumnEdit;
-using ProjectDayEdit = Timesheets.Api.Timesheets.ProjectDayEdit;
-using TimesheetDayEdit = Timesheets.Api.Timesheets.TimesheetDayEdit;
-using TimesheetEditRequest = Timesheets.Api.Timesheets.TimesheetEditRequest;
+using ProjectColumnEdit = Timesheets.Api.Features.Timesheets.ProjectColumnEdit;
+using ProjectDayEdit = Timesheets.Api.Features.Timesheets.ProjectDayEdit;
+using TimesheetDayEdit = Timesheets.Api.Features.Timesheets.TimesheetDayEdit;
+using TimesheetEditRequest = Timesheets.Api.Features.Timesheets.TimesheetEditRequest;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
 

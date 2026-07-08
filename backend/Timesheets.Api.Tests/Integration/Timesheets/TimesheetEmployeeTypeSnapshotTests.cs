@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
-using Timesheets.Api.Employees;
-using Timesheets.Api.Timesheets;
-using Timesheets.Api.Timesheets.Endpoints;
+using Timesheets.Api.Features.Employees;
+using Timesheets.Api.Features.Timesheets;
+using Timesheets.Api.Features.Timesheets.Endpoints;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
 

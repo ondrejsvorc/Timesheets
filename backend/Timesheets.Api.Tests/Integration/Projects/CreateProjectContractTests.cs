@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
-using Timesheets.Api.Projects.Endpoints;
+using Timesheets.Api.Features.Projects.Endpoints;
 using Xunit;
 
 namespace Timesheets.Api.Tests.Integration.Projects;

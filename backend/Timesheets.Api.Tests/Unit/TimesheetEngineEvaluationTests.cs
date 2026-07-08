@@ -1,5 +1,5 @@
-using Timesheets.Api.Employees;
-using Timesheets.Api.Timesheets;
+using Timesheets.Api.Features.Employees;
+using Timesheets.Api.Features.Timesheets;
 
 using DataAttendanceDay = Timesheets.Api.Data.Models.AttendanceDay;
 using DataAttendanceTimesheet = Timesheets.Api.Data.Models.AttendanceTimesheet;

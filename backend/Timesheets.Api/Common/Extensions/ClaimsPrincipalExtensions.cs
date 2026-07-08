@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using Timesheets.Api.Employees;
+using Timesheets.Api.Features.Employees;
 
 namespace Timesheets.Api.Common.Extensions;
 

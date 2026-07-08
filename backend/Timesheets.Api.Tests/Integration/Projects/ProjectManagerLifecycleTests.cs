@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
-using Timesheets.Api.Projects.Endpoints;
+using Timesheets.Api.Features.Projects.Endpoints;
 using Xunit;
 
 namespace Timesheets.Api.Tests.Integration.Projects;

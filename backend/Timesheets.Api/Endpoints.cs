@@ -1,11 +1,11 @@
-using Timesheets.Api.Auth;
-using Timesheets.Api.Auth.Endpoints;
-using Timesheets.Api.Contracts.Endpoints;
-using Timesheets.Api.Employees.Endpoints;
-using Timesheets.Api.Notifications;
-using Timesheets.Api.Notifications.Endpoints;
-using Timesheets.Api.Projects.Endpoints;
-using Timesheets.Api.Timesheets.Endpoints;
+using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Auth.Endpoints;
+using Timesheets.Api.Features.Contracts.Endpoints;
+using Timesheets.Api.Features.Employees.Endpoints;
+using Timesheets.Api.Features.Notifications;
+using Timesheets.Api.Features.Notifications.Endpoints;
+using Timesheets.Api.Features.Projects.Endpoints;
+using Timesheets.Api.Features.Timesheets.Endpoints;
 
 namespace Timesheets.Api;
 

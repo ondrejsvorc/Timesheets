@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using Timesheets.Api.Contracts.Endpoints;
+using Timesheets.Api.Features.Contracts.Endpoints;
 
 namespace Timesheets.Api.Tests.Integration.Contracts;
 

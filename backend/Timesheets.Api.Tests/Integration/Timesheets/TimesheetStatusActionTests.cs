@@ -6,7 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
-using Timesheets.Api.Timesheets.Endpoints;
+using Timesheets.Api.Features.Timesheets.Endpoints;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
 

@@ -4,8 +4,8 @@ using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
-using Timesheets.Api.Employees.Endpoints;
-using Timesheets.Api.Timesheets.Endpoints;
+using Timesheets.Api.Features.Employees.Endpoints;
+using Timesheets.Api.Features.Timesheets.Endpoints;
 using Xunit.Abstractions;
 
 namespace Timesheets.Api.Tests.Integration.Performance;

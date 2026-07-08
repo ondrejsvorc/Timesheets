@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
-using Timesheets.Api.Timesheets;
-using Timesheets.Api.Timesheets.Endpoints;
+using Timesheets.Api.Features.Timesheets;
+using Timesheets.Api.Features.Timesheets.Endpoints;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
 
@@ -358,7 +358,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             Assert.Equal(44m, allocation.Evaluation.Totals.CoreHours);
             Assert.Equal(44m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
             Assert.Equal(88m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
-            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
+            AssertGeneratedNonAcademicCellsStayWithinBounds((AllocateTimesheet.Response)allocation);
         }
     }
 
@@ -402,7 +402,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Assert.Equal(6m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
         AllocateTimesheet.DayResponse overnight = allocation.Days.Single(day => day.Date == overnightDate);
         Assert.Equal(new int?[] { 1320, 420 }, overnight.Work);
-        AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
+        AssertGeneratedNonAcademicCellsStayWithinBounds((AllocateTimesheet.Response)allocation);
     }
 
     [Fact]
@@ -436,7 +436,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             Assert.Equal(44m, allocation.Evaluation.Totals.CoreHours);
             Assert.Equal(44m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
             Assert.Equal(88m, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
-            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
+            AssertGeneratedNonAcademicCellsStayWithinBounds((AllocateTimesheet.Response)allocation);
         }
     }
 
@@ -465,7 +465,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             Assert.Equal(expected, allocation!.Evaluation.Totals.WorkedHours);
             Assert.Equal(expected, allocation.Evaluation.Totals.CoreHours);
             Assert.Empty(allocation.Evaluation.Totals.Projects);
-            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
+            AssertGeneratedNonAcademicCellsStayWithinBounds((AllocateTimesheet.Response)allocation);
         }
     }
 
@@ -504,7 +504,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             Assert.Equal(HalfHour(total * 0.10m), allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == firstAssignmentId).Hours);
             Assert.Equal(HalfHour(total * 0.15m), allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == secondAssignmentId).Hours);
             Assert.Equal(HalfHour(total * 0.25m), allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == thirdAssignmentId).Hours);
-            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
+            AssertGeneratedNonAcademicCellsStayWithinBounds((AllocateTimesheet.Response)allocation);
         }
     }
 
@@ -536,7 +536,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             Assert.Equal(total, allocation!.Evaluation.Totals.WorkedHours);
             Assert.Equal(TimesheetLogic.Normalize(total - projectTarget), allocation.Evaluation.Totals.CoreHours);
             Assert.Equal(projectTarget, allocation.Evaluation.Totals.Projects.Single(project => project.ProjectId == assignmentId).Hours);
-            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation);
+            AssertGeneratedNonAcademicCellsStayWithinBounds((AllocateTimesheet.Response)allocation);
         }
     }
 
@@ -601,7 +601,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             AllocateTimesheet.DayResponse interruption = allocation.Days.Single(day => day.Date == interruptionDate);
             Assert.Equal(4m, interruption.CoreHours);
             Assert.Equal(4m, interruption.ProjectCells[assignmentId].Hours);
-            AssertGeneratedNonAcademicCellsStayWithinBounds(allocation, interruptionDate);
+            AssertGeneratedNonAcademicCellsStayWithinBounds((AllocateTimesheet.Response)allocation, interruptionDate);
         }
     }
     [Fact]

@@ -2,9 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Timesheets.Api.Contracts;
-using Timesheets.Api.Contracts.Endpoints;
 using Timesheets.Api.Data;
+using Timesheets.Api.Features.Contracts;
+using Timesheets.Api.Features.Contracts.Endpoints;
 using Xunit;
 
 namespace Timesheets.Api.Tests.Integration.Contracts;

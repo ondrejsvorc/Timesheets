@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using Timesheets.Api.Common.Extensions;
-using Timesheets.Api.Employees;
+using Timesheets.Api.Features.Employees;
 
 namespace Timesheets.Api.Tests.Unit;
 
