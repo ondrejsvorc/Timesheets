@@ -32,15 +32,16 @@ public sealed class TimesheetEditRequestValidator : AbstractValidator<TimesheetE
         RuleForEach(request => request.Projects).ChildRules(project =>
         {
             project.RuleFor(value => value.Days).Must(HaveUniqueDates);
+            project.RuleFor(value => value.Days).Must(HaveAtMostOneNonHalfHour);
             project.RuleForEach(value => value.Days).ChildRules(day =>
             {
                 day.RuleFor(value => value.Hours).InclusiveBetween(0m, 12m);
-                day.RuleFor(value => value.Hours).Must(IsHalfHourIncrement).When(value => value.Hours > 0m);
             });
         });
     }
 
-    private static bool IsHalfHourIncrement(decimal hours) => Math.Round(hours * 2m, MidpointRounding.AwayFromZero) % 1m == 0m;
+    private static bool IsHalfHourIncrement(decimal hours) => hours * 2m % 1m == 0m;
+    private static bool HaveAtMostOneNonHalfHour(IEnumerable<ProjectDayEdit> days) => days.Count(day => !IsHalfHourIncrement(day.Hours)) <= 1;
 
     private static bool IsTimeOfDay(TimeSpan? value) => value is null || value >= TimeSpan.Zero && value < TimeSpan.FromDays(1);
     private static bool HaveUniqueDates(IEnumerable<TimesheetDayEdit> days) => days.Select(day => DateOnly.FromDateTime(day.Date)).Distinct().Count() == days.Count();

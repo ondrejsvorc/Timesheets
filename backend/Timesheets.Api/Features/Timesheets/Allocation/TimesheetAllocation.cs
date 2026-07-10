@@ -90,7 +90,7 @@ internal sealed class MonthlyTargets
     }
 
     public static decimal NonAcademicProjectTarget(EditableTimesheet sheet, ProjectColumn project) =>
-        HumanHours.RoundToHalfHour(ProjectTarget(sheet, project));
+        ProjectTarget(sheet, project);
 
     public static decimal ProjectTarget(EditableTimesheet sheet, ProjectColumn project)
     {

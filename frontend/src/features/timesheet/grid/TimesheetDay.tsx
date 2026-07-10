@@ -217,12 +217,12 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
                       onChange={(value) =>
                         update((draft) => {
                           const current = draft.projectCells[project.id] ?? { hours: 0, locked: false };
-                          const hours = value === null ? 0 : Math.round(value * 2) / 2;
+                          const hours = value ?? 0;
                           draft.projectCells[project.id] = { ...current, hours };
                         })
                       }
                       commitOnChange
-                      precision={1}
+                      precision={2}
                       disabled={locked}
                       className="h-8 w-20 max-w-full text-right tabular-nums"
                     />

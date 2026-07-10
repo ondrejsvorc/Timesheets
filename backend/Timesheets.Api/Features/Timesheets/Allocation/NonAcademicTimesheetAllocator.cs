@@ -26,6 +26,7 @@ internal sealed class NonAcademicTimesheetAllocator
         {
             filler.Fill(day);
         }
+        ReconcileProjectRemainders();
     }
 
     public void AllocateDay(int dayNumber)
@@ -89,4 +90,53 @@ internal sealed class NonAcademicTimesheetAllocator
         TimesheetInterruptions.HasBusinessTripInterruption(day.Description)
             ? 0m
             : TimesheetInterruptionHours.DayCapacity(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.Description, _totalWorkload, tracksAttendance: true, day.Schedules);
+
+    private void ReconcileProjectRemainders()
+    {
+        foreach (ProjectColumn project in _sheet.Projects.Where(project => !project.Locked).OrderBy(_ => Random.Shared.Next()))
+        {
+            decimal target = MonthlyTargets.ProjectTarget(_sheet, project);
+            decimal missing = TimesheetLogic.Normalize(target - _sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id)));
+            if (missing <= 0m)
+            {
+                continue;
+            }
+
+            foreach (EditableTimesheetDay day in AdjustableDays(project))
+            {
+                decimal amount = Math.Min(missing, AdjustmentCapacity(day));
+                if (amount <= 0m)
+                {
+                    continue;
+                }
+
+                decimal fromCore = day.CoreHoursFixed ? 0m : Math.Min(day.CoreHours, amount);
+                day.CoreHours = TimesheetLogic.Normalize(day.CoreHours - fromCore);
+                day.ProjectHours[project.Id] = TimesheetLogic.Normalize(day.ProjectHours.GetValueOrDefault(project.Id) + amount);
+                missing = TimesheetLogic.Normalize(missing - amount);
+                if (missing <= 0m)
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    private IEnumerable<EditableTimesheetDay> AdjustableDays(ProjectColumn project) =>
+        _sheet.Days
+            .Where(day =>
+                project.IsActiveOn(day.Date) &&
+                !day.ProjectHoursFixed.GetValueOrDefault(project.Id) &&
+                !TimesheetInterruptions.HasBusinessTripInterruption(day.Description) &&
+                !TimesheetInterruptions.HasProportionalInterruption(day.Description) &&
+                AdjustmentCapacity(day) > 0m)
+            .OrderByDescending(day => day.ProjectHours.GetValueOrDefault(project.Id) > 0m)
+            .ThenBy(_ => Random.Shared.Next());
+
+    private decimal AdjustmentCapacity(EditableTimesheetDay day)
+    {
+        decimal free = TimesheetLogic.Normalize(AvailableDayCapacity(day) - day.TotalHours());
+        decimal core = day.CoreHoursFixed ? 0m : day.CoreHours;
+        return TimesheetLogic.Normalize(Math.Max(0m, free) + core);
+    }
 }

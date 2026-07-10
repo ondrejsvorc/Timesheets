@@ -570,6 +570,35 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task AllocateTimesheet_GeneratesOneDecimalProjectCellForExactNonAcademicMonthlyTarget()
+    {
+        int year = 2064;
+        int month = 2;
+        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
+        await SeedNonAcademicMonthAsync(attendanceTimesheetId, year, month, [(assignmentId, 0.3m)]);
+        DateTime[] dates = MonthDates(year, month);
+        decimal total = dates.Count(TimesheetLogic.IsWeekday) * 8m;
+        decimal projectTarget = TimesheetLogic.Normalize(total * 0.3m);
+
+        TimesheetEditRequest request = new(
+            Days: dates.Select(date => ExistingWorkdayAttendance(date)).ToArray(),
+            Projects: [new ProjectColumnEdit(assignmentId, dates.Select(date => new ProjectDayEdit(date, 0m)).ToArray())]);
+
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}/allocate", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+        Assert.NotNull(allocation);
+        decimal projectHours = TimesheetLogic.Normalize(allocation!.Days.Sum(day => day.ProjectCells[assignmentId].Hours));
+        Assert.Equal(168m, total);
+        Assert.Equal(50.4m, projectTarget);
+        Assert.Equal(projectTarget, projectHours);
+        Assert.Single(allocation.Days.Where(day => day.ProjectCells[assignmentId].Hours > 0m && day.ProjectCells[assignmentId].Hours != HalfHour(day.ProjectCells[assignmentId].Hours)));
+        Assert.DoesNotContain(allocation.Evaluation.Issues, issue => issue.Code == "ERR-COM-06");
+    }
+
+    [Fact]
     public async Task AllocateTimesheet_GeneratesNonAcademicMonthWithProportionalInterruption()
     {
         int year = 2062;
@@ -722,10 +751,11 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
                 Assert.True(total <= Math.Min(12m, worked) + 0.009m, $"Generated total {total} exceeds attendance {worked} on {day.Date:yyyy-MM-dd}");
             }
 
-            foreach (decimal hours in day.ProjectCells.Values.Select(cell => cell.Hours).Where(hours => hours > 0m))
-            {
-                Assert.Equal(hours, HalfHour(hours));
-            }
+        }
+
+        foreach (IGrouping<Guid, KeyValuePair<Guid, AllocateTimesheet.ProjectCell>> projectCells in allocation.Days.SelectMany(day => day.ProjectCells).GroupBy(cell => cell.Key))
+        {
+            Assert.True(projectCells.Count(cell => cell.Value.Hours > 0m && cell.Value.Hours != HalfHour(cell.Value.Hours)) <= 1);
         }
     }
 
