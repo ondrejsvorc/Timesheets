@@ -196,6 +196,17 @@ internal sealed class AcademicTimesheetAllocator
             {
                 options = nonTinyOptions;
             }
+            else if (options.Any(HasExistingCellHours))
+            {
+                options = options.Where(HasExistingCellHours).ToList();
+                List<(EditableTimesheetDay Day, Guid? ProjectId, decimal Gap, decimal Remaining)> lowDayOptions = options
+                    .Where(option => option.Day.TotalHours() is > 0m and < 6m)
+                    .ToList();
+                if (lowDayOptions.Count > 0)
+                {
+                    options = lowDayOptions;
+                }
+            }
             else
             {
                 break;
@@ -217,6 +228,11 @@ internal sealed class AcademicTimesheetAllocator
             }
         }
     }
+
+    private static bool HasExistingCellHours((EditableTimesheetDay Day, Guid? ProjectId, decimal Gap, decimal Remaining) option) =>
+        option.ProjectId is Guid projectId
+            ? option.Day.ProjectHours.GetValueOrDefault(projectId) > 0m
+            : option.Day.CoreHours > 0m;
 
     private void CompleteMonthlyTargets(IReadOnlyList<EditableTimesheetDay> days, MonthlyTargets targets)
     {
