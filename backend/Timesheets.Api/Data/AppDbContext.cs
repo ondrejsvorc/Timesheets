@@ -283,8 +283,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(ce => ce.EndDate);
 
-        builder.HasIndex(ce => new { ce.ContractId, ce.EmployeeId, ce.Position })
+        builder.HasIndex(ce => new { ce.ContractId, ce.EmployeeId, ce.PositionCode, ce.StartDate })
             .IsUnique();
+
+        builder.HasIndex(ce => new { ce.EmployeeId, ce.StartDate, ce.EndDate });
     }
 
     private static void ConfigureAttendanceTimesheetsTable(ModelBuilder modelBuilder)
