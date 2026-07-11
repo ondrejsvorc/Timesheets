@@ -140,7 +140,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         var builder = modelBuilder.Entity<Project>();
 
-        builder.ToTable("Project");
+        builder.ToTable("Project", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_Project_ValidDateRange",
+                """
+                "EndDate" IS NULL OR "EndDate" >= "StartDate"
+                """);
+        });
 
         builder.HasKey(p => p.Id);
 
@@ -256,7 +263,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         var builder = modelBuilder.Entity<ContractEmployee>();
 
-        builder.ToTable("ContractEmployee");
+        builder.ToTable("ContractEmployee", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_ContractEmployee_WorkloadRange",
+                """
+                "Workload" >= 0 AND "Workload" <= 1
+                """);
+            table.HasCheckConstraint(
+                "CK_ContractEmployee_ValidDateRange",
+                """
+                "EndDate" IS NULL OR "EndDate" >= "StartDate"
+                """);
+        });
 
         builder.HasKey(ce => ce.Id);
 
@@ -293,7 +312,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         var builder = modelBuilder.Entity<AttendanceTimesheet>();
 
-        builder.ToTable("AttendanceTimesheet");
+        builder.ToTable("AttendanceTimesheet", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_AttendanceTimesheet_ValidMonth",
+                """
+                "Month" >= 1 AND "Month" <= 12
+                """);
+        });
 
         builder.HasKey(at => at.Id);
 
@@ -337,7 +363,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         var builder = modelBuilder.Entity<AttendanceDay>();
 
-        builder.ToTable("AttendanceDay");
+        builder.ToTable("AttendanceDay", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_AttendanceDay_WorkloadAndHours",
+                """
+                "Workload" >= 0 AND "Workload" <= 1
+                AND "HoursWithoutBreak" >= 0
+                AND "HoursObligation" >= 0
+                AND "CoreHours" >= 0
+                """);
+        });
 
         builder.HasKey(ad => ad.Id);
 
@@ -474,7 +510,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         var builder = modelBuilder.Entity<ProjectTimesheet>();
 
-        builder.ToTable("ProjectTimesheet");
+        builder.ToTable("ProjectTimesheet", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_ProjectTimesheet_WorkloadRange",
+                """
+                "Workload" >= 0 AND "Workload" <= 1
+                """);
+            table.HasCheckConstraint(
+                "CK_ProjectTimesheet_ValidMonth",
+                """
+                "Month" >= 1 AND "Month" <= 12
+                """);
+        });
 
         builder.HasKey(pt => pt.Id);
 
@@ -531,7 +579,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         var builder = modelBuilder.Entity<ProjectDay>();
 
-        builder.ToTable("ProjectDay");
+        builder.ToTable("ProjectDay", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_ProjectDay_HoursAndWorkload",
+                """
+                "Hours" >= 0
+                AND "Workload" >= 0 AND "Workload" <= 1
+                AND "HoursObligation" >= 0
+                """);
+        });
 
         builder.HasKey(pd => pd.Id);
 
@@ -569,7 +626,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         var builder = modelBuilder.Entity<CoreEmployment>();
 
-        builder.ToTable("CoreEmployment");
+        builder.ToTable("CoreEmployment", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_CoreEmployment_WorkloadRange",
+                """
+                "Workload" >= 0 AND "Workload" <= 1
+                """);
+            table.HasCheckConstraint(
+                "CK_CoreEmployment_ValidDateRange",
+                """
+                "EndDate" IS NULL OR "EndDate" >= "StartDate"
+                """);
+        });
 
         builder.HasKey(ce => ce.Id);
 
@@ -592,7 +661,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     {
         var builder = modelBuilder.Entity<EmployeeWorkload>();
 
-        builder.ToTable("EmployeeWorkload");
+        builder.ToTable("EmployeeWorkload", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_EmployeeWorkload_WorkloadRange",
+                """
+                "Workload" >= 0 AND "Workload" <= 1
+                """);
+            table.HasCheckConstraint(
+                "CK_EmployeeWorkload_ValidMonth",
+                """
+                "Month" >= 1 AND "Month" <= 12
+                """);
+        });
 
         builder.HasKey(ew => ew.Id);
 
