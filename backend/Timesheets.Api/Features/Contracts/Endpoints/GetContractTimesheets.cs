@@ -2,7 +2,6 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -119,8 +118,7 @@ public sealed class GetContractTimesheets : IEndpoint
                     x.timesheet.Workload,
                     x.contractEmployee.PositionCode,
                     x.contractEmployee.Position,
-                    employee.PersonalNumber,
-                    FullName = EmployeeNameFormatter.Format(employee.TitleBefore, employee.FullName, employee.TitleAfter),
+                    Employee = employee,
                     EmployeeType = employee.EmployeeType.Name,
                 })
             .ToListAsync(cancellationToken);
@@ -147,8 +145,8 @@ public sealed class GetContractTimesheets : IEndpoint
         List<EmployeeItem> employees = items
             .Select(item => new EmployeeItem(
                 item.EmployeeId,
-                item.PersonalNumber,
-                item.FullName,
+                item.Employee.PersonalNumber,
+                item.Employee.DisplayName,
                 item.EmployeeType
             ))
             .DistinctBy(item => item.Id)

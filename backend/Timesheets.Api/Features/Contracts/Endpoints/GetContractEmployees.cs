@@ -1,7 +1,6 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 using Timesheets.Api.Features.Auth;
 
@@ -40,14 +39,27 @@ public sealed class GetContractEmployees : IEndpoint
         DateTime localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, CzechTimeZone).Date;
         DateTime today = new(localToday.Year, localToday.Month, localToday.Day, 0, 0, 0, DateTimeKind.Utc);
         DateTime? projectEndDate = projectRange.EndDate;
-        List<EmployeeItem> employees = await dbContext.ContractEmployees
+        List<EmployeeItem> employees = (await dbContext.ContractEmployees
             .AsNoTracking()
             .Where(ce => ce.ContractId == id)
             .Include(ce => ce.Employee)
                 .ThenInclude(e => e.EmployeeType)
+            .ToListAsync(cancellationToken))
             .GroupBy(ce => ce.Employee)
-            .Select(g => new EmployeeItem(g.Key.Id, g.Key.PersonalNumber, EmployeeNameFormatter.Format(g.Key.TitleBefore, g.Key.FullName, g.Key.TitleAfter), g.Key.EmployeeTypeId != null ? g.Key.EmployeeType.Name : string.Empty, g.Select(ce => new PositionItem(ce.Id, ce.PositionCode, ce.Position, ce.Workload, ce.StartDate, ce.EndDate ?? projectEndDate, (ce.EndDate ?? projectEndDate) == null || (ce.EndDate ?? projectEndDate) >= today)).ToList()))
-            .ToListAsync(cancellationToken);
+            .Select(g => new EmployeeItem(
+                g.Key.Id,
+                g.Key.PersonalNumber,
+                g.Key.DisplayName,
+                g.Key.EmployeeTypeId != null ? g.Key.EmployeeType.Name : string.Empty,
+                g.Select(ce => new PositionItem(
+                    ce.Id,
+                    ce.PositionCode,
+                    ce.Position,
+                    ce.Workload,
+                    ce.StartDate,
+                    ce.EndDate ?? projectEndDate,
+                    (ce.EndDate ?? projectEndDate) == null || (ce.EndDate ?? projectEndDate) >= today)).ToList()))
+            .ToList();
 
         return TypedResults.Ok(new Response(projectRange.StartDate, projectRange.EndDate, employees));
     }

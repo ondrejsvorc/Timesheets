@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Common;
 using Timesheets.Api.Data;
+using Timesheets.Api.Data.Models;
 using Timesheets.Api.Features.Auth;
 
 namespace Timesheets.Api.Features.Employees.Endpoints;
@@ -21,22 +21,20 @@ public sealed class GetEmployee : IEndpoint
             return TypedResults.Forbid();
         }
 
-        Response? employee = await dbContext.Employees
+        Employee? employee = await dbContext.Employees
             .AsNoTracking()
-            .Where(e => e.Id == id)
-            .Select(e => new Response(
-                e.Id,
-                e.EmployeeTypeId,
-                EmployeeNameFormatter.Format(e.TitleBefore, e.FullName, e.TitleAfter),
-                e.PersonalNumber
-            ))
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
         if (employee is null)
         {
             return TypedResults.NotFound();
         }
 
-        return TypedResults.Ok(employee);
+        return TypedResults.Ok(new Response(
+            employee.Id,
+            employee.EmployeeTypeId,
+            employee.DisplayName,
+            employee.PersonalNumber
+        ));
     }
 }

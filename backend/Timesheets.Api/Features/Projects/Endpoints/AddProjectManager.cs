@@ -2,7 +2,6 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -42,11 +41,9 @@ public sealed class AddProjectManager : IEndpoint
             return TypedResults.NotFound();
         }
 
-        var employee = await dbContext.Employees
+        Employee? employee = await dbContext.Employees
             .AsNoTracking()
-            .Where(e => e.Id == request.EmployeeId)
-            .Select(e => new { e.PersonalNumber, e.FullName, e.TitleBefore, e.TitleAfter })
-            .FirstOrDefaultAsync(cancellationToken);
+            .FirstOrDefaultAsync(e => e.Id == request.EmployeeId, cancellationToken);
         if (employee is null)
         {
             return TypedResults.NotFound();
@@ -72,7 +69,7 @@ public sealed class AddProjectManager : IEndpoint
             id,
             request.EmployeeId,
             employee.PersonalNumber,
-            EmployeeNameFormatter.Format(employee.TitleBefore, employee.FullName, employee.TitleAfter));
+            employee.DisplayName);
 
         return TypedResults.Created($"/projects/{id}/managers/{request.EmployeeId}", response);
     }

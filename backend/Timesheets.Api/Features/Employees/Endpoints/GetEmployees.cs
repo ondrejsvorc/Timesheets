@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
 using Timesheets.Api.Features.Auth;
@@ -37,15 +36,15 @@ public sealed class GetEmployees : IEndpoint
                         || dbContext.Contracts.Any(c => c.Id == ce.ContractId && visibleProjectIds.Contains(c.ProjectId)))));
         }
 
-        List<EmployeeItem> employees = await query
+        List<EmployeeItem> employees = (await query.ToListAsync(cancellationToken))
             .Select(e => new EmployeeItem(
                 e.Id,
                 e.EmployeeTypeId,
                 e.PersonalNumber,
-                EmployeeNameFormatter.Format(e.TitleBefore, e.FullName, e.TitleAfter),
+                e.DisplayName,
                 e.IsGlobalManager
             ))
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         return TypedResults.Ok(new Response(employees));
     }

@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
 using Timesheets.Api.Features.Auth;
@@ -77,10 +76,7 @@ public sealed class GetTimesheetComments : IEndpoint
                 comment.Text,
                 new CommentAuthor(
                     comment.AuthorEmployeeId,
-                    EmployeeNameFormatter.Format(
-                        comment.AuthorEmployee.TitleBefore,
-                        comment.AuthorEmployee.FullName,
-                        comment.AuthorEmployee.TitleAfter)),
+                    comment.AuthorEmployee.DisplayName),
                 null))
             .Concat(history.Select(entry => new CommentItem(
                 entry.Id,
@@ -91,10 +87,7 @@ public sealed class GetTimesheetComments : IEndpoint
                 new StatusChangeDetails(
                     new CommentAuthor(
                         entry.ChangedByEmployeeId,
-                        EmployeeNameFormatter.Format(
-                            entry.ChangedByEmployee.TitleBefore,
-                            entry.ChangedByEmployee.FullName,
-                            entry.ChangedByEmployee.TitleAfter)),
+                        entry.ChangedByEmployee.DisplayName),
                     scope.ResolveTimesheetLabel(entry.AttendanceTimesheetId, entry.ProjectTimesheetId),
                     entry.FromStatus?.Name,
                     entry.ToStatus.Name,

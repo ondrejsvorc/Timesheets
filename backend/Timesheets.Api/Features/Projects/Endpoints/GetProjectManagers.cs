@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Common;
 using Timesheets.Api.Data;
 using Timesheets.Api.Features.Auth;
 
@@ -26,17 +25,19 @@ public sealed class GetProjectManagers : IEndpoint
             return TypedResults.Forbid();
         }
 
-        List<ProjectManagerItem> managers = await dbContext.ProjectManagers
+        List<ProjectManagerItem> managers = (await dbContext.ProjectManagers
             .AsNoTracking()
             .Where(pm => pm.ProjectId == id)
+            .Include(pm => pm.Employee)
             .OrderBy(pm => pm.Employee.FullName)
+            .ToListAsync(cancellationToken))
             .Select(pm => new ProjectManagerItem(
                 pm.ProjectId,
                 pm.EmployeeId,
                 pm.Employee.PersonalNumber,
-                EmployeeNameFormatter.Format(pm.Employee.TitleBefore, pm.Employee.FullName, pm.Employee.TitleAfter)
+                pm.Employee.DisplayName
             ))
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         return TypedResults.Ok(new Response(managers));
     }

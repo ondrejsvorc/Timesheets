@@ -2,7 +2,6 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
@@ -61,7 +60,7 @@ public sealed class AddTimesheetComment : IEndpoint
         dbContext.TimesheetComments.Add(comment);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        CommentAuthor commentAuthor = new(author.Id, EmployeeNameFormatter.Format(author.TitleBefore, author.FullName, author.TitleAfter));
+        CommentAuthor commentAuthor = new(author.Id, author.DisplayName);
         Response response = new(comment.Id, Type: "message", comment.CreatedAt, comment.Text, commentAuthor);
 
         return TypedResults.Created($"/api/timesheets/combined/comments/{comment.Id}", response);

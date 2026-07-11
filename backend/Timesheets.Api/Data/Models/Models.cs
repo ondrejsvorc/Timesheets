@@ -65,7 +65,7 @@ public sealed class ContractEmployee
     public Employee Employee { get; set; } = null!;
 }
 
-public sealed class Employee
+public sealed partial class Employee
 {
     public Guid Id { get; set; }
     public Guid? EmployeeTypeId { get; set; }
