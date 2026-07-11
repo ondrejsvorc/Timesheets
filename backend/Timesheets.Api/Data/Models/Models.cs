@@ -68,7 +68,7 @@ public sealed class ContractEmployee
 public sealed partial class Employee
 {
     public Guid Id { get; set; }
-    public Guid? EmployeeTypeId { get; set; }
+    public Guid EmployeeTypeId { get; set; }
     public string PersonalNumber { get; set; } = string.Empty;
     public string? TitleBefore { get; set; }
     public string? TitleAfter { get; set; }

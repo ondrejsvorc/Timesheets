@@ -50,7 +50,7 @@ public sealed class GetContractEmployees : IEndpoint
                 g.Key.Id,
                 g.Key.PersonalNumber,
                 g.Key.DisplayName,
-                g.Key.EmployeeTypeId != null ? g.Key.EmployeeType.Name : string.Empty,
+                g.Key.EmployeeType.Name,
                 g.Select(ce => new PositionItem(
                     ce.Id,
                     ce.PositionCode,

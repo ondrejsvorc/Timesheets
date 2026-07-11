@@ -94,6 +94,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.Property(e => e.CreatedAt)
             .IsRequired();
 
+        builder.Property(e => e.EmployeeTypeId)
+            .IsRequired();
+
         builder.HasOne(e => e.EmployeeType)
             .WithMany(et => et.Employees)
             .HasForeignKey(e => e.EmployeeTypeId)

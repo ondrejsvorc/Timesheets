@@ -195,11 +195,11 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             .AsNoTracking()
             .SingleAsync(s => s.Code == TimesheetStatusCodes.Draft, cancellationToken);
 
-        Guid? employeeTypeId = await dbContext.Employees
+        Guid employeeTypeId = await dbContext.Employees
             .AsNoTracking()
             .Where(employee => employee.Id == employeeId)
             .Select(employee => employee.EmployeeTypeId)
-            .SingleOrDefaultAsync(cancellationToken);
+            .SingleAsync(cancellationToken);
 
         Data.Models.AttendanceTimesheet timesheet = new()
         {

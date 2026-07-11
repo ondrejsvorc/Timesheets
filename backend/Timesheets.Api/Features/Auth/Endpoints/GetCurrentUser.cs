@@ -51,7 +51,7 @@ public sealed class GetCurrentUser : IEndpoint
         Response response = new(
             Id: employee.Id,
             FullName: employee.DisplayName,
-            EmployeeType: employee.EmployeeTypeId == null ? null : employee.EmployeeType?.Name,
+            EmployeeType: employee.EmployeeType.Name,
             PersonalNumber: employee.PersonalNumber,
             TitleBefore: employee.TitleBefore,
             TitleAfter: employee.TitleAfter,
