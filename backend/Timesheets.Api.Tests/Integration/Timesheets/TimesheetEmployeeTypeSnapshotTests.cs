@@ -100,15 +100,17 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
         Employee storedEmployee = await dbContext.Employees.SingleAsync(item => item.Id == employee.Id);
         storedEmployee.EmployeeTypeId = currentEmployeeTypeId;
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = employee.Id, Year = year, Month = month, Workload = 1m });
-        dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
-        {
-            Id = timesheetId,
-            EmployeeId = employee.Id,
-            EmployeeTypeId = snapshotEmployeeTypeId,
-            TimesheetStatusId = TestTimesheetStatusIds.Draft,
-            Year = year,
-            Month = month,
-            Days =
+        TimesheetBootstrap.AddLegacyMonthWithDays(
+            dbContext,
+            new Data.Models.AttendanceTimesheet
+            {
+                Id = timesheetId,
+                EmployeeId = employee.Id,
+                EmployeeTypeId = snapshotEmployeeTypeId,
+                TimesheetStatusId = TestTimesheetStatusIds.Draft,
+                Year = year,
+                Month = month,
+            },
             [
                 new Data.Models.AttendanceDay
                 {
@@ -118,8 +120,7 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
                     HoursObligation = 8m,
                     Schedules = "[]"
                 }
-            ]
-        });
+            ]);
         await dbContext.SaveChangesAsync();
 
         return new SnapshotSetup(employee.Id, timesheetId, year, month);

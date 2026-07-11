@@ -33,14 +33,15 @@ public sealed class GetCombinedTimesheet : IEndpoint
             return TypedResults.Forbid();
         }
 
-        var attendanceTimesheet = await dbContext.AttendanceTimesheets
-            .AsNoTracking()
-            .Where(t => t.EmployeeId == request.EmployeeId && t.Year == request.Year && t.Month == request.Month)
-            .Select(t => new
+        var attendanceTimesheet = await (
+            from timesheet in dbContext.AttendanceTimesheets.AsNoTracking()
+            join attendance in dbContext.Attendances.AsNoTracking() on timesheet.Id equals attendance.TimesheetId
+            where timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month
+            select new
             {
-                t.Id,
-                t.EmployeeTypeId,
-                Days = t.Days.Select(d => new AttendanceDaySource(d.Date, d.ClockIn, d.ClockOut, d.BreakStart, d.BreakEnd, d.Workload, d.HoursWithoutBreak, d.CoreHours, d.IsHoliday, d.Description, d.Schedules)).ToList()
+                timesheet.Id,
+                EmployeeTypeId = attendance.EmployeeTypeId,
+                Days = attendance.Days.Select(d => new AttendanceDaySource(d.Date, d.ClockIn, d.ClockOut, d.BreakStart, d.BreakEnd, d.Workload, d.HoursWithoutBreak, d.CoreHours, d.IsHoliday, d.Description, d.Schedules)).ToList()
             })
             .SingleOrDefaultAsync(cancellationToken);
 

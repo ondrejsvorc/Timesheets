@@ -212,8 +212,8 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             CreatedAt = DateTime.UtcNow
         };
 
+        TimesheetBootstrap.AddLegacyMonth(dbContext, timesheet);
         AddImportedDays(timesheet.Id, importedTimesheet, validInterruptionCodes);
-        dbContext.AttendanceTimesheets.Add(timesheet);
 
         await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -226,7 +226,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         Guid timesheetId = existingTimesheet.Id;
 
         List<Data.Models.AttendanceDay> existingDays = await dbContext.AttendanceDays
-            .Where(day => day.AttendanceTimesheetId == timesheetId)
+            .Where(day => day.AttendanceId == timesheetId)
             .ToListAsync(cancellationToken);
         dbContext.AttendanceDays.RemoveRange(existingDays);
 
@@ -244,14 +244,14 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         return timesheetId;
     }
 
-    private void AddImportedDays(Guid attendanceTimesheetId, AttendanceTimesheet importedTimesheet, HashSet<string> validInterruptionCodes)
+    private void AddImportedDays(Guid attendanceId, AttendanceTimesheet importedTimesheet, HashSet<string> validInterruptionCodes)
     {
         foreach (AttendanceDay day in importedTimesheet.Days)
         {
             dbContext.AttendanceDays.Add(new Data.Models.AttendanceDay
             {
                 Id = Guid.CreateVersion7(),
-                AttendanceTimesheetId = attendanceTimesheetId,
+                AttendanceId = attendanceId,
                 Date = ToUtcDate(day.Date),
                 ClockIn = day.ClockIn,
                 ClockOut = day.ClockOut,
@@ -269,17 +269,18 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
     private async Task RecalculateDraftProjectColumnsAsync(Guid employeeId, int year, int month, CancellationToken cancellationToken)
     {
-        Data.Models.AttendanceTimesheet? attendanceTimesheet = await dbContext.AttendanceTimesheets
+        Data.Models.Attendance? attendance = await dbContext.Attendances
             .AsNoTracking()
-            .Include(t => t.Days)
-            .FirstOrDefaultAsync(t => t.EmployeeId == employeeId && t.Year == year && t.Month == month, cancellationToken);
+            .Include(a => a.Days)
+            .Where(a => a.Timesheet.EmployeeId == employeeId && a.Timesheet.Year == year && a.Timesheet.Month == month)
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (attendanceTimesheet is null)
+        if (attendance is null)
         {
             return;
         }
 
-        Dictionary<DateTime, Data.Models.AttendanceDay> attendanceByDate = attendanceTimesheet.Days
+        Dictionary<DateTime, Data.Models.AttendanceDay> attendanceByDate = attendance.Days
             .ToDictionary(day => ToUtcDate(day.Date).Date);
 
         List<Data.Models.ProjectTimesheet> projectTimesheets = await dbContext.ProjectTimesheets

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
+using Timesheets.Api.Features.Employees;
 using ProjectColumnEdit = Timesheets.Api.Features.Timesheets.ProjectColumnEdit;
 using ProjectDayEdit = Timesheets.Api.Features.Timesheets.ProjectDayEdit;
 using TimesheetDayEdit = Timesheets.Api.Features.Timesheets.TimesheetDayEdit;
@@ -51,8 +52,8 @@ public class TimesheetLockTests : BaseIntegrationTest
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        AttendanceTimesheet stored = await assertionContext.AttendanceTimesheets.AsNoTracking().Include(timesheet => timesheet.Days).SingleAsync(timesheet => timesheet.Id == attendanceTimesheetId);
-        Assert.Equal(1m, Assert.Single(stored.Days).CoreHours);
+        AttendanceDay storedDay = await assertionContext.AttendanceDays.AsNoTracking().SingleAsync(day => day.AttendanceId == attendanceTimesheetId);
+        Assert.Equal(1m, storedDay.CoreHours);
     }
 
     [Fact]
@@ -81,7 +82,10 @@ public class TimesheetLockTests : BaseIntegrationTest
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         dbContext.ContractEmployees.Add(new ContractEmployee { Id = contractEmployeeId, ContractId = SeededTestData.BetaContractId, EmployeeId = SeededTestData.JanNovakEmployeeId, PositionCode = "LOCK", Position = $"Lock test {contractEmployeeId}", Workload = 1m, StartDate = date, EndDate = date });
-        dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = date.Year, Month = date.Month, Days = [new AttendanceDay { Id = Guid.CreateVersion7(), Date = date, Workload = 1m, HoursWithoutBreak = 8m, HoursObligation = 8m, CoreHours = 0m, Schedules = "[]" }] });
+        TimesheetBootstrap.AddLegacyMonthWithDays(
+            dbContext,
+            new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, EmployeeTypeId = EmployeeTypes.AcademicId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = date.Year, Month = date.Month },
+            [new AttendanceDay { Id = Guid.CreateVersion7(), Date = date, Workload = 1m, HoursWithoutBreak = 8m, HoursObligation = 8m, CoreHours = 0m, Schedules = "[]" }]);
         dbContext.ProjectTimesheets.Add(new ProjectTimesheet { Id = projectTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, ContractId = SeededTestData.BetaContractId, ContractEmployeeId = contractEmployeeId, TimesheetStatusId = locked ? TestTimesheetStatusIds.Approved : TestTimesheetStatusIds.Draft, Year = date.Year, Month = date.Month, Workload = 1m, LockedAt = locked ? DateTime.UtcNow : null, LockedBy = locked ? SeededTestData.JanNovakEmployeeId : null, Days = [new ProjectDay { Id = Guid.CreateVersion7(), Date = date, Hours = 2m, Workload = 1m, HoursObligation = 8m }] });
 
         await dbContext.SaveChangesAsync();

@@ -50,6 +50,13 @@ public sealed class TimesheetEngineEvaluationTests
             Employee = employee,
             Year = 2026,
             Month = 1,
+        };
+
+        Data.Models.Attendance attendance = new()
+        {
+            Id = timesheet.Id,
+            TimesheetId = timesheet.Id,
+            EmployeeTypeId = EmployeeTypes.AcademicId,
             Days = Enumerable.Range(1, 31)
                 .Select(day =>
                 {
@@ -57,6 +64,7 @@ public sealed class TimesheetEngineEvaluationTests
                     return new DataAttendanceDay
                     {
                         Id = Guid.CreateVersion7(),
+                        AttendanceId = timesheet.Id,
                         Date = date,
                         IsHoliday = day == 1,
                         Workload = 1m,
@@ -68,7 +76,7 @@ public sealed class TimesheetEngineEvaluationTests
 
         LoadedTimesheet loaded = new(
             Timesheet: timesheet,
-            EmployeeTypeId: EmployeeTypes.AcademicId,
+            Attendance: attendance,
             Projects: [],
             ProjectRanges: new Dictionary<Guid, ProjectDateRange>(),
             TotalWorkload: 1m,

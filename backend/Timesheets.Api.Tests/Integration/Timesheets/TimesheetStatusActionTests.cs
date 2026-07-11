@@ -6,6 +6,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Data;
 using Timesheets.Api.Data.Models;
+using Timesheets.Api.Features.Employees;
 using Timesheets.Api.Features.Timesheets.Endpoints;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
@@ -112,7 +113,10 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             dbContext.ContractManagers.Add(new ContractManager { Id = Guid.CreateVersion7(), ContractId = SeededTestData.AlphaContractId, EmployeeId = SeededTestData.MarieEmployeeId });
             dbContext.ContractEmployees.Add(new ContractEmployee { Id = contractEmployeeId, ContractId = SeededTestData.AlphaContractId, EmployeeId = SeededTestData.JanNovakEmployeeId, PositionCode = "WF-2039", Position = "Workflow 2039", Workload = 0m, StartDate = periodStart, EndDate = periodStart.AddMonths(1).AddDays(-1) });
             dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = 0m });
-            dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month, Days = days });
+            TimesheetBootstrap.AddLegacyMonthWithDays(
+                dbContext,
+                new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, EmployeeTypeId = EmployeeTypes.AcademicId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month },
+                days);
             dbContext.ProjectTimesheets.Add(new ProjectTimesheet { Id = projectTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, ContractId = SeededTestData.AlphaContractId, ContractEmployeeId = contractEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month, Workload = 0m });
             await dbContext.SaveChangesAsync();
         }
@@ -148,7 +152,9 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             dbContext.ContractManagers.Add(new ContractManager { Id = Guid.CreateVersion7(), ContractId = SeededTestData.AlphaContractId, EmployeeId = manager.Id });
             dbContext.ContractEmployees.Add(new ContractEmployee { Id = contractEmployeeId, ContractId = SeededTestData.AlphaContractId, EmployeeId = employee.Id, PositionCode = "WF-2040", Position = "Workflow 2040", Workload = 0m, StartDate = periodStart, EndDate = periodStart.AddMonths(1).AddDays(-1) });
             dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = employee.Id, Year = year, Month = month, Workload = 0m });
-            dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = employee.Id, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month });
+            TimesheetBootstrap.AddLegacyMonth(
+                dbContext,
+                new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = employee.Id, EmployeeTypeId = EmployeeTypes.AcademicId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month });
             await dbContext.SaveChangesAsync();
         }
 
@@ -209,7 +215,9 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Submitted, Year = 2099, Month = 1 });
+            TimesheetBootstrap.AddLegacyMonth(
+                dbContext,
+                new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, EmployeeTypeId = EmployeeTypes.AcademicId, TimesheetStatusId = TestTimesheetStatusIds.Submitted, Year = 2099, Month = 1 });
             await dbContext.SaveChangesAsync();
         }
 
@@ -306,16 +314,18 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             .Select(employee => employee.EmployeeTypeId)
             .SingleAsync();
 
-        dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet
-        {
-            Id = attendanceTimesheetId,
-            EmployeeId = setup.EmployeeId,
-            EmployeeTypeId = employeeTypeId,
-            TimesheetStatusId = attendanceStatusId,
-            Year = year,
-            Month = month,
-            CreatedAt = DateTime.UtcNow,
-        });
+        TimesheetBootstrap.AddLegacyMonth(
+            dbContext,
+            new AttendanceTimesheet
+            {
+                Id = attendanceTimesheetId,
+                EmployeeId = setup.EmployeeId,
+                EmployeeTypeId = employeeTypeId,
+                TimesheetStatusId = attendanceStatusId,
+                Year = year,
+                Month = month,
+                CreatedAt = DateTime.UtcNow,
+            });
         await dbContext.SaveChangesAsync();
 
         return new WorkflowSetup(setup.EmployeeId, setup.EmployeePersonalNumber, attendanceTimesheetId, projectTimesheet.Id, setup.ProjectId, year, month);

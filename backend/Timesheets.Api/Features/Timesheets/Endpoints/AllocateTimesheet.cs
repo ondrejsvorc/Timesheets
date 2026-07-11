@@ -33,7 +33,7 @@ public sealed class AllocateTimesheet : IEndpoint
 
         EditableTimesheet sheet = TimesheetEngine.BuildEditableTimesheet(loaded, request);
 
-        if (EmployeeTypes.TracksAttendance(loaded.EmployeeTypeId))
+        if (EmployeeTypes.TracksAttendance(loaded.Attendance.EmployeeTypeId))
         {
             NonAcademicTimesheetAllocator allocator = new(loaded, sheet);
             if (day is int dayNumber)

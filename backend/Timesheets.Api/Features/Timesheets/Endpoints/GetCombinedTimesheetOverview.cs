@@ -44,14 +44,15 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             return TypedResults.Forbid();
         }
 
-        var attendanceInfo = await dbContext.AttendanceTimesheets
-            .AsNoTracking()
-            .Where(t => t.EmployeeId == request.EmployeeId && t.Year == request.Year && t.Month == request.Month)
-            .Select(t => new
+        var attendanceInfo = await (
+            from timesheet in dbContext.AttendanceTimesheets.AsNoTracking()
+            join attendance in dbContext.Attendances.AsNoTracking() on timesheet.Id equals attendance.TimesheetId
+            where timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month
+            select new
             {
-                t.Id,
-                Status = t.TimesheetStatus.Name,
-                Days = t.Days
+                timesheet.Id,
+                Status = timesheet.TimesheetStatus.Name,
+                Days = attendance.Days
                     .OrderBy(day => day.Date)
                     .Select(day => new TimesheetMonthSummaryDay(day.Date, day.IsHoliday, day.Description))
                     .ToList()

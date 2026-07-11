@@ -82,19 +82,22 @@ public sealed class ExpectedLoadTests : BaseIntegrationTest
         }
 
         Guid attendanceTimesheetId = Guid.CreateVersion7();
-        dbContext.AttendanceTimesheets.Add(new AttendanceTimesheet
-        {
-            Id = attendanceTimesheetId,
-            EmployeeId = target.Id,
-            TimesheetStatusId = TestTimesheetStatusIds.Draft,
-            Year = year,
-            Month = month,
-            Days = Enumerable.Range(1, DateTime.DaysInMonth(year, month)).Select(day =>
+        TimesheetBootstrap.AddLegacyMonthWithDays(
+            dbContext,
+            new AttendanceTimesheet
+            {
+                Id = attendanceTimesheetId,
+                EmployeeId = target.Id,
+                EmployeeTypeId = TestEmployeeFactory.DefaultEmployeeTypeId,
+                TimesheetStatusId = TestTimesheetStatusIds.Draft,
+                Year = year,
+                Month = month,
+            },
+            Enumerable.Range(1, DateTime.DaysInMonth(year, month)).Select(day =>
             {
                 DateTime date = new(year, month, day, 0, 0, 0, DateTimeKind.Utc);
                 return new AttendanceDay { Id = Guid.CreateVersion7(), Date = date, Workload = 1m, HoursObligation = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday ? 0m : 8m, Schedules = "[]" };
-            }).ToList()
-        });
+            }));
 
         await dbContext.SaveChangesAsync();
         return (target.Id, year, month);

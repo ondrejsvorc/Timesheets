@@ -375,6 +375,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithMany()
             .HasForeignKey(a => a.EmployeeTypeId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(a => a.Days)
+            .WithOne(d => d.Attendance)
+            .HasForeignKey(d => d.AttendanceId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     private static void ConfigureAttendanceTimesheetsTable(ModelBuilder modelBuilder)
@@ -421,11 +426,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithMany()
             .HasForeignKey(at => at.ApprovedBy)
             .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasMany(at => at.Days)
-            .WithOne(d => d.AttendanceTimesheet)
-            .HasForeignKey(ad => ad.AttendanceTimesheetId)
-            .OnDelete(DeleteBehavior.Cascade);
     }
 
     private static void ConfigureAttendanceDaysTable(ModelBuilder modelBuilder)
@@ -446,7 +446,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.HasKey(ad => ad.Id);
 
-        builder.Property(ad => ad.AttendanceTimesheetId)
+        builder.Property(ad => ad.AttendanceId)
             .IsRequired();
 
         builder.Property(ad => ad.Date)
@@ -486,7 +486,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasColumnType("jsonb")
             .HasDefaultValueSql("'[]'::jsonb");
 
-        builder.HasIndex(ad => new { ad.AttendanceTimesheetId, ad.Date })
+        builder.HasIndex(ad => new { ad.AttendanceId, ad.Date })
             .IsUnique();
 
         builder.HasMany(ad => ad.DayInterruptions)

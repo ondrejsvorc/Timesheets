@@ -218,7 +218,10 @@ public static class DatabaseSeeder
                     CreatedAt = new DateTime(2024, 12, 1, 8, 0, 0, DateTimeKind.Utc)
                 }
             ];
-            context.AttendanceTimesheets.AddRange(attendanceTimesheets);
+            foreach (AttendanceTimesheet attendanceTimesheet in attendanceTimesheets)
+            {
+                TimesheetBootstrap.AddLegacyMonth(context, attendanceTimesheet);
+            }
         }
 
         if (!await context.AttendanceDays.AsNoTracking().AnyAsync())
@@ -229,7 +232,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("80000000-0000-0000-0000-000000000001"),
-                    AttendanceTimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+                    AttendanceId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
                     Date = new DateTime(2024, 11, 1, 0, 0, 0, DateTimeKind.Utc),
                     ClockIn = new TimeSpan(8, 0, 0),
                     ClockOut = new TimeSpan(16, 30, 0),
@@ -243,7 +246,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("80000000-0000-0000-0000-000000000002"),
-                    AttendanceTimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+                    AttendanceId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
                     Date = new DateTime(2024, 11, 2, 0, 0, 0, DateTimeKind.Utc),
                     ClockIn = new TimeSpan(8, 15, 0),
                     ClockOut = new TimeSpan(16, 45, 0),
@@ -257,7 +260,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("80000000-0000-0000-0000-000000000003"),
-                    AttendanceTimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+                    AttendanceId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
                     Date = new DateTime(2024, 11, 3, 0, 0, 0, DateTimeKind.Utc),
                     HoursObligation = 0m,
                     IsHoliday = false,
@@ -266,7 +269,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("80000000-0000-0000-0000-000000000004"),
-                    AttendanceTimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+                    AttendanceId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
                     Date = new DateTime(2024, 11, 4, 0, 0, 0, DateTimeKind.Utc),
                     ClockIn = new TimeSpan(8, 0, 0),
                     ClockOut = new TimeSpan(16, 30, 0),
@@ -280,7 +283,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("80000000-0000-0000-0000-000000000005"),
-                    AttendanceTimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
+                    AttendanceId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
                     Date = new DateTime(2024, 11, 5, 0, 0, 0, DateTimeKind.Utc),
                     ClockIn = new TimeSpan(8, 0, 0),
                     ClockOut = new TimeSpan(10, 30, 0),
@@ -293,7 +296,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("80000000-0000-0000-0000-000000000006"),
-                    AttendanceTimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000002"),
+                    AttendanceId = Guid.Parse("70000000-0000-0000-0000-000000000002"),
                     Date = new DateTime(2024, 12, 1, 0, 0, 0, DateTimeKind.Utc),
                     ClockIn = new TimeSpan(8, 0, 0),
                     ClockOut = new TimeSpan(16, 30, 0),
@@ -307,7 +310,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("80000000-0000-0000-0000-000000000007"),
-                    AttendanceTimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000002"),
+                    AttendanceId = Guid.Parse("70000000-0000-0000-0000-000000000002"),
                     Date = new DateTime(2024, 12, 2, 0, 0, 0, DateTimeKind.Utc),
                     ClockIn = new TimeSpan(8, 0, 0),
                     ClockOut = new TimeSpan(16, 30, 0),
@@ -322,7 +325,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("80000000-0000-0000-0000-000000000008"),
-                    AttendanceTimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000003"),
+                    AttendanceId = Guid.Parse("70000000-0000-0000-0000-000000000003"),
                     Date = new DateTime(2024, 12, 1, 0, 0, 0, DateTimeKind.Utc),
                     ClockIn = new TimeSpan(7, 30, 0),
                     ClockOut = new TimeSpan(15, 30, 0),
@@ -336,7 +339,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("80000000-0000-0000-0000-000000000009"),
-                    AttendanceTimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000003"),
+                    AttendanceId = Guid.Parse("70000000-0000-0000-0000-000000000003"),
                     Date = new DateTime(2024, 12, 2, 0, 0, 0, DateTimeKind.Utc),
                     ClockIn = new TimeSpan(7, 30, 0),
                     ClockOut = new TimeSpan(15, 30, 0),

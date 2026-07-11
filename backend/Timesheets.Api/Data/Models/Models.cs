@@ -155,6 +155,7 @@ public sealed class Attendance
 
     public Timesheet Timesheet { get; set; } = null!;
     public EmployeeType EmployeeType { get; set; } = null!;
+    public ICollection<AttendanceDay> Days { get; set; } = [];
 }
 
 public sealed class AttendanceTimesheet
@@ -174,7 +175,6 @@ public sealed class AttendanceTimesheet
     public Employee Employee { get; set; } = null!;
     public TimesheetStatus TimesheetStatus { get; set; } = null!;
     public Employee ApprovedByEmployee { get; set; } = null!;
-    public ICollection<AttendanceDay> Days { get; set; } = [];
     public ICollection<TimesheetStatusHistory> StatusHistory { get; set; } = [];
     public ICollection<TimesheetComment> Comments { get; set; } = [];
 }
@@ -182,7 +182,7 @@ public sealed class AttendanceTimesheet
 public sealed class AttendanceDay
 {
     public Guid Id { get; set; }
-    public Guid AttendanceTimesheetId { get; set; }
+    public Guid AttendanceId { get; set; }
     public DateTime Date { get; set; }
     public TimeSpan? ClockIn { get; set; }
     public TimeSpan? ClockOut { get; set; }
@@ -196,7 +196,7 @@ public sealed class AttendanceDay
     public string? Description { get; set; }
     public string Schedules { get; set; } = "[]";
 
-    public AttendanceTimesheet AttendanceTimesheet { get; set; } = null!;
+    public Attendance Attendance { get; set; } = null!;
     public ICollection<DayInterruption> DayInterruptions { get; set; } = [];
 }
 

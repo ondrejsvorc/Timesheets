@@ -165,7 +165,7 @@ public class TimesheetReimportTests : BaseIntegrationTest
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         bool commentExists = await dbContext.TimesheetComments.AsNoTracking().AnyAsync(comment => comment.AttendanceTimesheetId == timesheetId && comment.Text == "Test comment preserved on reimport");
-        int dayCount = await dbContext.AttendanceDays.AsNoTracking().CountAsync(day => day.AttendanceTimesheetId == timesheetId);
+        int dayCount = await dbContext.AttendanceDays.AsNoTracking().CountAsync(day => day.AttendanceId == timesheetId);
         Assert.True(commentExists);
         Assert.Equal(31, dayCount);
     }

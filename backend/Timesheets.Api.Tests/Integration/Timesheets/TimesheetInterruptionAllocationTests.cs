@@ -773,21 +773,22 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         ContractEmployee secondAssignment = Assignment(secondAssignmentId, "INT-2", $"Interruption 2 {secondAssignmentId}", firstDate);
         dbContext.ContractEmployees.AddRange(firstAssignment, secondAssignment);
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = firstDate.Year, Month = firstDate.Month, Workload = 1m });
-        dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
-        {
-            Id = attendanceTimesheetId,
-            EmployeeId = SeededTestData.JanNovakEmployeeId,
-            EmployeeTypeId = AcademicEmployeeTypeId,
-            TimesheetStatusId = TestTimesheetStatusIds.Draft,
-            Year = firstDate.Year,
-            Month = firstDate.Month,
-            Days =
+        TimesheetBootstrap.AddLegacyMonthWithDays(
+            dbContext,
+            new Data.Models.AttendanceTimesheet
+            {
+                Id = attendanceTimesheetId,
+                EmployeeId = SeededTestData.JanNovakEmployeeId,
+                EmployeeTypeId = AcademicEmployeeTypeId,
+                TimesheetStatusId = TestTimesheetStatusIds.Draft,
+                Year = firstDate.Year,
+                Month = firstDate.Month,
+            },
             [
                 AttendanceDay(firstDate, "NK"),
                 AttendanceDay(firstDate.AddDays(1), "D"),
                 AttendanceDay(firstDate.AddDays(2), "SCT")
-            ]
-        });
+            ]);
         dbContext.ProjectTimesheets.AddRange(ProjectTimesheet(firstAssignmentId, firstDate), ProjectTimesheet(secondAssignmentId, firstDate));
         await dbContext.SaveChangesAsync();
     }
@@ -799,16 +800,18 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         Employee employee = await dbContext.Employees.SingleAsync(employee => employee.Id == SeededTestData.JanNovakEmployeeId);
         employee.EmployeeTypeId = employeeTypeId;
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = date.Year, Month = date.Month, Workload = totalWorkload });
-        dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
-        {
-            Id = attendanceTimesheetId,
-            EmployeeId = SeededTestData.JanNovakEmployeeId,
-            EmployeeTypeId = employeeTypeId,
-            TimesheetStatusId = TestTimesheetStatusIds.Draft,
-            Year = date.Year,
-            Month = date.Month,
-            Days = [AttendanceDay(date, null)]
-        });
+        TimesheetBootstrap.AddLegacyMonthWithDays(
+            dbContext,
+            new Data.Models.AttendanceTimesheet
+            {
+                Id = attendanceTimesheetId,
+                EmployeeId = SeededTestData.JanNovakEmployeeId,
+                EmployeeTypeId = employeeTypeId,
+                TimesheetStatusId = TestTimesheetStatusIds.Draft,
+                Year = date.Year,
+                Month = date.Month,
+            },
+            [AttendanceDay(date, null)]);
 
         if (assignmentId.HasValue)
         {
@@ -842,16 +845,18 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
 
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = totalWorkload });
         dbContext.ContractEmployees.Add(Assignment(assignmentId, $"MONTH-{year}-{month}", $"Month {year}-{month}", firstDate, assignmentWorkload, lastDate));
-        dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
-        {
-            Id = attendanceTimesheetId,
-            EmployeeId = SeededTestData.JanNovakEmployeeId,
-            EmployeeTypeId = AcademicEmployeeTypeId,
-            TimesheetStatusId = TestTimesheetStatusIds.Draft,
-            Year = year,
-            Month = month,
-            Days = dates.Select(date => AttendanceDay(date, null)).ToList()
-        });
+        TimesheetBootstrap.AddLegacyMonthWithDays(
+            dbContext,
+            new Data.Models.AttendanceTimesheet
+            {
+                Id = attendanceTimesheetId,
+                EmployeeId = SeededTestData.JanNovakEmployeeId,
+                EmployeeTypeId = AcademicEmployeeTypeId,
+                TimesheetStatusId = TestTimesheetStatusIds.Draft,
+                Year = year,
+                Month = month,
+            },
+            dates.Select(date => AttendanceDay(date, null)).ToList());
         dbContext.ProjectTimesheets.Add(new Data.Models.ProjectTimesheet
         {
             Id = Guid.CreateVersion7(),
@@ -879,16 +884,18 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         DateTime lastDate = dates[^1];
 
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = 1m });
-        dbContext.AttendanceTimesheets.Add(new Data.Models.AttendanceTimesheet
-        {
-            Id = attendanceTimesheetId,
-            EmployeeId = SeededTestData.JanNovakEmployeeId,
-            EmployeeTypeId = NonAcademicEmployeeTypeId,
-            TimesheetStatusId = TestTimesheetStatusIds.Draft,
-            Year = year,
-            Month = month,
-            Days = dates.Select(date => AttendanceDay(date, null)).ToList()
-        });
+        TimesheetBootstrap.AddLegacyMonthWithDays(
+            dbContext,
+            new Data.Models.AttendanceTimesheet
+            {
+                Id = attendanceTimesheetId,
+                EmployeeId = SeededTestData.JanNovakEmployeeId,
+                EmployeeTypeId = NonAcademicEmployeeTypeId,
+                TimesheetStatusId = TestTimesheetStatusIds.Draft,
+                Year = year,
+                Month = month,
+            },
+            dates.Select(date => AttendanceDay(date, null)).ToList());
 
         for (int index = 0; index < assignments.Count; index++)
         {
