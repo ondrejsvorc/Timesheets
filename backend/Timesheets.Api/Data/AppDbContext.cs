@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Employee> Employees { get; set; } = null!;
     public DbSet<EmployeeType> EmployeeTypes { get; set; } = null!;
 
+    public DbSet<Timesheet> Timesheets { get; set; } = null!;
     public DbSet<AttendanceTimesheet> AttendanceTimesheets { get; set; } = null!;
     public DbSet<AttendanceDay> AttendanceDays { get; set; } = null!;
     public DbSet<DayInterruption> DayInterruptions { get; set; } = null!;
@@ -41,6 +42,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         ConfigureContractManagersTable(modelBuilder);
         ConfigureContractEmployeesTable(modelBuilder);
 
+        ConfigureTimesheetsTable(modelBuilder);
         ConfigureAttendanceTimesheetsTable(modelBuilder);
         ConfigureAttendanceDaysTable(modelBuilder);
         ConfigureInterruptionsTable(modelBuilder);
@@ -306,6 +308,46 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .IsUnique();
 
         builder.HasIndex(ce => new { ce.EmployeeId, ce.StartDate, ce.EndDate });
+    }
+
+    private static void ConfigureTimesheetsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<Timesheet>();
+
+        builder.ToTable("Timesheet", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_Timesheet_ValidMonth",
+                """
+                "Month" >= 1 AND "Month" <= 12
+                """);
+        });
+
+        builder.HasKey(t => t.Id);
+
+        builder.Property(t => t.EmployeeId).IsRequired();
+        builder.Property(t => t.TimesheetStatusId).IsRequired();
+        builder.Property(t => t.Year).IsRequired();
+        builder.Property(t => t.Month).IsRequired();
+        builder.Property(t => t.CreatedAt).IsRequired();
+
+        builder.HasIndex(t => new { t.EmployeeId, t.Year, t.Month })
+            .IsUnique();
+
+        builder.HasOne(t => t.Employee)
+            .WithMany(e => e.Timesheets)
+            .HasForeignKey(t => t.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(t => t.TimesheetStatus)
+            .WithMany()
+            .HasForeignKey(t => t.TimesheetStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(t => t.ApprovedByEmployee)
+            .WithMany()
+            .HasForeignKey(t => t.ApprovedBy)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureAttendanceTimesheetsTable(ModelBuilder modelBuilder)

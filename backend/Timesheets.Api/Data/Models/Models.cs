@@ -79,6 +79,7 @@ public sealed partial class Employee
     public DateTime? UpdatedAt { get; set; }
 
     public EmployeeType EmployeeType { get; set; } = null!;
+    public ICollection<Timesheet> Timesheets { get; set; } = [];
     public ICollection<AttendanceTimesheet> AttendanceTimesheets { get; set; } = [];
     public ICollection<ProjectTimesheet> ProjectTimesheets { get; set; } = [];
     public ICollection<CoreEmployment> CoreEmployments { get; set; } = [];
@@ -125,6 +126,24 @@ public sealed class Notification
     public bool IsRead { get; set; } = false;
 
     public Employee Employee { get; set; } = null!;
+}
+
+public sealed class Timesheet
+{
+    public Guid Id { get; set; }
+    public Guid EmployeeId { get; set; }
+    public Guid TimesheetStatusId { get; set; }
+    public Guid? ApprovedBy { get; set; }
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+
+    public Employee Employee { get; set; } = null!;
+    public TimesheetStatus TimesheetStatus { get; set; } = null!;
+    public Employee ApprovedByEmployee { get; set; } = null!;
 }
 
 public sealed class AttendanceTimesheet
