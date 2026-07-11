@@ -48,14 +48,14 @@ public sealed class GetTimesheetComments : IEndpoint
             return TypedResults.NotFound();
         }
 
-        IReadOnlyList<Guid> projectIds = scope.ProjectTimesheetLabels.Keys.ToList();
+        IReadOnlyList<Guid> projectIds = scope.ContractPartLabels.Keys.ToList();
 
         List<Data.Models.TimesheetComment> comments = await dbContext.TimesheetComments
             .AsNoTracking()
             .Include(c => c.AuthorEmployee)
             .Where(c =>
                 c.TimesheetId == scope.TimesheetId
-                || (c.ProjectTimesheetId != null && projectIds.Contains(c.ProjectTimesheetId.Value)))
+                || (c.ContractPartId != null && projectIds.Contains(c.ContractPartId.Value)))
             .ToListAsync(cancellationToken);
 
         List<TimesheetStatusHistory> history = await dbContext.TimesheetStatusHistories
@@ -65,7 +65,7 @@ public sealed class GetTimesheetComments : IEndpoint
             .Include(h => h.ChangedByEmployee)
             .Where(h =>
                 h.TimesheetId == scope.TimesheetId
-                || (h.ProjectTimesheetId != null && projectIds.Contains(h.ProjectTimesheetId.Value)))
+                || (h.ContractPartId != null && projectIds.Contains(h.ContractPartId.Value)))
             .ToListAsync(cancellationToken);
 
         List<CommentItem> items = comments
@@ -88,7 +88,7 @@ public sealed class GetTimesheetComments : IEndpoint
                     new CommentAuthor(
                         entry.ChangedByEmployeeId,
                         entry.ChangedByEmployee.DisplayName),
-                    scope.ResolveTimesheetLabel(entry.TimesheetId, entry.ProjectTimesheetId),
+                    scope.ResolveTimesheetLabel(entry.TimesheetId, entry.ContractPartId),
                     entry.FromStatus?.Name,
                     entry.ToStatus.Name,
                     entry.Comment))))

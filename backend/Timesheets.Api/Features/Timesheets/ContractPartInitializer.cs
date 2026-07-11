@@ -5,7 +5,7 @@ using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Features.Timesheets;
 
-internal static class ProjectTimesheetInitializer
+internal static class ContractPartInitializer
 {
     public static bool IsAssignmentActiveForMonth(ContractEmployee assignment, int year, int month)
     {
@@ -44,11 +44,12 @@ internal static class ProjectTimesheetInitializer
             return;
         }
 
+        Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, employeeId, year, month, cancellationToken);
         Guid[] assignmentIds = assignments.Select(assignment => assignment.Id).ToArray();
-        HashSet<Guid> existingAssignmentIds = await dbContext.ProjectTimesheets
+        HashSet<Guid> existingAssignmentIds = await dbContext.ContractParts
             .AsNoTracking()
-            .Where(timesheet => assignmentIds.Contains(timesheet.ContractEmployeeId) && timesheet.Year == year && timesheet.Month == month)
-            .Select(timesheet => timesheet.ContractEmployeeId)
+            .Where(part => part.TimesheetId == timesheetId && assignmentIds.Contains(part.ContractEmployeeId))
+            .Select(part => part.ContractEmployeeId)
             .ToHashSetAsync(cancellationToken);
         List<ContractEmployee> missingAssignments = assignments.Where(assignment => !existingAssignmentIds.Contains(assignment.Id)).ToList();
 
@@ -57,9 +58,8 @@ internal static class ProjectTimesheetInitializer
             return;
         }
 
-        Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, employeeId, year, month, cancellationToken);
         HashSet<DateOnly> holidays = GetHolidays(year, holidaysFactory);
-        dbContext.ProjectTimesheets.AddRange(missingAssignments.Select(assignment => Create(assignment, year, month, holidays, timesheetId)));
+        dbContext.ContractParts.AddRange(missingAssignments.Select(assignment => Create(assignment, year, month, holidays, timesheetId)));
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -70,31 +70,27 @@ internal static class ProjectTimesheetInitializer
             return false;
         }
 
-        bool exists = dbContext.ProjectTimesheets.Local.Any(timesheet => timesheet.ContractEmployeeId == assignment.Id && timesheet.Year == year && timesheet.Month == month)
-            || await dbContext.ProjectTimesheets.AnyAsync(timesheet => timesheet.ContractEmployeeId == assignment.Id && timesheet.Year == year && timesheet.Month == month, cancellationToken);
+        Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, assignment.EmployeeId, year, month, cancellationToken);
+        bool exists = dbContext.ContractParts.Local.Any(part => part.TimesheetId == timesheetId && part.ContractEmployeeId == assignment.Id)
+            || await dbContext.ContractParts.AnyAsync(part => part.TimesheetId == timesheetId && part.ContractEmployeeId == assignment.Id, cancellationToken);
 
         if (exists)
         {
             return false;
         }
 
-        Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, assignment.EmployeeId, year, month, cancellationToken);
-        dbContext.ProjectTimesheets.Add(Create(assignment, year, month, GetHolidays(year, holidaysFactory), timesheetId));
+        dbContext.ContractParts.Add(Create(assignment, year, month, GetHolidays(year, holidaysFactory), timesheetId));
         return true;
     }
 
-    private static Data.Models.ProjectTimesheet Create(ContractEmployee assignment, int year, int month, HashSet<DateOnly> holidays, Guid timesheetId)
+    private static ContractPart Create(ContractEmployee assignment, int year, int month, HashSet<DateOnly> holidays, Guid timesheetId)
     {
-        Data.Models.ProjectTimesheet projectTimesheet = new()
+        ContractPart contractPart = new()
         {
             Id = Guid.CreateVersion7(),
             TimesheetId = timesheetId,
-            EmployeeId = assignment.EmployeeId,
-            ContractId = assignment.ContractId,
             ContractEmployeeId = assignment.Id,
             TimesheetStatusId = TimesheetWorkflow.DraftStatusId,
-            Year = year,
-            Month = month,
             Workload = assignment.Workload,
             CreatedAt = DateTime.UtcNow,
         };
@@ -109,19 +105,18 @@ internal static class ProjectTimesheetInitializer
             }
 
             bool isHoliday = holidays.Contains(DateOnly.FromDateTime(date));
-            projectTimesheet.Days.Add(new Data.Models.ProjectDay
+            contractPart.Days.Add(new ContractPartDay
             {
                 Id = Guid.CreateVersion7(),
-                ProjectTimesheetId = projectTimesheet.Id,
+                ContractPartId = contractPart.Id,
                 Date = date,
                 Hours = 0m,
                 IsHoliday = isHoliday,
-                Workload = assignment.Workload,
                 HoursObligation = TimesheetLogic.CalculateTotalHoursObligation(date, isHoliday, assignment.Workload),
             });
         }
 
-        return projectTimesheet;
+        return contractPart;
     }
 
     private static HashSet<DateOnly> GetHolidays(int year, ICzechHolidaysFactory holidaysFactory) => holidaysFactory.Create(year).Select(holiday => holiday.Date).ToHashSet();

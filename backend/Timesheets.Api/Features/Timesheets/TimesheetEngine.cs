@@ -68,7 +68,7 @@ public sealed record ProjectDateRange(DateTime StartDate, DateTime? EndDate)
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value.Date : DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
 }
 
-public sealed record LoadedTimesheet(Data.Models.Timesheet Timesheet, Data.Models.Attendance Attendance, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
+public sealed record LoadedTimesheet(Data.Models.Timesheet Timesheet, Data.Models.Attendance Attendance, IReadOnlyList<Data.Models.ContractPart> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
 
 public sealed record ProjectColumn(Guid Id, decimal Workload, bool Locked, ProjectDateRange Range)
 {
@@ -120,9 +120,9 @@ public static class TimesheetEngine
             return null;
         }
 
-        List<Data.Models.ProjectTimesheet> projects = await dbContext.ProjectTimesheets
+        List<Data.Models.ContractPart> projects = await dbContext.ContractParts
             .Include(value => value.Days)
-            .Where(value => value.EmployeeId == timesheet.EmployeeId && value.Year == timesheet.Year && value.Month == timesheet.Month)
+            .Where(value => value.TimesheetId == timesheet.Id)
             .ToListAsync(cancellationToken);
 
         Guid[] assignmentIds = projects.Select(project => project.ContractEmployeeId).ToArray();
@@ -166,7 +166,7 @@ public static class TimesheetEngine
                 Dictionary<Guid, bool> projectHoursFixed = [];
                 Dictionary<Guid, decimal> projectHoursFloor = [];
 
-                foreach (Data.Models.ProjectTimesheet project in loaded.Projects)
+                foreach (Data.Models.ContractPart project in loaded.Projects)
                 {
                     ProjectColumn projectState = projectStatesById[project.ContractEmployeeId];
                     ProjectColumnEdit? projectUpdate = projects.GetValueOrDefault(project.ContractEmployeeId);
@@ -175,7 +175,7 @@ public static class TimesheetEngine
                         projectUpdate = null;
                     }
 
-                    Data.Models.ProjectDay? persistedDay = projectState.IsActiveOn(day.Date)
+                    Data.Models.ContractPartDay? persistedDay = projectState.IsActiveOn(day.Date)
                         ? project.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date)
                         : null;
                     decimal persisted = persistedDay?.Hours ?? 0m;
@@ -337,11 +337,11 @@ public static class TimesheetEngine
         }
 
         Dictionary<Guid, ProjectColumnEdit> projects = (request.Projects ?? []).ToDictionary(project => project.ContractEmployeeId);
-        foreach (Data.Models.ProjectTimesheet project in loaded.Projects)
+        foreach (Data.Models.ContractPart project in loaded.Projects)
         {
             if (loaded.ProjectRanges.TryGetValue(project.ContractEmployeeId, out ProjectDateRange? range))
             {
-                foreach (Data.Models.ProjectDay day in project.Days.Where(day => !range.Includes(day.Date)))
+                foreach (Data.Models.ContractPartDay day in project.Days.Where(day => !range.Includes(day.Date)))
                 {
                     day.Hours = 0m;
                     day.HoursLocked = false;
@@ -359,11 +359,11 @@ public static class TimesheetEngine
                 continue;
             }
 
-            Dictionary<DateOnly, Data.Models.ProjectDay> projectDays = project.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
+            Dictionary<DateOnly, Data.Models.ContractPartDay> projectDays = project.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
 
             foreach (ProjectDayEdit projectDay in update.Days)
             {
-                if (projectDays.TryGetValue(DateOnly.FromDateTime(projectDay.Date), out Data.Models.ProjectDay? day))
+                if (projectDays.TryGetValue(DateOnly.FromDateTime(projectDay.Date), out Data.Models.ContractPartDay? day))
                 {
                     bool active = loaded.ProjectRanges.TryGetValue(project.ContractEmployeeId, out range) && range.Includes(projectDay.Date);
                     day.Hours = active ? TimesheetLogic.Normalize(projectDay.Hours) : 0m;

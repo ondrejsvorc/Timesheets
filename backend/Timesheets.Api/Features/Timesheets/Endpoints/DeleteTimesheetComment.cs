@@ -40,9 +40,9 @@ public sealed class DeleteTimesheetComment : IEndpoint
             return TypedResults.Forbid();
         }
 
-        IReadOnlyList<Guid> projectTimesheetIds = scope.ProjectTimesheetLabels.Keys.ToList();
+        IReadOnlyList<Guid> projectTimesheetIds = scope.ContractPartLabels.Keys.ToList();
         bool isAttendanceComment = comment.TimesheetId == scope.TimesheetId;
-        bool isProjectComment = comment.ProjectTimesheetId is not null && projectTimesheetIds.Contains(comment.ProjectTimesheetId.Value);
+        bool isProjectComment = comment.ContractPartId is not null && projectTimesheetIds.Contains(comment.ContractPartId.Value);
 
         if (!isAttendanceComment && !isProjectComment)
         {

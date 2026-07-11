@@ -52,7 +52,7 @@ public class ContractEmployeeLifecycleTests : BaseIntegrationTest
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await dbContext.ProjectTimesheets.Where(timesheet => timesheet.ContractEmployeeId == setup.ContractEmployeeId).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, TestTimesheetStatusIds.Submitted));
+            await dbContext.ContractParts.Where(timesheet => timesheet.ContractEmployeeId == setup.ContractEmployeeId).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, TestTimesheetStatusIds.Submitted));
         }
 
         HttpResponseMessage response = await Client.DeleteAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}");

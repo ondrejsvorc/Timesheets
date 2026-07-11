@@ -61,9 +61,9 @@ internal static class ContractEmployeeValidation
             decimal? baseWorkload = await GetBaseWorkloadAsync(employeeId, year, month, dbContext, cancellationToken);
             decimal baseForValidation = baseWorkload is > 0m ? baseWorkload.Value : 1m;
 
-            decimal currentProjectWorkload = await dbContext.ProjectTimesheets
+            decimal currentProjectWorkload = await dbContext.ContractParts
                 .AsNoTracking()
-                .Where(t => t.EmployeeId == employeeId && t.Year == year && t.Month == month)
+                .Where(t => t.Timesheet.EmployeeId == employeeId && t.Timesheet.Year == year && t.Timesheet.Month == month)
                 .Where(t => excludeContractEmployeeId == null || t.ContractEmployeeId != excludeContractEmployeeId.Value)
                 .SumAsync(t => (decimal?)t.Workload, cancellationToken) ?? 0m;
 

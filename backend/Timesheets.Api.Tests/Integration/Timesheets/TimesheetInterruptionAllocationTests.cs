@@ -789,7 +789,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
                 AttendanceDay(firstDate.AddDays(1), "D"),
                 AttendanceDay(firstDate.AddDays(2), "SCT")
             ]);
-        dbContext.ProjectTimesheets.AddRange(ProjectTimesheet(firstAssignmentId, firstDate, timesheetId), ProjectTimesheet(secondAssignmentId, firstDate, timesheetId));
+        dbContext.ContractParts.AddRange(CreateContractPart(firstAssignmentId, firstDate, timesheetId), CreateContractPart(secondAssignmentId, firstDate, timesheetId));
         await dbContext.SaveChangesAsync();
     }
 
@@ -816,18 +816,14 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         if (assignmentId.HasValue)
         {
             dbContext.ContractEmployees.Add(Assignment(assignmentId.Value, $"GEN-{date:yyyy-MM}", $"Generation {date:yyyy-MM}", date, assignmentWorkload));
-            dbContext.ProjectTimesheets.Add(new Data.Models.ProjectTimesheet
+            dbContext.ContractParts.Add(new Data.Models.ContractPart
             {
                 Id = Guid.CreateVersion7(),
                 TimesheetId = timesheetId,
-                EmployeeId = SeededTestData.JanNovakEmployeeId,
-                ContractId = SeededTestData.BetaContractId,
                 ContractEmployeeId = assignmentId.Value,
                 TimesheetStatusId = TestTimesheetStatusIds.Draft,
-                Year = date.Year,
-                Month = date.Month,
                 Workload = assignmentWorkload,
-                Days = [ProjectDay(date, assignmentWorkload)]
+                Days = [CreateContractPartDay(date, assignmentWorkload)]
             });
         }
 
@@ -858,18 +854,14 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             },
             AcademicEmployeeTypeId,
             dates.Select(date => AttendanceDay(date, null)).ToList());
-        dbContext.ProjectTimesheets.Add(new Data.Models.ProjectTimesheet
+        dbContext.ContractParts.Add(new Data.Models.ContractPart
         {
             Id = Guid.CreateVersion7(),
             TimesheetId = timesheetId,
-            EmployeeId = SeededTestData.JanNovakEmployeeId,
-            ContractId = SeededTestData.BetaContractId,
             ContractEmployeeId = assignmentId,
             TimesheetStatusId = TestTimesheetStatusIds.Draft,
-            Year = year,
-            Month = month,
             Workload = assignmentWorkload,
-            Days = dates.Select(date => ProjectDay(date, assignmentWorkload)).ToList()
+            Days = dates.Select(date => CreateContractPartDay(date, assignmentWorkload)).ToList()
         });
 
         await dbContext.SaveChangesAsync();
@@ -903,18 +895,14 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         {
             (Guid id, decimal workload) = assignments[index];
             dbContext.ContractEmployees.Add(Assignment(id, $"NONACA-{year}-{month}-{index}", $"Non-academic {year}-{month}-{index}", firstDate, workload, lastDate));
-            dbContext.ProjectTimesheets.Add(new Data.Models.ProjectTimesheet
+            dbContext.ContractParts.Add(new Data.Models.ContractPart
             {
                 Id = Guid.CreateVersion7(),
                 TimesheetId = timesheetId,
-                EmployeeId = SeededTestData.JanNovakEmployeeId,
-                ContractId = SeededTestData.BetaContractId,
                 ContractEmployeeId = id,
                 TimesheetStatusId = TestTimesheetStatusIds.Draft,
-                Year = year,
-                Month = month,
                 Workload = workload,
-                Days = dates.Select(date => ProjectDay(date, workload)).ToList()
+                Days = dates.Select(date => CreateContractPartDay(date, workload)).ToList()
             });
         }
 
@@ -942,26 +930,22 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
 
     private static Data.Models.AttendanceDay AttendanceDay(DateTime date, string? description) => new() { Id = Guid.CreateVersion7(), Date = date, Workload = 1m, HoursObligation = 8m, Description = description, Schedules = "[]" };
 
-    private static Data.Models.ProjectTimesheet ProjectTimesheet(Guid assignmentId, DateTime firstDate, Guid timesheetId) => new()
+    private static Data.Models.ContractPart CreateContractPart(Guid assignmentId, DateTime firstDate, Guid timesheetId) => new()
     {
         Id = Guid.CreateVersion7(),
         TimesheetId = timesheetId,
-        EmployeeId = SeededTestData.JanNovakEmployeeId,
-        ContractId = SeededTestData.BetaContractId,
         ContractEmployeeId = assignmentId,
         TimesheetStatusId = TestTimesheetStatusIds.Draft,
-        Year = firstDate.Year,
-        Month = firstDate.Month,
         Workload = 0.25m,
         Days =
         [
-            ProjectDay(firstDate),
-            ProjectDay(firstDate.AddDays(1)),
-            ProjectDay(firstDate.AddDays(2))
+            CreateContractPartDay(firstDate),
+            CreateContractPartDay(firstDate.AddDays(1)),
+            CreateContractPartDay(firstDate.AddDays(2))
         ]
     };
 
-    private static Data.Models.ProjectDay ProjectDay(DateTime date, decimal workload = 0.25m) => new() { Id = Guid.CreateVersion7(), Date = date, Workload = workload, HoursObligation = 8m * workload };
+    private static Data.Models.ContractPartDay CreateContractPartDay(DateTime date, decimal workload = 0.25m) => new() { Id = Guid.CreateVersion7(), Date = date, HoursObligation = 8m * workload };
     private static TimesheetDayEdit Day(DateTime date, string description) => new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: description, Schedules: []);
     private static ProjectColumnEdit Project(Guid assignmentId, DateTime firstDate) => new(ContractEmployeeId: assignmentId, Days: [new ProjectDayEdit(firstDate, 0m), new ProjectDayEdit(firstDate.AddDays(1), 0m), new ProjectDayEdit(firstDate.AddDays(2), 0m)]);
     private static DateTime[] MonthDates(int year, int month) => Enumerable.Range(1, DateTime.DaysInMonth(year, month)).Select(day => new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc)).ToArray();

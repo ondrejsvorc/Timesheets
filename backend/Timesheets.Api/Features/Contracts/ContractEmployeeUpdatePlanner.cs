@@ -239,7 +239,7 @@ internal static class ContractEmployeeUpdatePlanner
 
     private static async Task<(int Submitted, int Approved, int DraftDaysOutside)> AnalyzeProtectedOutsideRangeAsync(Guid contractEmployeeId, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        List<Data.Models.ProjectTimesheet> timesheets = await dbContext.ProjectTimesheets
+        List<Data.Models.ContractPart> timesheets = await dbContext.ContractParts
             .AsNoTracking()
             .Include(t => t.TimesheetStatus)
             .Include(t => t.Days)
@@ -250,13 +250,13 @@ internal static class ContractEmployeeUpdatePlanner
         HashSet<Guid> approvedOutside = [];
         int draftDaysOutside = 0;
 
-        foreach (Data.Models.ProjectTimesheet timesheet in timesheets)
+        foreach (Data.Models.ContractPart timesheet in timesheets)
         {
             bool isSubmitted = TimesheetWorkflow.IsSubmitted(timesheet.TimesheetStatus);
             bool isApproved = TimesheetWorkflow.IsApproved(timesheet.TimesheetStatus);
             bool isDraft = TimesheetWorkflow.IsDraft(timesheet.TimesheetStatus);
 
-            foreach (Data.Models.ProjectDay day in timesheet.Days)
+            foreach (Data.Models.ContractPartDay day in timesheet.Days)
             {
                 if (ContractEmployeeValidation.ToUtcDate(day.Date) <= newEnd)
                 {
@@ -335,7 +335,7 @@ internal static class ContractEmployeeUpdatePlanner
 
     private static async Task<(int Draft, int Submitted, int Approved)> CountTimesheetsOnAssignmentAsync(Guid contractEmployeeId, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        List<string> statusCodes = await dbContext.ProjectTimesheets
+        List<string> statusCodes = await dbContext.ContractParts
             .AsNoTracking()
             .Where(t => t.ContractEmployeeId == contractEmployeeId)
             .Select(t => t.TimesheetStatus.Code)

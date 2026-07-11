@@ -50,27 +50,27 @@ public sealed class GetCombinedTimesheet : IEndpoint
             return TypedResults.NotFound();
         }
 
-        await ProjectTimesheetInitializer.EnsureForEmployeeMonthAsync(request.EmployeeId, request.Year, request.Month, dbContext, holidaysFactory, cancellationToken);
+        await ContractPartInitializer.EnsureForEmployeeMonthAsync(request.EmployeeId, request.Year, request.Month, dbContext, holidaysFactory, cancellationToken);
 
         List<ProjectTimesheetRow> projectTimesheetRows = await (
-            from timesheet in dbContext.ProjectTimesheets.AsNoTracking()
-            join contractEmployee in dbContext.ContractEmployees.AsNoTracking() on timesheet.ContractEmployeeId equals contractEmployee.Id
+            from part in dbContext.ContractParts.AsNoTracking()
+            join contractEmployee in dbContext.ContractEmployees.AsNoTracking() on part.ContractEmployeeId equals contractEmployee.Id
             join contract in dbContext.Contracts.AsNoTracking() on contractEmployee.ContractId equals contract.Id
             join project in dbContext.Projects.AsNoTracking() on contract.ProjectId equals project.Id
-            where timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month
+            where part.TimesheetId == attendanceTimesheet.Id
             select new ProjectTimesheetRow(
                 contractEmployee.Id,
                 project.Id,
                 contract.RegistrationNumber,
                 project.Name,
                 contractEmployee.Position,
-                timesheet.Workload,
-                timesheet.LockedAt,
+                part.Workload,
+                part.LockedAt,
                 contractEmployee.StartDate,
                 contractEmployee.EndDate,
                 project.StartDate,
                 project.EndDate,
-                timesheet.Days.Select(d => new ProjectDaySource(d.Date, d.Hours, d.HoursLocked, d.IsHoliday)).ToList()
+                part.Days.Select(d => new ProjectDaySource(d.Date, d.Hours, d.HoursLocked, d.IsHoliday)).ToList()
             )
         ).ToListAsync(cancellationToken);
         List<ProjectTimesheetSource> projectTimesheets = projectTimesheetRows

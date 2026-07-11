@@ -8,6 +8,16 @@ public static class TimesheetBootstrap
 {
     public static async Task<Guid> EnsureMonthTimesheetIdAsync(AppDbContext db, Guid employeeId, int year, int month, CancellationToken cancellationToken)
     {
+        Guid? localTimesheetId = db.Timesheets.Local
+            .Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month)
+            .Select(timesheet => (Guid?)timesheet.Id)
+            .FirstOrDefault();
+
+        if (localTimesheetId.HasValue)
+        {
+            return localTimesheetId.Value;
+        }
+
         Guid? timesheetId = await db.Timesheets
             .AsNoTracking()
             .Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month)

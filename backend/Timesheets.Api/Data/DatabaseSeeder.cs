@@ -350,20 +350,16 @@ public static class DatabaseSeeder
             context.AttendanceDays.AddRange(attendanceDays);
         }
 
-        if (!await context.ProjectTimesheets.AsNoTracking().AnyAsync())
+        if (!await context.ContractParts.AsNoTracking().AnyAsync())
         {
-            List<ProjectTimesheet> projectTimesheets =
+            List<ContractPart> projectTimesheets =
             [
                 new()
                 {
                     Id = Guid.Parse("90000000-0000-0000-0000-000000000001"),
                     TimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
-                    EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
-                    ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     ContractEmployeeId = Guid.Parse("60000000-0000-0000-0000-000000000001"),
                     TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000020"),
-                    Year = 2024,
-                    Month = 11,
                     Workload = 1.0m,
                     CreatedAt = new DateTime(2024, 11, 1, 8, 0, 0, DateTimeKind.Utc),
                     UpdatedAt = new DateTime(2024, 11, 30, 18, 0, 0, DateTimeKind.Utc)
@@ -372,12 +368,8 @@ public static class DatabaseSeeder
                 {
                     Id = Guid.Parse("90000000-0000-0000-0000-000000000002"),
                     TimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000002"),
-                    EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
-                    ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     ContractEmployeeId = Guid.Parse("60000000-0000-0000-0000-000000000001"),
                     TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000020"),
-                    Year = 2024,
-                    Month = 12,
                     Workload = 1.0m,
                     CreatedAt = new DateTime(2024, 12, 1, 8, 0, 0, DateTimeKind.Utc)
                 },
@@ -385,71 +377,62 @@ public static class DatabaseSeeder
                 {
                     Id = Guid.Parse("90000000-0000-0000-0000-000000000003"),
                     TimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000003"),
-                    EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000003"),
-                    ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     ContractEmployeeId = Guid.Parse("60000000-0000-0000-0000-000000000002"),
                     TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000020"),
-                    Year = 2024,
-                    Month = 12,
                     Workload = 0.5m,
                     CreatedAt = new DateTime(2024, 12, 1, 8, 0, 0, DateTimeKind.Utc)
                 }
             ];
-            context.ProjectTimesheets.AddRange(projectTimesheets);
+            context.ContractParts.AddRange(projectTimesheets);
         }
 
-        if (!await context.ProjectDays.AsNoTracking().AnyAsync())
+        if (!await context.ContractPartDays.AsNoTracking().AnyAsync())
         {
-            List<ProjectDay> projectDays =
+            List<ContractPartDay> projectDays =
             [
                 // Listopad 2024 - Marie Svobodová
                 new()
                 {
                     Id = Guid.Parse("A0000000-0000-0000-0000-000000000001"),
-                    ProjectTimesheetId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
+                    ContractPartId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
                     Date = new DateTime(2024, 11, 1, 0, 0, 0, DateTimeKind.Utc),
                     Hours = 8.0m,
-                    Workload = 1.0m,
                     HoursObligation = 8.0m,
                     IsHoliday = false
                 },
                 new()
                 {
                     Id = Guid.Parse("A0000000-0000-0000-0000-000000000002"),
-                    ProjectTimesheetId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
+                    ContractPartId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
                     Date = new DateTime(2024, 11, 2, 0, 0, 0, DateTimeKind.Utc),
                     Hours = 8.0m,
-                    Workload = 1.0m,
                     HoursObligation = 8.0m,
                     IsHoliday = false
                 },
                 new()
                 {
                     Id = Guid.Parse("A0000000-0000-0000-0000-000000000003"),
-                    ProjectTimesheetId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
+                    ContractPartId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
                     Date = new DateTime(2024, 11, 3, 0, 0, 0, DateTimeKind.Utc),
                     Hours = 0m,
-                    Workload = 1.0m,
                     HoursObligation = 0m,
                     IsHoliday = false
                 },
                 new()
                 {
                     Id = Guid.Parse("A0000000-0000-0000-0000-000000000004"),
-                    ProjectTimesheetId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
+                    ContractPartId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
                     Date = new DateTime(2024, 11, 4, 0, 0, 0, DateTimeKind.Utc),
                     Hours = 8.0m,
-                    Workload = 1.0m,
                     HoursObligation = 8.0m,
                     IsHoliday = false
                 },
                 new()
                 {
                     Id = Guid.Parse("A0000000-0000-0000-0000-000000000005"),
-                    ProjectTimesheetId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
+                    ContractPartId = Guid.Parse("90000000-0000-0000-0000-000000000001"),
                     Date = new DateTime(2024, 11, 5, 0, 0, 0, DateTimeKind.Utc),
                     Hours = 2.5m,
-                    Workload = 1.0m,
                     HoursObligation = 2.5m,
                     IsHoliday = false
                 },
@@ -457,20 +440,18 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("A0000000-0000-0000-0000-000000000006"),
-                    ProjectTimesheetId = Guid.Parse("90000000-0000-0000-0000-000000000002"),
+                    ContractPartId = Guid.Parse("90000000-0000-0000-0000-000000000002"),
                     Date = new DateTime(2024, 12, 1, 0, 0, 0, DateTimeKind.Utc),
                     Hours = 8.0m,
-                    Workload = 1.0m,
                     HoursObligation = 8.0m,
                     IsHoliday = false
                 },
                 new()
                 {
                     Id = Guid.Parse("A0000000-0000-0000-0000-000000000007"),
-                    ProjectTimesheetId = Guid.Parse("90000000-0000-0000-0000-000000000002"),
+                    ContractPartId = Guid.Parse("90000000-0000-0000-0000-000000000002"),
                     Date = new DateTime(2024, 12, 2, 0, 0, 0, DateTimeKind.Utc),
                     Hours = 8.0m,
-                    Workload = 1.0m,
                     HoursObligation = 8.0m,
                     IsHoliday = false
                 },
@@ -478,25 +459,23 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("A0000000-0000-0000-0000-000000000008"),
-                    ProjectTimesheetId = Guid.Parse("90000000-0000-0000-0000-000000000003"),
+                    ContractPartId = Guid.Parse("90000000-0000-0000-0000-000000000003"),
                     Date = new DateTime(2024, 12, 1, 0, 0, 0, DateTimeKind.Utc),
                     Hours = 4.0m,
-                    Workload = 0.5m,
                     HoursObligation = 4.0m,
                     IsHoliday = false
                 },
                 new()
                 {
                     Id = Guid.Parse("A0000000-0000-0000-0000-000000000009"),
-                    ProjectTimesheetId = Guid.Parse("90000000-0000-0000-0000-000000000003"),
+                    ContractPartId = Guid.Parse("90000000-0000-0000-0000-000000000003"),
                     Date = new DateTime(2024, 12, 2, 0, 0, 0, DateTimeKind.Utc),
                     Hours = 4.0m,
-                    Workload = 0.5m,
                     HoursObligation = 4.0m,
                     IsHoliday = false
                 }
             ];
-            context.ProjectDays.AddRange(projectDays);
+            context.ContractPartDays.AddRange(projectDays);
         }
 
         if (!await context.Notifications.AsNoTracking().AnyAsync())

@@ -29,13 +29,13 @@ public sealed class GetTimesheetCatalog : IEndpoint
             return TypedResults.NotFound();
         }
 
-        List<ProjectTimesheetRow> projectRows = await dbContext.ProjectTimesheets
+        List<ProjectTimesheetRow> projectRows = await dbContext.ContractParts
             .AsNoTracking()
-            .Where(timesheet => timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month)
-            .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { timesheet, contractEmployee })
-            .Join(dbContext.Contracts.AsNoTracking(), x => x.contractEmployee.ContractId, contract => contract.Id, (x, contract) => new { x.timesheet, contract })
+            .Where(part => part.TimesheetId == attendanceTimesheet.Id)
+            .Join(dbContext.ContractEmployees.AsNoTracking(), part => part.ContractEmployeeId, contractEmployee => contractEmployee.Id, (part, contractEmployee) => new { part, contractEmployee })
+            .Join(dbContext.Contracts.AsNoTracking(), x => x.contractEmployee.ContractId, contract => contract.Id, (x, contract) => new { x.part, contract })
             .OrderBy(x => x.contract.RegistrationNumber)
-            .Select(x => new ProjectTimesheetRow(x.timesheet.Id, x.contract.RegistrationNumber))
+            .Select(x => new ProjectTimesheetRow(x.part.Id, x.contract.RegistrationNumber))
             .ToListAsync(cancellationToken);
 
         List<ProjectTimesheetItem> projectTimesheets = projectRows.Select(row => new ProjectTimesheetItem(row.Id, row.ContractRegistrationNumber)).ToList();

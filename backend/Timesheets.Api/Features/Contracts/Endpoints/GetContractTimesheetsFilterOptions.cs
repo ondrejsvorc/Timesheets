@@ -34,14 +34,11 @@ public sealed class GetContractTimesheetsFilterOptions : IEndpoint
             return TypedResults.NotFound();
         }
 
-        var baseQuery = dbContext.ProjectTimesheets
+        var baseQuery = dbContext.ContractParts
             .AsNoTracking()
-            .Where(timesheet => timesheet.ContractId == id)
-            .Where(timesheet => dbContext.Timesheets.Any(attendance =>
-                attendance.EmployeeId == timesheet.EmployeeId
-                && attendance.Year == timesheet.Year
-                && attendance.Month == timesheet.Month))
-            .Select(timesheet => new { timesheet.Year, timesheet.Month, Status = timesheet.TimesheetStatus.Name });
+            .Where(part => part.ContractEmployee.ContractId == id)
+            .Where(part => dbContext.Attendances.Any(attendance => attendance.TimesheetId == part.TimesheetId))
+            .Select(part => new { part.Timesheet.Year, part.Timesheet.Month, Status = part.TimesheetStatus.Name });
 
         var rows = await baseQuery
             .Distinct()

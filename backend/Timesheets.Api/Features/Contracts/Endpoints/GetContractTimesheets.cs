@@ -77,45 +77,47 @@ public sealed class GetContractTimesheets : IEndpoint
 
         bool canViewAllTimesheets = await user.CanViewAllContractTimesheetsAsync(id, cancellationToken);
 
-        IQueryable<ProjectTimesheet> query = dbContext.ProjectTimesheets
+        IQueryable<ContractPart> query = dbContext.ContractParts
             .AsNoTracking()
-            .Where(timesheet => timesheet.ContractId == id)
-            .Where(timesheet => timesheet.Year > request.FromYear || (timesheet.Year == request.FromYear && timesheet.Month >= request.FromMonth))
-            .Where(timesheet => timesheet.Year < request.ToYear || (timesheet.Year == request.ToYear && timesheet.Month <= request.ToMonth))
-            .Where(timesheet => dbContext.Timesheets.Any(attendance =>
-                attendance.EmployeeId == timesheet.EmployeeId
-                && attendance.Year == timesheet.Year
-                && attendance.Month == timesheet.Month));
+            .Where(part => part.ContractEmployee.ContractId == id)
+            .Where(part => part.Timesheet.Year > request.FromYear || (part.Timesheet.Year == request.FromYear && part.Timesheet.Month >= request.FromMonth))
+            .Where(part => part.Timesheet.Year < request.ToYear || (part.Timesheet.Year == request.ToYear && part.Timesheet.Month <= request.ToMonth))
+            .Where(part => dbContext.Attendances.Any(attendance => attendance.TimesheetId == part.TimesheetId));
 
         if (!canViewAllTimesheets)
         {
-            query = query.Where(timesheet => timesheet.EmployeeId == user.EmployeeId);
+            query = query.Where(part => part.Timesheet.EmployeeId == user.EmployeeId);
         }
 
         if (request.Statuses.Length != 0)
         {
-            query = query.Where(timesheet => request.Statuses.Contains(timesheet.TimesheetStatus.Name));
+            query = query.Where(part => request.Statuses.Contains(part.TimesheetStatus.Name));
         }
 
         var items = await query
             .Join(
                 dbContext.ContractEmployees.AsNoTracking(),
-                timesheet => timesheet.ContractEmployeeId,
+                part => part.ContractEmployeeId,
                 contractEmployee => contractEmployee.Id,
-                (timesheet, contractEmployee) => new { timesheet, contractEmployee })
+                (part, contractEmployee) => new { part, contractEmployee })
+            .Join(
+                dbContext.Timesheets.AsNoTracking(),
+                x => x.part.TimesheetId,
+                timesheet => timesheet.Id,
+                (x, timesheet) => new { x.part, x.contractEmployee, timesheet })
             .Join(
                 dbContext.Employees.AsNoTracking(),
                 x => x.timesheet.EmployeeId,
                 employee => employee.Id,
                 (x, employee) => new
                 {
-                    x.timesheet.Id,
+                    x.part.Id,
                     x.timesheet.EmployeeId,
                     x.timesheet.Year,
                     x.timesheet.Month,
-                    x.timesheet.TimesheetStatusId,
-                    Status = x.timesheet.TimesheetStatus.Name,
-                    x.timesheet.Workload,
+                    x.part.TimesheetStatusId,
+                    Status = x.part.TimesheetStatus.Name,
+                    x.part.Workload,
                     x.contractEmployee.PositionCode,
                     x.contractEmployee.Position,
                     Employee = employee,

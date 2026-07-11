@@ -22,7 +22,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         {
             AppDbContext setupContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
             Data.Models.Timesheet setupAttendance = await setupContext.Timesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecTimesheetId);
-            ProjectTimesheet setupProject = await setupContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId);
+            ContractPart setupProject = await setupContext.ContractParts.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecContractPartId);
             setupAttendance.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
             setupProject.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
             setupProject.LockedAt = null;
@@ -30,14 +30,14 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             await setupContext.SaveChangesAsync();
         }
 
-        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.PetrEmployeeId, 2024, 12, "approve", null, [SeededTestData.PetrDecProjectTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.PetrEmployeeId, 2024, 12, "approve", null, [SeededTestData.PetrDecContractPartId]);
 
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var project = await dbContext.ProjectTimesheets.Where(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId).Select(timesheet => new { timesheet.TimesheetStatusId, timesheet.LockedAt, timesheet.LockedBy }).SingleAsync();
+        var project = await dbContext.ContractParts.Where(timesheet => timesheet.Id == SeededTestData.PetrDecContractPartId).Select(timesheet => new { timesheet.TimesheetStatusId, timesheet.LockedAt, timesheet.LockedBy }).SingleAsync();
         Assert.Equal(TestTimesheetStatusIds.Approved, project.TimesheetStatusId);
         Assert.NotNull(project.LockedAt);
         Assert.NotNull(project.LockedBy);
@@ -50,7 +50,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         {
             AppDbContext setupContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
             Data.Models.Timesheet attendance = await setupContext.Timesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecTimesheetId);
-            ProjectTimesheet project = await setupContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId);
+            ContractPart project = await setupContext.ContractParts.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecContractPartId);
             attendance.TimesheetStatusId = TestTimesheetStatusIds.Draft;
             project.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
             project.LockedAt = null;
@@ -58,7 +58,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             await setupContext.SaveChangesAsync();
         }
 
-        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.PetrEmployeeId, 2024, 12, "approve", null, [SeededTestData.PetrDecProjectTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.PetrEmployeeId, 2024, 12, "approve", null, [SeededTestData.PetrDecContractPartId]);
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -71,7 +71,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         {
             AppDbContext setupContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
             Data.Models.Timesheet setupAttendance = await setupContext.Timesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecTimesheetId);
-            ProjectTimesheet setupProject = await setupContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId);
+            ContractPart setupProject = await setupContext.ContractParts.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecContractPartId);
             setupAttendance.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
             setupProject.TimesheetStatusId = TestTimesheetStatusIds.Approved;
             setupProject.LockedAt = DateTime.UtcNow;
@@ -79,14 +79,14 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             await setupContext.SaveChangesAsync();
         }
 
-        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.PetrEmployeeId, 2024, 12, "return", "Opravit hodiny.", [SeededTestData.PetrDecProjectTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.PetrEmployeeId, 2024, 12, "return", "Opravit hodiny.", [SeededTestData.PetrDecContractPartId]);
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         Data.Models.Timesheet attendance = await assertionContext.Timesheets.AsNoTracking().SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecTimesheetId);
-        ProjectTimesheet project = await assertionContext.ProjectTimesheets.AsNoTracking().SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId);
+        ContractPart project = await assertionContext.ContractParts.AsNoTracking().SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecContractPartId);
         Assert.Equal(TestTimesheetStatusIds.Draft, attendance.TimesheetStatusId);
         Assert.Equal(TestTimesheetStatusIds.Draft, project.TimesheetStatusId);
         Assert.Null(project.LockedAt);
@@ -118,7 +118,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
                 new Data.Models.Timesheet { Id = timesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month },
                 EmployeeTypes.AcademicId,
                 days);
-            dbContext.ProjectTimesheets.Add(new ProjectTimesheet { Id = projectTimesheetId, TimesheetId = timesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, ContractId = SeededTestData.AlphaContractId, ContractEmployeeId = contractEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month, Workload = 0m });
+            dbContext.ContractParts.Add(new ContractPart { Id = projectTimesheetId, TimesheetId = timesheetId, ContractEmployeeId = contractEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Workload = 0m });
             await dbContext.SaveChangesAsync();
         }
 
@@ -129,7 +129,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
         Guid statusId = await assertionContext.Timesheets.Where(timesheet => timesheet.Id == timesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
-        Guid projectStatusId = await assertionContext.ProjectTimesheets.Where(timesheet => timesheet.Id == projectTimesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
+        Guid projectStatusId = await assertionContext.ContractParts.Where(timesheet => timesheet.Id == projectTimesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
         Notification notification = await assertionContext.Notifications.AsNoTracking().SingleAsync(item => item.EmployeeId == SeededTestData.MarieEmployeeId && item.Message.Contains("2039"));
         Assert.Equal(TestTimesheetStatusIds.Submitted, statusId);
         Assert.Equal(TestTimesheetStatusIds.Submitted, projectStatusId);
@@ -173,7 +173,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     [Fact]
     public async Task UnsupportedAction_ReturnsBadRequest()
     {
-        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.PetrEmployeeId, 2024, 12, "delete", null, [SeededTestData.PetrDecProjectTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.PetrEmployeeId, 2024, 12, "delete", null, [SeededTestData.PetrDecContractPartId]);
 
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
 
@@ -190,10 +190,10 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             Timesheet setupAttendance = await setupContext.Timesheets.SingleAsync(timesheet => timesheet.Id == Guid.Parse("70000000-0000-0000-0000-000000000002"));
             setupAttendance.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
 
-            List<ProjectTimesheet> projects = await setupContext.ProjectTimesheets
-                .Where(t => t.EmployeeId == SeededTestData.MarieEmployeeId && t.Year == 2024 && t.Month == 12)
+            List<ContractPart> projects = await setupContext.ContractParts
+                .Where(t => t.TimesheetId == setupAttendance.Id)
                 .ToListAsync();
-            foreach (ProjectTimesheet project in projects)
+            foreach (ContractPart project in projects)
             {
                 project.TimesheetStatusId = TestTimesheetStatusIds.Approved;
                 project.LockedAt = DateTime.UtcNow;
@@ -246,13 +246,13 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             await dbContext.SaveChangesAsync();
         }
 
-        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.ProjectTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.ContractPartId]);
         HttpStatusCode statusCode = await PutStatusAsAsync(manager.PersonalNumber, request);
 
         Assert.Equal(HttpStatusCode.OK, statusCode);
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        ProjectTimesheet project = await assertionContext.ProjectTimesheets.AsNoTracking().SingleAsync(timesheet => timesheet.Id == workflow.ProjectTimesheetId);
+        ContractPart project = await assertionContext.ContractParts.AsNoTracking().SingleAsync(timesheet => timesheet.Id == workflow.ContractPartId);
         Assert.Equal(TestTimesheetStatusIds.Approved, project.TimesheetStatusId);
         Assert.Equal(manager.Id, project.LockedBy);
         Assert.NotNull(project.LockedAt);
@@ -262,7 +262,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     public async Task Employee_CannotApproveProjectPart()
     {
         WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Submitted);
-        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.ProjectTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.ContractPartId]);
 
         HttpStatusCode statusCode = await PutStatusAsAsync(workflow.EmployeePersonalNumber, request);
 
@@ -306,7 +306,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
 
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        ProjectTimesheet projectTimesheet = await dbContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.ContractEmployeeId == setup.ContractEmployeeId && timesheet.Year == year && timesheet.Month == month);
+        ContractPart projectTimesheet = await dbContext.ContractParts.SingleAsync(part => part.ContractEmployeeId == setup.ContractEmployeeId && part.Timesheet.Year == year && part.Timesheet.Month == month);
         Guid timesheetId = projectTimesheet.TimesheetId;
         Data.Models.Timesheet monthTimesheet = await dbContext.Timesheets.SingleAsync(timesheet => timesheet.Id == timesheetId);
         monthTimesheet.TimesheetStatusId = attendanceStatusId;
@@ -338,5 +338,5 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
                 ["Authentication:Enabled"] = "true"
             })));
 
-    private sealed record WorkflowSetup(Guid EmployeeId, string EmployeePersonalNumber, Guid TimesheetId, Guid ProjectTimesheetId, Guid ProjectId, int Year, int Month);
+    private sealed record WorkflowSetup(Guid EmployeeId, string EmployeePersonalNumber, Guid TimesheetId, Guid ContractPartId, Guid ProjectId, int Year, int Month);
 }

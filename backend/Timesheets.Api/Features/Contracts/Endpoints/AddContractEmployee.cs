@@ -113,9 +113,9 @@ public sealed class AddContractEmployee : IEndpoint
             decimal? baseWorkload = await GetBaseWorkloadAsync(request.EmployeeId, year, month, dbContext, cancellationToken);
             decimal baseForValidation = baseWorkload is > 0m ? baseWorkload.Value : 1m;
 
-            decimal currentProjectWorkload = await dbContext.ProjectTimesheets
+            decimal currentProjectWorkload = await dbContext.ContractParts
                 .AsNoTracking()
-                .Where(t => t.EmployeeId == request.EmployeeId && t.Year == year && t.Month == month)
+                .Where(t => t.Timesheet.EmployeeId == request.EmployeeId && t.Timesheet.Year == year && t.Timesheet.Month == month)
                 .SumAsync(t => (decimal?)t.Workload, cancellationToken) ?? 0m;
 
             if (currentProjectWorkload + request.Workload > baseForValidation)
@@ -175,14 +175,15 @@ public sealed class AddContractEmployee : IEndpoint
 
         while (cursor <= last)
         {
-            Data.Models.ProjectTimesheet? existing = await dbContext.ProjectTimesheets
+            Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, contractEmployee.EmployeeId, cursor.Year, cursor.Month, cancellationToken);
+            Data.Models.ContractPart? existing = await dbContext.ContractParts
                 .FirstOrDefaultAsync(
-                    t => t.ContractEmployeeId == contractEmployee.Id && t.Year == cursor.Year && t.Month == cursor.Month,
+                    t => t.ContractEmployeeId == contractEmployee.Id && t.TimesheetId == timesheetId,
                     cancellationToken);
 
             if (existing is null)
             {
-                await ProjectTimesheetInitializer.EnsureForAssignmentMonthAsync(contractEmployee, cursor.Year, cursor.Month, dbContext, holidaysFactory, cancellationToken);
+                await ContractPartInitializer.EnsureForAssignmentMonthAsync(contractEmployee, cursor.Year, cursor.Month, dbContext, holidaysFactory, cancellationToken);
             }
             else
             {

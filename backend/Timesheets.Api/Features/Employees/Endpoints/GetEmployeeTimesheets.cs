@@ -34,9 +34,9 @@ public sealed class GetEmployeeTimesheets : IEndpoint
 
         // Build month list from either assigned projects (ProjectTimesheets) or imported attendance (AttendanceTimesheets).
         var monthKeysQuery =
-            dbContext.ProjectTimesheets.AsNoTracking()
-                .Where(t => t.EmployeeId == id)
-                .Select(t => new { t.Year, t.Month })
+            dbContext.ContractParts.AsNoTracking()
+                .Where(t => t.Timesheet.EmployeeId == id)
+                .Select(t => new { t.Timesheet.Year, t.Timesheet.Month })
                 .Union(
                     dbContext.Timesheets.AsNoTracking()
                         .Where(t => t.EmployeeId == id)

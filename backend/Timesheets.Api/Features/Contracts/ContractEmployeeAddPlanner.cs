@@ -24,11 +24,11 @@ internal static class ContractEmployeeAddPlanner
         int startKey = start.Year * 100 + start.Month;
         int? endKey = end.HasValue ? end.Value.Year * 100 + end.Value.Month : null;
 
-        List<string> statusCodes = await dbContext.ProjectTimesheets
+        List<string> statusCodes = await dbContext.ContractParts
             .AsNoTracking()
-            .Where(t => t.ContractId == contractId && t.EmployeeId == request.EmployeeId)
-            .Where(t => (t.Year * 100 + t.Month) >= startKey)
-            .Where(t => endKey == null || (t.Year * 100 + t.Month) <= endKey.Value)
+            .Where(t => t.ContractEmployee.ContractId == contractId && t.ContractEmployee.EmployeeId == request.EmployeeId)
+            .Where(t => (t.Timesheet.Year * 100 + t.Timesheet.Month) >= startKey)
+            .Where(t => endKey == null || (t.Timesheet.Year * 100 + t.Timesheet.Month) <= endKey.Value)
             .Where(t => t.TimesheetStatus.Code == TimesheetStatusCodes.Submitted || t.TimesheetStatus.Code == TimesheetStatusCodes.Approved)
             .Select(t => t.TimesheetStatus.Code)
             .ToListAsync(cancellationToken);

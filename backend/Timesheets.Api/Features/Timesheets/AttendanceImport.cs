@@ -165,11 +165,11 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             .Select(i => i.Name)
             .ToHashSetAsync(StringComparer.OrdinalIgnoreCase, cancellationToken);
 
-        await ProjectTimesheetInitializer.EnsureForEmployeeMonthAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, dbContext, holidaysFactory, cancellationToken);
+        await ContractPartInitializer.EnsureForEmployeeMonthAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, dbContext, holidaysFactory, cancellationToken);
 
-        decimal projectWorkload = await dbContext.ProjectTimesheets
+        decimal projectWorkload = await dbContext.ContractParts
             .AsNoTracking()
-            .Where(t => t.EmployeeId == employeeId && t.Year == importedTimesheet.Year && t.Month == importedTimesheet.Month)
+            .Where(t => t.Timesheet.EmployeeId == employeeId && t.Timesheet.Year == importedTimesheet.Year && t.Timesheet.Month == importedTimesheet.Month)
             .SumAsync(t => (decimal?)t.Workload, cancellationToken) ?? 0m;
 
         if (projectWorkload > importedTimesheet.Workload)
@@ -282,15 +282,15 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         Dictionary<DateTime, Data.Models.AttendanceDay> attendanceByDate = attendance.Days
             .ToDictionary(day => ToUtcDate(day.Date).Date);
 
-        List<Data.Models.ProjectTimesheet> projectTimesheets = await dbContext.ProjectTimesheets
+        List<Data.Models.ContractPart> projectTimesheets = await dbContext.ContractParts
             .Include(pt => pt.Days)
-            .Where(pt => pt.EmployeeId == employeeId && pt.Year == year && pt.Month == month)
+            .Where(pt => pt.Timesheet.EmployeeId == employeeId && pt.Timesheet.Year == year && pt.Timesheet.Month == month)
             .Where(pt => pt.TimesheetStatus.Code == TimesheetStatusCodes.Draft)
             .ToListAsync(cancellationToken);
 
-        foreach (Data.Models.ProjectTimesheet projectTimesheet in projectTimesheets)
+        foreach (Data.Models.ContractPart projectTimesheet in projectTimesheets)
         {
-            foreach (Data.Models.ProjectDay projectDay in projectTimesheet.Days)
+            foreach (Data.Models.ContractPartDay projectDay in projectTimesheet.Days)
             {
                 if (!attendanceByDate.TryGetValue(ToUtcDate(projectDay.Date).Date, out Data.Models.AttendanceDay? attendanceDay))
                 {

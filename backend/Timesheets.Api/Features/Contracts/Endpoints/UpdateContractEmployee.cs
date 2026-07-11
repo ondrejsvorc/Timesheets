@@ -206,7 +206,7 @@ public sealed class UpdateContractEmployee : IEndpoint
 
     private static async Task RemoveDraftProjectDaysOutsideRangeAsync(Guid contractEmployeeId, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        List<Guid> dayIds = await dbContext.ProjectTimesheets
+        List<Guid> dayIds = await dbContext.ContractParts
             .Where(t => t.ContractEmployeeId == contractEmployeeId)
             .Where(t => t.TimesheetStatus.Code == TimesheetStatusCodes.Draft)
             .SelectMany(t => t.Days)
@@ -219,7 +219,7 @@ public sealed class UpdateContractEmployee : IEndpoint
             return;
         }
 
-        await dbContext.ProjectDays
+        await dbContext.ContractPartDays
             .Where(day => dayIds.Contains(day.Id))
             .ExecuteDeleteAsync(cancellationToken);
     }
@@ -236,14 +236,15 @@ public sealed class UpdateContractEmployee : IEndpoint
 
         while (cursor <= last)
         {
-            Data.Models.ProjectTimesheet? existing = await dbContext.ProjectTimesheets
+            Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, contractEmployee.EmployeeId, cursor.Year, cursor.Month, cancellationToken);
+            Data.Models.ContractPart? existing = await dbContext.ContractParts
                 .FirstOrDefaultAsync(
-                    t => t.ContractEmployeeId == contractEmployee.Id && t.Year == cursor.Year && t.Month == cursor.Month,
+                    t => t.ContractEmployeeId == contractEmployee.Id && t.TimesheetId == timesheetId,
                     cancellationToken);
 
             if (existing is null)
             {
-                await ProjectTimesheetInitializer.EnsureForAssignmentMonthAsync(contractEmployee, cursor.Year, cursor.Month, dbContext, holidaysFactory, cancellationToken);
+                await ContractPartInitializer.EnsureForAssignmentMonthAsync(contractEmployee, cursor.Year, cursor.Month, dbContext, holidaysFactory, cancellationToken);
             }
             else
             {

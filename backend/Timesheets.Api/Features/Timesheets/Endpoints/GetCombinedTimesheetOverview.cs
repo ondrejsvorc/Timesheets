@@ -64,28 +64,28 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             return TypedResults.NotFound();
         }
 
-        await ProjectTimesheetInitializer.EnsureForEmployeeMonthAsync(request.EmployeeId, request.Year, request.Month, dbContext, holidaysFactory, cancellationToken);
+        await ContractPartInitializer.EnsureForEmployeeMonthAsync(request.EmployeeId, request.Year, request.Month, dbContext, holidaysFactory, cancellationToken);
 
-        List<ProjectRowSource> projectRows = await dbContext.ProjectTimesheets
+        List<ProjectRowSource> projectRows = await dbContext.ContractParts
             .AsNoTracking()
-            .Where(timesheet => timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month)
+            .Where(part => part.TimesheetId == attendanceInfo.Id)
             .Join(
                 dbContext.ContractEmployees.AsNoTracking(),
-                timesheet => timesheet.ContractEmployeeId,
+                part => part.ContractEmployeeId,
                 contractEmployee => contractEmployee.Id,
-                (timesheet, contractEmployee) => new { timesheet, contractEmployee })
+                (part, contractEmployee) => new { part, contractEmployee })
             .Join(
                 dbContext.Contracts.AsNoTracking(),
                 x => x.contractEmployee.ContractId,
                 contract => contract.Id,
                 (x, contract) => new ProjectRowSource(
-                    x.timesheet.Id,
+                    x.part.Id,
                     contract.Id,
                     contract.ProjectId,
                     contract.RegistrationNumber,
                     x.contractEmployee.Position,
-                    x.timesheet.Workload,
-                    x.timesheet.TimesheetStatus.Code))
+                    x.part.Workload,
+                    x.part.TimesheetStatus.Code))
             .ToListAsync(cancellationToken);
 
         HashSet<DateOnly> holidays = holidaysFactory.Create(request.Year).Select(holiday => holiday.Date).ToHashSet();

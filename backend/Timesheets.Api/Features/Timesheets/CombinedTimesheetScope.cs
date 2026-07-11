@@ -3,7 +3,7 @@ using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Features.Timesheets;
 
-internal sealed record CombinedTimesheetScope(Guid TimesheetId, IReadOnlyDictionary<Guid, string> ProjectTimesheetLabels);
+internal sealed record CombinedTimesheetScope(Guid TimesheetId, IReadOnlyDictionary<Guid, string> ContractPartLabels);
 
 internal static class CombinedTimesheetScopeLoader
 {
@@ -20,9 +20,9 @@ internal static class CombinedTimesheetScopeLoader
             return null;
         }
 
-        List<(Guid Id, string ContractRegistrationNumber)> projectRows = await dbContext.ProjectTimesheets
+        List<(Guid Id, string ContractRegistrationNumber)> projectRows = await dbContext.ContractParts
             .AsNoTracking()
-            .Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month)
+            .Where(part => part.TimesheetId == timesheetId.Value)
             .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { timesheet, contractEmployee })
             .Join(dbContext.Contracts.AsNoTracking(), x => x.contractEmployee.ContractId, contract => contract.Id, (x, contract) => new { x.timesheet.Id, contract.RegistrationNumber })
             .OrderBy(x => x.RegistrationNumber)
@@ -34,14 +34,14 @@ internal static class CombinedTimesheetScopeLoader
         return new CombinedTimesheetScope(timesheetId.Value, labels);
     }
 
-    public static string ResolveTimesheetLabel(this CombinedTimesheetScope scope, Guid? timesheetId, Guid? projectTimesheetId)
+    public static string ResolveTimesheetLabel(this CombinedTimesheetScope scope, Guid? timesheetId, Guid? contractPartId)
     {
         if (timesheetId is not null)
         {
             return "Pracovní výkaz";
         }
 
-        if (projectTimesheetId is not null && scope.ProjectTimesheetLabels.TryGetValue(projectTimesheetId.Value, out string? label))
+        if (contractPartId is not null && scope.ContractPartLabels.TryGetValue(contractPartId.Value, out string? label))
         {
             return label;
         }

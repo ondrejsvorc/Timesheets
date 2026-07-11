@@ -20,8 +20,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DayInterruption> DayInterruptions { get; set; } = null!;
     public DbSet<Interruption> Interruptions { get; set; } = null!;
 
-    public DbSet<ProjectTimesheet> ProjectTimesheets { get; set; } = null!;
-    public DbSet<ProjectDay> ProjectDays { get; set; } = null!;
+    public DbSet<ContractPart> ContractParts { get; set; } = null!;
+    public DbSet<ContractPartDay> ContractPartDays { get; set; } = null!;
     public DbSet<CoreEmployment> CoreEmployments { get; set; } = null!;
     public DbSet<EmployeeWorkload> EmployeeWorkloads { get; set; } = null!;
 
@@ -48,8 +48,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         ConfigureInterruptionsTable(modelBuilder);
         ConfigureDayInterruptionsTable(modelBuilder);
 
-        ConfigureProjectTimesheetsTable(modelBuilder);
-        ConfigureProjectDaysTable(modelBuilder);
+        ConfigureContractPartsTable(modelBuilder);
+        ConfigureContractPartDaysTable(modelBuilder);
         ConfigureTimesheetStatusesTable(modelBuilder);
         ConfigureTimesheetStatusHistoriesTable(modelBuilder);
         ConfigureTimesheetCommentsTable(modelBuilder);
@@ -537,130 +537,116 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         );
     }
 
-    private static void ConfigureProjectTimesheetsTable(ModelBuilder modelBuilder)
+    private static void ConfigureContractPartsTable(ModelBuilder modelBuilder)
     {
-        var builder = modelBuilder.Entity<ProjectTimesheet>();
+        var builder = modelBuilder.Entity<ContractPart>();
 
-        builder.ToTable("ProjectTimesheet", table =>
+        builder.ToTable("ContractPart", table =>
         {
             table.HasCheckConstraint(
-                "CK_ProjectTimesheet_WorkloadRange",
+                "CK_ContractPart_WorkloadRange",
                 """
                 "Workload" >= 0 AND "Workload" <= 1
                 """);
             table.HasCheckConstraint(
-                "CK_ProjectTimesheet_ValidMonth",
+                "CK_ContractPart_Lock",
                 """
-                "Month" >= 1 AND "Month" <= 12
+                ("LockedAt" IS NULL AND "LockedBy" IS NULL)
+                OR
+                ("LockedAt" IS NOT NULL AND "LockedBy" IS NOT NULL)
                 """);
         });
 
-        builder.HasKey(pt => pt.Id);
+        builder.HasKey(part => part.Id);
 
-        builder.Property(pt => pt.TimesheetId)
+        builder.Property(part => part.TimesheetId)
             .IsRequired();
 
-        builder.Property(pt => pt.EmployeeId)
+        builder.Property(part => part.ContractEmployeeId)
             .IsRequired();
 
-        builder.Property(pt => pt.ContractId)
-            .IsRequired();
-
-        builder.Property(pt => pt.ContractEmployeeId)
-            .IsRequired();
-
-        builder.Property(pt => pt.Year)
-            .IsRequired();
-
-        builder.Property(pt => pt.Month)
-            .IsRequired();
-
-        builder.Property(pt => pt.Workload)
+        builder.Property(part => part.Workload)
             .IsRequired()
             .HasPrecision(7, 4);
 
-        builder.Property(pt => pt.TimesheetStatusId)
+        builder.Property(part => part.TimesheetStatusId)
             .IsRequired();
 
-        builder.HasOne(pt => pt.TimesheetStatus)
+        builder.HasOne(part => part.TimesheetStatus)
             .WithMany()
-            .HasForeignKey(pt => pt.TimesheetStatusId)
+            .HasForeignKey(part => part.TimesheetStatusId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.Property(pt => pt.LockedAt);
-        builder.Property(pt => pt.LockedBy);
+        builder.Property(part => part.LockedAt);
+        builder.Property(part => part.LockedBy);
 
-        builder.Property(pt => pt.CreatedAt)
+        builder.Property(part => part.CreatedAt)
             .IsRequired();
 
-        builder.Property(pt => pt.UpdatedAt);
+        builder.Property(part => part.UpdatedAt);
 
-        builder.HasIndex(pt => new { pt.ContractEmployeeId, pt.Year, pt.Month })
+        builder.HasIndex(part => new { part.TimesheetId, part.ContractEmployeeId })
             .IsUnique();
 
-        builder.HasIndex(pt => new { pt.TimesheetId, pt.ContractEmployeeId })
-            .IsUnique();
-
-        builder.HasOne(pt => pt.Timesheet)
-            .WithMany(t => t.ProjectTimesheets)
-            .HasForeignKey(pt => pt.TimesheetId)
+        builder.HasOne(part => part.Timesheet)
+            .WithMany(t => t.ContractParts)
+            .HasForeignKey(part => part.TimesheetId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasOne<ContractEmployee>()
+        builder.HasOne(part => part.ContractEmployee)
             .WithMany()
-            .HasForeignKey(pt => pt.ContractEmployeeId)
+            .HasForeignKey(part => part.ContractEmployeeId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasMany(pt => pt.Days)
-            .WithOne(d => d.ProjectTimesheet)
-            .HasForeignKey(pd => pd.ProjectTimesheetId)
+        builder.HasMany(part => part.Days)
+            .WithOne(day => day.ContractPart)
+            .HasForeignKey(day => day.ContractPartId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 
-    private static void ConfigureProjectDaysTable(ModelBuilder modelBuilder)
+    private static void ConfigureContractPartDaysTable(ModelBuilder modelBuilder)
     {
-        var builder = modelBuilder.Entity<ProjectDay>();
+        var builder = modelBuilder.Entity<ContractPartDay>();
 
-        builder.ToTable("ProjectDay", table =>
+        builder.ToTable("ContractPartDay", table =>
         {
             table.HasCheckConstraint(
-                "CK_ProjectDay_HoursAndWorkload",
+                "CK_ContractPartDay_Hours",
                 """
                 "Hours" >= 0
-                AND "Workload" >= 0 AND "Workload" <= 1
-                AND "HoursObligation" >= 0
+                """);
+            table.HasCheckConstraint(
+                "CK_ContractPartDay_HoursObligation",
+                """
+                "HoursObligation" >= 0
                 """);
         });
 
-        builder.HasKey(pd => pd.Id);
+        builder.HasKey(day => day.Id);
 
-        builder.Property(pd => pd.ProjectTimesheetId)
+        builder.Property(day => day.ContractPartId)
             .IsRequired();
 
-        builder.Property(pd => pd.Date)
+        builder.Property(day => day.Date)
             .IsRequired();
 
-        builder.Property(pd => pd.Hours)
+        builder.Property(day => day.Hours)
             .IsRequired()
             .HasPrecision(5, 2);
 
-        builder.Property(pd => pd.HoursLocked)
+        builder.Property(day => day.HoursLocked)
             .IsRequired()
             .HasDefaultValue(false);
 
-        builder.Property(pd => pd.IsHoliday)
+        builder.Property(day => day.IsHoliday)
             .IsRequired()
             .HasDefaultValue(false);
 
-        builder.Property(pd => pd.Workload)
-            .IsRequired()
-            .HasPrecision(7, 4);
-
-        builder.Property(pd => pd.HoursObligation)
+        builder.Property(day => day.HoursObligation)
             .IsRequired()
             .HasPrecision(5, 2);
 
-        builder.HasIndex(pd => new { pd.ProjectTimesheetId, pd.Date })
+        builder.HasIndex(day => new { day.ContractPartId, day.Date })
             .IsUnique();
     }
 
@@ -771,9 +757,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             table.HasCheckConstraint(
                 "CK_TimesheetStatusHistory_ExactlyOneTimesheet",
                 """
-                ("TimesheetId" IS NOT NULL AND "ProjectTimesheetId" IS NULL)
+                ("TimesheetId" IS NOT NULL AND "ContractPartId" IS NULL)
                 OR
-                ("TimesheetId" IS NULL AND "ProjectTimesheetId" IS NOT NULL)
+                ("TimesheetId" IS NULL AND "ContractPartId" IS NOT NULL)
                 """);
         });
 
@@ -791,9 +777,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.Property(history => history.Comment)
             .HasMaxLength(500);
 
-        builder.HasOne(history => history.ProjectTimesheet)
-            .WithMany(timesheet => timesheet.StatusHistory)
-            .HasForeignKey(history => history.ProjectTimesheetId)
+        builder.HasOne(history => history.ContractPart)
+            .WithMany(part => part.StatusHistory)
+            .HasForeignKey(history => history.ContractPartId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(history => history.FromStatus)
@@ -812,7 +798,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(history => history.TimesheetId);
-        builder.HasIndex(history => history.ProjectTimesheetId);
+        builder.HasIndex(history => history.ContractPartId);
         builder.HasIndex(history => history.ChangedByEmployeeId);
         builder.HasIndex(history => history.ChangedAt);
     }
@@ -826,9 +812,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             table.HasCheckConstraint(
                 "CK_TimesheetComment_ExactlyOneTimesheet",
                 """
-                ("TimesheetId" IS NOT NULL AND "ProjectTimesheetId" IS NULL)
+                ("TimesheetId" IS NOT NULL AND "ContractPartId" IS NULL)
                 OR
-                ("TimesheetId" IS NULL AND "ProjectTimesheetId" IS NOT NULL)
+                ("TimesheetId" IS NULL AND "ContractPartId" IS NOT NULL)
                 """);
         });
 
@@ -844,9 +830,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.Property(comment => comment.CreatedAt)
             .IsRequired();
 
-        builder.HasOne(comment => comment.ProjectTimesheet)
-            .WithMany(timesheet => timesheet.Comments)
-            .HasForeignKey(comment => comment.ProjectTimesheetId)
+        builder.HasOne(comment => comment.ContractPart)
+            .WithMany(part => part.Comments)
+            .HasForeignKey(comment => comment.ContractPartId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(comment => comment.AuthorEmployee)
@@ -855,7 +841,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(comment => comment.TimesheetId);
-        builder.HasIndex(comment => comment.ProjectTimesheetId);
+        builder.HasIndex(comment => comment.ContractPartId);
         builder.HasIndex(comment => comment.AuthorEmployeeId);
         builder.HasIndex(comment => comment.CreatedAt);
     }

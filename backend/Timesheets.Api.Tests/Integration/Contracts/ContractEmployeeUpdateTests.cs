@@ -75,7 +75,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
 
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        int decemberDayCount = await dbContext.ProjectDays.AsNoTracking().Where(day => day.ProjectTimesheet.ContractEmployeeId == setup.ContractEmployeeId).Where(day => day.Date > new DateTime(2024, 11, 30, 0, 0, 0, DateTimeKind.Utc)).CountAsync();
+        int decemberDayCount = await dbContext.ContractPartDays.AsNoTracking().Where(day => day.ContractPart.ContractEmployeeId == setup.ContractEmployeeId).Where(day => day.Date > new DateTime(2024, 11, 30, 0, 0, 0, DateTimeKind.Utc)).CountAsync();
         Assert.Equal(0, decemberDayCount);
     }
 
@@ -83,7 +83,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     public async Task UpdateImpact_ShortenEnd_WithSubmittedOutside_ReturnsBlocked()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
-        Guid decemberTimesheetId = await GetProjectTimesheetIdAsync(setup.ContractEmployeeId, 2024, 12);
+        Guid decemberTimesheetId = await GetContractPartIdAsync(setup.ContractEmployeeId, 2024, 12);
         await SetProjectTimesheetStatusAsync(decemberTimesheetId, TestTimesheetStatusIds.Submitted);
 
         ContractEmployeeUpdateRequest request = new(TestIdentifiers.Position(1), "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 11, 30, 0, 0, 0, DateTimeKind.Utc));
@@ -136,9 +136,9 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            decimal januaryWorkload = await dbContext.ProjectTimesheets.AsNoTracking()
+            decimal januaryWorkload = await dbContext.ContractParts.AsNoTracking()
                 .Where(timesheet => timesheet.ContractEmployeeId == setup.ContractEmployeeId)
-                .Where(timesheet => timesheet.Year == 2024 && timesheet.Month == 1)
+                .Where(timesheet => timesheet.Timesheet.Year == 2024 && timesheet.Timesheet.Month == 1)
                 .Select(timesheet => timesheet.Workload)
                 .SingleAsync();
             Assert.Equal(0.5m, januaryWorkload);
@@ -156,9 +156,9 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            decimal januaryWorkload = await dbContext.ProjectTimesheets.AsNoTracking()
+            decimal januaryWorkload = await dbContext.ContractParts.AsNoTracking()
                 .Where(timesheet => timesheet.ContractEmployeeId == setup.ContractEmployeeId)
-                .Where(timesheet => timesheet.Year == 2024 && timesheet.Month == 1)
+                .Where(timesheet => timesheet.Timesheet.Year == 2024 && timesheet.Timesheet.Month == 1)
                 .Select(timesheet => timesheet.Workload)
                 .SingleAsync();
             Assert.Equal(0.25m, januaryWorkload);
@@ -223,18 +223,18 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
         Assert.True(impact.NewTimesheetMonthCount > 0);
     }
 
-    private async Task<Guid> GetProjectTimesheetIdAsync(Guid contractEmployeeId, int year, int month)
+    private async Task<Guid> GetContractPartIdAsync(Guid contractEmployeeId, int year, int month)
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        return await dbContext.ProjectTimesheets.AsNoTracking().Where(timesheet => timesheet.ContractEmployeeId == contractEmployeeId).Where(timesheet => timesheet.Year == year && timesheet.Month == month).Select(timesheet => timesheet.Id).SingleAsync();
+        return await dbContext.ContractParts.AsNoTracking().Where(part => part.ContractEmployeeId == contractEmployeeId && part.Timesheet.Year == year && part.Timesheet.Month == month).Select(part => part.Id).SingleAsync();
     }
 
     private async Task SetProjectTimesheetStatusAsync(Guid projectTimesheetId, Guid statusId)
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        int affected = await dbContext.ProjectTimesheets.Where(timesheet => timesheet.Id == projectTimesheetId).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
+        int affected = await dbContext.ContractParts.Where(timesheet => timesheet.Id == projectTimesheetId).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
         Assert.Equal(1, affected);
     }
 }

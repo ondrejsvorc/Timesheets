@@ -35,7 +35,6 @@ public sealed class Contract
     public DateTime? UpdatedAt { get; set; }
 
     public Project Project { get; set; } = null!;
-    public ICollection<ProjectTimesheet> ProjectTimesheets { get; set; } = [];
     public ICollection<ContractManager> ContractManagers { get; set; } = [];
     public ICollection<ContractEmployee> ContractEmployees { get; set; } = [];
 }
@@ -80,7 +79,6 @@ public sealed partial class Employee
 
     public EmployeeType EmployeeType { get; set; } = null!;
     public ICollection<Timesheet> Timesheets { get; set; } = [];
-    public ICollection<ProjectTimesheet> ProjectTimesheets { get; set; } = [];
     public ICollection<CoreEmployment> CoreEmployments { get; set; } = [];
     public ICollection<EmployeeWorkload> EmployeeWorkloads { get; set; } = [];
     public ICollection<Notification> Notifications { get; set; } = [];
@@ -144,7 +142,7 @@ public sealed class Timesheet
     public TimesheetStatus TimesheetStatus { get; set; } = null!;
     public Employee ApprovedByEmployee { get; set; } = null!;
     public Attendance? Attendance { get; set; }
-    public ICollection<ProjectTimesheet> ProjectTimesheets { get; set; } = [];
+    public ICollection<ContractPart> ContractParts { get; set; } = [];
     public ICollection<TimesheetStatusHistory> StatusHistory { get; set; } = [];
     public ICollection<TimesheetComment> Comments { get; set; } = [];
 }
@@ -199,16 +197,12 @@ public sealed class Interruption
     public decimal? HoursObligationOverride { get; set; }
 }
 
-public sealed class ProjectTimesheet
+public sealed class ContractPart
 {
     public Guid Id { get; set; }
     public Guid TimesheetId { get; set; }
-    public Guid EmployeeId { get; set; }
-    public Guid ContractId { get; set; }
     public Guid ContractEmployeeId { get; set; }
     public Guid TimesheetStatusId { get; set; }
-    public int Year { get; set; }
-    public int Month { get; set; }
     public decimal Workload { get; set; }
     public DateTime? LockedAt { get; set; }
     public Guid? LockedBy { get; set; }
@@ -217,23 +211,23 @@ public sealed class ProjectTimesheet
 
     public TimesheetStatus TimesheetStatus { get; set; } = null!;
     public Timesheet Timesheet { get; set; } = null!;
-    public ICollection<ProjectDay> Days { get; set; } = [];
+    public ContractEmployee ContractEmployee { get; set; } = null!;
+    public ICollection<ContractPartDay> Days { get; set; } = [];
     public ICollection<TimesheetStatusHistory> StatusHistory { get; set; } = [];
     public ICollection<TimesheetComment> Comments { get; set; } = [];
 }
 
-public sealed class ProjectDay
+public sealed class ContractPartDay
 {
     public Guid Id { get; set; }
-    public Guid ProjectTimesheetId { get; set; }
+    public Guid ContractPartId { get; set; }
     public DateTime Date { get; set; }
     public decimal Hours { get; set; }
     public bool HoursLocked { get; set; }
     public bool IsHoliday { get; set; }
-    public decimal Workload { get; set; }
     public decimal HoursObligation { get; set; }
 
-    public ProjectTimesheet ProjectTimesheet { get; set; } = null!;
+    public ContractPart ContractPart { get; set; } = null!;
 }
 
 public sealed class TimesheetStatus
@@ -250,7 +244,7 @@ public sealed class TimesheetStatusHistory
     public Guid Id { get; set; }
 
     public Guid? TimesheetId { get; set; }
-    public Guid? ProjectTimesheetId { get; set; }
+    public Guid? ContractPartId { get; set; }
 
     public Guid? FromStatusId { get; set; }
     public Guid ToStatusId { get; set; }
@@ -261,7 +255,7 @@ public sealed class TimesheetStatusHistory
     public string? Comment { get; set; }
 
     public Timesheet? Timesheet { get; set; }
-    public ProjectTimesheet? ProjectTimesheet { get; set; }
+    public ContractPart? ContractPart { get; set; }
 
     public TimesheetStatus? FromStatus { get; set; }
     public TimesheetStatus ToStatus { get; set; } = null!;
@@ -274,13 +268,13 @@ public sealed class TimesheetComment
     public Guid Id { get; set; }
 
     public Guid? TimesheetId { get; set; }
-    public Guid? ProjectTimesheetId { get; set; }
+    public Guid? ContractPartId { get; set; }
 
     public Guid AuthorEmployeeId { get; set; }
     public string Text { get; set; } = string.Empty;
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
     public Timesheet? Timesheet { get; set; }
-    public ProjectTimesheet? ProjectTimesheet { get; set; }
+    public ContractPart? ContractPart { get; set; }
     public Employee AuthorEmployee { get; set; } = null!;
 }

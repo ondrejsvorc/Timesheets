@@ -28,7 +28,7 @@ public sealed class RemoveContractEmployee : IEndpoint
             return TypedResults.NotFound();
         }
 
-        bool hasProtectedTimesheets = await dbContext.ProjectTimesheets
+        bool hasProtectedTimesheets = await dbContext.ContractParts
             .AsNoTracking()
             .AnyAsync(timesheet => timesheet.ContractEmployeeId == contractEmployeeId && (timesheet.TimesheetStatus.Code == TimesheetStatusCodes.Submitted || timesheet.TimesheetStatus.Code == TimesheetStatusCodes.Approved), cancellationToken);
         if (hasProtectedTimesheets)
