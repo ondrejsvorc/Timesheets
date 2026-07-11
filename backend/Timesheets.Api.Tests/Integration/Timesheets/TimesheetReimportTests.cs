@@ -92,7 +92,7 @@ public class TimesheetReimportTests : BaseIntegrationTest
             Assert.Equal(HttpStatusCode.OK, importResponse.StatusCode);
         }
 
-        await SetAttendanceTimesheetStatusAsync(setup.EmployeeId, 2024, 10, TestTimesheetStatusIds.Submitted);
+        await SetTimesheetStatusAsync(setup.EmployeeId, 2024, 10, TestTimesheetStatusIds.Submitted);
 
         using MultipartFormDataContent detectForm = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx");
         HttpResponseMessage detectResponse = await Client.PostAsync("/api/timesheets/detect", detectForm);
@@ -122,10 +122,10 @@ public class TimesheetReimportTests : BaseIntegrationTest
 
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Guid? employeeTypeId = await dbContext.AttendanceTimesheets
+        Guid? employeeTypeId = await dbContext.Attendances
             .AsNoTracking()
-            .Where(timesheet => timesheet.EmployeeId == setup.EmployeeId && timesheet.Year == 2024 && timesheet.Month == 10)
-            .Select(timesheet => timesheet.EmployeeTypeId)
+            .Where(attendance => attendance.Timesheet.EmployeeId == setup.EmployeeId && attendance.Timesheet.Year == 2024 && attendance.Timesheet.Month == 10)
+            .Select(attendance => attendance.EmployeeTypeId)
             .SingleAsync();
 
         Assert.Equal(EmployeeTypes.NonAcademicId, employeeTypeId);
@@ -164,17 +164,17 @@ public class TimesheetReimportTests : BaseIntegrationTest
 
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        bool commentExists = await dbContext.TimesheetComments.AsNoTracking().AnyAsync(comment => comment.AttendanceTimesheetId == timesheetId && comment.Text == "Test comment preserved on reimport");
+        bool commentExists = await dbContext.TimesheetComments.AsNoTracking().AnyAsync(comment => comment.TimesheetId == timesheetId && comment.Text == "Test comment preserved on reimport");
         int dayCount = await dbContext.AttendanceDays.AsNoTracking().CountAsync(day => day.AttendanceId == timesheetId);
         Assert.True(commentExists);
         Assert.Equal(31, dayCount);
     }
 
-    private async Task SetAttendanceTimesheetStatusAsync(Guid employeeId, int year, int month, Guid statusId)
+    private async Task SetTimesheetStatusAsync(Guid employeeId, int year, int month, Guid statusId)
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        int affected = await dbContext.AttendanceTimesheets.Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
+        int affected = await dbContext.Timesheets.Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
         Assert.Equal(1, affected);
     }
 
@@ -186,11 +186,11 @@ public class TimesheetReimportTests : BaseIntegrationTest
         Assert.Equal(1, affected);
     }
 
-    private async Task AddAttendanceCommentAsync(Guid attendanceTimesheetId, string text)
+    private async Task AddAttendanceCommentAsync(Guid timesheetId, string text)
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        dbContext.TimesheetComments.Add(new TimesheetComment { Id = Guid.CreateVersion7(), AttendanceTimesheetId = attendanceTimesheetId, AuthorEmployeeId = SeededTestData.JanNovakEmployeeId, Text = text });
+        dbContext.TimesheetComments.Add(new TimesheetComment { Id = Guid.CreateVersion7(), TimesheetId = timesheetId, AuthorEmployeeId = SeededTestData.JanNovakEmployeeId, Text = text });
         await dbContext.SaveChangesAsync();
     }
 }

@@ -4,6 +4,7 @@ using CzechHolidays;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data;
+using Timesheets.Api.Data.Models;
 
 namespace Timesheets.Api.Features.Timesheets;
 
@@ -104,13 +105,12 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             return CreateDetection(file, metadata, canImport: false, isReimport: false, errorMessage: "Nepodařilo se určit osobní číslo zaměstnance.");
         }
 
-        // Accept variants like "ST101972" vs "101972" (e.g. "ST101972".Contains("101972")).
         if (!employee.PersonalNumber.Contains(metadata.EmployeePersonalNumber.Trim(), StringComparison.OrdinalIgnoreCase))
         {
             return CreateDetection(file, metadata, canImport: false, isReimport: false, errorMessage: "Soubor nepatří vybranému zaměstnanci.");
         }
 
-        Data.Models.AttendanceTimesheet? existingTimesheet = await dbContext.AttendanceTimesheets
+        Data.Models.Timesheet? existingTimesheet = await dbContext.Timesheets
             .AsNoTracking()
             .Include(timesheet => timesheet.TimesheetStatus)
             .FirstOrDefaultAsync(timesheet => timesheet.EmployeeId == employee.Id && timesheet.Year == metadata.Year && timesheet.Month == metadata.Month, cancellationToken);
@@ -177,7 +177,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             throw new AttendanceImportException($"Nelze importovat. Projektové úvazky pro {importedTimesheet.Month:00}/{importedTimesheet.Year} jsou {projectWorkload:0.##}, ale importovaný celkový úvazek je {importedTimesheet.Workload:0.##}. Nejdřív upravte přiřazení na zakázky.");
         }
 
-        Data.Models.AttendanceTimesheet? existingTimesheet = await dbContext.AttendanceTimesheets
+        Data.Models.Timesheet? existingTimesheet = await dbContext.Timesheets
             .Include(timesheet => timesheet.TimesheetStatus)
             .FirstOrDefaultAsync(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == importedTimesheet.Year && timesheet.Month == importedTimesheet.Month, cancellationToken);
 
@@ -201,18 +201,17 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             .Select(employee => employee.EmployeeTypeId)
             .SingleAsync(cancellationToken);
 
-        Data.Models.AttendanceTimesheet timesheet = new()
+        Data.Models.Timesheet timesheet = new()
         {
             Id = Guid.CreateVersion7(),
             EmployeeId = employeeId,
-            EmployeeTypeId = employeeTypeId,
             TimesheetStatusId = draftStatus.Id,
             Year = importedTimesheet.Year,
             Month = importedTimesheet.Month,
             CreatedAt = DateTime.UtcNow
         };
 
-        TimesheetBootstrap.AddLegacyMonth(dbContext, timesheet);
+        TimesheetBootstrap.AddMonth(dbContext, timesheet, employeeTypeId);
         AddImportedDays(timesheet.Id, importedTimesheet, validInterruptionCodes);
 
         await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
@@ -221,7 +220,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         return timesheet.Id;
     }
 
-    private async Task<Guid> ReimportAsync(Data.Models.AttendanceTimesheet existingTimesheet, Guid employeeId, AttendanceTimesheet importedTimesheet, HashSet<string> validInterruptionCodes, CancellationToken cancellationToken)
+    private async Task<Guid> ReimportAsync(Data.Models.Timesheet existingTimesheet, Guid employeeId, AttendanceTimesheet importedTimesheet, HashSet<string> validInterruptionCodes, CancellationToken cancellationToken)
     {
         Guid timesheetId = existingTimesheet.Id;
 
@@ -234,7 +233,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         await UpsertEmployeeWorkloadAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        await dbContext.AttendanceTimesheets
+        await dbContext.Timesheets
             .Where(t => t.Id == timesheetId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(t => t.UpdatedAt, DateTime.UtcNow), cancellationToken);
 
@@ -246,7 +245,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
     private void AddImportedDays(Guid attendanceId, AttendanceTimesheet importedTimesheet, HashSet<string> validInterruptionCodes)
     {
-        foreach (AttendanceDay day in importedTimesheet.Days)
+        foreach (Features.Timesheets.AttendanceDay day in importedTimesheet.Days)
         {
             dbContext.AttendanceDays.Add(new Data.Models.AttendanceDay
             {
@@ -336,7 +335,6 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             return null;
         }
 
-        // Remove parenthetical noise like "(0)" and normalize separators.
         string cleaned = Regex.Replace(raw, @"\([^)]*\)", " ");
         cleaned = cleaned.Replace(";", " ").Replace(",", " ").Replace("|", " ");
 
@@ -371,7 +369,6 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             return true;
         }
 
-        // "SCT0" -> "SCT", "NL123" -> "NL"
         string alpha = Regex.Replace(token, @"[^A-Z/]", "");
         if (alpha.Length > 0 && validCodes.Contains(alpha))
         {
@@ -379,7 +376,6 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             return true;
         }
 
-        // Best-effort fallback: choose closest prefix match from known DB codes.
         string? prefixMatch = validCodes
             .Where(code => alpha.StartsWith(code, StringComparison.OrdinalIgnoreCase) || code.StartsWith(alpha, StringComparison.OrdinalIgnoreCase))
             .OrderBy(code => Math.Abs(code.Length - alpha.Length))

@@ -68,7 +68,7 @@ public sealed record ProjectDateRange(DateTime StartDate, DateTime? EndDate)
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value.Date : DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
 }
 
-public sealed record LoadedTimesheet(Data.Models.AttendanceTimesheet Timesheet, Data.Models.Attendance Attendance, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
+public sealed record LoadedTimesheet(Data.Models.Timesheet Timesheet, Data.Models.Attendance Attendance, IReadOnlyList<Data.Models.ProjectTimesheet> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
 
 public sealed record ProjectColumn(Guid Id, decimal Workload, bool Locked, ProjectDateRange Range)
 {
@@ -101,7 +101,7 @@ public static class TimesheetEngine
 {
     public static async Task<LoadedTimesheet?> LoadAsync(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        Data.Models.AttendanceTimesheet? timesheet = await dbContext.AttendanceTimesheets
+        Data.Models.Timesheet? timesheet = await dbContext.Timesheets
             .Include(value => value.Employee)
             .Include(value => value.TimesheetStatus)
             .SingleOrDefaultAsync(value => value.Id == id, cancellationToken);

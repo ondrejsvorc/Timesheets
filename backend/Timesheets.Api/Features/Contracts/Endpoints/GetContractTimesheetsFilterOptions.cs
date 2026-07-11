@@ -37,7 +37,7 @@ public sealed class GetContractTimesheetsFilterOptions : IEndpoint
         var baseQuery = dbContext.ProjectTimesheets
             .AsNoTracking()
             .Where(timesheet => timesheet.ContractId == id)
-            .Where(timesheet => dbContext.AttendanceTimesheets.Any(attendance =>
+            .Where(timesheet => dbContext.Timesheets.Any(attendance =>
                 attendance.EmployeeId == timesheet.EmployeeId
                 && attendance.Year == timesheet.Year
                 && attendance.Month == timesheet.Month))

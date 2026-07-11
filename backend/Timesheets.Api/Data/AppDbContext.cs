@@ -16,7 +16,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<Timesheet> Timesheets { get; set; } = null!;
     public DbSet<Attendance> Attendances { get; set; } = null!;
-    public DbSet<AttendanceTimesheet> AttendanceTimesheets { get; set; } = null!;
     public DbSet<AttendanceDay> AttendanceDays { get; set; } = null!;
     public DbSet<DayInterruption> DayInterruptions { get; set; } = null!;
     public DbSet<Interruption> Interruptions { get; set; } = null!;
@@ -45,7 +44,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         ConfigureTimesheetsTable(modelBuilder);
         ConfigureAttendancesTable(modelBuilder);
-        ConfigureAttendanceTimesheetsTable(modelBuilder);
         ConfigureAttendanceDaysTable(modelBuilder);
         ConfigureInterruptionsTable(modelBuilder);
         ConfigureDayInterruptionsTable(modelBuilder);
@@ -342,7 +340,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(t => t.TimesheetStatus)
-            .WithMany()
+            .WithMany(ts => ts.Timesheets)
             .HasForeignKey(t => t.TimesheetStatusId)
             .OnDelete(DeleteBehavior.Restrict);
 
@@ -354,6 +352,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.HasOne(t => t.Attendance)
             .WithOne(a => a.Timesheet)
             .HasForeignKey<Attendance>(a => a.TimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(t => t.StatusHistory)
+            .WithOne(history => history.Timesheet)
+            .HasForeignKey(history => history.TimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(t => t.Comments)
+            .WithOne(comment => comment.Timesheet)
+            .HasForeignKey(comment => comment.TimesheetId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 
@@ -380,52 +388,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .WithOne(d => d.Attendance)
             .HasForeignKey(d => d.AttendanceId)
             .OnDelete(DeleteBehavior.Cascade);
-    }
-
-    private static void ConfigureAttendanceTimesheetsTable(ModelBuilder modelBuilder)
-    {
-        var builder = modelBuilder.Entity<AttendanceTimesheet>();
-
-        builder.ToTable("AttendanceTimesheet", table =>
-        {
-            table.HasCheckConstraint(
-                "CK_AttendanceTimesheet_ValidMonth",
-                """
-                "Month" >= 1 AND "Month" <= 12
-                """);
-        });
-
-        builder.HasKey(at => at.Id);
-
-        builder.Property(at => at.EmployeeId).IsRequired();
-        builder.Property(at => at.EmployeeTypeId);
-        builder.Property(at => at.TimesheetStatusId).IsRequired();
-        builder.Property(at => at.Year).IsRequired();
-        builder.Property(at => at.Month).IsRequired();
-        builder.Property(at => at.CreatedAt).IsRequired();
-
-        builder.HasIndex(at => new { at.EmployeeId, at.Year, at.Month })
-            .IsUnique();
-
-        builder.HasOne(at => at.Employee)
-            .WithMany(e => e.AttendanceTimesheets)
-            .HasForeignKey(at => at.EmployeeId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne<EmployeeType>()
-            .WithMany()
-            .HasForeignKey(at => at.EmployeeTypeId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(at => at.TimesheetStatus)
-            .WithMany(ts => ts.AttendanceTimesheets)
-            .HasForeignKey(at => at.TimesheetStatusId)
-            .OnDelete(DeleteBehavior.Restrict);
-
-        builder.HasOne(at => at.ApprovedByEmployee)
-            .WithMany()
-            .HasForeignKey(at => at.ApprovedBy)
-            .OnDelete(DeleteBehavior.Restrict);
     }
 
     private static void ConfigureAttendanceDaysTable(ModelBuilder modelBuilder)
@@ -595,6 +557,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.HasKey(pt => pt.Id);
 
+        builder.Property(pt => pt.TimesheetId)
+            .IsRequired();
+
         builder.Property(pt => pt.EmployeeId)
             .IsRequired();
 
@@ -632,6 +597,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.HasIndex(pt => new { pt.ContractEmployeeId, pt.Year, pt.Month })
             .IsUnique();
+
+        builder.HasIndex(pt => new { pt.TimesheetId, pt.ContractEmployeeId })
+            .IsUnique();
+
+        builder.HasOne(pt => pt.Timesheet)
+            .WithMany(t => t.ProjectTimesheets)
+            .HasForeignKey(pt => pt.TimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne<ContractEmployee>()
             .WithMany()
@@ -798,9 +771,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             table.HasCheckConstraint(
                 "CK_TimesheetStatusHistory_ExactlyOneTimesheet",
                 """
-                ("AttendanceTimesheetId" IS NOT NULL AND "ProjectTimesheetId" IS NULL)
+                ("TimesheetId" IS NOT NULL AND "ProjectTimesheetId" IS NULL)
                 OR
-                ("AttendanceTimesheetId" IS NULL AND "ProjectTimesheetId" IS NOT NULL)
+                ("TimesheetId" IS NULL AND "ProjectTimesheetId" IS NOT NULL)
                 """);
         });
 
@@ -817,11 +790,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(history => history.Comment)
             .HasMaxLength(500);
-
-        builder.HasOne(history => history.AttendanceTimesheet)
-            .WithMany(timesheet => timesheet.StatusHistory)
-            .HasForeignKey(history => history.AttendanceTimesheetId)
-            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(history => history.ProjectTimesheet)
             .WithMany(timesheet => timesheet.StatusHistory)
@@ -843,7 +811,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(history => history.ChangedByEmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(history => history.AttendanceTimesheetId);
+        builder.HasIndex(history => history.TimesheetId);
         builder.HasIndex(history => history.ProjectTimesheetId);
         builder.HasIndex(history => history.ChangedByEmployeeId);
         builder.HasIndex(history => history.ChangedAt);
@@ -858,9 +826,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             table.HasCheckConstraint(
                 "CK_TimesheetComment_ExactlyOneTimesheet",
                 """
-                ("AttendanceTimesheetId" IS NOT NULL AND "ProjectTimesheetId" IS NULL)
+                ("TimesheetId" IS NOT NULL AND "ProjectTimesheetId" IS NULL)
                 OR
-                ("AttendanceTimesheetId" IS NULL AND "ProjectTimesheetId" IS NOT NULL)
+                ("TimesheetId" IS NULL AND "ProjectTimesheetId" IS NOT NULL)
                 """);
         });
 
@@ -876,11 +844,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.Property(comment => comment.CreatedAt)
             .IsRequired();
 
-        builder.HasOne(comment => comment.AttendanceTimesheet)
-            .WithMany(timesheet => timesheet.Comments)
-            .HasForeignKey(comment => comment.AttendanceTimesheetId)
-            .OnDelete(DeleteBehavior.Cascade);
-
         builder.HasOne(comment => comment.ProjectTimesheet)
             .WithMany(timesheet => timesheet.Comments)
             .HasForeignKey(comment => comment.ProjectTimesheetId)
@@ -891,7 +854,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasForeignKey(comment => comment.AuthorEmployeeId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(comment => comment.AttendanceTimesheetId);
+        builder.HasIndex(comment => comment.TimesheetId);
         builder.HasIndex(comment => comment.ProjectTimesheetId);
         builder.HasIndex(comment => comment.AuthorEmployeeId);
         builder.HasIndex(comment => comment.CreatedAt);

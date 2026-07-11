@@ -81,18 +81,18 @@ public sealed class ExpectedLoadTests : BaseIntegrationTest
             dbContext.ContractEmployees.Add(new ContractEmployee { Id = assignmentId, ContractId = contractId, EmployeeId = target.Id, PositionCode = $"LOAD-{index:00}", Position = $"Load Position {index:00}", Workload = 0.05m, StartDate = monthStart, EndDate = monthStart.AddMonths(1).AddDays(-1) });
         }
 
-        Guid attendanceTimesheetId = Guid.CreateVersion7();
-        TimesheetBootstrap.AddLegacyMonthWithDays(
+        Guid timesheetId = Guid.CreateVersion7();
+        TimesheetBootstrap.AddMonthWithDays(
             dbContext,
-            new AttendanceTimesheet
+            new Data.Models.Timesheet
             {
-                Id = attendanceTimesheetId,
+                Id = timesheetId,
                 EmployeeId = target.Id,
-                EmployeeTypeId = TestEmployeeFactory.DefaultEmployeeTypeId,
                 TimesheetStatusId = TestTimesheetStatusIds.Draft,
                 Year = year,
                 Month = month,
             },
+            TestEmployeeFactory.DefaultEmployeeTypeId,
             Enumerable.Range(1, DateTime.DaysInMonth(year, month)).Select(day =>
             {
                 DateTime date = new(year, month, day, 0, 0, 0, DateTimeKind.Utc);

@@ -13,12 +13,12 @@ public sealed class GetTimesheetCatalog : IEndpoint
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
     public sealed record ProjectTimesheetItem(Guid Id, string Label);
-    public sealed record Response(Guid AttendanceTimesheetId, Guid CurrentStatusId, IEnumerable<ProjectTimesheetItem> ProjectTimesheets);
+    public sealed record Response(Guid TimesheetId, Guid CurrentStatusId, IEnumerable<ProjectTimesheetItem> ProjectTimesheets);
     private sealed record ProjectTimesheetRow(Guid Id, string ContractRegistrationNumber);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle([AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        var attendanceTimesheet = await dbContext.AttendanceTimesheets
+        var attendanceTimesheet = await dbContext.Timesheets
             .AsNoTracking()
             .Where(t => t.EmployeeId == request.EmployeeId && t.Year == request.Year && t.Month == request.Month)
             .Select(t => new { t.Id, t.TimesheetStatusId })

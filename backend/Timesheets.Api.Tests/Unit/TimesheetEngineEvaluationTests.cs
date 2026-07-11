@@ -1,9 +1,8 @@
 using Timesheets.Api.Features.Employees;
 using Timesheets.Api.Features.Timesheets;
-
 using DataAttendanceDay = Timesheets.Api.Data.Models.AttendanceDay;
-using DataAttendanceTimesheet = Timesheets.Api.Data.Models.AttendanceTimesheet;
 using DataEmployee = Timesheets.Api.Data.Models.Employee;
+using DataTimesheet = Timesheets.Api.Data.Models.Timesheet;
 
 namespace Timesheets.Api.Tests.Unit;
 
@@ -42,11 +41,10 @@ public sealed class TimesheetEngineEvaluationTests
             Surname = "Employee"
         };
 
-        DataAttendanceTimesheet timesheet = new()
+        DataTimesheet timesheet = new()
         {
             Id = Guid.CreateVersion7(),
             EmployeeId = employee.Id,
-            EmployeeTypeId = EmployeeTypes.AcademicId,
             Employee = employee,
             Year = 2026,
             Month = 1,

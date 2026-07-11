@@ -177,15 +177,14 @@ public static class DatabaseSeeder
             context.ContractEmployees.AddRange(contractEmployees);
         }
 
-        if (!await context.AttendanceTimesheets.AsNoTracking().AnyAsync())
+        if (!await context.Timesheets.AsNoTracking().AnyAsync())
         {
-            List<AttendanceTimesheet> attendanceTimesheets =
+            List<Timesheet> timesheets =
             [
                 new()
                 {
                     Id = Guid.Parse("70000000-0000-0000-0000-000000000001"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
-                    EmployeeTypeId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
                     TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000022"), // Schválený
                     Year = 2024,
                     Month = 11,
@@ -199,7 +198,6 @@ public static class DatabaseSeeder
                 {
                     Id = Guid.Parse("70000000-0000-0000-0000-000000000002"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
-                    EmployeeTypeId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
                     TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000021"), // Ke schválení
                     Year = 2024,
                     Month = 12,
@@ -211,17 +209,15 @@ public static class DatabaseSeeder
                 {
                     Id = Guid.Parse("70000000-0000-0000-0000-000000000003"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000003"),
-                    EmployeeTypeId = Guid.Parse("00000000-0000-0000-0000-000000000002"),
                     TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000020"), // Rozpracovaný
                     Year = 2024,
                     Month = 12,
                     CreatedAt = new DateTime(2024, 12, 1, 8, 0, 0, DateTimeKind.Utc)
                 }
             ];
-            foreach (AttendanceTimesheet attendanceTimesheet in attendanceTimesheets)
-            {
-                TimesheetBootstrap.AddLegacyMonth(context, attendanceTimesheet);
-            }
+            TimesheetBootstrap.AddMonth(context, timesheets[0], Guid.Parse("00000000-0000-0000-0000-000000000001"));
+            TimesheetBootstrap.AddMonth(context, timesheets[1], Guid.Parse("00000000-0000-0000-0000-000000000001"));
+            TimesheetBootstrap.AddMonth(context, timesheets[2], Guid.Parse("00000000-0000-0000-0000-000000000002"));
         }
 
         if (!await context.AttendanceDays.AsNoTracking().AnyAsync())
@@ -361,6 +357,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("90000000-0000-0000-0000-000000000001"),
+                    TimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000001"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
                     ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     ContractEmployeeId = Guid.Parse("60000000-0000-0000-0000-000000000001"),
@@ -374,6 +371,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("90000000-0000-0000-0000-000000000002"),
+                    TimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000002"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000002"),
                     ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     ContractEmployeeId = Guid.Parse("60000000-0000-0000-0000-000000000001"),
@@ -386,6 +384,7 @@ public static class DatabaseSeeder
                 new()
                 {
                     Id = Guid.Parse("90000000-0000-0000-0000-000000000003"),
+                    TimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000003"),
                     EmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000003"),
                     ContractId = Guid.Parse("30000000-0000-0000-0000-000000000001"),
                     ContractEmployeeId = Guid.Parse("60000000-0000-0000-0000-000000000002"),

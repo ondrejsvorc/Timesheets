@@ -45,7 +45,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         }
 
         var attendanceInfo = await (
-            from timesheet in dbContext.AttendanceTimesheets.AsNoTracking()
+            from timesheet in dbContext.Timesheets.AsNoTracking()
             join attendance in dbContext.Attendances.AsNoTracking() on timesheet.Id equals attendance.TimesheetId
             where timesheet.EmployeeId == request.EmployeeId && timesheet.Year == request.Year && timesheet.Month == request.Month
             select new

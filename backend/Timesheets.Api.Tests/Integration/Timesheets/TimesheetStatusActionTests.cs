@@ -21,7 +21,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         using (IServiceScope setupScope = CreateScope())
         {
             AppDbContext setupContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            AttendanceTimesheet setupAttendance = await setupContext.AttendanceTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecAttendanceTimesheetId);
+            Data.Models.Timesheet setupAttendance = await setupContext.Timesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecTimesheetId);
             ProjectTimesheet setupProject = await setupContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId);
             setupAttendance.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
             setupProject.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
@@ -49,7 +49,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         using (IServiceScope setupScope = CreateScope())
         {
             AppDbContext setupContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            AttendanceTimesheet attendance = await setupContext.AttendanceTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecAttendanceTimesheetId);
+            Data.Models.Timesheet attendance = await setupContext.Timesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecTimesheetId);
             ProjectTimesheet project = await setupContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId);
             attendance.TimesheetStatusId = TestTimesheetStatusIds.Draft;
             project.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
@@ -70,7 +70,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         using (IServiceScope setupScope = CreateScope())
         {
             AppDbContext setupContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            AttendanceTimesheet setupAttendance = await setupContext.AttendanceTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecAttendanceTimesheetId);
+            Data.Models.Timesheet setupAttendance = await setupContext.Timesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecTimesheetId);
             ProjectTimesheet setupProject = await setupContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId);
             setupAttendance.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
             setupProject.TimesheetStatusId = TestTimesheetStatusIds.Approved;
@@ -85,7 +85,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        AttendanceTimesheet attendance = await assertionContext.AttendanceTimesheets.AsNoTracking().SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecAttendanceTimesheetId);
+        Data.Models.Timesheet attendance = await assertionContext.Timesheets.AsNoTracking().SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecTimesheetId);
         ProjectTimesheet project = await assertionContext.ProjectTimesheets.AsNoTracking().SingleAsync(timesheet => timesheet.Id == SeededTestData.PetrDecProjectTimesheetId);
         Assert.Equal(TestTimesheetStatusIds.Draft, attendance.TimesheetStatusId);
         Assert.Equal(TestTimesheetStatusIds.Draft, project.TimesheetStatusId);
@@ -98,7 +98,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     {
         const int year = 2039;
         const int month = 1;
-        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid timesheetId = Guid.CreateVersion7();
         Guid contractEmployeeId = Guid.CreateVersion7();
         Guid projectTimesheetId = Guid.CreateVersion7();
 
@@ -113,21 +113,22 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             dbContext.ContractManagers.Add(new ContractManager { Id = Guid.CreateVersion7(), ContractId = SeededTestData.AlphaContractId, EmployeeId = SeededTestData.MarieEmployeeId });
             dbContext.ContractEmployees.Add(new ContractEmployee { Id = contractEmployeeId, ContractId = SeededTestData.AlphaContractId, EmployeeId = SeededTestData.JanNovakEmployeeId, PositionCode = "WF-2039", Position = "Workflow 2039", Workload = 0m, StartDate = periodStart, EndDate = periodStart.AddMonths(1).AddDays(-1) });
             dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = 0m });
-            TimesheetBootstrap.AddLegacyMonthWithDays(
+            TimesheetBootstrap.AddMonthWithDays(
                 dbContext,
-                new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, EmployeeTypeId = EmployeeTypes.AcademicId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month },
+                new Data.Models.Timesheet { Id = timesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month },
+                EmployeeTypes.AcademicId,
                 days);
-            dbContext.ProjectTimesheets.Add(new ProjectTimesheet { Id = projectTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, ContractId = SeededTestData.AlphaContractId, ContractEmployeeId = contractEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month, Workload = 0m });
+            dbContext.ProjectTimesheets.Add(new ProjectTimesheet { Id = projectTimesheetId, TimesheetId = timesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, ContractId = SeededTestData.AlphaContractId, ContractEmployeeId = contractEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month, Workload = 0m });
             await dbContext.SaveChangesAsync();
         }
 
-        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.JanNovakEmployeeId, year, month, "submit", null, [attendanceTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.JanNovakEmployeeId, year, month, "submit", null, [timesheetId]);
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Guid statusId = await assertionContext.AttendanceTimesheets.Where(timesheet => timesheet.Id == attendanceTimesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
+        Guid statusId = await assertionContext.Timesheets.Where(timesheet => timesheet.Id == timesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
         Guid projectStatusId = await assertionContext.ProjectTimesheets.Where(timesheet => timesheet.Id == projectTimesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
         Notification notification = await assertionContext.Notifications.AsNoTracking().SingleAsync(item => item.EmployeeId == SeededTestData.MarieEmployeeId && item.Message.Contains("2039"));
         Assert.Equal(TestTimesheetStatusIds.Submitted, statusId);
@@ -141,7 +142,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         const int year = 2040;
         const int month = 1;
         DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
-        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid timesheetId = Guid.CreateVersion7();
         Guid contractEmployeeId = Guid.CreateVersion7();
         Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, "emp-" + TestIdentifiers.Suffix(17), "Visible", "Employee");
         Employee manager = await TestEmployeeFactory.CreateAsync(Factory.Services, "cm-" + TestIdentifiers.Suffix(17), "Contract", "Manager");
@@ -152,19 +153,20 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
             dbContext.ContractManagers.Add(new ContractManager { Id = Guid.CreateVersion7(), ContractId = SeededTestData.AlphaContractId, EmployeeId = manager.Id });
             dbContext.ContractEmployees.Add(new ContractEmployee { Id = contractEmployeeId, ContractId = SeededTestData.AlphaContractId, EmployeeId = employee.Id, PositionCode = "WF-2040", Position = "Workflow 2040", Workload = 0m, StartDate = periodStart, EndDate = periodStart.AddMonths(1).AddDays(-1) });
             dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = employee.Id, Year = year, Month = month, Workload = 0m });
-            TimesheetBootstrap.AddLegacyMonth(
+            TimesheetBootstrap.AddMonth(
                 dbContext,
-                new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = employee.Id, EmployeeTypeId = EmployeeTypes.AcademicId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month });
+                new Data.Models.Timesheet { Id = timesheetId, EmployeeId = employee.Id, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = year, Month = month },
+                EmployeeTypes.AcademicId);
             await dbContext.SaveChangesAsync();
         }
 
-        UpdateCombinedTimesheetStatus.Request request = new(employee.Id, year, month, "submit", null, [attendanceTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(employee.Id, year, month, "submit", null, [timesheetId]);
         HttpStatusCode statusCode = await PutStatusAsAsync(manager.PersonalNumber, request);
 
         Assert.Equal(HttpStatusCode.Unauthorized, statusCode);
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Guid statusId = await assertionContext.AttendanceTimesheets.Where(timesheet => timesheet.Id == attendanceTimesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
+        Guid statusId = await assertionContext.Timesheets.Where(timesheet => timesheet.Id == timesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
         Assert.Equal(TestTimesheetStatusIds.Draft, statusId);
     }
 
@@ -185,7 +187,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         using (IServiceScope setupScope = CreateScope())
         {
             AppDbContext setupContext = setupScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            AttendanceTimesheet setupAttendance = await setupContext.AttendanceTimesheets.SingleAsync(timesheet => timesheet.Id == Guid.Parse("70000000-0000-0000-0000-000000000002"));
+            Timesheet setupAttendance = await setupContext.Timesheets.SingleAsync(timesheet => timesheet.Id == Guid.Parse("70000000-0000-0000-0000-000000000002"));
             setupAttendance.TimesheetStatusId = TestTimesheetStatusIds.Submitted;
 
             List<ProjectTimesheet> projects = await setupContext.ProjectTimesheets
@@ -211,23 +213,24 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     [Fact]
     public async Task Employee_CanCompleteOwnWholeTimesheet()
     {
-        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid timesheetId = Guid.CreateVersion7();
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            TimesheetBootstrap.AddLegacyMonth(
+            TimesheetBootstrap.AddMonth(
                 dbContext,
-                new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, EmployeeTypeId = EmployeeTypes.AcademicId, TimesheetStatusId = TestTimesheetStatusIds.Submitted, Year = 2099, Month = 1 });
+                new Data.Models.Timesheet { Id = timesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Submitted, Year = 2099, Month = 1 },
+                EmployeeTypes.AcademicId);
             await dbContext.SaveChangesAsync();
         }
 
-        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.JanNovakEmployeeId, 2099, 1, "approve", null, [attendanceTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(SeededTestData.JanNovakEmployeeId, 2099, 1, "approve", null, [timesheetId]);
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Guid statusId = await assertionContext.AttendanceTimesheets.Where(timesheet => timesheet.Id == attendanceTimesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
+        Guid statusId = await assertionContext.Timesheets.Where(timesheet => timesheet.Id == timesheetId).Select(timesheet => timesheet.TimesheetStatusId).SingleAsync();
         Assert.Equal(TestTimesheetStatusIds.Approved, statusId);
     }
     [Fact]
@@ -270,7 +273,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     public async Task FinalApproval_RequiresApprovedProjectParts()
     {
         WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Submitted);
-        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.AttendanceTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.TimesheetId]);
 
         HttpResponseMessage response = await Client.PutAsJsonAsync("/api/timesheets/combined/status", request);
 
@@ -281,14 +284,14 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     public async Task Employee_CanFinalApproveOwnWholeTimesheetAfterProjectPartsAreApproved()
     {
         WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Approved);
-        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.AttendanceTimesheetId]);
+        UpdateCombinedTimesheetStatus.Request request = new(workflow.EmployeeId, workflow.Year, workflow.Month, "approve", null, [workflow.TimesheetId]);
 
         HttpStatusCode statusCode = await PutStatusAsAsync(workflow.EmployeePersonalNumber, request);
 
         Assert.Equal(HttpStatusCode.OK, statusCode);
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        AttendanceTimesheet attendance = await assertionContext.AttendanceTimesheets.AsNoTracking().SingleAsync(timesheet => timesheet.Id == workflow.AttendanceTimesheetId);
+        Data.Models.Timesheet attendance = await assertionContext.Timesheets.AsNoTracking().SingleAsync(timesheet => timesheet.Id == workflow.TimesheetId);
         Assert.Equal(TestTimesheetStatusIds.Approved, attendance.TimesheetStatusId);
         Assert.Equal(workflow.EmployeeId, attendance.ApprovedBy);
         Assert.NotNull(attendance.ApprovedAt);
@@ -300,35 +303,19 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         const int month = 1;
         DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, periodStart, periodStart.AddMonths(1).AddDays(-1), workload: 0.5m);
-        Guid attendanceTimesheetId = Guid.CreateVersion7();
 
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         ProjectTimesheet projectTimesheet = await dbContext.ProjectTimesheets.SingleAsync(timesheet => timesheet.ContractEmployeeId == setup.ContractEmployeeId && timesheet.Year == year && timesheet.Month == month);
+        Guid timesheetId = projectTimesheet.TimesheetId;
+        Data.Models.Timesheet monthTimesheet = await dbContext.Timesheets.SingleAsync(timesheet => timesheet.Id == timesheetId);
+        monthTimesheet.TimesheetStatusId = attendanceStatusId;
         projectTimesheet.TimesheetStatusId = projectStatusId;
         projectTimesheet.LockedAt = projectStatusId == TestTimesheetStatusIds.Approved ? DateTime.UtcNow : null;
         projectTimesheet.LockedBy = projectStatusId == TestTimesheetStatusIds.Approved ? setup.EmployeeId : null;
-
-        Guid? employeeTypeId = await dbContext.Employees
-            .Where(employee => employee.Id == setup.EmployeeId)
-            .Select(employee => employee.EmployeeTypeId)
-            .SingleAsync();
-
-        TimesheetBootstrap.AddLegacyMonth(
-            dbContext,
-            new AttendanceTimesheet
-            {
-                Id = attendanceTimesheetId,
-                EmployeeId = setup.EmployeeId,
-                EmployeeTypeId = employeeTypeId,
-                TimesheetStatusId = attendanceStatusId,
-                Year = year,
-                Month = month,
-                CreatedAt = DateTime.UtcNow,
-            });
         await dbContext.SaveChangesAsync();
 
-        return new WorkflowSetup(setup.EmployeeId, setup.EmployeePersonalNumber, attendanceTimesheetId, projectTimesheet.Id, setup.ProjectId, year, month);
+        return new WorkflowSetup(setup.EmployeeId, setup.EmployeePersonalNumber, timesheetId, projectTimesheet.Id, setup.ProjectId, year, month);
     }
 
     private async Task<HttpStatusCode> PutStatusAsAsync(string personalNumber, UpdateCombinedTimesheetStatus.Request request)
@@ -351,5 +338,5 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
                 ["Authentication:Enabled"] = "true"
             })));
 
-    private sealed record WorkflowSetup(Guid EmployeeId, string EmployeePersonalNumber, Guid AttendanceTimesheetId, Guid ProjectTimesheetId, Guid ProjectId, int Year, int Month);
+    private sealed record WorkflowSetup(Guid EmployeeId, string EmployeePersonalNumber, Guid TimesheetId, Guid ProjectTimesheetId, Guid ProjectId, int Year, int Month);
 }

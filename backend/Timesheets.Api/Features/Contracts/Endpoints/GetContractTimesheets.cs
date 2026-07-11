@@ -82,7 +82,7 @@ public sealed class GetContractTimesheets : IEndpoint
             .Where(timesheet => timesheet.ContractId == id)
             .Where(timesheet => timesheet.Year > request.FromYear || (timesheet.Year == request.FromYear && timesheet.Month >= request.FromMonth))
             .Where(timesheet => timesheet.Year < request.ToYear || (timesheet.Year == request.ToYear && timesheet.Month <= request.ToMonth))
-            .Where(timesheet => dbContext.AttendanceTimesheets.Any(attendance =>
+            .Where(timesheet => dbContext.Timesheets.Any(attendance =>
                 attendance.EmployeeId == timesheet.EmployeeId
                 && attendance.Year == timesheet.Year
                 && attendance.Month == timesheet.Month));

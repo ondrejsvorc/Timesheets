@@ -20,13 +20,13 @@ public class TimesheetLockTests : BaseIntegrationTest
     public async Task UpdateTimesheet_LockedHoursAndMetadataCannotChange()
     {
         DateTime date = new(2035, 1, 2, 0, 0, 0, DateTimeKind.Utc);
-        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid timesheetId = Guid.CreateVersion7();
         Guid contractEmployeeId = Guid.CreateVersion7();
         Guid projectTimesheetId = Guid.CreateVersion7();
-        await SeedTimesheetsAsync(attendanceTimesheetId, contractEmployeeId, projectTimesheetId, date);
+        await SeedTimesheetsAsync(timesheetId, contractEmployeeId, projectTimesheetId, date);
 
         TimesheetEditRequest forgedRequest = CreateDraft(contractEmployeeId, date, hours: 9m);
-        HttpResponseMessage forgedResponse = await Client.PutAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}", forgedRequest);
+        HttpResponseMessage forgedResponse = await Client.PutAsJsonAsync($"/api/timesheets/{timesheetId}", forgedRequest);
         Assert.Equal(HttpStatusCode.OK, forgedResponse.StatusCode);
 
         using IServiceScope assertionScope = CreateScope();
@@ -41,18 +41,18 @@ public class TimesheetLockTests : BaseIntegrationTest
     public async Task UpdateTimesheet_CoreHoursCanChangeBeforeProjectsAreLocked()
     {
         DateTime date = new(2035, 2, 1, 0, 0, 0, DateTimeKind.Utc);
-        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid timesheetId = Guid.CreateVersion7();
         Guid contractEmployeeId = Guid.CreateVersion7();
         Guid projectTimesheetId = Guid.CreateVersion7();
-        await SeedTimesheetsAsync(attendanceTimesheetId, contractEmployeeId, projectTimesheetId, date, locked: false);
+        await SeedTimesheetsAsync(timesheetId, contractEmployeeId, projectTimesheetId, date, locked: false);
 
         TimesheetEditRequest request = CreateDraft(contractEmployeeId, date, hours: 2m, coreHours: 1m);
-        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}", request);
+        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{timesheetId}", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using IServiceScope assertionScope = CreateScope();
         AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
-        AttendanceDay storedDay = await assertionContext.AttendanceDays.AsNoTracking().SingleAsync(day => day.AttendanceId == attendanceTimesheetId);
+        AttendanceDay storedDay = await assertionContext.AttendanceDays.AsNoTracking().SingleAsync(day => day.AttendanceId == timesheetId);
         Assert.Equal(1m, storedDay.CoreHours);
     }
 
@@ -60,13 +60,13 @@ public class TimesheetLockTests : BaseIntegrationTest
     public async Task UpdateTimesheet_ProjectCellLockIsPersisted()
     {
         DateTime date = new(2035, 3, 1, 0, 0, 0, DateTimeKind.Utc);
-        Guid attendanceTimesheetId = Guid.CreateVersion7();
+        Guid timesheetId = Guid.CreateVersion7();
         Guid contractEmployeeId = Guid.CreateVersion7();
         Guid projectTimesheetId = Guid.CreateVersion7();
-        await SeedTimesheetsAsync(attendanceTimesheetId, contractEmployeeId, projectTimesheetId, date, locked: false);
+        await SeedTimesheetsAsync(timesheetId, contractEmployeeId, projectTimesheetId, date, locked: false);
 
         TimesheetEditRequest request = CreateDraft(contractEmployeeId, date, hours: 9m, hoursLocked: true);
-        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{attendanceTimesheetId}", request);
+        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{timesheetId}", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using IServiceScope assertionScope = CreateScope();
@@ -76,17 +76,18 @@ public class TimesheetLockTests : BaseIntegrationTest
         Assert.True(stored.HoursLocked);
     }
 
-    private async Task SeedTimesheetsAsync(Guid attendanceTimesheetId, Guid contractEmployeeId, Guid projectTimesheetId, DateTime date, bool locked = true)
+    private async Task SeedTimesheetsAsync(Guid timesheetId, Guid contractEmployeeId, Guid projectTimesheetId, DateTime date, bool locked = true)
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         dbContext.ContractEmployees.Add(new ContractEmployee { Id = contractEmployeeId, ContractId = SeededTestData.BetaContractId, EmployeeId = SeededTestData.JanNovakEmployeeId, PositionCode = "LOCK", Position = $"Lock test {contractEmployeeId}", Workload = 1m, StartDate = date, EndDate = date });
-        TimesheetBootstrap.AddLegacyMonthWithDays(
+        TimesheetBootstrap.AddMonthWithDays(
             dbContext,
-            new AttendanceTimesheet { Id = attendanceTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, EmployeeTypeId = EmployeeTypes.AcademicId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = date.Year, Month = date.Month },
+            new Timesheet { Id = timesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = date.Year, Month = date.Month },
+            EmployeeTypes.AcademicId,
             [new AttendanceDay { Id = Guid.CreateVersion7(), Date = date, Workload = 1m, HoursWithoutBreak = 8m, HoursObligation = 8m, CoreHours = 0m, Schedules = "[]" }]);
-        dbContext.ProjectTimesheets.Add(new ProjectTimesheet { Id = projectTimesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, ContractId = SeededTestData.BetaContractId, ContractEmployeeId = contractEmployeeId, TimesheetStatusId = locked ? TestTimesheetStatusIds.Approved : TestTimesheetStatusIds.Draft, Year = date.Year, Month = date.Month, Workload = 1m, LockedAt = locked ? DateTime.UtcNow : null, LockedBy = locked ? SeededTestData.JanNovakEmployeeId : null, Days = [new ProjectDay { Id = Guid.CreateVersion7(), Date = date, Hours = 2m, Workload = 1m, HoursObligation = 8m }] });
+        dbContext.ProjectTimesheets.Add(new ProjectTimesheet { Id = projectTimesheetId, TimesheetId = timesheetId, EmployeeId = SeededTestData.JanNovakEmployeeId, ContractId = SeededTestData.BetaContractId, ContractEmployeeId = contractEmployeeId, TimesheetStatusId = locked ? TestTimesheetStatusIds.Approved : TestTimesheetStatusIds.Draft, Year = date.Year, Month = date.Month, Workload = 1m, LockedAt = locked ? DateTime.UtcNow : null, LockedBy = locked ? SeededTestData.JanNovakEmployeeId : null, Days = [new ProjectDay { Id = Guid.CreateVersion7(), Date = date, Hours = 2m, Workload = 1m, HoursObligation = 8m }] });
 
         await dbContext.SaveChangesAsync();
     }

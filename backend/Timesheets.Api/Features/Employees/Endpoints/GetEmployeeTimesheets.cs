@@ -38,7 +38,7 @@ public sealed class GetEmployeeTimesheets : IEndpoint
                 .Where(t => t.EmployeeId == id)
                 .Select(t => new { t.Year, t.Month })
                 .Union(
-                    dbContext.AttendanceTimesheets.AsNoTracking()
+                    dbContext.Timesheets.AsNoTracking()
                         .Where(t => t.EmployeeId == id)
                         .Select(t => new { t.Year, t.Month })
                 );
@@ -76,7 +76,7 @@ public sealed class GetEmployeeTimesheets : IEndpoint
             .Select(w => new ValueTuple<int, int>(w.Year, w.Month))
             .ToHashSetAsync(cancellationToken);
 
-        Dictionary<(int Year, int Month), string> statusByMonth = await dbContext.AttendanceTimesheets
+        Dictionary<(int Year, int Month), string> statusByMonth = await dbContext.Timesheets
             .AsNoTracking()
             .Where(t => t.EmployeeId == id)
             .Select(t => new { t.Year, t.Month, Status = t.TimesheetStatus.Name })

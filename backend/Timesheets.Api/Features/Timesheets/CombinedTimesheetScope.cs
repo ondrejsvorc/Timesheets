@@ -3,19 +3,19 @@ using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Features.Timesheets;
 
-internal sealed record CombinedTimesheetScope(Guid AttendanceTimesheetId, IReadOnlyDictionary<Guid, string> ProjectTimesheetLabels);
+internal sealed record CombinedTimesheetScope(Guid TimesheetId, IReadOnlyDictionary<Guid, string> ProjectTimesheetLabels);
 
 internal static class CombinedTimesheetScopeLoader
 {
     public static async Task<CombinedTimesheetScope?> LoadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        Guid? attendanceTimesheetId = await dbContext.AttendanceTimesheets
+        Guid? timesheetId = await dbContext.Timesheets
             .AsNoTracking()
-            .Where(t => t.EmployeeId == employeeId && t.Year == year && t.Month == month)
-            .Select(t => (Guid?)t.Id)
+            .Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month)
+            .Select(timesheet => (Guid?)timesheet.Id)
             .SingleOrDefaultAsync(cancellationToken);
 
-        if (attendanceTimesheetId is null)
+        if (timesheetId is null)
         {
             return null;
         }
@@ -31,12 +31,12 @@ internal static class CombinedTimesheetScopeLoader
 
         Dictionary<Guid, string> labels = projectRows.ToDictionary(row => row.Id, row => row.ContractRegistrationNumber);
 
-        return new CombinedTimesheetScope(attendanceTimesheetId.Value, labels);
+        return new CombinedTimesheetScope(timesheetId.Value, labels);
     }
 
-    public static string ResolveTimesheetLabel(this CombinedTimesheetScope scope, Guid? attendanceTimesheetId, Guid? projectTimesheetId)
+    public static string ResolveTimesheetLabel(this CombinedTimesheetScope scope, Guid? timesheetId, Guid? projectTimesheetId)
     {
-        if (attendanceTimesheetId is not null)
+        if (timesheetId is not null)
         {
             return "Pracovní výkaz";
         }

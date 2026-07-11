@@ -57,8 +57,9 @@ internal static class ProjectTimesheetInitializer
             return;
         }
 
+        Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, employeeId, year, month, cancellationToken);
         HashSet<DateOnly> holidays = GetHolidays(year, holidaysFactory);
-        dbContext.ProjectTimesheets.AddRange(missingAssignments.Select(assignment => Create(assignment, year, month, holidays)));
+        dbContext.ProjectTimesheets.AddRange(missingAssignments.Select(assignment => Create(assignment, year, month, holidays, timesheetId)));
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -77,15 +78,17 @@ internal static class ProjectTimesheetInitializer
             return false;
         }
 
-        dbContext.ProjectTimesheets.Add(Create(assignment, year, month, GetHolidays(year, holidaysFactory)));
+        Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, assignment.EmployeeId, year, month, cancellationToken);
+        dbContext.ProjectTimesheets.Add(Create(assignment, year, month, GetHolidays(year, holidaysFactory), timesheetId));
         return true;
     }
 
-    private static Data.Models.ProjectTimesheet Create(ContractEmployee assignment, int year, int month, HashSet<DateOnly> holidays)
+    private static Data.Models.ProjectTimesheet Create(ContractEmployee assignment, int year, int month, HashSet<DateOnly> holidays, Guid timesheetId)
     {
         Data.Models.ProjectTimesheet projectTimesheet = new()
         {
             Id = Guid.CreateVersion7(),
+            TimesheetId = timesheetId,
             EmployeeId = assignment.EmployeeId,
             ContractId = assignment.ContractId,
             ContractEmployeeId = assignment.Id,

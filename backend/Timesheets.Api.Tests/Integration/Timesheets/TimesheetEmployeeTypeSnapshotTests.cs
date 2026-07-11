@@ -49,7 +49,7 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
             ],
             Projects: []);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{setup.AttendanceTimesheetId}/review", request);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{setup.TimesheetId}/review", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         TimesheetEvaluation? evaluation = await response.Content.ReadFromJsonAsync<TimesheetEvaluation>();
@@ -77,7 +77,7 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
             ],
             Projects: []);
 
-        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{setup.AttendanceTimesheetId}/allocate?day=2", request);
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{setup.TimesheetId}/allocate?day=2", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
@@ -100,17 +100,17 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
         Employee storedEmployee = await dbContext.Employees.SingleAsync(item => item.Id == employee.Id);
         storedEmployee.EmployeeTypeId = currentEmployeeTypeId;
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = employee.Id, Year = year, Month = month, Workload = 1m });
-        TimesheetBootstrap.AddLegacyMonthWithDays(
+        TimesheetBootstrap.AddMonthWithDays(
             dbContext,
-            new Data.Models.AttendanceTimesheet
+            new Data.Models.Timesheet
             {
                 Id = timesheetId,
                 EmployeeId = employee.Id,
-                EmployeeTypeId = snapshotEmployeeTypeId,
                 TimesheetStatusId = TestTimesheetStatusIds.Draft,
                 Year = year,
                 Month = month,
             },
+            snapshotEmployeeTypeId,
             [
                 new Data.Models.AttendanceDay
                 {
@@ -126,5 +126,5 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
         return new SnapshotSetup(employee.Id, timesheetId, year, month);
     }
 
-    private sealed record SnapshotSetup(Guid EmployeeId, Guid AttendanceTimesheetId, int Year, int Month);
+    private sealed record SnapshotSetup(Guid EmployeeId, Guid TimesheetId, int Year, int Month);
 }

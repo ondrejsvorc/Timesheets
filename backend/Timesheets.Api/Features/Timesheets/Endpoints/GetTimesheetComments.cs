@@ -54,7 +54,7 @@ public sealed class GetTimesheetComments : IEndpoint
             .AsNoTracking()
             .Include(c => c.AuthorEmployee)
             .Where(c =>
-                c.AttendanceTimesheetId == scope.AttendanceTimesheetId
+                c.TimesheetId == scope.TimesheetId
                 || (c.ProjectTimesheetId != null && projectIds.Contains(c.ProjectTimesheetId.Value)))
             .ToListAsync(cancellationToken);
 
@@ -64,7 +64,7 @@ public sealed class GetTimesheetComments : IEndpoint
             .Include(h => h.ToStatus)
             .Include(h => h.ChangedByEmployee)
             .Where(h =>
-                h.AttendanceTimesheetId == scope.AttendanceTimesheetId
+                h.TimesheetId == scope.TimesheetId
                 || (h.ProjectTimesheetId != null && projectIds.Contains(h.ProjectTimesheetId.Value)))
             .ToListAsync(cancellationToken);
 
@@ -88,7 +88,7 @@ public sealed class GetTimesheetComments : IEndpoint
                     new CommentAuthor(
                         entry.ChangedByEmployeeId,
                         entry.ChangedByEmployee.DisplayName),
-                    scope.ResolveTimesheetLabel(entry.AttendanceTimesheetId, entry.ProjectTimesheetId),
+                    scope.ResolveTimesheetLabel(entry.TimesheetId, entry.ProjectTimesheetId),
                     entry.FromStatus?.Name,
                     entry.ToStatus.Name,
                     entry.Comment))))

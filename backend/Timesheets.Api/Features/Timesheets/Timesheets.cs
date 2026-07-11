@@ -1,4 +1,4 @@
-﻿namespace Timesheets.Api.Features.Timesheets;
+namespace Timesheets.Api.Features.Timesheets;
 
 public sealed record TimeRange(TimeSpan Start, TimeSpan End);
 

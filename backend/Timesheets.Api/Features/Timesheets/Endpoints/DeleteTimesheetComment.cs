@@ -41,7 +41,7 @@ public sealed class DeleteTimesheetComment : IEndpoint
         }
 
         IReadOnlyList<Guid> projectTimesheetIds = scope.ProjectTimesheetLabels.Keys.ToList();
-        bool isAttendanceComment = comment.AttendanceTimesheetId == scope.AttendanceTimesheetId;
+        bool isAttendanceComment = comment.TimesheetId == scope.TimesheetId;
         bool isProjectComment = comment.ProjectTimesheetId is not null && projectTimesheetIds.Contains(comment.ProjectTimesheetId.Value);
 
         if (!isAttendanceComment && !isProjectComment)

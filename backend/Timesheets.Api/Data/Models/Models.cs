@@ -80,7 +80,6 @@ public sealed partial class Employee
 
     public EmployeeType EmployeeType { get; set; } = null!;
     public ICollection<Timesheet> Timesheets { get; set; } = [];
-    public ICollection<AttendanceTimesheet> AttendanceTimesheets { get; set; } = [];
     public ICollection<ProjectTimesheet> ProjectTimesheets { get; set; } = [];
     public ICollection<CoreEmployment> CoreEmployments { get; set; } = [];
     public ICollection<EmployeeWorkload> EmployeeWorkloads { get; set; } = [];
@@ -145,6 +144,9 @@ public sealed class Timesheet
     public TimesheetStatus TimesheetStatus { get; set; } = null!;
     public Employee ApprovedByEmployee { get; set; } = null!;
     public Attendance? Attendance { get; set; }
+    public ICollection<ProjectTimesheet> ProjectTimesheets { get; set; } = [];
+    public ICollection<TimesheetStatusHistory> StatusHistory { get; set; } = [];
+    public ICollection<TimesheetComment> Comments { get; set; } = [];
 }
 
 public sealed class Attendance
@@ -156,27 +158,6 @@ public sealed class Attendance
     public Timesheet Timesheet { get; set; } = null!;
     public EmployeeType EmployeeType { get; set; } = null!;
     public ICollection<AttendanceDay> Days { get; set; } = [];
-}
-
-public sealed class AttendanceTimesheet
-{
-    public Guid Id { get; set; }
-    public Guid EmployeeId { get; set; }
-    public Guid? EmployeeTypeId { get; set; }
-    public Guid TimesheetStatusId { get; set; }
-    public Guid? ApprovedBy { get; set; }
-    public int Year { get; set; }
-    public int Month { get; set; }
-    public DateTime? SubmittedAt { get; set; }
-    public DateTime? ApprovedAt { get; set; }
-    public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
-    public DateTime? UpdatedAt { get; set; }
-
-    public Employee Employee { get; set; } = null!;
-    public TimesheetStatus TimesheetStatus { get; set; } = null!;
-    public Employee ApprovedByEmployee { get; set; } = null!;
-    public ICollection<TimesheetStatusHistory> StatusHistory { get; set; } = [];
-    public ICollection<TimesheetComment> Comments { get; set; } = [];
 }
 
 public sealed class AttendanceDay
@@ -221,6 +202,7 @@ public sealed class Interruption
 public sealed class ProjectTimesheet
 {
     public Guid Id { get; set; }
+    public Guid TimesheetId { get; set; }
     public Guid EmployeeId { get; set; }
     public Guid ContractId { get; set; }
     public Guid ContractEmployeeId { get; set; }
@@ -234,6 +216,7 @@ public sealed class ProjectTimesheet
     public DateTime? UpdatedAt { get; set; }
 
     public TimesheetStatus TimesheetStatus { get; set; } = null!;
+    public Timesheet Timesheet { get; set; } = null!;
     public ICollection<ProjectDay> Days { get; set; } = [];
     public ICollection<TimesheetStatusHistory> StatusHistory { get; set; } = [];
     public ICollection<TimesheetComment> Comments { get; set; } = [];
@@ -259,14 +242,14 @@ public sealed class TimesheetStatus
     public string Code { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
 
-    public ICollection<AttendanceTimesheet> AttendanceTimesheets { get; set; } = [];
+    public ICollection<Timesheet> Timesheets { get; set; } = [];
 }
 
 public sealed class TimesheetStatusHistory
 {
     public Guid Id { get; set; }
 
-    public Guid? AttendanceTimesheetId { get; set; }
+    public Guid? TimesheetId { get; set; }
     public Guid? ProjectTimesheetId { get; set; }
 
     public Guid? FromStatusId { get; set; }
@@ -277,7 +260,7 @@ public sealed class TimesheetStatusHistory
     public DateTime ChangedAt { get; init; } = DateTime.UtcNow;
     public string? Comment { get; set; }
 
-    public AttendanceTimesheet? AttendanceTimesheet { get; set; }
+    public Timesheet? Timesheet { get; set; }
     public ProjectTimesheet? ProjectTimesheet { get; set; }
 
     public TimesheetStatus? FromStatus { get; set; }
@@ -290,14 +273,14 @@ public sealed class TimesheetComment
 {
     public Guid Id { get; set; }
 
-    public Guid? AttendanceTimesheetId { get; set; }
+    public Guid? TimesheetId { get; set; }
     public Guid? ProjectTimesheetId { get; set; }
 
     public Guid AuthorEmployeeId { get; set; }
     public string Text { get; set; } = string.Empty;
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
 
-    public AttendanceTimesheet? AttendanceTimesheet { get; set; }
+    public Timesheet? Timesheet { get; set; }
     public ProjectTimesheet? ProjectTimesheet { get; set; }
     public Employee AuthorEmployee { get; set; } = null!;
 }

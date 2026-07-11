@@ -1,45 +1,59 @@
+using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Data.Models;
+using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Data;
 
-// ponytail: dual-write shadow Timesheet + Attendance until AttendanceTimesheet is removed (step 4g).
 public static class TimesheetBootstrap
 {
-    public static void AddLegacyMonth(AppDbContext db, AttendanceTimesheet legacy)
+    public static async Task<Guid> EnsureMonthTimesheetIdAsync(AppDbContext db, Guid employeeId, int year, int month, CancellationToken cancellationToken)
     {
-        Guid employeeTypeId = legacy.EmployeeTypeId
-            ?? throw new InvalidOperationException("EmployeeTypeId is required when creating Attendance.");
+        Guid? timesheetId = await db.Timesheets
+            .AsNoTracking()
+            .Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month)
+            .Select(timesheet => (Guid?)timesheet.Id)
+            .SingleOrDefaultAsync(cancellationToken);
 
-        db.Timesheets.Add(new Timesheet
+        if (timesheetId.HasValue)
         {
-            Id = legacy.Id,
-            EmployeeId = legacy.EmployeeId,
-            TimesheetStatusId = legacy.TimesheetStatusId,
-            ApprovedBy = legacy.ApprovedBy,
-            Year = legacy.Year,
-            Month = legacy.Month,
-            SubmittedAt = legacy.SubmittedAt,
-            ApprovedAt = legacy.ApprovedAt,
-            CreatedAt = legacy.CreatedAt,
-            UpdatedAt = legacy.UpdatedAt,
-        });
+            return timesheetId.Value;
+        }
 
-        db.Attendances.Add(new Attendance
+        Guid employeeTypeId = await db.Employees
+            .Where(employee => employee.Id == employeeId)
+            .Select(employee => employee.EmployeeTypeId)
+            .SingleAsync(cancellationToken);
+
+        Timesheet timesheet = new()
         {
-            Id = legacy.Id,
-            TimesheetId = legacy.Id,
-            EmployeeTypeId = employeeTypeId,
-        });
-
-        db.AttendanceTimesheets.Add(legacy);
+            Id = Guid.CreateVersion7(),
+            EmployeeId = employeeId,
+            TimesheetStatusId = TimesheetWorkflow.DraftStatusId,
+            Year = year,
+            Month = month,
+            CreatedAt = DateTime.UtcNow,
+        };
+        AddMonth(db, timesheet, employeeTypeId);
+        return timesheet.Id;
     }
 
-    public static void AddLegacyMonthWithDays(AppDbContext db, AttendanceTimesheet legacy, IEnumerable<AttendanceDay> days)
+    public static void AddMonth(AppDbContext db, Timesheet timesheet, Guid employeeTypeId)
     {
-        AddLegacyMonth(db, legacy);
-        foreach (AttendanceDay day in days)
+        db.Timesheets.Add(timesheet);
+        db.Attendances.Add(new Attendance
         {
-            day.AttendanceId = legacy.Id;
+            Id = timesheet.Id,
+            TimesheetId = timesheet.Id,
+            EmployeeTypeId = employeeTypeId,
+        });
+    }
+
+    public static void AddMonthWithDays(AppDbContext db, Timesheet timesheet, Guid employeeTypeId, IEnumerable<Data.Models.AttendanceDay> days)
+    {
+        AddMonth(db, timesheet, employeeTypeId);
+        foreach (Data.Models.AttendanceDay day in days)
+        {
+            day.AttendanceId = timesheet.Id;
             db.AttendanceDays.Add(day);
         }
     }
