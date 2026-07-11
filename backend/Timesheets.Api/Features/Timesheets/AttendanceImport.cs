@@ -237,7 +237,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             .Where(t => t.Id == timesheetId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(t => t.UpdatedAt, DateTime.UtcNow), cancellationToken);
 
-        await RecalculateDraftProjectColumnsAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, cancellationToken);
+        await RecalculateDraftContractPartColumnsAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         await TimesheetEngine.ApplyInterruptionHoursAsync(timesheetId, dbContext, cancellationToken);
         return timesheetId;
@@ -266,7 +266,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         }
     }
 
-    private async Task RecalculateDraftProjectColumnsAsync(Guid employeeId, int year, int month, CancellationToken cancellationToken)
+    private async Task RecalculateDraftContractPartColumnsAsync(Guid employeeId, int year, int month, CancellationToken cancellationToken)
     {
         Data.Models.Attendance? attendance = await dbContext.Attendances
             .AsNoTracking()
@@ -282,23 +282,23 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         Dictionary<DateTime, Data.Models.AttendanceDay> attendanceByDate = attendance.Days
             .ToDictionary(day => ToUtcDate(day.Date).Date);
 
-        List<Data.Models.ContractPart> projectTimesheets = await dbContext.ContractParts
+        List<Data.Models.ContractPart> contractParts = await dbContext.ContractParts
             .Include(pt => pt.Days)
             .Where(pt => pt.Timesheet.EmployeeId == employeeId && pt.Timesheet.Year == year && pt.Timesheet.Month == month)
             .Where(pt => pt.TimesheetStatus.Code == TimesheetStatusCodes.Draft)
             .ToListAsync(cancellationToken);
 
-        foreach (Data.Models.ContractPart projectTimesheet in projectTimesheets)
+        foreach (Data.Models.ContractPart projectTimesheet in contractParts)
         {
-            foreach (Data.Models.ContractPartDay projectDay in projectTimesheet.Days)
+            foreach (Data.Models.ContractPartDay contractPartDay in projectTimesheet.Days)
             {
-                if (!attendanceByDate.TryGetValue(ToUtcDate(projectDay.Date).Date, out Data.Models.AttendanceDay? attendanceDay))
+                if (!attendanceByDate.TryGetValue(ToUtcDate(contractPartDay.Date).Date, out Data.Models.AttendanceDay? attendanceDay))
                 {
                     continue;
                 }
 
-                projectDay.IsHoliday = attendanceDay.IsHoliday;
-                projectDay.HoursObligation = TimesheetLogic.CalculateTotalHoursObligation(projectDay.Date, attendanceDay.IsHoliday, projectTimesheet.Workload);
+                contractPartDay.IsHoliday = attendanceDay.IsHoliday;
+                contractPartDay.HoursObligation = TimesheetLogic.CalculateTotalHoursObligation(contractPartDay.Date, attendanceDay.IsHoliday, projectTimesheet.Workload);
             }
 
             projectTimesheet.UpdatedAt = DateTime.UtcNow;

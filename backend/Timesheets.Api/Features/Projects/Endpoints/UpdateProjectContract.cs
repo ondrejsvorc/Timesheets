@@ -11,7 +11,7 @@ namespace Timesheets.Api.Features.Projects.Endpoints;
 public sealed class UpdateProjectContract : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapPut("/{projectId}/contracts/{contractId}", Handle)
+        app.MapPut("/{contractEmployeeId}/contracts/{contractId}", Handle)
            .WithSummary("Update Project Contract")
            .WithRequestValidation<Request>();
 
@@ -26,14 +26,14 @@ public sealed class UpdateProjectContract : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid projectId, Guid contractId, [FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid contractEmployeeId, Guid contractId, [FromBody] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
-        if (!user.CanManageContract(contractId, projectId))
+        if (!user.CanManageContract(contractId, contractEmployeeId))
         {
             return TypedResults.Forbid();
         }
 
-        bool contractExists = await dbContext.Contracts.AsNoTracking().AnyAsync(contract => contract.ProjectId == projectId && contract.Id == contractId, cancellationToken);
+        bool contractExists = await dbContext.Contracts.AsNoTracking().AnyAsync(contract => contract.ProjectId == contractEmployeeId && contract.Id == contractId, cancellationToken);
         if (!contractExists)
         {
             return TypedResults.NotFound();
@@ -41,7 +41,7 @@ public sealed class UpdateProjectContract : IEndpoint
 
         string name = request.Name.Trim();
         string registrationNumber = request.RegistrationNumber.Trim();
-        if (await ProjectContractValidation.HasDuplicateAsync(projectId, contractId, name, registrationNumber, dbContext, cancellationToken))
+        if (await ProjectContractValidation.HasDuplicateAsync(contractEmployeeId, contractId, name, registrationNumber, dbContext, cancellationToken))
         {
             return TypedResults.BadRequest(ProjectContractValidation.DuplicateError);
         }
@@ -49,7 +49,7 @@ public sealed class UpdateProjectContract : IEndpoint
         try
         {
             await dbContext.Contracts
-                .Where(c => c.ProjectId == projectId && c.Id == contractId)
+                .Where(c => c.ProjectId == contractEmployeeId && c.Id == contractId)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(c => c.Name, name)
                     .SetProperty(c => c.RegistrationNumber, registrationNumber)
@@ -63,7 +63,7 @@ public sealed class UpdateProjectContract : IEndpoint
 
         ProjectContractItem? contract = await dbContext.Contracts
             .AsNoTracking()
-            .Where(c => c.ProjectId == projectId && c.Id == contractId)
+            .Where(c => c.ProjectId == contractEmployeeId && c.Id == contractId)
             .Select(c => new ProjectContractItem(
                 c.Id,
                 c.Name,

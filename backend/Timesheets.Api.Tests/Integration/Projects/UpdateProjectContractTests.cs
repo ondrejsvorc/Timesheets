@@ -15,20 +15,20 @@ public class UpdateProjectContractTests : BaseIntegrationTest
         CreateProject.Request createProjectRequest = new("Test Project For Contract Update", TestIdentifiers.Project(200), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
         HttpResponseMessage postProjectResponse = await Client.PostAsJsonAsync("/api/projects", createProjectRequest);
         CreateProject.Response? createdProject = await postProjectResponse.Content.ReadFromJsonAsync<CreateProject.Response>();
-        Guid projectId = createdProject!.Project.Id;
+        Guid contractEmployeeId = createdProject!.Project.Id;
 
         CreateProjectContract.Request createContractRequest = new("Valid Contract for Update", TestIdentifiers.Contract(200));
-        HttpResponseMessage postContractResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", createContractRequest);
+        HttpResponseMessage postContractResponse = await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", createContractRequest);
         CreateProjectContract.Response? createdContract = await postContractResponse.Content.ReadFromJsonAsync<CreateProjectContract.Response>();
         Guid contractId = createdContract!.ProjectContract.Id;
 
-        HttpResponseMessage emptyNameResponse = await Client.PutAsJsonAsync($"/api/projects/{projectId}/contracts/{contractId}", new UpdateProjectContract.Request("", TestIdentifiers.Contract(201)));
+        HttpResponseMessage emptyNameResponse = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts/{contractId}", new UpdateProjectContract.Request("", TestIdentifiers.Contract(201)));
         Assert.Equal(HttpStatusCode.BadRequest, emptyNameResponse.StatusCode);
 
-        HttpResponseMessage longNameResponse = await Client.PutAsJsonAsync($"/api/projects/{projectId}/contracts/{contractId}", new UpdateProjectContract.Request(new string('a', 201), TestIdentifiers.Contract(201)));
+        HttpResponseMessage longNameResponse = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts/{contractId}", new UpdateProjectContract.Request(new string('a', 201), TestIdentifiers.Contract(201)));
         Assert.Equal(HttpStatusCode.BadRequest, longNameResponse.StatusCode);
 
-        HttpResponseMessage longRegResponse = await Client.PutAsJsonAsync($"/api/projects/{projectId}/contracts/{contractId}", new UpdateProjectContract.Request("Valid Name", new string('b', 101)));
+        HttpResponseMessage longRegResponse = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts/{contractId}", new UpdateProjectContract.Request("Valid Name", new string('b', 101)));
         Assert.Equal(HttpStatusCode.BadRequest, longRegResponse.StatusCode);
     }
 
@@ -38,15 +38,15 @@ public class UpdateProjectContractTests : BaseIntegrationTest
         CreateProject.Request createProjectRequest = new("Project For Contract Update Response", TestIdentifiers.Project(201), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
         HttpResponseMessage postProjectResponse = await Client.PostAsJsonAsync("/api/projects", createProjectRequest);
         CreateProject.Response? createdProject = await postProjectResponse.Content.ReadFromJsonAsync<CreateProject.Response>();
-        Guid projectId = createdProject!.Project.Id;
+        Guid contractEmployeeId = createdProject!.Project.Id;
 
         CreateProjectContract.Request createContractRequest = new("Contract Before Update", TestIdentifiers.Contract(202));
-        HttpResponseMessage postContractResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", createContractRequest);
+        HttpResponseMessage postContractResponse = await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", createContractRequest);
         CreateProjectContract.Response? createdContract = await postContractResponse.Content.ReadFromJsonAsync<CreateProjectContract.Response>();
         Guid contractId = createdContract!.ProjectContract.Id;
 
         UpdateProjectContract.Request updateRequest = new("Contract After Update", "54321 10 9876 54");
-        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/projects/{projectId}/contracts/{contractId}", updateRequest);
+        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts/{contractId}", updateRequest);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         UpdateProjectContract.Response? updated = await response.Content.ReadFromJsonAsync<UpdateProjectContract.Response>();
@@ -63,14 +63,14 @@ public class UpdateProjectContractTests : BaseIntegrationTest
         string suffix = TestIdentifiers.Suffix();
         CreateProject.Request projectRequest = new($"Project {suffix}", TestIdentifiers.Project(202), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
         CreateProject.Response? project = await (await Client.PostAsJsonAsync("/api/projects", projectRequest)).Content.ReadFromJsonAsync<CreateProject.Response>();
-        Guid projectId = project!.Project.Id;
+        Guid contractEmployeeId = project!.Project.Id;
 
-        HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", new CreateProjectContract.Request("First Contract", TestIdentifiers.Contract(203)));
+        HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", new CreateProjectContract.Request("First Contract", TestIdentifiers.Contract(203)));
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
-        CreateProjectContract.Response? second = await (await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", new CreateProjectContract.Request("Second Contract", TestIdentifiers.Contract(204)))).Content.ReadFromJsonAsync<CreateProjectContract.Response>();
+        CreateProjectContract.Response? second = await (await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", new CreateProjectContract.Request("Second Contract", TestIdentifiers.Contract(204)))).Content.ReadFromJsonAsync<CreateProjectContract.Response>();
 
-        HttpResponseMessage duplicateName = await Client.PutAsJsonAsync($"/api/projects/{projectId}/contracts/{second!.ProjectContract.Id}", new UpdateProjectContract.Request("  first contract  ", TestIdentifiers.Contract(204)));
-        HttpResponseMessage duplicateRegistrationNumber = await Client.PutAsJsonAsync($"/api/projects/{projectId}/contracts/{second.ProjectContract.Id}", new UpdateProjectContract.Request("Second Contract", TestIdentifiers.Contract(203)));
+        HttpResponseMessage duplicateName = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts/{second!.ProjectContract.Id}", new UpdateProjectContract.Request("  first contract  ", TestIdentifiers.Contract(204)));
+        HttpResponseMessage duplicateRegistrationNumber = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts/{second.ProjectContract.Id}", new UpdateProjectContract.Request("Second Contract", TestIdentifiers.Contract(203)));
 
         Assert.Equal(HttpStatusCode.BadRequest, duplicateName.StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, duplicateRegistrationNumber.StatusCode);

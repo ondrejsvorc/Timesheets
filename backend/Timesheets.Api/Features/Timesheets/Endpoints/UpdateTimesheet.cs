@@ -26,7 +26,7 @@ public sealed class UpdateTimesheet : IEndpoint
         {
             return TypedResults.Forbid();
         }
-        if (TimesheetEngine.HasInactiveProjectHours(loaded, request))
+        if (TimesheetEngine.HasInactiveContractPartHours(loaded, request))
         {
             return TypedResults.BadRequest("Zakázkové hodiny nelze vyplnit mimo platnost pozice nebo projektu.");
         }

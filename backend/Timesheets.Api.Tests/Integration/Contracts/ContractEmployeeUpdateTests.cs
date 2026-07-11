@@ -84,7 +84,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc));
         Guid decemberTimesheetId = await GetContractPartIdAsync(setup.ContractEmployeeId, 2024, 12);
-        await SetProjectTimesheetStatusAsync(decemberTimesheetId, TestTimesheetStatusIds.Submitted);
+        await SetContractPartStatusAsync(decemberTimesheetId, TestTimesheetStatusIds.Submitted);
 
         ContractEmployeeUpdateRequest request = new(TestIdentifiers.Position(1), "Developer", 1.0m, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 11, 30, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/contracts/{setup.ContractId}/employees/{setup.ContractEmployeeId}/update-impact", request);
@@ -124,7 +124,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task UpdateContractEmployee_WorkloadChange_SyncsExistingProjectTimesheets()
+    public async Task UpdateContractEmployee_WorkloadChange_SyncsExistingContractParts()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(
             Factory.Services,
@@ -230,11 +230,11 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
         return await dbContext.ContractParts.AsNoTracking().Where(part => part.ContractEmployeeId == contractEmployeeId && part.Timesheet.Year == year && part.Timesheet.Month == month).Select(part => part.Id).SingleAsync();
     }
 
-    private async Task SetProjectTimesheetStatusAsync(Guid projectTimesheetId, Guid statusId)
+    private async Task SetContractPartStatusAsync(Guid contractPartId, Guid statusId)
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        int affected = await dbContext.ContractParts.Where(timesheet => timesheet.Id == projectTimesheetId).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
+        int affected = await dbContext.ContractParts.Where(timesheet => timesheet.Id == contractPartId).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
         Assert.Equal(1, affected);
     }
 }

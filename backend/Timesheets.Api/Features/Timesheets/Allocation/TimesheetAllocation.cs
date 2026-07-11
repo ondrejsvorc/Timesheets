@@ -4,40 +4,40 @@ internal static class AllocationDayExtensions
 {
     public const decimal CoreToleranceHours = 2m;
 
-    public static decimal TotalHours(this EditableTimesheetDay day) => TimesheetLogic.Normalize(day.CoreHours + day.ProjectHours.Values.Sum());
+    public static decimal TotalHours(this EditableTimesheetDay day) => TimesheetLogic.Normalize(day.CoreHours + day.ContractPartHours.Values.Sum());
 
-    public static bool HasLockedProjectHours(this EditableTimesheetDay day) =>
-        day.ProjectHoursFixed.Any(item => item.Value && day.ProjectHours.GetValueOrDefault(item.Key) > 0m);
+    public static bool HasLockedContractPartHours(this EditableTimesheetDay day) =>
+        day.ContractPartHoursFixed.Any(item => item.Value && day.ContractPartHours.GetValueOrDefault(item.Key) > 0m);
 
-    public static void ResetGeneratedAllocations(this EditableTimesheetDay day, IReadOnlyList<ProjectColumn> projects)
+    public static void ResetGeneratedAllocations(this EditableTimesheetDay day, IReadOnlyList<ContractPartColumn> projects)
     {
         if (!day.CoreHoursFixed)
         {
             day.CoreHours = 0m;
         }
 
-        foreach (ProjectColumn project in projects)
+        foreach (ContractPartColumn project in projects)
         {
-            if (!day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+            if (!day.ContractPartHoursFixed.GetValueOrDefault(project.Id))
             {
-                day.ProjectHours[project.Id] = day.ProjectFloor(project.Id);
+                day.ContractPartHours[project.Id] = day.ProjectFloor(project.Id);
             }
         }
     }
 
-    public static decimal ProjectFloor(this EditableTimesheetDay day, Guid projectId) =>
-        day.ProjectHoursFloor.GetValueOrDefault(projectId);
+    public static decimal ProjectFloor(this EditableTimesheetDay day, Guid contractEmployeeId) =>
+        day.ContractPartHoursFloor.GetValueOrDefault(contractEmployeeId);
 
-    public static void SetProjectHours(this EditableTimesheetDay day, Guid projectId, decimal hours)
+    public static void SetContractPartHours(this EditableTimesheetDay day, Guid contractEmployeeId, decimal hours)
     {
-        decimal floor = day.ProjectFloor(projectId);
-        day.ProjectHours[projectId] = HumanHours.RoundToHalfHour(Math.Max(floor, hours));
+        decimal floor = day.ProjectFloor(contractEmployeeId);
+        day.ContractPartHours[contractEmployeeId] = HumanHours.RoundToHalfHour(Math.Max(floor, hours));
     }
 
-    public static void AddProjectHours(this EditableTimesheetDay day, Guid projectId, decimal amount)
+    public static void AddContractPartHours(this EditableTimesheetDay day, Guid contractEmployeeId, decimal amount)
     {
-        decimal current = day.ProjectHours.GetValueOrDefault(projectId);
-        day.SetProjectHours(projectId, current + amount);
+        decimal current = day.ContractPartHours.GetValueOrDefault(contractEmployeeId);
+        day.SetContractPartHours(contractEmployeeId, current + amount);
     }
 
     public static decimal WorkedHours(this EditableTimesheetDay day) =>
@@ -68,31 +68,31 @@ internal sealed class MonthlyTargets
 
     public static MonthlyTargets Remainders(EditableTimesheet sheet, decimal totalWorkload) => new(
         TimesheetLogic.Normalize(Math.Max(0m, CoreTarget(sheet, totalWorkload) - sheet.Days.Sum(day => day.CoreHours))),
-        sheet.Projects.ToDictionary(
+        sheet.ContractParts.ToDictionary(
             project => project.Id,
-            project => TimesheetLogic.Normalize(Math.Max(0m, ProjectTarget(sheet, project) - sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))))));
+            project => TimesheetLogic.Normalize(Math.Max(0m, ContractPartTarget(sheet, project) - sheet.Days.Sum(day => day.ContractPartHours.GetValueOrDefault(project.Id))))));
 
     public static MonthlyTargets NonAcademicCapacityRemainders(EditableTimesheet sheet, decimal availableHours)
     {
-        Dictionary<Guid, decimal> projectHours = sheet.Projects.ToDictionary(
+        Dictionary<Guid, decimal> projectHours = sheet.ContractParts.ToDictionary(
             project => project.Id,
-            project => TimesheetLogic.Normalize(sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))));
-        Dictionary<Guid, decimal> projectTargets = sheet.Projects.ToDictionary(
+            project => TimesheetLogic.Normalize(sheet.Days.Sum(day => day.ContractPartHours.GetValueOrDefault(project.Id))));
+        Dictionary<Guid, decimal> contractPartTargets = sheet.ContractParts.ToDictionary(
             project => project.Id,
-            project => Math.Max(NonAcademicProjectTarget(sheet, project), projectHours[project.Id]));
-        decimal coreTarget = TimesheetLogic.Normalize(Math.Max(0m, availableHours - projectTargets.Values.Sum()));
+            project => Math.Max(NonAcademicContractPartTarget(sheet, project), projectHours[project.Id]));
+        decimal coreTarget = TimesheetLogic.Normalize(Math.Max(0m, availableHours - contractPartTargets.Values.Sum()));
 
         return new MonthlyTargets(
             TimesheetLogic.Normalize(Math.Max(0m, coreTarget - sheet.Days.Sum(day => day.CoreHours))),
-            projectTargets.ToDictionary(
+            contractPartTargets.ToDictionary(
                 item => item.Key,
                 item => TimesheetLogic.Normalize(Math.Max(0m, item.Value - projectHours[item.Key]))));
     }
 
-    public static decimal NonAcademicProjectTarget(EditableTimesheet sheet, ProjectColumn project) =>
-        ProjectTarget(sheet, project);
+    public static decimal NonAcademicContractPartTarget(EditableTimesheet sheet, ContractPartColumn project) =>
+        ContractPartTarget(sheet, project);
 
-    public static decimal ProjectTarget(EditableTimesheet sheet, ProjectColumn project)
+    public static decimal ContractPartTarget(EditableTimesheet sheet, ContractPartColumn project)
     {
         int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday) && project.IsActiveOn(day.Date));
         return TimesheetLogic.Normalize(fundedDays * 8m * project.Workload);
@@ -102,7 +102,7 @@ internal sealed class MonthlyTargets
     {
         int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday));
         decimal total = TimesheetLogic.Normalize(fundedDays * 8m * totalWorkload);
-        return TimesheetLogic.Normalize(total - sheet.Projects.Sum(project => ProjectTarget(sheet, project)));
+        return TimesheetLogic.Normalize(total - sheet.ContractParts.Sum(project => ContractPartTarget(sheet, project)));
     }
 
     public static void AppendMismatch(List<string> errors, string label, decimal actual, decimal expected)
@@ -165,7 +165,7 @@ internal sealed class HumanHours
 }
 
 /// <summary>Fills a single day's core and project hours from the monthly remainders.</summary>
-internal sealed class DayTargetFiller(IReadOnlyList<ProjectColumn> projects, decimal totalWorkload, bool tracksAttendance, MonthlyTargets targets)
+internal sealed class DayTargetFiller(IReadOnlyList<ContractPartColumn> projects, decimal totalWorkload, bool tracksAttendance, MonthlyTargets targets)
 {
     public void Fill(EditableTimesheetDay day)
     {
@@ -173,7 +173,7 @@ internal sealed class DayTargetFiller(IReadOnlyList<ProjectColumn> projects, dec
         {
             return;
         }
-        if (day.HasLockedProjectHours())
+        if (day.HasLockedContractPartHours())
         {
             return;
         }
@@ -181,19 +181,19 @@ internal sealed class DayTargetFiller(IReadOnlyList<ProjectColumn> projects, dec
         if (TimesheetInterruptions.HasProportionalInterruption(day.Description))
         {
             decimal previousCoreHours = day.CoreHours;
-            Dictionary<Guid, decimal> previousProjectHours = projects.ToDictionary(project => project.Id, project => day.ProjectHours.GetValueOrDefault(project.Id));
+            Dictionary<Guid, decimal> previousContractPartHours = projects.ToDictionary(project => project.Id, project => day.ContractPartHours.GetValueOrDefault(project.Id));
             TimesheetInterruptionHours.ApplyToDayState(day, projects, totalWorkload, tracksAttendance);
             targets.ConsumeCore(day.CoreHours - previousCoreHours);
-            foreach (ProjectColumn project in projects)
+            foreach (ContractPartColumn project in projects)
             {
-                targets.ConsumeProject(project.Id, day.ProjectHours.GetValueOrDefault(project.Id) - previousProjectHours[project.Id]);
+                targets.ConsumeProject(project.Id, day.ContractPartHours.GetValueOrDefault(project.Id) - previousContractPartHours[project.Id]);
             }
 
             return;
         }
 
         decimal capacity = TimesheetInterruptionHours.DayCapacity(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.Description, totalWorkload, tracksAttendance, day.Schedules);
-        decimal free = TimesheetLogic.Normalize(capacity - day.CoreHours - day.ProjectHours.Values.Sum());
+        decimal free = TimesheetLogic.Normalize(capacity - day.CoreHours - day.ContractPartHours.Values.Sum());
         if (free <= 0)
         {
             return;
@@ -210,11 +210,11 @@ internal sealed class DayTargetFiller(IReadOnlyList<ProjectColumn> projects, dec
             free -= core;
         }
 
-        List<(Guid ProjectId, decimal Remaining)> projectRemaining = [];
-        foreach (ProjectColumn project in projects)
+        List<(Guid ContractEmployeeId, decimal Remaining)> projectRemaining = [];
+        foreach (ContractPartColumn project in projects)
         {
-            bool fixedHours = day.ProjectHoursFixed.GetValueOrDefault(project.Id);
-            if (project.IsActiveOn(day.Date) && !project.Locked && !fixedHours && day.ProjectHours.GetValueOrDefault(project.Id) <= day.ProjectFloor(project.Id) && targets.Project(project.Id) > 0)
+            bool fixedHours = day.ContractPartHoursFixed.GetValueOrDefault(project.Id);
+            if (project.IsActiveOn(day.Date) && !project.Locked && !fixedHours && day.ContractPartHours.GetValueOrDefault(project.Id) <= day.ProjectFloor(project.Id) && targets.Project(project.Id) > 0)
             {
                 projectRemaining.Add((project.Id, targets.Project(project.Id)));
             }
@@ -225,13 +225,13 @@ internal sealed class DayTargetFiller(IReadOnlyList<ProjectColumn> projects, dec
         decimal amount = Math.Min(free, totalRemaining);
         decimal left = amount;
 
-        foreach ((Guid projectId, decimal target) in projectRemaining)
+        foreach ((Guid contractEmployeeId, decimal target) in projectRemaining)
         {
             decimal maxValue = Math.Min(target, left);
             decimal value = PreferGeneratedCellHours(TimesheetLogic.Normalize(amount * target / totalRemaining), maxValue);
             left -= value;
-            day.SetProjectHours(projectId, value);
-            targets.ConsumeProject(projectId, value);
+            day.SetContractPartHours(contractEmployeeId, value);
+            targets.ConsumeProject(contractEmployeeId, value);
         }
 
         if (!day.CoreHoursFixed && left > 0m)

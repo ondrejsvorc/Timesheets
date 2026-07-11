@@ -12,8 +12,8 @@ namespace Timesheets.Api.Features.Timesheets.Endpoints;
 public sealed class AddTimesheetComment : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapPost("/combined/comments", Handle)
-           .WithSummary("Add Combined Timesheet Comment")
+        app.MapPost("/comments", Handle)
+           .WithSummary("Add Timesheet Comment")
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
@@ -39,7 +39,7 @@ public sealed class AddTimesheetComment : IEndpoint
             return TypedResults.Forbid();
         }
 
-        CombinedTimesheetScope? timesheetScope = await CombinedTimesheetScopeLoader.LoadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
+        TimesheetScope? timesheetScope = await TimesheetScopeLoader.LoadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         if (timesheetScope is null)
         {
             return TypedResults.NotFound();
@@ -63,6 +63,6 @@ public sealed class AddTimesheetComment : IEndpoint
         CommentAuthor commentAuthor = new(author.Id, author.DisplayName);
         Response response = new(comment.Id, Type: "message", comment.CreatedAt, comment.Text, commentAuthor);
 
-        return TypedResults.Created($"/api/timesheets/combined/comments/{comment.Id}", response);
+        return TypedResults.Created($"/api/timesheets/comments/{comment.Id}", response);
     }
 }

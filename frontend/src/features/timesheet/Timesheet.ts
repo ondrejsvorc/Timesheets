@@ -16,7 +16,7 @@ export interface CoreDefinition {
   workload: number;
 }
 
-export interface ProjectDefinition {
+export interface ContractPartDefinition {
   id: string;
   registrationNumber: string;
   name: string;
@@ -26,7 +26,7 @@ export interface ProjectDefinition {
   activeDays: boolean[];
 }
 
-export interface ProjectCell {
+export interface ContractPartCell {
   hours: number;
   locked: boolean;
 }
@@ -35,7 +35,7 @@ export interface TimesheetDay {
   date: string;
   attendance: Attendance;
   coreHours: number | null;
-  projectCells: Record<string, ProjectCell>;
+  contractPartCells: Record<string, ContractPartCell>;
   isHoliday: boolean;
   isWeekend: boolean;
   attendanceAdjusted?: boolean;
@@ -47,7 +47,7 @@ export interface Timesheet {
   month: number;
   tracksAttendance: boolean;
   core: CoreDefinition;
-  projects: ProjectDefinition[];
+  contractParts: ContractPartDefinition[];
   days: TimesheetDay[];
 }
 
@@ -72,8 +72,8 @@ export interface TimesheetDayEvaluation {
   hasProportionalInterruption: boolean;
 }
 
-export interface TimesheetProjectTotal {
-  projectId: string;
+export interface ContractPartTotal {
+  contractEmployeeId: string;
   hours: number;
   obligation: number;
 }
@@ -84,7 +84,7 @@ export interface TimesheetTotals {
   allocatedHours: number;
   coreHours: number;
   coreHoursObligation: number;
-  projects: TimesheetProjectTotal[];
+  contractParts: ContractPartTotal[];
 }
 
 export interface TimesheetEvaluation {

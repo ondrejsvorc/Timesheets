@@ -36,14 +36,14 @@ internal static class TimesheetWorkflow
     public static bool IsValidProjectTransition(TimesheetStatus from, TimesheetStatus to) => IsValidTransition(from.Code, to.Code);
     public static bool IsValidProjectTransition(Guid fromId, Guid toId) => IsValidTransition(CodeForId(fromId), CodeForId(toId));
 
-    public static string ResolveProjectDisplayStatus(string statusCode) => statusCode switch
+    public static string ResolveContractPartDisplayStatus(string statusCode) => statusCode switch
     {
         TimesheetStatusCodes.Submitted => SubmittedStatusName,
         TimesheetStatusCodes.Approved => ApprovedStatusName,
         _ => DraftStatusName,
     };
 
-    public static string ResolveProjectDisplayStatus(Guid projectStatusId) => ResolveProjectDisplayStatus(CodeForId(projectStatusId));
+    public static string ResolveContractPartDisplayStatus(Guid projectStatusId) => ResolveContractPartDisplayStatus(CodeForId(projectStatusId));
 
     private static bool IsValidTransition(string fromCode, string toCode) => (fromCode, toCode) switch
     {

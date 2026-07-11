@@ -75,8 +75,8 @@ public sealed class TimesheetEngineEvaluationTests
         LoadedTimesheet loaded = new(
             Timesheet: timesheet,
             Attendance: attendance,
-            Projects: [],
-            ProjectRanges: new Dictionary<Guid, ProjectDateRange>(),
+            ContractParts: [],
+            ContractPartRanges: new Dictionary<Guid, ContractPartDateRange>(),
             TotalWorkload: 1m,
             CoreWorkload: 1m);
 

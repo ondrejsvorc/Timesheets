@@ -17,9 +17,9 @@ public class ProjectLifecycleTests : BaseIntegrationTest
         Assert.Equal(HttpStatusCode.Created, postResponse.StatusCode);
 
         CreateProject.Response? createdProject = await postResponse.Content.ReadFromJsonAsync<CreateProject.Response>();
-        Guid projectId = createdProject!.Project.Id;
+        Guid contractEmployeeId = createdProject!.Project.Id;
 
-        HttpResponseMessage getResponse = await Client.GetAsync($"/api/projects/{projectId}");
+        HttpResponseMessage getResponse = await Client.GetAsync($"/api/projects/{contractEmployeeId}");
         Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
         GetProject.Response? projectData = await getResponse.Content.ReadFromJsonAsync<GetProject.Response>();
         Assert.NotNull(projectData);
@@ -27,7 +27,7 @@ public class ProjectLifecycleTests : BaseIntegrationTest
         Assert.Equal(createRequest.RegistrationNumber, projectData.Project.RegistrationNumber);
 
         UpdateProject.Request updateRequest = new("Updated Lifecycle Project", TestIdentifiers.Project(1002), createRequest.StartDate, createRequest.EndDate);
-        HttpResponseMessage putResponse = await Client.PutAsJsonAsync($"/api/projects/{projectId}", updateRequest);
+        HttpResponseMessage putResponse = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}", updateRequest);
         Assert.Equal(HttpStatusCode.OK, putResponse.StatusCode);
 
         UpdateProject.Response? updatedProject = await putResponse.Content.ReadFromJsonAsync<UpdateProject.Response>();
@@ -35,10 +35,10 @@ public class ProjectLifecycleTests : BaseIntegrationTest
         Assert.Equal(updateRequest.Name, updatedProject!.Project.Name);
         Assert.Equal(updateRequest.RegistrationNumber, updatedProject.Project.RegistrationNumber);
 
-        HttpResponseMessage deleteResponse = await Client.DeleteAsync($"/api/projects/{projectId}");
+        HttpResponseMessage deleteResponse = await Client.DeleteAsync($"/api/projects/{contractEmployeeId}");
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
 
-        HttpResponseMessage getDeletedResponse = await Client.GetAsync($"/api/projects/{projectId}");
+        HttpResponseMessage getDeletedResponse = await Client.GetAsync($"/api/projects/{contractEmployeeId}");
         Assert.Equal(HttpStatusCode.NotFound, getDeletedResponse.StatusCode);
     }
 }

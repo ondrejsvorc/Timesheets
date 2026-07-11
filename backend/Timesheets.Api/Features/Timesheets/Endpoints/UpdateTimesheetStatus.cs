@@ -12,15 +12,15 @@ using Timesheets.Api.Features.Notifications;
 
 namespace Timesheets.Api.Features.Timesheets.Endpoints;
 
-public sealed class UpdateCombinedTimesheetStatus : IEndpoint
+public sealed class UpdateTimesheetStatus : IEndpoint
 {
     private const string SubmitAction = "submit";
     private const string ApproveAction = "approve";
     private const string ReturnAction = "return";
 
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapPut("/combined/status", Handle)
-           .WithSummary("Update Combined Timesheet Status")
+        app.MapPut("/status", Handle)
+           .WithSummary("Update Timesheet Status")
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
@@ -44,7 +44,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
     private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> Handle([FromBody] Request request, AppDbContext dbContext, NotificationSender notificationSender, ICurrentUser user, CancellationToken cancellationToken)
     {
-        CombinedTimesheetScope? scope = await CombinedTimesheetScopeLoader.LoadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
+        TimesheetScope? scope = await TimesheetScopeLoader.LoadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
 
         if (scope is null)
         {
@@ -65,16 +65,16 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
         HashSet<Guid> selectedIds = request.TimesheetIds.ToHashSet();
         bool includesAttendance = selectedIds.Contains(scope.TimesheetId);
-        HashSet<Guid> selectedProjectIds = selectedIds
+        HashSet<Guid> selectedContractPartIds = selectedIds
             .Where(id => scope.ContractPartLabels.ContainsKey(id))
             .ToHashSet();
 
-        if (includesAttendance && selectedProjectIds.Count > 0)
+        if (includesAttendance && selectedContractPartIds.Count > 0)
         {
             return TypedResults.BadRequest("Nelze měnit stav docházky a projektových výkazů v jednom požadavku.");
         }
 
-        if (!includesAttendance && selectedProjectIds.Count == 0)
+        if (!includesAttendance && selectedContractPartIds.Count == 0)
         {
             return TypedResults.BadRequest("One or more selected timesheets are invalid for this employee and period.");
         }
@@ -89,10 +89,10 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return await UpdateAttendanceStatusAsync(request, scope, monthTimesheet, targetStatus, user, dbContext, notificationSender, cancellationToken);
         }
 
-        return await UpdateProjectStatusesAsync(request, monthTimesheet, selectedProjectIds, targetStatus, user, dbContext, notificationSender, cancellationToken);
+        return await UpdateProjectStatusesAsync(request, monthTimesheet, selectedContractPartIds, targetStatus, user, dbContext, notificationSender, cancellationToken);
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateAttendanceStatusAsync(Request request, CombinedTimesheetScope scope, Data.Models.Timesheet monthTimesheet, TargetStatus targetStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
+    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateAttendanceStatusAsync(Request request, TimesheetScope scope, Data.Models.Timesheet monthTimesheet, TargetStatus targetStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
     {
         Guid currentStatusId = monthTimesheet.TimesheetStatusId;
 
@@ -186,12 +186,12 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         return TypedResults.Ok();
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateProjectStatusesAsync(Request request, Data.Models.Timesheet monthTimesheet, HashSet<Guid> selectedProjectIds, TargetStatus targetStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
+    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateProjectStatusesAsync(Request request, Data.Models.Timesheet monthTimesheet, HashSet<Guid> selectedContractPartIds, TargetStatus targetStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
     {
-        List<ProjectTimesheetPart> projectScopes = await LoadProjectScopesAsync(selectedProjectIds, dbContext, cancellationToken);
+        List<ContractPartScope> contractPartScopes = await LoadContractPartScopesAsync(selectedContractPartIds, dbContext, cancellationToken);
 
-        if (projectScopes.Count != selectedProjectIds.Count
-            || !user.CanManageProjectTimesheetParts(projectScopes))
+        if (contractPartScopes.Count != selectedContractPartIds.Count
+            || !user.CanManageContractPartScopes(contractPartScopes))
         {
             return TypedResults.Unauthorized();
         }
@@ -201,12 +201,12 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return TypedResults.BadRequest("Projektové sloupce lze schvalovat nebo vracet pouze ve výkazu odeslaném ke schválení.");
         }
 
-        List<Data.Models.ContractPart> projectTimesheets = await dbContext.ContractParts
+        List<Data.Models.ContractPart> contractParts = await dbContext.ContractParts
             .Include(t => t.TimesheetStatus)
-            .Where(t => selectedProjectIds.Contains(t.Id))
+            .Where(t => selectedContractPartIds.Contains(t.Id))
             .ToListAsync(cancellationToken);
 
-        if (projectTimesheets.Count != selectedProjectIds.Count)
+        if (contractParts.Count != selectedContractPartIds.Count)
         {
             return TypedResults.NotFound();
         }
@@ -214,7 +214,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         bool isProjectReturn = TimesheetWorkflow.IsDraft(targetStatus.Code);
         bool anyProjectStatusChanged = false;
 
-        foreach (Data.Models.ContractPart projectTimesheet in projectTimesheets)
+        foreach (Data.Models.ContractPart projectTimesheet in contractParts)
         {
             Guid currentStatusId = projectTimesheet.TimesheetStatusId;
 
@@ -302,7 +302,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         _ => throw new InvalidOperationException($"Unsupported timesheet action '{action}'.")
     };
 
-    private static async Task<bool> AreAllProjectsApprovedAsync(CombinedTimesheetScope scope, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<bool> AreAllProjectsApprovedAsync(TimesheetScope scope, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         if (scope.ContractPartLabels.Count == 0)
         {
@@ -319,14 +319,14 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             && projectStatusCodes.All(TimesheetWorkflow.IsApproved);
     }
 
-    private static Task<List<ProjectTimesheetPart>> LoadProjectScopesAsync(IEnumerable<Guid> projectTimesheetIds, AppDbContext dbContext, CancellationToken cancellationToken) => dbContext.ContractParts
+    private static Task<List<ContractPartScope>> LoadContractPartScopesAsync(IEnumerable<Guid> contractPartIds, AppDbContext dbContext, CancellationToken cancellationToken) => dbContext.ContractParts
         .AsNoTracking()
-        .Where(timesheet => projectTimesheetIds.Contains(timesheet.Id))
+        .Where(timesheet => contractPartIds.Contains(timesheet.Id))
         .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { contractEmployee.ContractId })
-        .Join(dbContext.Contracts.AsNoTracking(), value => value.ContractId, contract => contract.Id, (value, contract) => new ProjectTimesheetPart(value.ContractId, contract.ProjectId))
+        .Join(dbContext.Contracts.AsNoTracking(), value => value.ContractId, contract => contract.Id, (value, contract) => new ContractPartScope(value.ContractId, contract.ProjectId))
         .ToListAsync(cancellationToken);
 
-    private static async Task<Guid[]> LoadPendingProjectManagerIdsAsync(CombinedTimesheetScope scope, Guid employeeId, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task<Guid[]> LoadPendingProjectManagerIdsAsync(TimesheetScope scope, Guid employeeId, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         Guid[] pendingContractPartIds = await dbContext.ContractParts
             .AsNoTracking()
@@ -339,9 +339,9 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
             return [];
         }
 
-        List<ProjectTimesheetPart> projectScopes = await LoadProjectScopesAsync(pendingContractPartIds, dbContext, cancellationToken);
-        Guid[] contractIds = projectScopes.Select(projectScope => projectScope.ContractId).Distinct().ToArray();
-        Guid[] projectIds = projectScopes.Select(projectScope => projectScope.ProjectId).Distinct().ToArray();
+        List<ContractPartScope> contractPartScopes = await LoadContractPartScopesAsync(pendingContractPartIds, dbContext, cancellationToken);
+        Guid[] contractIds = contractPartScopes.Select(projectScope => projectScope.ContractId).Distinct().ToArray();
+        Guid[] contractEmployeeIds = contractPartScopes.Select(projectScope => projectScope.ProjectId).Distinct().ToArray();
 
         List<Guid> contractManagerIds = await dbContext.ContractManagers
             .AsNoTracking()
@@ -351,20 +351,20 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
 
         List<Guid> projectManagerIds = await dbContext.ProjectManagers
             .AsNoTracking()
-            .Where(manager => projectIds.Contains(manager.ProjectId) && manager.EmployeeId != employeeId)
+            .Where(manager => contractEmployeeIds.Contains(manager.ProjectId) && manager.EmployeeId != employeeId)
             .Select(manager => manager.EmployeeId)
             .ToListAsync(cancellationToken);
 
         return contractManagerIds.Concat(projectManagerIds).Distinct().ToArray();
     }
 
-    private static async Task ResetProjectStatusesAsync(CombinedTimesheetScope scope, Guid changedByEmployeeId, string? comment, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task ResetProjectStatusesAsync(TimesheetScope scope, Guid changedByEmployeeId, string? comment, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        List<Data.Models.ContractPart> projectTimesheets = await dbContext.ContractParts
+        List<Data.Models.ContractPart> contractParts = await dbContext.ContractParts
             .Where(timesheet => scope.ContractPartLabels.Keys.Contains(timesheet.Id))
             .ToListAsync(cancellationToken);
 
-        foreach (Data.Models.ContractPart projectTimesheet in projectTimesheets)
+        foreach (Data.Models.ContractPart projectTimesheet in contractParts)
         {
             if (projectTimesheet.TimesheetStatusId == TimesheetWorkflow.DraftStatusId && projectTimesheet.LockedAt is null)
             {
@@ -388,13 +388,13 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         }
     }
 
-    private static async Task SubmitProjectStatusesAsync(CombinedTimesheetScope scope, Guid changedByEmployeeId, string? comment, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task SubmitProjectStatusesAsync(TimesheetScope scope, Guid changedByEmployeeId, string? comment, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        List<Data.Models.ContractPart> projectTimesheets = await dbContext.ContractParts
+        List<Data.Models.ContractPart> contractParts = await dbContext.ContractParts
             .Where(timesheet => scope.ContractPartLabels.Keys.Contains(timesheet.Id) && timesheet.TimesheetStatus.Code == TimesheetStatusCodes.Draft)
             .ToListAsync(cancellationToken);
 
-        foreach (Data.Models.ContractPart projectTimesheet in projectTimesheets)
+        foreach (Data.Models.ContractPart projectTimesheet in contractParts)
         {
             Guid previousStatusId = projectTimesheet.TimesheetStatusId;
             projectTimesheet.TimesheetStatusId = TimesheetWorkflow.SubmittedStatusId;

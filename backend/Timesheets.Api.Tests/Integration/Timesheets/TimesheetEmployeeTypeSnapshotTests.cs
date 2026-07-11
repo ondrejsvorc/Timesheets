@@ -17,14 +17,14 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
     public TimesheetEmployeeTypeSnapshotTests(CustomWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
-    public async Task GetCombinedTimesheet_UsesEmployeeTypeSnapshot()
+    public async Task GetTimesheet_UsesEmployeeTypeSnapshot()
     {
         SnapshotSetup setup = await SeedSnapshotTimesheetAsync(year: 2058, month: 1, snapshotEmployeeTypeId: EmployeeTypes.AcademicId, currentEmployeeTypeId: NonAcademicEmployeeTypeId);
 
-        HttpResponseMessage response = await Client.GetAsync($"/api/timesheets/combined?employeeId={setup.EmployeeId}&year={setup.Year}&month={setup.Month}");
+        HttpResponseMessage response = await Client.GetAsync($"/api/timesheets?employeeId={setup.EmployeeId}&year={setup.Year}&month={setup.Month}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        GetCombinedTimesheet.Response? payload = await response.Content.ReadFromJsonAsync<GetCombinedTimesheet.Response>();
+        GetTimesheet.Response? payload = await response.Content.ReadFromJsonAsync<GetTimesheet.Response>();
         Assert.NotNull(payload);
         Assert.False(payload!.TracksAttendance);
     }
@@ -47,7 +47,7 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
                     Description: null,
                     Schedules: [new TimeRange(new TimeSpan(8, 0, 0), new TimeSpan(10, 0, 0))])
             ],
-            Projects: []);
+            ContractParts: []);
 
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{setup.TimesheetId}/review", request);
 
@@ -75,7 +75,7 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
                     Description: null,
                     Schedules: [new TimeRange(new TimeSpan(8, 0, 0), new TimeSpan(10, 0, 0))])
             ],
-            Projects: []);
+            ContractParts: []);
 
         HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{setup.TimesheetId}/allocate?day=2", request);
 

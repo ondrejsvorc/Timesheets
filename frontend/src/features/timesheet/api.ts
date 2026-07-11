@@ -1,8 +1,8 @@
 import { ApiUrl, customFetch, withDelay } from "@/constants/api";
 import type { TimesheetComment } from "./comments/Comment";
-import type { ProjectCell, TimeRange, Timesheet, TimesheetData, TimesheetEvaluation, TimesheetIssue } from "./Timesheet";
+import type { ContractPartCell, TimeRange, Timesheet, TimesheetData, TimesheetEvaluation, TimesheetIssue } from "./Timesheet";
 
-interface CompactProjectDefinition {
+interface CompactContractPartDefinition {
   id: string;
   registrationNumber: string;
   name: string;
@@ -17,26 +17,26 @@ interface CompactDayItem {
   work: [number | null, number | null];
   break: [number | null, number | null];
   coreHours: number;
-  projectCells: ProjectCell[];
+  contractPartCells: ContractPartCell[];
   isHoliday: boolean;
   isWeekend: boolean;
   note?: string | null;
   schedules?: Array<[number, number]> | null;
 }
 
-interface GetCombinedTimesheetResponse {
+interface GetTimesheetResponse {
   id: string;
   year: number;
   month: number;
   coreWorkload: number;
   tracksAttendance: boolean;
-  projects: CompactProjectDefinition[];
+  contractParts: CompactContractPartDefinition[];
   days: CompactDayItem[];
 }
 
-export interface CombinedTimesheetOverviewItem {
+export interface TimesheetOverviewItem {
   timesheetId: string | null;
-  kind: "core" | "project";
+  kind: "core" | "contractPart";
   label: string;
   contractRegistrationNumber: string | null;
   position: string | null;
@@ -47,7 +47,7 @@ export interface CombinedTimesheetOverviewItem {
   projectId: string | null;
 }
 
-export interface CombinedTimesheetMonthSummary {
+export interface TimesheetMonthSummary {
   periodStart: string;
   periodEnd: string;
   workdays: number;
@@ -57,13 +57,13 @@ export interface CombinedTimesheetMonthSummary {
   totalWorkload: number;
 }
 
-export interface GetCombinedTimesheetOverviewResponse {
+export interface GetTimesheetOverviewResponse {
   employeeId: string;
   year: number;
   month: number;
   status: string;
-  items: CombinedTimesheetOverviewItem[];
-  summary: CombinedTimesheetMonthSummary;
+  items: TimesheetOverviewItem[];
+  summary: TimesheetMonthSummary;
 }
 
 interface DraftDay {
@@ -78,14 +78,14 @@ interface DraftDay {
   schedules: Array<{ start: string; end: string }> | null;
 }
 
-interface DraftProject {
+interface DraftContractPart {
   contractEmployeeId: string;
   days: Array<{ date: string; hours: number; hoursLocked?: boolean }>;
 }
 
 interface TimesheetDraft {
   days: DraftDay[];
-  projects: DraftProject[];
+  contractParts: DraftContractPart[];
 }
 
 interface ApiIssue {
@@ -113,7 +113,7 @@ interface ApiAllocationDay {
   work: [number | null, number | null];
   break: [number | null, number | null];
   coreHours: number;
-  projectCells: Record<string, ProjectCell>;
+  contractPartCells: Record<string, ContractPartCell>;
   attendanceAdjusted: boolean;
 }
 
@@ -133,7 +133,7 @@ interface AllocationDay {
   breakStart: string;
   breakEnd: string;
   coreHours: number;
-  projectCells: Record<string, ProjectCell>;
+  contractPartCells: Record<string, ContractPartCell>;
   attendanceAdjusted: boolean;
 }
 
@@ -175,7 +175,7 @@ export interface DeleteTimesheetCommentRequest {
 
 export type TimesheetStatusAction = "submit" | "approve" | "return";
 
-export interface UpdateCombinedTimesheetStatusRequest {
+export interface UpdateTimesheetStatusRequest {
   employeeId: string;
   year: number;
   month: number;
@@ -207,20 +207,20 @@ const mapCompactSchedules = (schedules: Array<[number, number]> | null | undefin
   }));
 };
 
-const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
-  const projects = response.projects.map((project) => ({
-    id: project.id,
-    registrationNumber: project.registrationNumber,
-    name: project.name,
-    position: project.position,
-    workload: project.workload,
-    locked: project.locked,
-    activeDays: project.activeDays,
+const mapToTimesheet = (response: GetTimesheetResponse): Timesheet => {
+  const contractParts = response.contractParts.map((part) => ({
+    id: part.id,
+    registrationNumber: part.registrationNumber,
+    name: part.name,
+    position: part.position,
+    workload: part.workload,
+    locked: part.locked,
+    activeDays: part.activeDays,
   }));
 
   const days = response.days.map((day) => {
-    const projectCells = projects.reduce<Record<string, ProjectCell>>((acc, project, index) => {
-      acc[project.id] = day.projectCells[index] ?? { hours: 0, locked: false };
+    const contractPartCells = contractParts.reduce<Record<string, ContractPartCell>>((acc, part, index) => {
+      acc[part.id] = day.contractPartCells[index] ?? { hours: 0, locked: false };
       return acc;
     }, {});
 
@@ -235,7 +235,7 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
         schedules: mapCompactSchedules(day.schedules),
       },
       coreHours: day.coreHours > 0 ? day.coreHours : null,
-      projectCells,
+      contractPartCells,
       isHoliday: day.isHoliday,
       isWeekend: day.isWeekend,
     };
@@ -247,7 +247,7 @@ const mapToTimesheet = (response: GetCombinedTimesheetResponse): Timesheet => {
     month: response.month,
     tracksAttendance: response.tracksAttendance,
     core: { workload: response.coreWorkload },
-    projects,
+    contractParts,
     days,
   };
 };
@@ -294,12 +294,12 @@ const buildTimesheetDraft = (timesheet: Timesheet): TimesheetDraft => {
         schedules: mapDraftSchedules(day.attendance.schedules),
       };
     }),
-    projects: timesheet.projects.map((project) => {
+    contractParts: timesheet.contractParts.map((part) => {
       return {
-        contractEmployeeId: project.id,
+        contractEmployeeId: part.id,
         days: timesheet.days.map((day, index) => {
-          const active = project.activeDays[index] ?? true;
-          const cell = day.projectCells[project.id] ?? { hours: 0, locked: false };
+          const active = part.activeDays[index] ?? true;
+          const cell = day.contractPartCells[part.id] ?? { hours: 0, locked: false };
           return {
             date: dayDate(timesheet.year, timesheet.month, index + 1),
             hours: active ? cell.hours : 0,
@@ -350,7 +350,7 @@ const mapComment = (item: TimesheetCommentItem): TimesheetComment => {
   };
 };
 
-export const getCombinedTimesheet = (employeeId: string, year: number, month: number): Promise<TimesheetData> => {
+export const getTimesheet = (employeeId: string, year: number, month: number): Promise<TimesheetData> => {
   const params = new URLSearchParams({
     employeeId,
     year: String(year),
@@ -358,13 +358,13 @@ export const getCombinedTimesheet = (employeeId: string, year: number, month: nu
   });
 
   return withDelay("slowest", async () => {
-    const response = await customFetch<GetCombinedTimesheetResponse>(`${ApiUrl}/timesheets/combined?${params.toString()}`);
+    const response = await customFetch<GetTimesheetResponse>(`${ApiUrl}/timesheets?${params.toString()}`);
     const timesheet = mapToTimesheet(response);
     return { timesheet, evaluation: await reviewTimesheet(timesheet) };
   });
 };
 
-export const getCombinedTimesheetOverview = (employeeId: string, year: number, month: number): Promise<GetCombinedTimesheetOverviewResponse> => {
+export const getTimesheetOverview = (employeeId: string, year: number, month: number): Promise<GetTimesheetOverviewResponse> => {
   const params = new URLSearchParams({
     employeeId,
     year: String(year),
@@ -372,7 +372,7 @@ export const getCombinedTimesheetOverview = (employeeId: string, year: number, m
   });
 
   return withDelay("slow", () => {
-    return customFetch<GetCombinedTimesheetOverviewResponse>(`${ApiUrl}/timesheets/combined/overview?${params.toString()}`);
+    return customFetch<GetTimesheetOverviewResponse>(`${ApiUrl}/timesheets/overview?${params.toString()}`);
   });
 };
 
@@ -410,15 +410,15 @@ export const allocateTimesheet = async (timesheet: Timesheet, day?: number): Pro
       breakStart: minutesToTime(day.break?.[0]),
       breakEnd: minutesToTime(day.break?.[1]),
       coreHours: day.coreHours,
-      projectCells: day.projectCells,
+      contractPartCells: day.contractPartCells,
       attendanceAdjusted: day.attendanceAdjusted,
     })),
     evaluation: mapTimesheetEvaluation(allocation.evaluation),
   };
 };
 
-export const updateCombinedTimesheetStatus = async (request: UpdateCombinedTimesheetStatusRequest, signal?: AbortSignal): Promise<void> => {
-  await customFetch<void>(`${ApiUrl}/timesheets/combined/status`, {
+export const updateTimesheetStatus = async (request: UpdateTimesheetStatusRequest, signal?: AbortSignal): Promise<void> => {
+  await customFetch<void>(`${ApiUrl}/timesheets/status`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -441,13 +441,13 @@ export const getTimesheetComments = (employeeId: string, year: number, month: nu
   });
 
   return withDelay("fast", async () => {
-    const response = await customFetch<TimesheetCommentItem[]>(`${ApiUrl}/timesheets/combined/comments?${params.toString()}`);
+    const response = await customFetch<TimesheetCommentItem[]>(`${ApiUrl}/timesheets/comments?${params.toString()}`);
     return response.map(mapComment);
   });
 };
 
 export const addTimesheetComment = async (request: AddTimesheetCommentRequest, signal?: AbortSignal): Promise<TimesheetComment> => {
-  const response = await customFetch<TimesheetCommentItem>(`${ApiUrl}/timesheets/combined/comments`, {
+  const response = await customFetch<TimesheetCommentItem>(`${ApiUrl}/timesheets/comments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(request),
@@ -464,7 +464,7 @@ export const deleteTimesheetComment = async (request: DeleteTimesheetCommentRequ
     month: String(request.month),
   });
 
-  await customFetch<void>(`${ApiUrl}/timesheets/combined/comments/${request.commentId}?${params.toString()}`, {
+  await customFetch<void>(`${ApiUrl}/timesheets/comments/${request.commentId}?${params.toString()}`, {
     method: "DELETE",
     signal,
   });

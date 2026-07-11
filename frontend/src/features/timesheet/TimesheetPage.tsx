@@ -15,7 +15,7 @@ import type { GetEmployeeResponse } from "@/features/employee/api";
 import { resolveEmployeeTypeName } from "@/features/employee/employeeType";
 import { cn } from "@/utils/common";
 import { formatWorkload } from "@/utils/format";
-import { allocateTimesheet, type GetCombinedTimesheetOverviewResponse, reviewTimesheet, updateTimesheet } from "./api";
+import { allocateTimesheet, type GetTimesheetOverviewResponse, reviewTimesheet, updateTimesheet } from "./api";
 import type { TimesheetComment } from "./comments/Comment";
 import { TimesheetComments } from "./comments/TimesheetComments";
 import { TimesheetGrid } from "./grid/TimesheetGrid";
@@ -25,7 +25,7 @@ import { TimesheetWorkflowToolbar } from "./TimesheetWorkflowToolbar";
 
 export interface TimesheetPageData {
   employee: GetEmployeeResponse;
-  overview: GetCombinedTimesheetOverviewResponse;
+  overview: GetTimesheetOverviewResponse;
   timesheetData: TimesheetData;
   comments: TimesheetComment[];
 }
@@ -64,7 +64,7 @@ const TimesheetPageLoaded = () => {
 
 interface TimesheetEditorProps {
   initialData: TimesheetData;
-  overview: GetCombinedTimesheetOverviewResponse;
+  overview: GetTimesheetOverviewResponse;
 }
 
 const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
@@ -134,7 +134,7 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
           target.attendance.breakStart = allocated.breakStart;
           target.attendance.breakEnd = allocated.breakEnd;
           target.coreHours = allocated.coreHours || null;
-          target.projectCells = allocated.projectCells;
+          target.contractPartCells = allocated.contractPartCells;
           target.attendanceAdjusted = allocated.attendanceAdjusted;
         });
       });
@@ -150,7 +150,7 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
         actions={!hasWorkflowButtons && <FullscreenButton onClick={() => setIsFullscreen((current) => !current)} isFullscreen={isFullscreen} />}
       >
         <div className="flex items-center gap-2">
-          <SubPageTitle>{Texts.combinedTimesheet}</SubPageTitle>
+          <SubPageTitle>{Texts.timesheet}</SubPageTitle>
           <TimesheetStatusBadge status={overview.status} />
         </div>
       </SubPageHeader>

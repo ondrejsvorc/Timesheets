@@ -10,8 +10,8 @@ namespace Timesheets.Api.Features.Timesheets.Endpoints;
 public sealed class GetTimesheetComments : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapGet("/combined/comments", Handle)
-           .WithSummary("Get Combined Timesheet Comments");
+        app.MapGet("/comments", Handle)
+           .WithSummary("Get Timesheet Comments");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
     public sealed record CommentAuthor(Guid Id, string Name);
@@ -36,7 +36,7 @@ public sealed class GetTimesheetComments : IEndpoint
             return TypedResults.Forbid();
         }
 
-        CombinedTimesheetScope? scope = await CombinedTimesheetScopeLoader.LoadAsync(
+        TimesheetScope? scope = await TimesheetScopeLoader.LoadAsync(
             request.EmployeeId,
             request.Year,
             request.Month,
@@ -48,14 +48,14 @@ public sealed class GetTimesheetComments : IEndpoint
             return TypedResults.NotFound();
         }
 
-        IReadOnlyList<Guid> projectIds = scope.ContractPartLabels.Keys.ToList();
+        IReadOnlyList<Guid> contractEmployeeIds = scope.ContractPartLabels.Keys.ToList();
 
         List<Data.Models.TimesheetComment> comments = await dbContext.TimesheetComments
             .AsNoTracking()
             .Include(c => c.AuthorEmployee)
             .Where(c =>
                 c.TimesheetId == scope.TimesheetId
-                || (c.ContractPartId != null && projectIds.Contains(c.ContractPartId.Value)))
+                || (c.ContractPartId != null && contractEmployeeIds.Contains(c.ContractPartId.Value)))
             .ToListAsync(cancellationToken);
 
         List<TimesheetStatusHistory> history = await dbContext.TimesheetStatusHistories
@@ -65,7 +65,7 @@ public sealed class GetTimesheetComments : IEndpoint
             .Include(h => h.ChangedByEmployee)
             .Where(h =>
                 h.TimesheetId == scope.TimesheetId
-                || (h.ContractPartId != null && projectIds.Contains(h.ContractPartId.Value)))
+                || (h.ContractPartId != null && contractEmployeeIds.Contains(h.ContractPartId.Value)))
             .ToListAsync(cancellationToken);
 
         List<CommentItem> items = comments

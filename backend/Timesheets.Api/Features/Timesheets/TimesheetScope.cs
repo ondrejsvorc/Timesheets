@@ -3,11 +3,11 @@ using Timesheets.Api.Data;
 
 namespace Timesheets.Api.Features.Timesheets;
 
-internal sealed record CombinedTimesheetScope(Guid TimesheetId, IReadOnlyDictionary<Guid, string> ContractPartLabels);
+internal sealed record TimesheetScope(Guid TimesheetId, IReadOnlyDictionary<Guid, string> ContractPartLabels);
 
-internal static class CombinedTimesheetScopeLoader
+internal static class TimesheetScopeLoader
 {
-    public static async Task<CombinedTimesheetScope?> LoadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
+    public static async Task<TimesheetScope?> LoadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         Guid? timesheetId = await dbContext.Timesheets
             .AsNoTracking()
@@ -20,7 +20,7 @@ internal static class CombinedTimesheetScopeLoader
             return null;
         }
 
-        List<(Guid Id, string ContractRegistrationNumber)> projectRows = await dbContext.ContractParts
+        List<(Guid Id, string ContractRegistrationNumber)> contractPartRows = await dbContext.ContractParts
             .AsNoTracking()
             .Where(part => part.TimesheetId == timesheetId.Value)
             .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { timesheet, contractEmployee })
@@ -29,12 +29,12 @@ internal static class CombinedTimesheetScopeLoader
             .Select(x => new ValueTuple<Guid, string>(x.Id, x.RegistrationNumber))
             .ToListAsync(cancellationToken);
 
-        Dictionary<Guid, string> labels = projectRows.ToDictionary(row => row.Id, row => row.ContractRegistrationNumber);
+        Dictionary<Guid, string> labels = contractPartRows.ToDictionary(row => row.Id, row => row.ContractRegistrationNumber);
 
-        return new CombinedTimesheetScope(timesheetId.Value, labels);
+        return new TimesheetScope(timesheetId.Value, labels);
     }
 
-    public static string ResolveTimesheetLabel(this CombinedTimesheetScope scope, Guid? timesheetId, Guid? contractPartId)
+    public static string ResolveTimesheetLabel(this TimesheetScope scope, Guid? timesheetId, Guid? contractPartId)
     {
         if (timesheetId is not null)
         {

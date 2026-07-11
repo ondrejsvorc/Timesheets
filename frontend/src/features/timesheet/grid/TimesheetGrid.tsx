@@ -8,14 +8,14 @@ import { TimesheetBody } from "./TimesheetBody";
 import { TimesheetFooter } from "./TimesheetFooter";
 import { TimesheetHeader } from "./TimesheetHeader";
 
-const createGridTemplate = (projectCount: number, tracksAttendance: boolean) => {
+const createGridTemplate = (contractPartCount: number, tracksAttendance: boolean) => {
   const attendanceTimes = tracksAttendance
     ? ["minmax(6rem, max-content)" /* Příchod */, "minmax(6rem, max-content)" /* Odchod */, "minmax(6rem, max-content)" /* Pauza od */, "minmax(6rem, max-content)" /* Pauza do */]
     : [];
   const attendanceTotals = tracksAttendance ? ["minmax(4rem, max-content)" /* Docházka */, "minmax(4rem, max-content)" /* Noční */] : [];
   const stag = tracksAttendance ? [] : ["minmax(7rem, max-content)" /* STAG */];
   const base = ["minmax(8rem, max-content)" /* Den */, ...attendanceTimes, "minmax(max-content, max-content)" /* Přerušení */, ...attendanceTotals, ...stag, "minmax(5rem, 1fr)" /* Kmen */];
-  const projectColumns = projectCount > 0 ? [`repeat(${projectCount}, minmax(max-content, 1fr))`] : [];
+  const projectColumns = contractPartCount > 0 ? [`repeat(${contractPartCount}, minmax(max-content, 1fr))`] : [];
   const control = "minmax(7rem, max-content)"; /* Kontrola */
   const delta = "minmax(7rem, max-content)"; /* Rozdíl */
   return [...base, ...projectColumns, control, delta].join(" ");
@@ -31,12 +31,12 @@ interface TimesheetGridProps {
 }
 
 export const TimesheetGrid = ({ timesheet, evaluation, readOnly = false, onUpdateDay, onAllocate, className }: TimesheetGridProps) => {
-  const projectCount = timesheet.projects.length;
-  const template = useMemo(() => createGridTemplate(projectCount, timesheet.tracksAttendance), [projectCount, timesheet.tracksAttendance]);
+  const contractPartCount = timesheet.contractParts.length;
+  const template = useMemo(() => createGridTemplate(contractPartCount, timesheet.tracksAttendance), [contractPartCount, timesheet.tracksAttendance]);
 
-  const copyProjectColumn = async (projectId: string) => {
+  const copyContractPartColumn = async (contractEmployeeId: string) => {
     const lines = timesheet.days.map((day) => {
-      const hours = day.projectCells[projectId]?.hours ?? 0;
+      const hours = day.contractPartCells[contractEmployeeId]?.hours ?? 0;
       return formatHours(hours);
     });
 
@@ -55,21 +55,21 @@ export const TimesheetGrid = ({ timesheet, evaluation, readOnly = false, onUpdat
         <TimesheetHeader
           readOnly={readOnly}
           tracksAttendance={timesheet.tracksAttendance}
-          projects={timesheet.projects}
+          contractParts={timesheet.contractParts}
           core={timesheet.core}
-          onCopyProjectColumn={copyProjectColumn}
+          onCopyContractPartColumn={copyContractPartColumn}
           onGenerateMonthly={() => onAllocate()}
         />
         <TimesheetBody
           readOnly={readOnly}
           tracksAttendance={timesheet.tracksAttendance}
           days={timesheet.days}
-          projects={timesheet.projects}
+          contractParts={timesheet.contractParts}
           evaluation={evaluation}
           onUpdateDay={onUpdateDay}
           onAllocate={onAllocate}
         />
-        <TimesheetFooter readOnly={readOnly} tracksAttendance={timesheet.tracksAttendance} projects={timesheet.projects} totals={evaluation.totals} />
+        <TimesheetFooter readOnly={readOnly} tracksAttendance={timesheet.tracksAttendance} contractParts={timesheet.contractParts} totals={evaluation.totals} />
       </div>
     </div>
   );

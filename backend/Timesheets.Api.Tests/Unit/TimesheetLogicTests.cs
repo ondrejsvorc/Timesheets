@@ -57,16 +57,16 @@ public sealed class TimesheetLogicTests
     }
 
     [Fact]
-    public void Combined_workload_is_not_multiplied_by_days()
+    public void Total_workload_is_not_multiplied_by_days()
     {
-        CombinedDay first = CombinedDay(1);
-        CombinedDay second = CombinedDay(2);
+        EvaluatedDay first = Day(1);
+        EvaluatedDay second = Day(2);
 
-        CombinedTimesheet timesheet = new(Year: 2026, Month: 6, CoreWorkload: 1m, Days: [first, second]);
+        EvaluatedTimesheet timesheet = new(Year: 2026, Month: 6, CoreWorkload: 1m, Days: [first, second]);
         Assert.Equal(1m, timesheet.TotalWorkload);
     }
 
     private static AttendanceDay Day(DateTime date, TimeSpan? clockIn = null, TimeSpan? clockOut = null, TimeSpan? breakStart = null, TimeSpan? breakEnd = null, bool isHoliday = false) => new(Date: date, ClockIn: clockIn, ClockOut: clockOut, BreakStart: breakStart, BreakEnd: breakEnd, OtherInterruption: null, Schedules: [], IsHoliday: isHoliday, Workload: 1m);
 
-    private static CombinedDay CombinedDay(int day) => new(Date: new DateTime(2026, 6, day, 0, 0, 0, DateTimeKind.Utc), IsHoliday: false, Workload: 1m, CoreWorkload: 1m, WorkedHours: 8m, CoreHours: 8m, ProjectHours: 0m, StagHours: 0m, HasAttendanceFilled: true, SkipAllocationRules: false);
+    private static EvaluatedDay Day(int day) => new(Date: new DateTime(2026, 6, day, 0, 0, 0, DateTimeKind.Utc), IsHoliday: false, Workload: 1m, CoreWorkload: 1m, WorkedHours: 8m, CoreHours: 8m, ContractPartHours: 0m, StagHours: 0m, HasAttendanceFilled: true, SkipAllocationRules: false);
 }

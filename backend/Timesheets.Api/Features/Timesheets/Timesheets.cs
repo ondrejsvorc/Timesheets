@@ -2,19 +2,19 @@ namespace Timesheets.Api.Features.Timesheets;
 
 public sealed record TimeRange(TimeSpan Start, TimeSpan End);
 
-public sealed record CombinedTimesheet(int Year, int Month, decimal CoreWorkload, IReadOnlyList<CombinedDay> Days)
+public sealed record EvaluatedTimesheet(int Year, int Month, decimal CoreWorkload, IReadOnlyList<EvaluatedDay> Days)
 {
     public decimal TotalHours => Days.Sum(d => d.TotalHours);
     public decimal TotalWorkload => Days.FirstOrDefault()?.TotalWorkload ?? 0m;
     public decimal TotalHoursObligation => Days.Sum(day => day.TotalHoursObligation);
 }
 
-public sealed record CombinedDay(DateTime Date, bool IsHoliday, decimal Workload, decimal CoreWorkload, decimal WorkedHours, decimal CoreHours, decimal ProjectHours, decimal StagHours, bool HasAttendanceFilled, bool SkipAllocationRules)
+public sealed record EvaluatedDay(DateTime Date, bool IsHoliday, decimal Workload, decimal CoreWorkload, decimal WorkedHours, decimal CoreHours, decimal ContractPartHours, decimal StagHours, bool HasAttendanceFilled, bool SkipAllocationRules)
 {
     public bool IsWeekend => TimesheetLogic.IsWeekend(Date);
     public bool IsWorkday => TimesheetLogic.IsWorkday(Date, IsHoliday);
     public decimal TotalWorkload => Workload;
-    public decimal AllocatedHours => TimesheetLogic.Normalize(CoreHours + ProjectHours);
+    public decimal AllocatedHours => TimesheetLogic.Normalize(CoreHours + ContractPartHours);
     public decimal TotalHours => HasAttendanceFilled ? WorkedHours : AllocatedHours;
     public decimal TotalHoursObligation => TimesheetLogic.CalculateTotalHoursObligation(Date, IsHoliday, Workload);
 }
@@ -63,7 +63,7 @@ public sealed record AttendanceDay(DateTime Date, TimeSpan? ClockIn, TimeSpan? C
 /// <param name="Month">Měsíc vykazovaného období.</param>
 /// <param name="Workload">Úvazek.</param>
 /// <param name="Days">Dny měsíčního výkazu projektové činnosti.</param>
-public sealed record ProjectTimesheet(int Year, int Month, decimal Workload, IReadOnlyList<ProjectDay> Days)
+public sealed record ContractPartTimesheet(int Year, int Month, decimal Workload, IReadOnlyList<ContractPartTimesheetDay> Days)
 {
     public decimal TotalWorkload => Workload;
     public decimal TotalHours => Days.Sum(day => day.TotalHours);
@@ -71,12 +71,12 @@ public sealed record ProjectTimesheet(int Year, int Month, decimal Workload, IRe
 }
 
 /// <summary>
-/// Den měsíčního výkazu projektové činnosti.
+/// Den m?s�?n�ho v�kazu projektov� ?innosti.
 /// </summary>
 /// <param name="Date">Datum.</param>
-/// <param name="Hours">Počet hodin.</param>
-/// <param name="IsHoliday">Určuje, zda se jedná o státní svátek.</param>
-public sealed record ProjectDay(DateTime Date, decimal Hours, bool IsHoliday, decimal Workload)
+/// <param name="Hours">Po?et hodin.</param>
+/// <param name="IsHoliday">Ur?uje, zda se jedn� o st�tn� sv�tek.</param>
+public sealed record ContractPartTimesheetDay(DateTime Date, decimal Hours, bool IsHoliday, decimal Workload)
 {
     public bool IsWeekend => TimesheetLogic.IsWeekend(Date);
     public bool IsWorkday => TimesheetLogic.IsWorkday(Date, IsHoliday);

@@ -22,8 +22,8 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
     public async Task DeleteProject_WithSubmittedTimesheets_ReturnsConflict()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 2, 28, 0, 0, 0, DateTimeKind.Utc));
-        Guid projectTimesheetId = await GetSingleContractPartIdAsync(setup.ContractEmployeeId);
-        await SetProjectTimesheetStatusAsync(projectTimesheetId, TestTimesheetStatusIds.Submitted);
+        Guid contractPartId = await GetSingleContractPartIdAsync(setup.ContractEmployeeId);
+        await SetContractPartStatusAsync(contractPartId, TestTimesheetStatusIds.Submitted);
         HttpResponseMessage response = await Client.DeleteAsync($"/api/projects/{setup.ProjectId}");
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -32,8 +32,8 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
     public async Task DeleteProject_WithSubmittedTimesheetsAndForceQuery_ReturnsConflict()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 4, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 5, 31, 0, 0, 0, DateTimeKind.Utc));
-        Guid projectTimesheetId = await GetSingleContractPartIdAsync(setup.ContractEmployeeId);
-        await SetProjectTimesheetStatusAsync(projectTimesheetId, TestTimesheetStatusIds.Submitted);
+        Guid contractPartId = await GetSingleContractPartIdAsync(setup.ContractEmployeeId);
+        await SetContractPartStatusAsync(contractPartId, TestTimesheetStatusIds.Submitted);
         HttpResponseMessage response = await Client.DeleteAsync($"/api/projects/{setup.ProjectId}?force=true");
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
@@ -45,11 +45,11 @@ public class ProjectDeleteProtectionTests : BaseIntegrationTest
         return await dbContext.ContractParts.AsNoTracking().Where(timesheet => timesheet.ContractEmployeeId == contractEmployeeId).Select(timesheet => timesheet.Id).FirstAsync();
     }
 
-    private async Task SetProjectTimesheetStatusAsync(Guid projectTimesheetId, Guid statusId)
+    private async Task SetContractPartStatusAsync(Guid contractPartId, Guid statusId)
     {
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        int affected = await dbContext.ContractParts.Where(timesheet => timesheet.Id == projectTimesheetId).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
+        int affected = await dbContext.ContractParts.Where(timesheet => timesheet.Id == contractPartId).ExecuteUpdateAsync(setters => setters.SetProperty(timesheet => timesheet.TimesheetStatusId, statusId));
         Assert.Equal(1, affected);
     }
 }

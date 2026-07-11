@@ -41,11 +41,11 @@ file static class TimesheetLimits
     public const decimal MinHoursBeforeBreak = 4m;
 }
 
-public sealed class CombinedTimesheetReviewer
+public sealed class EvaluatedTimesheetReviewer
 {
     private const decimal ShortDayThresholdHours = 6m;
 
-    public TimesheetReview Review(CombinedTimesheet timesheet, AttendanceTimesheet attendance, bool tracksAttendance)
+    public TimesheetReview Review(EvaluatedTimesheet timesheet, AttendanceTimesheet attendance, bool tracksAttendance)
     {
         TimesheetReview attendanceReview = tracksAttendance ? new AttendanceTimesheetReviewer().Review(attendance) : new TimesheetReview();
         return new TimesheetReview
@@ -55,9 +55,9 @@ public sealed class CombinedTimesheetReviewer
         };
     }
 
-    private static IEnumerable<TimesheetIssue> ReviewTimesheet(CombinedTimesheet timesheet) => ReviewMonthlyHours(timesheet);
+    private static IEnumerable<TimesheetIssue> ReviewTimesheet(EvaluatedTimesheet timesheet) => ReviewMonthlyHours(timesheet);
 
-    private static IEnumerable<DayIssue> ReviewDay(CombinedDay day, bool tracksAttendance) =>
+    private static IEnumerable<DayIssue> ReviewDay(EvaluatedDay day, bool tracksAttendance) =>
     [
         .. ReviewBalance(day),
         .. ReviewStag(day, tracksAttendance),
@@ -66,7 +66,7 @@ public sealed class CombinedTimesheetReviewer
         .. ReviewWeekendAndHoliday(day)
     ];
 
-    private static IEnumerable<DayIssue> ReviewShortDay(CombinedDay day, bool tracksAttendance)
+    private static IEnumerable<DayIssue> ReviewShortDay(EvaluatedDay day, bool tracksAttendance)
     {
         if (day.SkipAllocationRules)
         {
@@ -95,7 +95,7 @@ public sealed class CombinedTimesheetReviewer
         yield return new DayIssue("WAR-ALL-04", IssueType.Warning, academicMessage, day.Date.Day, "allocatedHours");
     }
 
-    private static IEnumerable<DayIssue> ReviewBalance(CombinedDay day)
+    private static IEnumerable<DayIssue> ReviewBalance(EvaluatedDay day)
     {
         if (day.SkipAllocationRules || !day.HasAttendanceFilled || day.WorkedHours > TimesheetLimits.MaxWorkShiftHours)
         {
@@ -126,7 +126,7 @@ public sealed class CombinedTimesheetReviewer
         }
     }
 
-    private static IEnumerable<DayIssue> ReviewStag(CombinedDay day, bool tracksAttendance)
+    private static IEnumerable<DayIssue> ReviewStag(EvaluatedDay day, bool tracksAttendance)
     {
         if (!tracksAttendance && !day.SkipAllocationRules && day.CoreWorkload > 0 && day.StagHours > 0 && day.CoreHours + 0.009m < day.StagHours)
         {
@@ -134,7 +134,7 @@ public sealed class CombinedTimesheetReviewer
         }
     }
 
-    private static IEnumerable<DayIssue> ReviewMissingAttendance(CombinedDay day, bool tracksAttendance)
+    private static IEnumerable<DayIssue> ReviewMissingAttendance(EvaluatedDay day, bool tracksAttendance)
     {
         if (!tracksAttendance || day.SkipAllocationRules || day.HasAttendanceFilled)
         {
@@ -153,7 +153,7 @@ public sealed class CombinedTimesheetReviewer
         yield return new DayIssue("ERR-ATT-13", IssueType.Error, message, day.Date.Day, "breakEnd");
     }
 
-    private static IEnumerable<TimesheetIssue> ReviewMonthlyHours(CombinedTimesheet timesheet)
+    private static IEnumerable<TimesheetIssue> ReviewMonthlyHours(EvaluatedTimesheet timesheet)
     {
         if (timesheet.TotalHours + 0.009m < timesheet.TotalHoursObligation)
         {
@@ -161,7 +161,7 @@ public sealed class CombinedTimesheetReviewer
         }
     }
 
-    private static IEnumerable<DayIssue> ReviewWeekendAndHoliday(CombinedDay day)
+    private static IEnumerable<DayIssue> ReviewWeekendAndHoliday(EvaluatedDay day)
     {
         if (day.IsWeekend && day.TotalHours > 0)
         {

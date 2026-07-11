@@ -20,7 +20,7 @@ public interface ICurrentUser
     bool Satisfies(UserRole minRole, Guid? projectId = null, Guid? contractId = null);
     Task<bool> CanAccessEmployeeAsync(Guid employeeId, CancellationToken cancellationToken);
     Task<bool> CanViewAllContractTimesheetsAsync(Guid contractId, CancellationToken cancellationToken);
-    bool CanManageProjectTimesheetParts(IReadOnlyList<ProjectTimesheetPart> parts);
+    bool CanManageContractPartScopes(IReadOnlyList<ContractPartScope> parts);
 }
 
-public sealed record ProjectTimesheetPart(Guid ContractId, Guid ProjectId);
+public sealed record ContractPartScope(Guid ContractId, Guid ProjectId);

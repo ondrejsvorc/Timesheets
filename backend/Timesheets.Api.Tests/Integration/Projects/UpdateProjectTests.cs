@@ -25,18 +25,18 @@ public class UpdateProjectTests : BaseIntegrationTest
         CreateProject.Request createRequest = new("Valid Project for Update", registrationNumber, DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10));
         HttpResponseMessage postResponse = await Client.PostAsJsonAsync("/api/projects", createRequest);
         CreateProject.Response? createdProject = await postResponse.Content.ReadFromJsonAsync<CreateProject.Response>();
-        Guid projectId = createdProject!.Project.Id;
+        Guid contractEmployeeId = createdProject!.Project.Id;
 
-        HttpResponseMessage emptyNameResponse = await Client.PutAsJsonAsync($"/api/projects/{projectId}", new UpdateProject.Request("", registrationNumber, DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10)));
+        HttpResponseMessage emptyNameResponse = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}", new UpdateProject.Request("", registrationNumber, DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10)));
         Assert.Equal(HttpStatusCode.BadRequest, emptyNameResponse.StatusCode);
 
-        HttpResponseMessage longNameResponse = await Client.PutAsJsonAsync($"/api/projects/{projectId}", new UpdateProject.Request(new string('a', 201), registrationNumber, DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10)));
+        HttpResponseMessage longNameResponse = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}", new UpdateProject.Request(new string('a', 201), registrationNumber, DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10)));
         Assert.Equal(HttpStatusCode.BadRequest, longNameResponse.StatusCode);
 
-        HttpResponseMessage longRegResponse = await Client.PutAsJsonAsync($"/api/projects/{projectId}", new UpdateProject.Request("Valid Name", new string('b', 101), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10)));
+        HttpResponseMessage longRegResponse = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}", new UpdateProject.Request("Valid Name", new string('b', 101), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10)));
         Assert.Equal(HttpStatusCode.BadRequest, longRegResponse.StatusCode);
 
-        HttpResponseMessage invalidDatesResponse = await Client.PutAsJsonAsync($"/api/projects/{projectId}", new UpdateProject.Request("Valid Name", registrationNumber, DateTime.UtcNow.Date.AddDays(10), DateTime.UtcNow.Date));
+        HttpResponseMessage invalidDatesResponse = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}", new UpdateProject.Request("Valid Name", registrationNumber, DateTime.UtcNow.Date.AddDays(10), DateTime.UtcNow.Date));
         Assert.Equal(HttpStatusCode.BadRequest, invalidDatesResponse.StatusCode);
     }
 
@@ -46,17 +46,17 @@ public class UpdateProjectTests : BaseIntegrationTest
         CreateProject.Request createRequest = new("Project To Update", TestIdentifiers.Project(1022), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(10));
         HttpResponseMessage postResponse = await Client.PostAsJsonAsync("/api/projects", createRequest);
         CreateProject.Response? createdProject = await postResponse.Content.ReadFromJsonAsync<CreateProject.Response>();
-        Guid projectId = createdProject!.Project.Id;
+        Guid contractEmployeeId = createdProject!.Project.Id;
 
         UpdateProject.Request updateRequest = new("Updated Project Name", TestIdentifiers.Project(1023), createRequest.StartDate, createRequest.EndDate);
-        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/projects/{projectId}", updateRequest);
+        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}", updateRequest);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
         UpdateProject.Response? updated = await response.Content.ReadFromJsonAsync<UpdateProject.Response>();
         Assert.NotNull(updated);
         Assert.Equal(updateRequest.Name, updated!.Project.Name);
         Assert.Equal(updateRequest.RegistrationNumber, updated.Project.RegistrationNumber);
-        Assert.Equal(projectId, updated.Project.Id);
+        Assert.Equal(contractEmployeeId, updated.Project.Id);
         Assert.Equal(0, updated.Project.ContractCount);
     }
 

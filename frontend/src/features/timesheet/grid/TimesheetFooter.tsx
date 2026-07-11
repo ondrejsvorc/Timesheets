@@ -1,12 +1,12 @@
 import { HoursToHumanTooltip } from "@/components/shared/tooltips/HoursToHumanTooltip";
 import { cn } from "@/utils/common";
 import { formatHours } from "@/utils/format";
-import type { ProjectDefinition, TimesheetTotals } from "../Timesheet";
+import type { ContractPartDefinition, TimesheetTotals } from "../Timesheet";
 
 interface TimesheetFooterProps {
   readOnly?: boolean;
   tracksAttendance: boolean;
-  projects: ProjectDefinition[];
+  contractParts: ContractPartDefinition[];
   totals: TimesheetTotals;
 }
 
@@ -26,7 +26,7 @@ const CORE_TOLERANCE_HOURS = 2;
 
 const isHoursMatch = (value: number, target: number) => Math.abs(value - target) < 0.01;
 
-export const TimesheetFooter = ({ readOnly = false, tracksAttendance, projects, totals }: TimesheetFooterProps) => {
+export const TimesheetFooter = ({ readOnly = false, tracksAttendance, contractParts, totals }: TimesheetFooterProps) => {
   const cell = "min-w-0 flex items-center justify-end whitespace-nowrap tabular-nums text-[12px] uppercase tracking-wider px-2";
   const centered = "min-w-0 flex items-center justify-center whitespace-nowrap tabular-nums text-[12px] uppercase tracking-wider px-2";
 
@@ -61,12 +61,12 @@ export const TimesheetFooter = ({ readOnly = false, tracksAttendance, projects, 
       >
         <Total value={totals.coreHours} obligation={totals.coreHoursObligation} />
       </div>
-      {projects.map((project) => {
-        const total = totals.projects.find((value) => value.projectId === project.id);
+      {contractParts.map((part) => {
+        const total = totals.contractParts.find((value) => value.contractEmployeeId === part.id);
         const hours = total?.hours ?? 0;
         const obligation = total?.obligation ?? 0;
         return (
-          <div key={project.id} className={cn(centered, !isHoursMatch(hours, obligation) ? "text-red-600" : "text-blue-800")}>
+          <div key={part.id} className={cn(centered, !isHoursMatch(hours, obligation) ? "text-red-600" : "text-blue-800")}>
             <Total value={hours} obligation={obligation} />
           </div>
         );

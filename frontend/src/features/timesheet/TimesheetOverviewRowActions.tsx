@@ -6,12 +6,12 @@ import { useCan } from "@/auth/useCan";
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
-import { type CombinedTimesheetOverviewItem, type GetCombinedTimesheetOverviewResponse, type TimesheetStatusAction, updateCombinedTimesheetStatus } from "./api";
+import { type GetTimesheetOverviewResponse, type TimesheetOverviewItem, type TimesheetStatusAction, updateTimesheetStatus } from "./api";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
 
 interface TimesheetOverviewRowActionsProps {
-  item: CombinedTimesheetOverviewItem;
-  overview: GetCombinedTimesheetOverviewResponse;
+  item: TimesheetOverviewItem;
+  overview: GetTimesheetOverviewResponse;
 }
 
 export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOverviewRowActionsProps) => {
@@ -24,7 +24,7 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
   const isSubmitted = overview.status === Texts.statusPendingApproval;
 
   const timesheetId = item.timesheetId;
-  const showActions = item.kind === "project" && Boolean(timesheetId) && isSubmitted;
+  const showActions = item.kind === "contractPart" && Boolean(timesheetId) && isSubmitted;
 
   const canManagePart = useCan(UiAction.timesheet.approveProject, {
     timesheetContractId: item.contractId ?? undefined,
@@ -36,7 +36,7 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
   const changeProjectStatus = async (action: TimesheetStatusAction, comment: string, signal: AbortSignal) => {
     if (!timesheetId) return;
 
-    await updateCombinedTimesheetStatus(
+    await updateTimesheetStatus(
       {
         employeeId,
         year: overview.year,

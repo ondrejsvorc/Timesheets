@@ -87,13 +87,13 @@ public static class Endpoints
 
     private static void MapTimesheetEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/timesheets").WithTags("Timesheets")
-        .MapEndpoint<GetCombinedTimesheetOverview>()
-        .MapEndpoint<GetCombinedTimesheet>()
+        .MapEndpoint<GetTimesheetOverview>()
+        .MapEndpoint<GetTimesheet>()
         .MapEndpoint<GetTimesheetCatalog>()
         .MapEndpoint<GetTimesheetStatuses>()
         .MapEndpoint<UpdateTimesheet>()
         .MapEndpoint<AllocateTimesheet>()
-        .MapEndpoint<UpdateCombinedTimesheetStatus>()
+        .MapEndpoint<UpdateTimesheetStatus>()
         .MapEndpoint<GetTimesheetComments>()
         .MapEndpoint<AddTimesheetComment>()
         .MapEndpoint<DeleteTimesheetComment>()

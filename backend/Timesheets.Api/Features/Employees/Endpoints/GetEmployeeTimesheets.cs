@@ -32,7 +32,7 @@ public sealed class GetEmployeeTimesheets : IEndpoint
             return TypedResults.NotFound();
         }
 
-        // Build month list from either assigned projects (ProjectTimesheets) or imported attendance (AttendanceTimesheets).
+        // Build month list from either assigned projects (ContractParts) or imported attendance (AttendanceTimesheets).
         var monthKeysQuery =
             dbContext.ContractParts.AsNoTracking()
                 .Where(t => t.Timesheet.EmployeeId == id)

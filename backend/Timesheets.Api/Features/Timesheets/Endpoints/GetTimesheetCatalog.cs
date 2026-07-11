@@ -12,9 +12,9 @@ public sealed class GetTimesheetCatalog : IEndpoint
            .WithSummary("Get Timesheet Catalog");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
-    public sealed record ProjectTimesheetItem(Guid Id, string Label);
-    public sealed record Response(Guid TimesheetId, Guid CurrentStatusId, IEnumerable<ProjectTimesheetItem> ProjectTimesheets);
-    private sealed record ProjectTimesheetRow(Guid Id, string ContractRegistrationNumber);
+    public sealed record ContractPartItem(Guid Id, string Label);
+    public sealed record Response(Guid TimesheetId, Guid CurrentStatusId, IEnumerable<ContractPartItem> ContractParts);
+    private sealed record ContractPartRow(Guid Id, string ContractRegistrationNumber);
 
     private static async Task<Results<Ok<Response>, NotFound>> Handle([AsParameters] Request request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
@@ -29,17 +29,17 @@ public sealed class GetTimesheetCatalog : IEndpoint
             return TypedResults.NotFound();
         }
 
-        List<ProjectTimesheetRow> projectRows = await dbContext.ContractParts
+        List<ContractPartRow> contractPartRows = await dbContext.ContractParts
             .AsNoTracking()
             .Where(part => part.TimesheetId == attendanceTimesheet.Id)
             .Join(dbContext.ContractEmployees.AsNoTracking(), part => part.ContractEmployeeId, contractEmployee => contractEmployee.Id, (part, contractEmployee) => new { part, contractEmployee })
             .Join(dbContext.Contracts.AsNoTracking(), x => x.contractEmployee.ContractId, contract => contract.Id, (x, contract) => new { x.part, contract })
             .OrderBy(x => x.contract.RegistrationNumber)
-            .Select(x => new ProjectTimesheetRow(x.part.Id, x.contract.RegistrationNumber))
+            .Select(x => new ContractPartRow(x.part.Id, x.contract.RegistrationNumber))
             .ToListAsync(cancellationToken);
 
-        List<ProjectTimesheetItem> projectTimesheets = projectRows.Select(row => new ProjectTimesheetItem(row.Id, row.ContractRegistrationNumber)).ToList();
+        List<ContractPartItem> contractParts = contractPartRows.Select(row => new ContractPartItem(row.Id, row.ContractRegistrationNumber)).ToList();
 
-        return TypedResults.Ok(new Response(attendanceTimesheet.Id, attendanceTimesheet.TimesheetStatusId, projectTimesheets));
+        return TypedResults.Ok(new Response(attendanceTimesheet.Id, attendanceTimesheet.TimesheetStatusId, contractParts));
     }
 }

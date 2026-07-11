@@ -9,8 +9,8 @@ namespace Timesheets.Api.Features.Timesheets.Endpoints;
 public sealed class DeleteTimesheetComment : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapDelete("/combined/comments/{commentId}", Handle)
-           .WithSummary("Delete Combined Timesheet Comment");
+        app.MapDelete("/comments/{commentId}", Handle)
+           .WithSummary("Delete Timesheet Comment");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
 
@@ -21,7 +21,7 @@ public sealed class DeleteTimesheetComment : IEndpoint
             return TypedResults.Forbid();
         }
 
-        CombinedTimesheetScope? scope = await CombinedTimesheetScopeLoader.LoadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
+        TimesheetScope? scope = await TimesheetScopeLoader.LoadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
 
         if (scope is null)
         {
@@ -40,9 +40,9 @@ public sealed class DeleteTimesheetComment : IEndpoint
             return TypedResults.Forbid();
         }
 
-        IReadOnlyList<Guid> projectTimesheetIds = scope.ContractPartLabels.Keys.ToList();
+        IReadOnlyList<Guid> contractPartIds = scope.ContractPartLabels.Keys.ToList();
         bool isAttendanceComment = comment.TimesheetId == scope.TimesheetId;
-        bool isProjectComment = comment.ContractPartId is not null && projectTimesheetIds.Contains(comment.ContractPartId.Value);
+        bool isProjectComment = comment.ContractPartId is not null && contractPartIds.Contains(comment.ContractPartId.Value);
 
         if (!isAttendanceComment && !isProjectComment)
         {

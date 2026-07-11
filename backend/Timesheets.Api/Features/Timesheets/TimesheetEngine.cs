@@ -9,18 +9,18 @@ namespace Timesheets.Api.Features.Timesheets;
 
 public sealed record TimesheetDayEdit(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal CoreHours, string? Description, IReadOnlyList<TimeRange>? Schedules, bool CoreHoursFixed = false);
 
-public sealed record ProjectDayEdit(DateTime Date, decimal Hours, bool HoursLocked = false);
+public sealed record ContractPartDayEdit(DateTime Date, decimal Hours, bool HoursLocked = false);
 
-public sealed record ProjectColumnEdit(Guid ContractEmployeeId, IReadOnlyList<ProjectDayEdit> Days);
+public sealed record ContractPartEdit(Guid ContractEmployeeId, IReadOnlyList<ContractPartDayEdit> Days);
 
-public sealed record TimesheetEditRequest(IReadOnlyList<TimesheetDayEdit> Days, IReadOnlyList<ProjectColumnEdit>? Projects);
+public sealed record TimesheetEditRequest(IReadOnlyList<TimesheetDayEdit> Days, IReadOnlyList<ContractPartEdit>? ContractParts);
 
 public sealed class TimesheetEditRequestValidator : AbstractValidator<TimesheetEditRequest>
 {
     public TimesheetEditRequestValidator()
     {
         RuleFor(request => request.Days).NotEmpty().Must(HaveUniqueDates);
-        RuleFor(request => request.Projects).Must(HaveUniqueProjects);
+        RuleFor(request => request.ContractParts).Must(HaveUniqueContractParts);
         RuleForEach(request => request.Days).ChildRules(day =>
         {
             day.RuleFor(value => value.CoreHours).InclusiveBetween(0m, 12m);
@@ -29,7 +29,7 @@ public sealed class TimesheetEditRequestValidator : AbstractValidator<TimesheetE
             day.RuleFor(value => value.BreakStart).Must(IsTimeOfDay);
             day.RuleFor(value => value.BreakEnd).Must(IsTimeOfDay);
         });
-        RuleForEach(request => request.Projects).ChildRules(project =>
+        RuleForEach(request => request.ContractParts).ChildRules(project =>
         {
             project.RuleFor(value => value.Days).Must(HaveUniqueDates);
             project.RuleFor(value => value.Days).Must(HaveAtMostOneNonHalfHour);
@@ -41,23 +41,23 @@ public sealed class TimesheetEditRequestValidator : AbstractValidator<TimesheetE
     }
 
     private static bool IsHalfHourIncrement(decimal hours) => hours * 2m % 1m == 0m;
-    private static bool HaveAtMostOneNonHalfHour(IEnumerable<ProjectDayEdit> days) => days.Count(day => !IsHalfHourIncrement(day.Hours)) <= 1;
+    private static bool HaveAtMostOneNonHalfHour(IEnumerable<ContractPartDayEdit> days) => days.Count(day => !IsHalfHourIncrement(day.Hours)) <= 1;
 
     private static bool IsTimeOfDay(TimeSpan? value) => value is null || value >= TimeSpan.Zero && value < TimeSpan.FromDays(1);
     private static bool HaveUniqueDates(IEnumerable<TimesheetDayEdit> days) => days.Select(day => DateOnly.FromDateTime(day.Date)).Distinct().Count() == days.Count();
-    private static bool HaveUniqueDates(IEnumerable<ProjectDayEdit> days) => days.Select(day => DateOnly.FromDateTime(day.Date)).Distinct().Count() == days.Count();
-    private static bool HaveUniqueProjects(IEnumerable<ProjectColumnEdit>? projects) => projects is null || projects.Select(project => project.ContractEmployeeId).Distinct().Count() == projects.Count();
+    private static bool HaveUniqueDates(IEnumerable<ContractPartDayEdit> days) => days.Select(day => DateOnly.FromDateTime(day.Date)).Distinct().Count() == days.Count();
+    private static bool HaveUniqueContractParts(IEnumerable<ContractPartEdit>? projects) => projects is null || projects.Select(project => project.ContractEmployeeId).Distinct().Count() == projects.Count();
 }
 
 public sealed record TimesheetDayEvaluation(int Day, decimal WorkedHours, decimal NightHours, decimal AllocatedHours, decimal Balance, bool HasBusinessTrip, bool HasCoreOnlyInterruption, bool HasProportionalInterruption);
 
-public sealed record TimesheetProjectTotal(Guid ProjectId, decimal Hours, decimal Obligation);
+public sealed record ContractPartTotal(Guid ContractEmployeeId, decimal Hours, decimal Obligation);
 
-public sealed record TimesheetTotals(decimal WorkedHours, decimal HoursObligation, decimal AllocatedHours, decimal CoreHours, decimal CoreHoursObligation, IReadOnlyList<TimesheetProjectTotal> Projects);
+public sealed record TimesheetTotals(decimal WorkedHours, decimal HoursObligation, decimal AllocatedHours, decimal CoreHours, decimal CoreHoursObligation, IReadOnlyList<ContractPartTotal> ContractParts);
 
 public sealed record TimesheetEvaluation(bool HasErrors, IReadOnlyList<TimesheetIssue> Issues, IReadOnlyList<DayIssue> DayIssues, IReadOnlyList<TimesheetDayEvaluation> Days, TimesheetTotals Totals);
 
-public sealed record ProjectDateRange(DateTime StartDate, DateTime? EndDate)
+public sealed record ContractPartDateRange(DateTime StartDate, DateTime? EndDate)
 {
     public bool Includes(DateTime date)
     {
@@ -68,9 +68,9 @@ public sealed record ProjectDateRange(DateTime StartDate, DateTime? EndDate)
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value.Date : DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
 }
 
-public sealed record LoadedTimesheet(Data.Models.Timesheet Timesheet, Data.Models.Attendance Attendance, IReadOnlyList<Data.Models.ContractPart> Projects, IReadOnlyDictionary<Guid, ProjectDateRange> ProjectRanges, decimal TotalWorkload, decimal CoreWorkload);
+public sealed record LoadedTimesheet(Data.Models.Timesheet Timesheet, Data.Models.Attendance Attendance, IReadOnlyList<Data.Models.ContractPart> ContractParts, IReadOnlyDictionary<Guid, ContractPartDateRange> ContractPartRanges, decimal TotalWorkload, decimal CoreWorkload);
 
-public sealed record ProjectColumn(Guid Id, decimal Workload, bool Locked, ProjectDateRange Range)
+public sealed record ContractPartColumn(Guid Id, decimal Workload, bool Locked, ContractPartDateRange Range)
 {
     public bool IsActiveOn(DateTime date) => Range.Includes(date);
 }
@@ -87,15 +87,15 @@ public sealed class EditableTimesheetDay
     public required bool IsHoliday { get; init; }
     public required decimal CoreHours { get; set; }
     public required bool CoreHoursFixed { get; init; }
-    public required Dictionary<Guid, decimal> ProjectHours { get; init; }
-    public required Dictionary<Guid, bool> ProjectHoursFixed { get; init; }
-    public required Dictionary<Guid, decimal> ProjectHoursFloor { get; init; }
+    public required Dictionary<Guid, decimal> ContractPartHours { get; init; }
+    public required Dictionary<Guid, bool> ContractPartHoursFixed { get; init; }
+    public required Dictionary<Guid, decimal> ContractPartHoursFloor { get; init; }
 
     /// <summary>Set when the generator raised the user's attendance to cover allocated hours.</summary>
     public bool AttendanceAdjusted { get; set; }
 }
 
-public sealed record EditableTimesheet(IReadOnlyList<EditableTimesheetDay> Days, IReadOnlyList<ProjectColumn> Projects);
+public sealed record EditableTimesheet(IReadOnlyList<EditableTimesheetDay> Days, IReadOnlyList<ContractPartColumn> ContractParts);
 
 public static class TimesheetEngine
 {
@@ -140,21 +140,21 @@ public static class TimesheetEngine
                 ProjectEndDate = project.EndDate
             })
             .ToListAsync(cancellationToken);
-        Dictionary<Guid, ProjectDateRange> projectRanges = rangeRows.ToDictionary(
+        Dictionary<Guid, ContractPartDateRange> projectRanges = rangeRows.ToDictionary(
             row => row.Id,
-            row => EffectiveProjectRange(row.StartDate, row.AssignmentEndDate, row.ProjectStartDate, row.ProjectEndDate));
+            row => EffectiveContractPartRange(row.StartDate, row.AssignmentEndDate, row.ProjectStartDate, row.ProjectEndDate));
 
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(timesheet.EmployeeId, timesheet.Year, timesheet.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - projects.Sum(project => project.Workload));
-        return new LoadedTimesheet(Timesheet: timesheet, Attendance: attendance, Projects: projects, ProjectRanges: projectRanges, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
+        return new LoadedTimesheet(Timesheet: timesheet, Attendance: attendance, ContractParts: projects, ContractPartRanges: projectRanges, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
     }
 
     public static EditableTimesheet BuildEditableTimesheet(LoadedTimesheet loaded, TimesheetEditRequest request)
     {
         Dictionary<DateOnly, TimesheetDayEdit> days = request.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
-        Dictionary<Guid, ProjectColumnEdit> projects = (request.Projects ?? []).ToDictionary(project => project.ContractEmployeeId);
-        List<ProjectColumn> projectStates = ProjectColumns(loaded);
-        Dictionary<Guid, ProjectColumn> projectStatesById = projectStates.ToDictionary(project => project.Id);
+        Dictionary<Guid, ContractPartEdit> projects = (request.ContractParts ?? []).ToDictionary(project => project.ContractEmployeeId);
+        List<ContractPartColumn> contractPartStates = ContractPartColumns(loaded);
+        Dictionary<Guid, ContractPartColumn> contractPartStatesById = contractPartStates.ToDictionary(project => project.Id);
 
         List<EditableTimesheetDay> dayStates = loaded.Attendance.Days
             .OrderBy(day => day.Date)
@@ -166,23 +166,23 @@ public static class TimesheetEngine
                 Dictionary<Guid, bool> projectHoursFixed = [];
                 Dictionary<Guid, decimal> projectHoursFloor = [];
 
-                foreach (Data.Models.ContractPart project in loaded.Projects)
+                foreach (Data.Models.ContractPart project in loaded.ContractParts)
                 {
-                    ProjectColumn projectState = projectStatesById[project.ContractEmployeeId];
-                    ProjectColumnEdit? projectUpdate = projects.GetValueOrDefault(project.ContractEmployeeId);
+                    ContractPartColumn projectState = contractPartStatesById[project.ContractEmployeeId];
+                    ContractPartEdit? contractPartUpdate = projects.GetValueOrDefault(project.ContractEmployeeId);
                     if (project.LockedAt is not null || !projectState.IsActiveOn(day.Date))
                     {
-                        projectUpdate = null;
+                        contractPartUpdate = null;
                     }
 
                     Data.Models.ContractPartDay? persistedDay = projectState.IsActiveOn(day.Date)
-                        ? project.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date)
+                        ? project.Days.FirstOrDefault(contractPartDay => DateOnly.FromDateTime(contractPartDay.Date) == date)
                         : null;
                     decimal persisted = persistedDay?.Hours ?? 0m;
-                    ProjectDayEdit? projectDayUpdate = projectUpdate?.Days.FirstOrDefault(projectDay => DateOnly.FromDateTime(projectDay.Date) == date);
-                    decimal hours = projectDayUpdate?.Hours ?? persisted;
+                    ContractPartDayEdit? contractPartDayUpdate = contractPartUpdate?.Days.FirstOrDefault(contractPartDay => DateOnly.FromDateTime(contractPartDay.Date) == date);
+                    decimal hours = contractPartDayUpdate?.Hours ?? persisted;
                     projectHours[project.ContractEmployeeId] = TimesheetLogic.Normalize(hours);
-                    projectHoursFixed[project.ContractEmployeeId] = projectState.IsActiveOn(day.Date) && (projectDayUpdate?.HoursLocked ?? persistedDay?.HoursLocked ?? false);
+                    projectHoursFixed[project.ContractEmployeeId] = projectState.IsActiveOn(day.Date) && (contractPartDayUpdate?.HoursLocked ?? persistedDay?.HoursLocked ?? false);
                     bool projectFixed = projectHoursFixed[project.ContractEmployeeId];
                     projectHoursFloor[project.ContractEmployeeId] = projectFixed && hours > 0m ? TimesheetLogic.Normalize(hours) : 0m;
                 }
@@ -199,25 +199,25 @@ public static class TimesheetEngine
                     IsHoliday = day.IsHoliday,
                     CoreHours = TimesheetLogic.Normalize(update is null ? day.CoreHours : update.CoreHours),
                     CoreHoursFixed = update?.CoreHoursFixed ?? false,
-                    ProjectHours = projectHours,
-                    ProjectHoursFixed = projectHoursFixed,
-                    ProjectHoursFloor = projectHoursFloor
+                    ContractPartHours = projectHours,
+                    ContractPartHoursFixed = projectHoursFixed,
+                    ContractPartHoursFloor = projectHoursFloor
                 };
             })
             .ToList();
 
-        return new EditableTimesheet(Days: dayStates, Projects: projectStates);
+        return new EditableTimesheet(Days: dayStates, ContractParts: contractPartStates);
     }
 
     public static TimesheetEditRequest CurrentEditRequest(LoadedTimesheet loaded)
     {
         TimesheetDayEdit[] days = loaded.Attendance.Days.Select(day => new TimesheetDayEdit(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, CoreHours: day.CoreHours, Description: day.Description, Schedules: ParseSchedules(day.Schedules))).ToArray();
-        ProjectColumnEdit[] projects = loaded.Projects.Select(project =>
+        ContractPartEdit[] projects = loaded.ContractParts.Select(project =>
         {
-            ProjectDayEdit[] projectDays = project.Days.Select(day => new ProjectDayEdit(Date: day.Date, Hours: day.Hours, HoursLocked: day.HoursLocked)).ToArray();
-            return new ProjectColumnEdit(ContractEmployeeId: project.ContractEmployeeId, Days: projectDays);
+            ContractPartDayEdit[] contractPartDays = project.Days.Select(day => new ContractPartDayEdit(Date: day.Date, Hours: day.Hours, HoursLocked: day.HoursLocked)).ToArray();
+            return new ContractPartEdit(ContractEmployeeId: project.ContractEmployeeId, Days: contractPartDays);
         }).ToArray();
-        return new TimesheetEditRequest(Days: days, Projects: projects);
+        return new TimesheetEditRequest(Days: days, ContractParts: projects);
     }
 
     public static TimesheetEvaluation Evaluate(LoadedTimesheet loaded, TimesheetEditRequest request) => Evaluate(loaded, BuildEditableTimesheet(loaded, request));
@@ -227,54 +227,54 @@ public static class TimesheetEngine
         bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.Attendance.EmployeeTypeId);
         foreach (EditableTimesheetDay day in sheet.Days)
         {
-            TimesheetInterruptionHours.ApplyToDayState(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance);
+            TimesheetInterruptionHours.ApplyToDayState(day, sheet.ContractParts, loaded.TotalWorkload, tracksAttendance);
         }
 
         List<AttendanceDay> attendanceDays = sheet.Days.Select(day => new AttendanceDay(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, OtherInterruption: day.Description, Schedules: day.Schedules, IsHoliday: day.IsHoliday, Workload: loaded.TotalWorkload)).ToList();
         AttendanceTimesheet attendance = new(EmployeePersonalNumber: loaded.Timesheet.Employee.PersonalNumber, EmployeeName: loaded.Timesheet.Employee.DisplayName, Workload: loaded.TotalWorkload, Year: loaded.Timesheet.Year, Month: loaded.Timesheet.Month, Days: attendanceDays);
 
-        List<CombinedDay> combinedDays = sheet.Days.Select(day =>
+        List<EvaluatedDay> evaluatedDays = sheet.Days.Select(day =>
         {
             decimal worked = TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
-            decimal projectHours = day.ProjectHours.Values.Sum();
+            decimal projectHours = day.ContractPartHours.Values.Sum();
             decimal stagHours = TimesheetLogic.CalculateStagHours(day.Schedules);
             bool hasAttendance = tracksAttendance && (day.ClockIn is not null || day.ClockOut is not null);
             bool skipAllocationRules = TimesheetInterruptions.SkipAllocationRules(day.Description);
-            return new CombinedDay(Date: day.Date, IsHoliday: day.IsHoliday, Workload: loaded.TotalWorkload, CoreWorkload: loaded.CoreWorkload, WorkedHours: worked, CoreHours: day.CoreHours, ProjectHours: projectHours, StagHours: stagHours, HasAttendanceFilled: hasAttendance, SkipAllocationRules: skipAllocationRules);
+            return new EvaluatedDay(Date: day.Date, IsHoliday: day.IsHoliday, Workload: loaded.TotalWorkload, CoreWorkload: loaded.CoreWorkload, WorkedHours: worked, CoreHours: day.CoreHours, ContractPartHours: projectHours, StagHours: stagHours, HasAttendanceFilled: hasAttendance, SkipAllocationRules: skipAllocationRules);
         }).ToList();
 
-        CombinedTimesheet combined = new(Year: loaded.Timesheet.Year, Month: loaded.Timesheet.Month, CoreWorkload: loaded.CoreWorkload, Days: combinedDays);
+        EvaluatedTimesheet evaluated = new(Year: loaded.Timesheet.Year, Month: loaded.Timesheet.Month, CoreWorkload: loaded.CoreWorkload, Days: evaluatedDays);
         int fundedDays = sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday));
-        List<TimesheetProjectTotal> projectTotals = sheet.Projects.Select(project =>
+        List<ContractPartTotal> contractPartTotals = sheet.ContractParts.Select(project =>
         {
-            decimal hours = TimesheetLogic.Normalize(sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id)));
+            decimal hours = TimesheetLogic.Normalize(sheet.Days.Sum(day => day.ContractPartHours.GetValueOrDefault(project.Id)));
             decimal obligation = TimesheetLogic.Normalize(sheet.Days.Count(day => TimesheetLogic.IsWorkday(day.Date, day.IsHoliday) && project.IsActiveOn(day.Date)) * 8m * project.Workload);
-            return new TimesheetProjectTotal(ProjectId: project.Id, Hours: hours, Obligation: obligation);
+            return new ContractPartTotal(ContractEmployeeId: project.Id, Hours: hours, Obligation: obligation);
         }).ToList();
 
         decimal hoursObligation = TimesheetLogic.Normalize(fundedDays * 8m * loaded.TotalWorkload);
-        TimesheetTotals totals = new(WorkedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.WorkedHours)), HoursObligation: hoursObligation, AllocatedHours: TimesheetLogic.Normalize(combinedDays.Sum(day => day.AllocatedHours)), CoreHours: TimesheetLogic.Normalize(sheet.Days.Sum(day => day.CoreHours)), CoreHoursObligation: TimesheetLogic.Normalize(hoursObligation - projectTotals.Sum(project => project.Obligation)), Projects: projectTotals);
+        TimesheetTotals totals = new(WorkedHours: TimesheetLogic.Normalize(evaluatedDays.Sum(day => day.WorkedHours)), HoursObligation: hoursObligation, AllocatedHours: TimesheetLogic.Normalize(evaluatedDays.Sum(day => day.AllocatedHours)), CoreHours: TimesheetLogic.Normalize(sheet.Days.Sum(day => day.CoreHours)), CoreHoursObligation: TimesheetLogic.Normalize(hoursObligation - contractPartTotals.Sum(project => project.Obligation)), ContractParts: contractPartTotals);
 
-        TimesheetReview review = new CombinedTimesheetReviewer().Review(combined, attendance, tracksAttendance);
-        IReadOnlyList<TimesheetIssue> issues = review.Issues.Concat(ReviewProjectTotals(projectTotals)).Concat(ReviewCoreTolerance(totals)).ToArray();
+        TimesheetReview review = new EvaluatedTimesheetReviewer().Review(evaluated, attendance, tracksAttendance);
+        IReadOnlyList<TimesheetIssue> issues = review.Issues.Concat(ReviewContractPartTotals(contractPartTotals)).Concat(ReviewCoreTolerance(totals)).ToArray();
         IReadOnlyList<DayIssue> dayIssues = review.DayIssues.ToArray();
 
-        List<TimesheetDayEvaluation> days = sheet.Days.Zip(combinedDays).Select(pair =>
+        List<TimesheetDayEvaluation> days = sheet.Days.Zip(evaluatedDays).Select(pair =>
         {
-            (EditableTimesheetDay day, CombinedDay combinedDay) = pair;
+            (EditableTimesheetDay day, EvaluatedDay evaluatedDay) = pair;
             bool businessTrip = TimesheetInterruptions.HasBusinessTripInterruption(day.Description);
             bool proportional = TimesheetInterruptions.HasProportionalInterruption(day.Description);
-            decimal balance = combinedDay.SkipAllocationRules || !combinedDay.HasAttendanceFilled ? 0m : TimesheetLogic.Round(combinedDay.WorkedHours - combinedDay.AllocatedHours);
+            decimal balance = evaluatedDay.SkipAllocationRules || !evaluatedDay.HasAttendanceFilled ? 0m : TimesheetLogic.Round(evaluatedDay.WorkedHours - evaluatedDay.AllocatedHours);
             decimal nightHours = TimesheetLogic.CalculateNightHours(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
-            return new TimesheetDayEvaluation(Day: day.Date.Day, WorkedHours: combinedDay.WorkedHours, NightHours: nightHours, AllocatedHours: combinedDay.AllocatedHours, Balance: balance, HasBusinessTrip: businessTrip, HasCoreOnlyInterruption: false, HasProportionalInterruption: proportional);
+            return new TimesheetDayEvaluation(Day: day.Date.Day, WorkedHours: evaluatedDay.WorkedHours, NightHours: nightHours, AllocatedHours: evaluatedDay.AllocatedHours, Balance: balance, HasBusinessTrip: businessTrip, HasCoreOnlyInterruption: false, HasProportionalInterruption: proportional);
         }).ToList();
 
         return new TimesheetEvaluation(HasErrors: issues.Any(issue => issue.Type is IssueType.Error) || dayIssues.Any(issue => issue.Type is IssueType.Error), Issues: issues, DayIssues: dayIssues, Days: days, Totals: totals);
     }
 
-    private static IEnumerable<TimesheetIssue> ReviewProjectTotals(IReadOnlyList<TimesheetProjectTotal> projectTotals)
+    private static IEnumerable<TimesheetIssue> ReviewContractPartTotals(IReadOnlyList<ContractPartTotal> contractPartTotals)
     {
-        foreach (TimesheetProjectTotal project in projectTotals)
+        foreach (ContractPartTotal project in contractPartTotals)
         {
             if (TimesheetLogic.HasUnequalHours(project.Hours, project.Obligation))
             {
@@ -298,11 +298,11 @@ public static class TimesheetEngine
         }
     }
 
-    public static bool HasInactiveProjectHours(LoadedTimesheet loaded, TimesheetEditRequest request)
+    public static bool HasInactiveContractPartHours(LoadedTimesheet loaded, TimesheetEditRequest request)
     {
-        foreach (ProjectColumnEdit project in request.Projects ?? [])
+        foreach (ContractPartEdit project in request.ContractParts ?? [])
         {
-            if (!loaded.ProjectRanges.TryGetValue(project.ContractEmployeeId, out ProjectDateRange? range))
+            if (!loaded.ContractPartRanges.TryGetValue(project.ContractEmployeeId, out ContractPartDateRange? range))
             {
                 continue;
             }
@@ -336,10 +336,10 @@ public static class TimesheetEngine
             day.HoursWithoutBreak = TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
         }
 
-        Dictionary<Guid, ProjectColumnEdit> projects = (request.Projects ?? []).ToDictionary(project => project.ContractEmployeeId);
-        foreach (Data.Models.ContractPart project in loaded.Projects)
+        Dictionary<Guid, ContractPartEdit> projects = (request.ContractParts ?? []).ToDictionary(project => project.ContractEmployeeId);
+        foreach (Data.Models.ContractPart project in loaded.ContractParts)
         {
-            if (loaded.ProjectRanges.TryGetValue(project.ContractEmployeeId, out ProjectDateRange? range))
+            if (loaded.ContractPartRanges.TryGetValue(project.ContractEmployeeId, out ContractPartDateRange? range))
             {
                 foreach (Data.Models.ContractPartDay day in project.Days.Where(day => !range.Includes(day.Date)))
                 {
@@ -348,7 +348,7 @@ public static class TimesheetEngine
                 }
             }
 
-            if (!projects.TryGetValue(project.ContractEmployeeId, out ProjectColumnEdit? update))
+            if (!projects.TryGetValue(project.ContractEmployeeId, out ContractPartEdit? update))
             {
                 continue;
             }
@@ -359,15 +359,15 @@ public static class TimesheetEngine
                 continue;
             }
 
-            Dictionary<DateOnly, Data.Models.ContractPartDay> projectDays = project.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
+            Dictionary<DateOnly, Data.Models.ContractPartDay> contractPartDays = project.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
 
-            foreach (ProjectDayEdit projectDay in update.Days)
+            foreach (ContractPartDayEdit contractPartDay in update.Days)
             {
-                if (projectDays.TryGetValue(DateOnly.FromDateTime(projectDay.Date), out Data.Models.ContractPartDay? day))
+                if (contractPartDays.TryGetValue(DateOnly.FromDateTime(contractPartDay.Date), out Data.Models.ContractPartDay? day))
                 {
-                    bool active = loaded.ProjectRanges.TryGetValue(project.ContractEmployeeId, out range) && range.Includes(projectDay.Date);
-                    day.Hours = active ? TimesheetLogic.Normalize(projectDay.Hours) : 0m;
-                    day.HoursLocked = active && projectDay.HoursLocked;
+                    bool active = loaded.ContractPartRanges.TryGetValue(project.ContractEmployeeId, out range) && range.Includes(contractPartDay.Date);
+                    day.Hours = active ? TimesheetLogic.Normalize(contractPartDay.Hours) : 0m;
+                    day.HoursLocked = active && contractPartDay.HoursLocked;
                 }
             }
         }
@@ -387,14 +387,14 @@ public static class TimesheetEngine
         bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.Attendance.EmployeeTypeId);
         foreach (EditableTimesheetDay day in sheet.Days)
         {
-            TimesheetInterruptionHours.ApplyToDayState(day, sheet.Projects, loaded.TotalWorkload, tracksAttendance);
+            TimesheetInterruptionHours.ApplyToDayState(day, sheet.ContractParts, loaded.TotalWorkload, tracksAttendance);
         }
 
         TimesheetEditRequest request = new(
             Days: sheet.Days.Select(day => new TimesheetDayEdit(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.CoreHours, day.Description, day.Schedules)).ToList(),
-            Projects: sheet.Projects.Select(project => new ProjectColumnEdit(
+            ContractParts: sheet.ContractParts.Select(project => new ContractPartEdit(
                 project.Id,
-                sheet.Days.Select(day => new ProjectDayEdit(day.Date, day.ProjectHours.GetValueOrDefault(project.Id), day.ProjectHoursFixed.GetValueOrDefault(project.Id))).ToList())).ToList());
+                sheet.Days.Select(day => new ContractPartDayEdit(day.Date, day.ContractPartHours.GetValueOrDefault(project.Id), day.ContractPartHoursFixed.GetValueOrDefault(project.Id))).ToList())).ToList());
         ApplyEdits(loaded, request);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
@@ -416,19 +416,19 @@ public static class TimesheetEngine
         }
     }
 
-    internal static ProjectDateRange EffectiveProjectRange(DateTime assignmentStartDate, DateTime? assignmentEndDate, DateTime projectStartDate, DateTime? projectEndDate)
+    internal static ContractPartDateRange EffectiveContractPartRange(DateTime assignmentStartDate, DateTime? assignmentEndDate, DateTime projectStartDate, DateTime? projectEndDate)
     {
         DateTime start = Max(ToUtcDate(assignmentStartDate), ToUtcDate(projectStartDate));
         DateTime? end = Min(assignmentEndDate.HasValue ? ToUtcDate(assignmentEndDate.Value) : null, projectEndDate.HasValue ? ToUtcDate(projectEndDate.Value) : null);
-        return new ProjectDateRange(start, end);
+        return new ContractPartDateRange(start, end);
     }
 
-    private static List<ProjectColumn> ProjectColumns(LoadedTimesheet loaded) => loaded.Projects
-        .Select(project => new ProjectColumn(
+    private static List<ContractPartColumn> ContractPartColumns(LoadedTimesheet loaded) => loaded.ContractParts
+        .Select(project => new ContractPartColumn(
             Id: project.ContractEmployeeId,
             Workload: project.Workload,
             Locked: project.LockedAt is not null,
-            Range: loaded.ProjectRanges.GetValueOrDefault(project.ContractEmployeeId) ?? new ProjectDateRange(DateTime.MinValue, null)))
+            Range: loaded.ContractPartRanges.GetValueOrDefault(project.ContractEmployeeId) ?? new ContractPartDateRange(DateTime.MinValue, null)))
         .ToList();
 
     private static DateTime Max(DateTime first, DateTime second) => first >= second ? first : second;

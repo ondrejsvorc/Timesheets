@@ -28,9 +28,9 @@ public sealed class TimesheetEditRequestValidatorTests
         TimesheetDayEdit[] days = projectHours
             .Select((_, index) => new TimesheetDayEdit(start.AddDays(index), null, null, null, null, 0m, null, []))
             .ToArray();
-        ProjectDayEdit[] projectDays = projectHours
-            .Select((hours, index) => new ProjectDayEdit(start.AddDays(index), hours))
+        ContractPartDayEdit[] contractPartDays = projectHours
+            .Select((hours, index) => new ContractPartDayEdit(start.AddDays(index), hours))
             .ToArray();
-        return new TimesheetEditRequest(days, [new ProjectColumnEdit(Guid.CreateVersion7(), projectDays)]);
+        return new TimesheetEditRequest(days, [new ContractPartEdit(Guid.CreateVersion7(), contractPartDays)]);
     }
 }

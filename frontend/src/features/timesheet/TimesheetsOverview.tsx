@@ -4,11 +4,11 @@ import { SubPageHeader, SubPageTitle } from "@/components/shared/layout/SubPageH
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
 import { formatWorkload } from "@/utils/format";
-import type { CombinedTimesheetMonthSummary, GetCombinedTimesheetOverviewResponse } from "./api";
+import type { GetTimesheetOverviewResponse, TimesheetMonthSummary } from "./api";
 import { TimesheetOverviewRowActions } from "./TimesheetOverviewRowActions";
 
 interface TimesheetsOverviewProps {
-  overview: GetCombinedTimesheetOverviewResponse;
+  overview: GetTimesheetOverviewResponse;
 }
 
 export const TimesheetsOverview = ({ overview }: TimesheetsOverviewProps) => {
@@ -66,7 +66,7 @@ export const TimesheetsOverview = ({ overview }: TimesheetsOverviewProps) => {
   );
 };
 
-const TimesheetDaysOverview = ({ summary }: { summary: CombinedTimesheetMonthSummary }) => (
+const TimesheetDaysOverview = ({ summary }: { summary: TimesheetMonthSummary }) => (
   <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
     <DayStatCard label={Texts.summaryWorkdays} value={summary.workdays} />
     <DayStatCard label={Texts.summaryVacation} value={summary.vacationDays} />

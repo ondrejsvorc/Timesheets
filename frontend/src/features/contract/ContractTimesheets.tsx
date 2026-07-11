@@ -269,7 +269,7 @@ const TimesheetsByMonth = ({ months, isLoading }: TimesheetsByMonthProps) => {
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 font-medium">
                 <EmployeeNameLink employeeId={employee.id}>{employee.fullName}</EmployeeNameLink>
                 <TimesheetMonthLink employeeId={employee.id} year={monthGroup.year} month={monthGroup.month} className="text-sm text-muted-foreground">
-                  {Texts.viewCombinedTimesheet}
+                  {Texts.viewTimesheet}
                 </TimesheetMonthLink>
               </div>
               {employee.timesheets.length === 0 ? (

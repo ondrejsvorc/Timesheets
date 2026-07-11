@@ -13,14 +13,14 @@ internal static class ProjectContractValidation
     private static string NormalizeName(string value) => MultiWhitespace.Replace(value.Trim(), " ").ToLowerInvariant();
     private static string NormalizeRegistrationNumber(string value) => MultiWhitespace.Replace(value, "").Trim().ToLowerInvariant();
 
-    public static async Task<bool> HasDuplicateAsync(Guid projectId, Guid? excludedContractId, string name, string registrationNumber, AppDbContext dbContext, CancellationToken cancellationToken)
+    public static async Task<bool> HasDuplicateAsync(Guid contractEmployeeId, Guid? excludedContractId, string name, string registrationNumber, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         string normalizedName = NormalizeName(name);
         string normalizedRegistrationNumber = NormalizeRegistrationNumber(registrationNumber);
 
         var contracts = await dbContext.Contracts
             .AsNoTracking()
-            .Where(contract => contract.ProjectId == projectId && (!excludedContractId.HasValue || contract.Id != excludedContractId.Value))
+            .Where(contract => contract.ProjectId == contractEmployeeId && (!excludedContractId.HasValue || contract.Id != excludedContractId.Value))
             .Select(contract => new { contract.Name, contract.RegistrationNumber })
             .ToListAsync(cancellationToken);
 

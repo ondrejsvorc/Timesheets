@@ -180,7 +180,7 @@ public sealed class UpdateContractEmployee : IEndpoint
             }
             if (impact.DraftDaysToRemove > 0 && impact.CurrentAssignmentEndDate.HasValue)
             {
-                await RemoveDraftProjectDaysOutsideRangeAsync(
+                await RemoveDraftContractPartDaysOutsideRangeAsync(
                     contractEmployeeId,
                     impact.CurrentAssignmentEndDate.Value,
                     dbContext,
@@ -204,7 +204,7 @@ public sealed class UpdateContractEmployee : IEndpoint
             resultAssignment.EndDate));
     }
 
-    private static async Task RemoveDraftProjectDaysOutsideRangeAsync(Guid contractEmployeeId, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
+    private static async Task RemoveDraftContractPartDaysOutsideRangeAsync(Guid contractEmployeeId, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         List<Guid> dayIds = await dbContext.ContractParts
             .Where(t => t.ContractEmployeeId == contractEmployeeId)

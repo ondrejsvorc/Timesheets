@@ -25,7 +25,7 @@ import { ProjectManagers } from "./features/project/ProjectManagers";
 import { ProjectPage } from "./features/project/ProjectPage";
 import { getProjects } from "./features/projects/api";
 import { ProjectsPage } from "./features/projects/ProjectsPage";
-import { getCombinedTimesheet, getCombinedTimesheetOverview, getTimesheetComments } from "./features/timesheet/api";
+import { getTimesheet, getTimesheetComments, getTimesheetOverview } from "./features/timesheet/api";
 import { TimesheetPage, type TimesheetPageData } from "./features/timesheet/TimesheetPage";
 
 const requireProjectId = (params: Params) => {
@@ -164,12 +164,9 @@ const timesheetLoader = async ({ request }: LoaderFunctionArgs) => {
   await denyUnless(UiAction.timesheet.view, { employeeId }, request);
 
   return {
-    promise: Promise.all([
-      getEmployee(employeeId),
-      getCombinedTimesheetOverview(employeeId, year, month),
-      getCombinedTimesheet(employeeId, year, month),
-      getTimesheetComments(employeeId, year, month),
-    ]).then(([employee, overview, timesheetData, comments]) => ({ employee, overview, timesheetData, comments }) satisfies TimesheetPageData),
+    promise: Promise.all([getEmployee(employeeId), getTimesheetOverview(employeeId, year, month), getTimesheet(employeeId, year, month), getTimesheetComments(employeeId, year, month)]).then(
+      ([employee, overview, timesheetData, comments]) => ({ employee, overview, timesheetData, comments }) satisfies TimesheetPageData,
+    ),
   };
 };
 

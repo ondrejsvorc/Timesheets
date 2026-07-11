@@ -8,19 +8,19 @@ namespace Timesheets.Api.Features.Projects.Endpoints;
 public sealed class DeleteProjectContract : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapDelete("/{projectId}/contracts/{contractId}", Handle)
+        app.MapDelete("/{contractEmployeeId}/contracts/{contractId}", Handle)
            .WithSummary("Delete Project Contract");
 
-    private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(Guid projectId, Guid contractId, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<NoContent, NotFound, Conflict<string>, ForbidHttpResult>> Handle(Guid contractEmployeeId, Guid contractId, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
-        if (!user.CanManageContract(contractId, projectId))
+        if (!user.CanManageContract(contractId, contractEmployeeId))
         {
             return TypedResults.Forbid();
         }
 
         bool exists = await dbContext.Contracts
             .AsNoTracking()
-            .AnyAsync(c => c.ProjectId == projectId && c.Id == contractId, cancellationToken);
+            .AnyAsync(c => c.ProjectId == contractEmployeeId && c.Id == contractId, cancellationToken);
 
         if (!exists)
         {
@@ -33,7 +33,7 @@ public sealed class DeleteProjectContract : IEndpoint
         }
 
         await dbContext.Contracts
-            .Where(c => c.ProjectId == projectId && c.Id == contractId)
+            .Where(c => c.ProjectId == contractEmployeeId && c.Id == contractId)
             .ExecuteDeleteAsync(cancellationToken);
 
         return TypedResults.NoContent();

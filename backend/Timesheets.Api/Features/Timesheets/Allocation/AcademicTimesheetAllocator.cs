@@ -28,7 +28,7 @@ internal sealed class AcademicTimesheetAllocator
             .Where(day =>
                 CanAllocateDay(day) &&
                 !TimesheetInterruptions.SkipAllocationRules(day.Description) &&
-                !day.HasLockedProjectHours() &&
+                !day.HasLockedContractPartHours() &&
                 CanDayReceiveHours(day))
             .ToList();
         if (candidates.Count == 0)
@@ -50,27 +50,27 @@ internal sealed class AcademicTimesheetAllocator
         {
             return;
         }
-        if (day.HasLockedProjectHours())
+        if (day.HasLockedContractPartHours())
         {
             return;
         }
 
-        day.ResetGeneratedAllocations(_sheet.Projects);
+        day.ResetGeneratedAllocations(_sheet.ContractParts);
         MonthlyTargets targets = MonthlyTargets.Remainders(_sheet, _totalWorkload);
-        new DayTargetFiller(_sheet.Projects, _totalWorkload, tracksAttendance: false, targets).Fill(day);
+        new DayTargetFiller(_sheet.ContractParts, _totalWorkload, tracksAttendance: false, targets).Fill(day);
     }
 
     private void ApplyInterruptions()
     {
         foreach (EditableTimesheetDay day in _sheet.Days.Where(day => TimesheetInterruptions.SkipAllocationRules(day.Description)))
         {
-            TimesheetInterruptionHours.ApplyToDayState(day, _sheet.Projects, _totalWorkload, tracksAttendance: false);
+            TimesheetInterruptionHours.ApplyToDayState(day, _sheet.ContractParts, _totalWorkload, tracksAttendance: false);
         }
     }
 
     private void TopUpCoreToStag()
     {
-        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => !day.CoreHoursFixed && !TimesheetInterruptions.SkipAllocationRules(day.Description) && !day.HasLockedProjectHours()))
+        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => !day.CoreHoursFixed && !TimesheetInterruptions.SkipAllocationRules(day.Description) && !day.HasLockedContractPartHours()))
         {
             decimal stagMissing = TimesheetLogic.Normalize(TimesheetLogic.CalculateStagHours(day.Schedules) - day.CoreHours);
             if (stagMissing > 0m)
@@ -155,7 +155,7 @@ internal sealed class AcademicTimesheetAllocator
 
     private void FillDayTargetsRandomly(Dictionary<EditableTimesheetDay, decimal> dayTargets, MonthlyTargets targets)
     {
-        Dictionary<Guid, ProjectColumn> projectsById = _sheet.Projects.ToDictionary(project => project.Id);
+        Dictionary<Guid, ContractPartColumn> projectsById = _sheet.ContractParts.ToDictionary(project => project.Id);
         while (targets.Remaining > 0m)
         {
             List<(EditableTimesheetDay Day, Guid? ProjectId, decimal Gap, decimal Remaining)> options = [];
@@ -172,14 +172,14 @@ internal sealed class AcademicTimesheetAllocator
                     options.Add((day, null, gap, targets.Core));
                 }
 
-                foreach ((Guid projectId, decimal targetLeft) in targets.Projects)
+                foreach ((Guid contractEmployeeId, decimal targetLeft) in targets.Projects)
                 {
                     if (targetLeft > 0m &&
-                        projectsById[projectId].IsActiveOn(day.Date) &&
-                        !projectsById[projectId].Locked &&
-                        !day.ProjectHoursFixed.GetValueOrDefault(projectId))
+                        projectsById[contractEmployeeId].IsActiveOn(day.Date) &&
+                        !projectsById[contractEmployeeId].Locked &&
+                        !day.ContractPartHoursFixed.GetValueOrDefault(contractEmployeeId))
                     {
-                        options.Add((day, projectId, gap, targetLeft));
+                        options.Add((day, contractEmployeeId, gap, targetLeft));
                     }
                 }
             }
@@ -223,24 +223,24 @@ internal sealed class AcademicTimesheetAllocator
             }
             else
             {
-                selectedDay.ProjectHours[selectedProjectId.Value] = TimesheetLogic.Normalize(selectedDay.ProjectHours.GetValueOrDefault(selectedProjectId.Value) + amount);
+                selectedDay.ContractPartHours[selectedProjectId.Value] = TimesheetLogic.Normalize(selectedDay.ContractPartHours.GetValueOrDefault(selectedProjectId.Value) + amount);
                 targets.ConsumeProject(selectedProjectId.Value, amount);
             }
         }
     }
 
     private static bool HasExistingCellHours((EditableTimesheetDay Day, Guid? ProjectId, decimal Gap, decimal Remaining) option) =>
-        option.ProjectId is Guid projectId
-            ? option.Day.ProjectHours.GetValueOrDefault(projectId) > 0m
+        option.ProjectId is Guid contractEmployeeId
+            ? option.Day.ContractPartHours.GetValueOrDefault(contractEmployeeId) > 0m
             : option.Day.CoreHours > 0m;
 
     private void CompleteMonthlyTargets(IReadOnlyList<EditableTimesheetDay> days, MonthlyTargets targets)
     {
-        foreach (ProjectColumn project in _sheet.Projects.OrderBy(_ => Random.Shared.Next()))
+        foreach (ContractPartColumn project in _sheet.ContractParts.OrderBy(_ => Random.Shared.Next()))
         {
-            CompleteProjectTarget(days, project, targets, onlyExistingCells: true);
-            CompleteProjectTarget(days, project, targets, onlyExistingCells: false);
-            CompleteProjectTarget(days, project, targets, onlyExistingCells: true);
+            CompleteContractPartTarget(days, project, targets, onlyExistingCells: true);
+            CompleteContractPartTarget(days, project, targets, onlyExistingCells: false);
+            CompleteContractPartTarget(days, project, targets, onlyExistingCells: true);
         }
 
         CompleteCoreTarget(days, targets, onlyExistingCells: true);
@@ -248,7 +248,7 @@ internal sealed class AcademicTimesheetAllocator
         CompleteCoreTarget(days, targets, onlyExistingCells: true);
     }
 
-    private void CompleteProjectTarget(IReadOnlyList<EditableTimesheetDay> days, ProjectColumn project, MonthlyTargets targets, bool onlyExistingCells)
+    private void CompleteContractPartTarget(IReadOnlyList<EditableTimesheetDay> days, ContractPartColumn project, MonthlyTargets targets, bool onlyExistingCells)
     {
         foreach (EditableTimesheetDay day in days.OrderBy(_ => Random.Shared.Next()))
         {
@@ -256,12 +256,12 @@ internal sealed class AcademicTimesheetAllocator
             {
                 return;
             }
-            if (!project.IsActiveOn(day.Date) || project.Locked || day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+            if (!project.IsActiveOn(day.Date) || project.Locked || day.ContractPartHoursFixed.GetValueOrDefault(project.Id))
             {
                 continue;
             }
 
-            decimal current = day.ProjectHours.GetValueOrDefault(project.Id);
+            decimal current = day.ContractPartHours.GetValueOrDefault(project.Id);
             if (onlyExistingCells && current <= 0m)
             {
                 continue;
@@ -273,7 +273,7 @@ internal sealed class AcademicTimesheetAllocator
                 continue;
             }
 
-            day.ProjectHours[project.Id] = TimesheetLogic.Normalize(current + add);
+            day.ContractPartHours[project.Id] = TimesheetLogic.Normalize(current + add);
             targets.ConsumeProject(project.Id, add);
         }
     }
@@ -310,9 +310,9 @@ internal sealed class AcademicTimesheetAllocator
     {
         List<string> errors = [];
         MonthlyTargets.AppendMismatch(errors, "core", TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.CoreHours)), MonthlyTargets.CoreTarget(_sheet, _totalWorkload));
-        foreach (ProjectColumn project in _sheet.Projects)
+        foreach (ContractPartColumn project in _sheet.ContractParts)
         {
-            MonthlyTargets.AppendMismatch(errors, $"project {project.Id}", TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id))), MonthlyTargets.ProjectTarget(_sheet, project));
+            MonthlyTargets.AppendMismatch(errors, $"project {project.Id}", TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.ContractPartHours.GetValueOrDefault(project.Id))), MonthlyTargets.ContractPartTarget(_sheet, project));
         }
 
         if (errors.Count > 0)
@@ -357,5 +357,5 @@ internal sealed class AcademicTimesheetAllocator
     }
 
     private bool CanDayReceiveHours(EditableTimesheetDay day) =>
-        !day.CoreHoursFixed || _sheet.Projects.Any(project => project.IsActiveOn(day.Date) && !project.Locked && !day.ProjectHoursFixed.GetValueOrDefault(project.Id));
+        !day.CoreHoursFixed || _sheet.ContractParts.Any(project => project.IsActiveOn(day.Date) && !project.Locked && !day.ContractPartHoursFixed.GetValueOrDefault(project.Id));
 }

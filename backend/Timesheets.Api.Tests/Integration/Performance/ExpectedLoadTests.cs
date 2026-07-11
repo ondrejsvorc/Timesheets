@@ -20,7 +20,7 @@ public sealed class ExpectedLoadTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task ExpectedLoad_HandlesSixHundredEmployeesAndTenProjectColumns()
+    public async Task ExpectedLoad_HandlesSixHundredEmployeesAndTenContractPartColumns()
     {
         (Guid employeeId, int year, int month) = await SeedExpectedLoadAsync();
         await Client.GetAsync("/api/employees");
@@ -30,19 +30,19 @@ public sealed class ExpectedLoadTests : BaseIntegrationTest
         employeesTimer.Stop();
 
         Stopwatch timesheetTimer = Stopwatch.StartNew();
-        HttpResponseMessage timesheetResponse = await Client.GetAsync($"/api/timesheets/combined?employeeId={employeeId}&year={year}&month={month}");
+        HttpResponseMessage timesheetResponse = await Client.GetAsync($"/api/timesheets?employeeId={employeeId}&year={year}&month={month}");
         timesheetTimer.Stop();
 
         Assert.Equal(HttpStatusCode.OK, employeesResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, timesheetResponse.StatusCode);
 
         GetEmployees.Response? employees = await employeesResponse.Content.ReadFromJsonAsync<GetEmployees.Response>();
-        GetCombinedTimesheet.Response? timesheet = await timesheetResponse.Content.ReadFromJsonAsync<GetCombinedTimesheet.Response>();
+        GetTimesheet.Response? timesheet = await timesheetResponse.Content.ReadFromJsonAsync<GetTimesheet.Response>();
         Assert.NotNull(employees);
         Assert.NotNull(timesheet);
         Assert.True(employees!.Employees.Count() >= 600);
-        Assert.Equal(10, timesheet!.Projects.Count());
-        Assert.Equal(10, timesheet.Projects.Select(project => project.RegistrationNumber).Distinct().Count());
+        Assert.Equal(10, timesheet!.ContractParts.Count());
+        Assert.Equal(10, timesheet.ContractParts.Select(project => project.RegistrationNumber).Distinct().Count());
         Assert.Equal(DateTime.DaysInMonth(year, month), timesheet.Days.Count());
         Assert.True(employeesTimer.Elapsed < TimeSpan.FromSeconds(5), $"Načtení zaměstnanců trvalo {employeesTimer.Elapsed}.");
         Assert.True(timesheetTimer.Elapsed < TimeSpan.FromSeconds(5), $"Načtení kombinovaného výkazu trvalo {timesheetTimer.Elapsed}.");

@@ -9,13 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
 import { cn } from "@/utils/common";
-import { type GetCombinedTimesheetOverviewResponse, type TimesheetStatusAction, updateCombinedTimesheetStatus } from "./api";
+import { type GetTimesheetOverviewResponse, type TimesheetStatusAction, updateTimesheetStatus } from "./api";
 import type { Timesheet, TimesheetEvaluation } from "./Timesheet";
 import { type TimesheetWorkflowAction, TimesheetWorkflowConfirmDialog } from "./TimesheetWorkflowConfirmDialog";
 
 interface TimesheetWorkflowToolbarProps {
   timesheet: Timesheet;
-  overview: GetCombinedTimesheetOverviewResponse;
+  overview: GetTimesheetOverviewResponse;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   onSave: (signal: AbortSignal) => Promise<TimesheetEvaluation>;
@@ -33,13 +33,13 @@ export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, on
   const isDraft = overview.status === Texts.statusInProgress;
   const isSubmitted = overview.status === Texts.statusPendingApproval;
   const isApproved = overview.status === Texts.statusApproved;
-  const projectItems = overview.items.filter((item) => item.kind === "project");
-  const allProjectsApproved = projectItems.length === 0 || projectItems.every((item) => item.status === Texts.statusApproved);
+  const contractPartItems = overview.items.filter((item) => item.kind === "contractPart");
+  const allContractPartsApproved = contractPartItems.length === 0 || contractPartItems.every((item) => item.status === Texts.statusApproved);
   const canSubmit = useCan(UiAction.timesheet.submit, { employeeId });
   const canManageWhole = useCan(UiAction.timesheet.finalApprove, { employeeId });
 
   const changeAttendanceStatus = async (action: TimesheetStatusAction, comment: string, signal: AbortSignal) => {
-    await updateCombinedTimesheetStatus(
+    await updateTimesheetStatus(
       {
         employeeId,
         year: overview.year,
@@ -97,7 +97,7 @@ export const TimesheetWorkflowToolbar = ({ timesheet, overview, isFullscreen, on
           )}
           {isSubmitted && canManageWhole && (
             <>
-              {allProjectsApproved && (
+              {allContractPartsApproved && (
                 <Button type="button" onClick={() => setActiveWorkflow("finalApprove")}>
                   <span className="inline-flex items-center gap-2">
                     <Check className="size-4" />

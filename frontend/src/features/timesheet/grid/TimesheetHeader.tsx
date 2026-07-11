@@ -2,15 +2,15 @@ import { Copy, Lock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Texts } from "@/constants/texts";
-import type { CoreDefinition, ProjectDefinition } from "../Timesheet";
+import type { ContractPartDefinition, CoreDefinition } from "../Timesheet";
 
 interface TimesheetHeaderProps {
   readOnly?: boolean;
   tracksAttendance: boolean;
-  projects: ProjectDefinition[];
+  contractParts: ContractPartDefinition[];
   core: CoreDefinition;
   onGenerateMonthly: () => void | Promise<void>;
-  onCopyProjectColumn: (projectId: string) => void | Promise<void>;
+  onCopyContractPartColumn: (contractEmployeeId: string) => void | Promise<void>;
 }
 
 const formatWorkloadPercent = (workload: number) => {
@@ -19,7 +19,7 @@ const formatWorkloadPercent = (workload: number) => {
     .replace(".", ",");
 };
 
-export const TimesheetHeader = ({ readOnly = false, tracksAttendance, projects, core, onGenerateMonthly, onCopyProjectColumn }: TimesheetHeaderProps) => {
+export const TimesheetHeader = ({ readOnly = false, tracksAttendance, contractParts, core, onGenerateMonthly, onCopyContractPartColumn }: TimesheetHeaderProps) => {
   return (
     <div className="relative z-20 grid grid-cols-subgrid col-[1/-1] sticky top-0 self-start bg-slate-100 border-b border-slate-300">
       <div className="sticky left-0 z-40 bg-slate-100 border-r border-slate-300 h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">{Texts.day}</div>
@@ -40,24 +40,24 @@ export const TimesheetHeader = ({ readOnly = false, tracksAttendance, projects, 
       )}
       {!tracksAttendance && <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">STAG</div>}
       <div className="h-10 px-2 flex items-center justify-center text-center font-medium whitespace-nowrap min-w-0">Kmen ({formatWorkloadPercent(core.workload)}%)</div>
-      {projects.map((project, index) => (
-        <div key={project.id} className="h-10 px-2 flex items-center justify-center gap-1 text-center font-medium whitespace-nowrap min-w-0">
+      {contractParts.map((part, index) => (
+        <div key={part.id} className="h-10 px-2 flex items-center justify-center gap-1 text-center font-medium whitespace-nowrap min-w-0">
           <Tooltip delayDuration={120}>
             <TooltipTrigger asChild>
               <span className="cursor-help border-b border-dotted border-slate-400">Z{index + 1}</span>
             </TooltipTrigger>
             <TooltipContent side="top" className="space-y-1 text-left">
-              <div className="font-medium">{project.name}</div>
-              <div>{project.registrationNumber || Texts.noContractNumber}</div>
-              <div>{formatWorkloadPercent(project.workload)} %</div>
+              <div className="font-medium">{part.name}</div>
+              <div>{part.registrationNumber || Texts.noContractNumber}</div>
+              <div>{formatWorkloadPercent(part.workload)} %</div>
             </TooltipContent>
           </Tooltip>
-          {project.locked && <Lock className="h-3.5 w-3.5 text-slate-500" aria-label={Texts.lockContractColumn} />}
+          {part.locked && <Lock className="h-3.5 w-3.5 text-slate-500" aria-label={Texts.lockContractColumn} />}
           <Button
             variant="ghost"
             size="icon"
             className="h-6 w-6 text-slate-500 hover:text-slate-700 hover:bg-slate-200 transition-all active:scale-90"
-            onClick={() => void onCopyProjectColumn(project.id)}
+            onClick={() => void onCopyContractPartColumn(part.id)}
             title={Texts.copyProjectColumn}
           >
             <Copy className="h-3.5 w-3.5" />

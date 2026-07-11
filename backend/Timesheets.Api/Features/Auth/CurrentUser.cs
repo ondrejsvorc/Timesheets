@@ -101,16 +101,16 @@ internal sealed class CurrentUser(IHttpContextAccessor httpContextAccessor, AppD
             return false;
         }
 
-        Guid? projectId = await dbContext.Contracts
+        Guid? contractEmployeeId = await dbContext.Contracts
             .AsNoTracking()
             .Where(c => c.Id == contractId)
             .Select(c => (Guid?)c.ProjectId)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return projectId.HasValue && ProjectManagerOf.Contains(projectId.Value);
+        return contractEmployeeId.HasValue && ProjectManagerOf.Contains(contractEmployeeId.Value);
     }
 
-    public bool CanManageProjectTimesheetParts(IReadOnlyList<ProjectTimesheetPart> parts)
+    public bool CanManageContractPartScopes(IReadOnlyList<ContractPartScope> parts)
     {
         if (IsAtLeast(UserRole.GlobalManager))
         {

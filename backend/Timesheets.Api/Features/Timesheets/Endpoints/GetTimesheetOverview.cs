@@ -8,11 +8,11 @@ using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Timesheets.Endpoints;
 
-public sealed class GetCombinedTimesheetOverview : IEndpoint
+public sealed class GetTimesheetOverview : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) =>
-        app.MapGet("/combined/overview", Handle)
-           .WithSummary("Get Combined Timesheet Overview");
+        app.MapGet("/overview", Handle)
+           .WithSummary("Get Timesheet Overview");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
     public sealed record OverviewItem(
@@ -66,7 +66,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
 
         await ContractPartInitializer.EnsureForEmployeeMonthAsync(request.EmployeeId, request.Year, request.Month, dbContext, holidaysFactory, cancellationToken);
 
-        List<ProjectRowSource> projectRows = await dbContext.ContractParts
+        List<ProjectRowSource> contractPartRows = await dbContext.ContractParts
             .AsNoTracking()
             .Where(part => part.TimesheetId == attendanceInfo.Id)
             .Join(
@@ -93,7 +93,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             .Select(day => day with { IsHoliday = day.IsHoliday || holidays.Contains(DateOnly.FromDateTime(day.Date)) })
             .ToList();
 
-        decimal totalProjectWorkload = projectRows.Sum(item => item.Workload);
+        decimal totalProjectWorkload = contractPartRows.Sum(item => item.Workload);
         decimal totalWorkload = await TimesheetWorkloads.GetAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
         TimesheetMonthSummary summary = TimesheetMonthSummaryCalculator.Compute(request.Year, request.Month, summaryDays, totalWorkload);
@@ -103,7 +103,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             new(attendanceInfo.Id, "core", "Kmen", null, null, coreWorkload, [], attendanceInfo.Status, null, null),
         ];
 
-        Guid[] contractIds = projectRows.Select(row => row.ContractId).Distinct().ToArray();
+        Guid[] contractIds = contractPartRows.Select(row => row.ContractId).Distinct().ToArray();
         List<ManagerRowSource> managerRows = (await dbContext.ContractManagers
             .AsNoTracking()
             .Include(manager => manager.Employee)
@@ -115,14 +115,14 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
             .ToList();
         ILookup<Guid, string> managersByContract = managerRows.ToLookup(manager => manager.ContractId, manager => manager.FullName);
 
-        for (int index = 0; index < projectRows.Count; index++)
+        for (int index = 0; index < contractPartRows.Count; index++)
         {
-            ProjectRowSource row = projectRows[index];
-            string projectStatus = TimesheetWorkflow.ResolveProjectDisplayStatus(row.StatusCode);
+            ProjectRowSource row = contractPartRows[index];
+            string projectStatus = TimesheetWorkflow.ResolveContractPartDisplayStatus(row.StatusCode);
 
             items.Add(new OverviewItem(
                 row.TimesheetId,
-                "project",
+                "contractPart",
                 $"Projektová činnost {index + 1}",
                 row.ContractRegistrationNumber,
                 row.Position,

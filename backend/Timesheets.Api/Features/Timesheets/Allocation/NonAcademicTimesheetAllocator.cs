@@ -15,13 +15,13 @@ internal sealed class NonAcademicTimesheetAllocator
     public void AllocateMonth()
     {
         ResetGeneratedAllocations();
-        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => day.HasLockedProjectHours()))
+        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => day.HasLockedContractPartHours()))
         {
-            DistributeLockedProjectDay(day);
+            DistributeLockedContractPartDay(day);
         }
 
         MonthlyTargets targets = MonthlyTargets.NonAcademicCapacityRemainders(_sheet, AvailableMonthCapacity());
-        DayTargetFiller filler = new(_sheet.Projects, _totalWorkload, tracksAttendance: true, targets);
+        DayTargetFiller filler = new(_sheet.ContractParts, _totalWorkload, tracksAttendance: true, targets);
         foreach (EditableTimesheetDay day in _sheet.Days.Where(day => AvailableDayCapacity(day) > 0m))
         {
             filler.Fill(day);
@@ -36,15 +36,15 @@ internal sealed class NonAcademicTimesheetAllocator
         {
             return;
         }
-        if (day.HasLockedProjectHours())
+        if (day.HasLockedContractPartHours())
         {
-            DistributeLockedProjectDay(day);
+            DistributeLockedContractPartDay(day);
             return;
         }
 
-        day.ResetGeneratedAllocations(_sheet.Projects);
+        day.ResetGeneratedAllocations(_sheet.ContractParts);
         MonthlyTargets targets = MonthlyTargets.NonAcademicCapacityRemainders(_sheet, AvailableMonthCapacity());
-        new DayTargetFiller(_sheet.Projects, _totalWorkload, tracksAttendance: true, targets).Fill(day);
+        new DayTargetFiller(_sheet.ContractParts, _totalWorkload, tracksAttendance: true, targets).Fill(day);
     }
 
     private void ResetGeneratedAllocations()
@@ -56,29 +56,29 @@ internal sealed class NonAcademicTimesheetAllocator
                 day.CoreHours = 0m;
             }
 
-            foreach (ProjectColumn project in _sheet.Projects)
+            foreach (ContractPartColumn project in _sheet.ContractParts)
             {
-                if (!day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+                if (!day.ContractPartHoursFixed.GetValueOrDefault(project.Id))
                 {
-                    day.ProjectHours[project.Id] = day.ProjectFloor(project.Id);
+                    day.ContractPartHours[project.Id] = day.ProjectFloor(project.Id);
                 }
             }
         }
     }
 
-    private void DistributeLockedProjectDay(EditableTimesheetDay day)
+    private void DistributeLockedContractPartDay(EditableTimesheetDay day)
     {
-        foreach (ProjectColumn project in _sheet.Projects)
+        foreach (ContractPartColumn project in _sheet.ContractParts)
         {
-            if (!day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+            if (!day.ContractPartHoursFixed.GetValueOrDefault(project.Id))
             {
-                day.ProjectHours[project.Id] = day.ProjectFloor(project.Id);
+                day.ContractPartHours[project.Id] = day.ProjectFloor(project.Id);
             }
         }
 
         if (!day.CoreHoursFixed)
         {
-            decimal projectHours = TimesheetLogic.Normalize(_sheet.Projects.Sum(project => day.ProjectHours.GetValueOrDefault(project.Id)));
+            decimal projectHours = TimesheetLogic.Normalize(_sheet.ContractParts.Sum(project => day.ContractPartHours.GetValueOrDefault(project.Id)));
             day.CoreHours = TimesheetLogic.Normalize(Math.Max(0m, AvailableDayCapacity(day) - projectHours));
         }
     }
@@ -93,10 +93,10 @@ internal sealed class NonAcademicTimesheetAllocator
 
     private void ReconcileProjectRemainders()
     {
-        foreach (ProjectColumn project in _sheet.Projects.Where(project => !project.Locked).OrderBy(_ => Random.Shared.Next()))
+        foreach (ContractPartColumn project in _sheet.ContractParts.Where(project => !project.Locked).OrderBy(_ => Random.Shared.Next()))
         {
-            decimal target = MonthlyTargets.ProjectTarget(_sheet, project);
-            decimal missing = TimesheetLogic.Normalize(target - _sheet.Days.Sum(day => day.ProjectHours.GetValueOrDefault(project.Id)));
+            decimal target = MonthlyTargets.ContractPartTarget(_sheet, project);
+            decimal missing = TimesheetLogic.Normalize(target - _sheet.Days.Sum(day => day.ContractPartHours.GetValueOrDefault(project.Id)));
             if (missing <= 0m)
             {
                 continue;
@@ -112,7 +112,7 @@ internal sealed class NonAcademicTimesheetAllocator
 
                 decimal fromCore = day.CoreHoursFixed ? 0m : Math.Min(day.CoreHours, amount);
                 day.CoreHours = TimesheetLogic.Normalize(day.CoreHours - fromCore);
-                day.ProjectHours[project.Id] = TimesheetLogic.Normalize(day.ProjectHours.GetValueOrDefault(project.Id) + amount);
+                day.ContractPartHours[project.Id] = TimesheetLogic.Normalize(day.ContractPartHours.GetValueOrDefault(project.Id) + amount);
                 missing = TimesheetLogic.Normalize(missing - amount);
                 if (missing <= 0m)
                 {
@@ -122,15 +122,15 @@ internal sealed class NonAcademicTimesheetAllocator
         }
     }
 
-    private IEnumerable<EditableTimesheetDay> AdjustableDays(ProjectColumn project) =>
+    private IEnumerable<EditableTimesheetDay> AdjustableDays(ContractPartColumn project) =>
         _sheet.Days
             .Where(day =>
                 project.IsActiveOn(day.Date) &&
-                !day.ProjectHoursFixed.GetValueOrDefault(project.Id) &&
+                !day.ContractPartHoursFixed.GetValueOrDefault(project.Id) &&
                 !TimesheetInterruptions.HasBusinessTripInterruption(day.Description) &&
                 !TimesheetInterruptions.HasProportionalInterruption(day.Description) &&
                 AdjustmentCapacity(day) > 0m)
-            .OrderByDescending(day => day.ProjectHours.GetValueOrDefault(project.Id) > 0m)
+            .OrderByDescending(day => day.ContractPartHours.GetValueOrDefault(project.Id) > 0m)
             .ThenBy(_ => Random.Shared.Next());
 
     private decimal AdjustmentCapacity(EditableTimesheetDay day)

@@ -16,10 +16,10 @@ public class ContractManagerLifecycleTests : BaseIntegrationTest
         CreateProject.Request createProjectRequest = new("Test Project for Contract Managers", TestIdentifiers.Project(1050), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
         HttpResponseMessage projectResponse = await Client.PostAsJsonAsync("/api/projects", createProjectRequest);
         Assert.Equal(HttpStatusCode.Created, projectResponse.StatusCode);
-        Guid projectId = (await projectResponse.Content.ReadFromJsonAsync<CreateProject.Response>())!.Project.Id;
+        Guid contractEmployeeId = (await projectResponse.Content.ReadFromJsonAsync<CreateProject.Response>())!.Project.Id;
 
         CreateProjectContract.Request createContractRequest = new("Test Contract Manager", TestIdentifiers.Contract(1050));
-        HttpResponseMessage contractResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", createContractRequest);
+        HttpResponseMessage contractResponse = await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", createContractRequest);
         Assert.Equal(HttpStatusCode.Created, contractResponse.StatusCode);
         Guid contractId = (await contractResponse.Content.ReadFromJsonAsync<CreateProjectContract.Response>())!.ProjectContract.Id;
 
@@ -27,14 +27,14 @@ public class ContractManagerLifecycleTests : BaseIntegrationTest
         HttpResponseMessage addResponse = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/managers", new AddContractManager.Request(contractId, managerId));
         Assert.Equal(HttpStatusCode.Created, addResponse.StatusCode);
 
-        GetProjectContractsManagers.Response? managersList = await (await Client.GetAsync($"/api/projects/{projectId}/contracts/managers")).Content.ReadFromJsonAsync<GetProjectContractsManagers.Response>();
+        GetProjectContractsManagers.Response? managersList = await (await Client.GetAsync($"/api/projects/{contractEmployeeId}/contracts/managers")).Content.ReadFromJsonAsync<GetProjectContractsManagers.Response>();
         Assert.NotNull(managersList);
         Assert.Contains(managersList!.Managers, manager => manager.EmployeeId == managerId && manager.ContractId == contractId);
 
         HttpResponseMessage deleteResponse = await Client.DeleteAsync($"/api/contracts/{contractId}/managers/{managerId}");
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
 
-        GetProjectContractsManagers.Response? managersAfterDelete = await (await Client.GetAsync($"/api/projects/{projectId}/contracts/managers")).Content.ReadFromJsonAsync<GetProjectContractsManagers.Response>();
+        GetProjectContractsManagers.Response? managersAfterDelete = await (await Client.GetAsync($"/api/projects/{contractEmployeeId}/contracts/managers")).Content.ReadFromJsonAsync<GetProjectContractsManagers.Response>();
         Assert.DoesNotContain(managersAfterDelete!.Managers, manager => manager.EmployeeId == managerId && manager.ContractId == contractId);
     }
 }

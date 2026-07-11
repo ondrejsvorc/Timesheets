@@ -95,7 +95,7 @@ internal static class ContractPartInitializer
             CreatedAt = DateTime.UtcNow,
         };
 
-        ProjectDateRange range = EffectiveRange(assignment);
+        ContractPartDateRange range = EffectiveRange(assignment);
         for (int day = 1; day <= DateTime.DaysInMonth(year, month); day++)
         {
             DateTime date = new(year, month, day, 0, 0, 0, DateTimeKind.Utc);
@@ -120,7 +120,7 @@ internal static class ContractPartInitializer
     }
 
     private static HashSet<DateOnly> GetHolidays(int year, ICzechHolidaysFactory holidaysFactory) => holidaysFactory.Create(year).Select(holiday => holiday.Date).ToHashSet();
-    private static ProjectDateRange EffectiveRange(ContractEmployee assignment) => TimesheetEngine.EffectiveProjectRange(
+    private static ContractPartDateRange EffectiveRange(ContractEmployee assignment) => TimesheetEngine.EffectiveContractPartRange(
         assignment.StartDate,
         assignment.EndDate,
         assignment.Contract?.Project?.StartDate ?? assignment.StartDate,

@@ -27,7 +27,7 @@ internal static class TimesheetInterruptionHours
         return stagHours > 0m ? TimesheetLogic.Normalize(Math.Min(12m, stagHours)) : 0m;
     }
 
-    public static void ApplyToDayState(EditableTimesheetDay day, IReadOnlyList<ProjectColumn> projects, decimal totalWorkload, bool tracksAttendance)
+    public static void ApplyToDayState(EditableTimesheetDay day, IReadOnlyList<ContractPartColumn> projects, decimal totalWorkload, bool tracksAttendance)
     {
         if (TimesheetInterruptions.HasBusinessTripInterruption(day.Description))
         {
@@ -46,14 +46,14 @@ internal static class TimesheetInterruptionHours
         }
     }
 
-    private static void ApplyProportional(EditableTimesheetDay day, IReadOnlyList<ProjectColumn> projects, decimal totalWorkload, decimal capacity)
+    private static void ApplyProportional(EditableTimesheetDay day, IReadOnlyList<ContractPartColumn> projects, decimal totalWorkload, decimal capacity)
     {
         if (totalWorkload <= 0m)
         {
             return;
         }
 
-        List<ProjectColumn> activeProjects = projects.Where(project => project.IsActiveOn(day.Date)).ToList();
+        List<ContractPartColumn> activeProjects = projects.Where(project => project.IsActiveOn(day.Date)).ToList();
         decimal projectWorkload = activeProjects.Sum(project => project.Workload);
         decimal coreWorkload = Math.Max(0m, totalWorkload - projectWorkload);
         decimal allocated = 0m;
@@ -62,31 +62,31 @@ internal static class TimesheetInterruptionHours
             allocated += day.CoreHours;
         }
 
-        foreach (ProjectColumn project in projects.Where(project => !project.IsActiveOn(day.Date)))
+        foreach (ContractPartColumn project in projects.Where(project => !project.IsActiveOn(day.Date)))
         {
-            if (day.ProjectHoursFixed.GetValueOrDefault(project.Id))
+            if (day.ContractPartHoursFixed.GetValueOrDefault(project.Id))
             {
-                allocated += day.ProjectHours.GetValueOrDefault(project.Id);
+                allocated += day.ContractPartHours.GetValueOrDefault(project.Id);
             }
             else
             {
-                day.ProjectHours[project.Id] = day.ProjectHoursFloor.GetValueOrDefault(project.Id);
+                day.ContractPartHours[project.Id] = day.ContractPartHoursFloor.GetValueOrDefault(project.Id);
             }
         }
 
-        foreach (ProjectColumn project in activeProjects.Where(project => day.ProjectHoursFixed.GetValueOrDefault(project.Id)))
+        foreach (ContractPartColumn project in activeProjects.Where(project => day.ContractPartHoursFixed.GetValueOrDefault(project.Id)))
         {
-            allocated += day.ProjectHours.GetValueOrDefault(project.Id);
+            allocated += day.ContractPartHours.GetValueOrDefault(project.Id);
         }
 
-        List<ProjectColumn> mutableProjects = activeProjects.Where(project => !day.ProjectHoursFixed.GetValueOrDefault(project.Id)).ToList();
+        List<ContractPartColumn> mutableProjects = activeProjects.Where(project => !day.ContractPartHoursFixed.GetValueOrDefault(project.Id)).ToList();
         if (!day.CoreHoursFixed)
         {
             day.CoreHours = 0m;
         }
-        foreach (ProjectColumn project in mutableProjects)
+        foreach (ContractPartColumn project in mutableProjects)
         {
-            day.ProjectHours[project.Id] = day.ProjectHoursFloor.GetValueOrDefault(project.Id);
+            day.ContractPartHours[project.Id] = day.ContractPartHoursFloor.GetValueOrDefault(project.Id);
         }
 
         decimal mutableWorkload = (day.CoreHoursFixed ? 0m : coreWorkload) + mutableProjects.Sum(project => project.Workload);
@@ -104,13 +104,13 @@ internal static class TimesheetInterruptionHours
 
         for (int index = 0; index < mutableProjects.Count; index++)
         {
-            ProjectColumn project = mutableProjects[index];
-            decimal floor = day.ProjectHoursFloor.GetValueOrDefault(project.Id);
+            ContractPartColumn project = mutableProjects[index];
+            decimal floor = day.ContractPartHoursFloor.GetValueOrDefault(project.Id);
             decimal hours = index == mutableProjects.Count - 1
                 ? TimesheetLogic.Normalize(Math.Max(floor, Math.Max(0m, capacity - allocated)))
                 : TimesheetLogic.Normalize(Math.Max(floor, remaining * project.Workload / mutableWorkload));
-            day.ProjectHours[project.Id] = TimesheetLogic.Normalize(Math.Round(hours * 2m, MidpointRounding.AwayFromZero) / 2m);
-            allocated += day.ProjectHours[project.Id];
+            day.ContractPartHours[project.Id] = TimesheetLogic.Normalize(Math.Round(hours * 2m, MidpointRounding.AwayFromZero) / 2m);
+            allocated += day.ContractPartHours[project.Id];
         }
     }
 }

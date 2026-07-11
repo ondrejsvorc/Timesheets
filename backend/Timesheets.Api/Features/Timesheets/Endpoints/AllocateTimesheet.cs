@@ -15,8 +15,8 @@ public sealed class AllocateTimesheet : IEndpoint
             .WithSummary("Allocate Timesheet Edit")
             .WithRequestValidation<TimesheetEditRequest>();
 
-    public sealed record ProjectCell(decimal Hours, bool Locked);
-    public sealed record DayResponse(DateTime Date, int?[] Work, int?[] Break, decimal CoreHours, IReadOnlyDictionary<Guid, ProjectCell> ProjectCells, bool AttendanceAdjusted);
+    public sealed record ContractPartCell(decimal Hours, bool Locked);
+    public sealed record DayResponse(DateTime Date, int?[] Work, int?[] Break, decimal CoreHours, IReadOnlyDictionary<Guid, ContractPartCell> ContractPartCells, bool AttendanceAdjusted);
     public sealed record Response(IReadOnlyList<DayResponse> Days, TimesheetEvaluation Evaluation);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, [FromQuery] int? day, [FromBody] TimesheetEditRequest request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
@@ -69,11 +69,11 @@ public sealed class AllocateTimesheet : IEndpoint
                 Work: [ConvertToMinutes(day.ClockIn), ConvertToMinutes(day.ClockOut)],
                 Break: [ConvertToMinutes(day.BreakStart), ConvertToMinutes(day.BreakEnd)],
                 CoreHours: day.CoreHours,
-                ProjectCells: sheet.Projects.ToDictionary(
+                ContractPartCells: sheet.ContractParts.ToDictionary(
                     project => project.Id,
-                    project => new ProjectCell(
-                        day.ProjectHours.GetValueOrDefault(project.Id),
-                        day.ProjectHoursFixed.GetValueOrDefault(project.Id))),
+                    project => new ContractPartCell(
+                        day.ContractPartHours.GetValueOrDefault(project.Id),
+                        day.ContractPartHoursFixed.GetValueOrDefault(project.Id))),
                 AttendanceAdjusted: day.AttendanceAdjusted))
             .ToList();
         return new Response(Days: allocation, Evaluation: TimesheetEngine.Evaluate(loaded, sheet));

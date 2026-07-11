@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { cn } from "@/utils/common";
 import { formatHours } from "@/utils/format";
-import type { ProjectDefinition as Project, TimesheetDayEvaluation, TimesheetDay as TimesheetDayModel, TimesheetIssue } from "../Timesheet";
+import type { ContractPartDefinition as ContractPart, TimesheetDayEvaluation, TimesheetDay as TimesheetDayModel, TimesheetIssue } from "../Timesheet";
 import { Interruption } from "./Interruption";
 import { LockableField } from "./LockableField";
 import { StagSchedule } from "./StagSchedule";
@@ -43,14 +43,14 @@ interface TimesheetDayProps {
   tracksAttendance: boolean;
   day: TimesheetDayModel;
   dayIndex: number;
-  projects: Project[];
+  contractParts: ContractPart[];
   evaluation?: TimesheetDayEvaluation;
   issues: TimesheetIssue[];
   onUpdateDay: (index: number, updater: (day: TimesheetDayModel) => void) => void;
   onAllocate: (day?: number) => Promise<void>;
 }
 
-const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, evaluation, issues, onUpdateDay, onAllocate }: TimesheetDayProps) => {
+const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts, evaluation, issues, onUpdateDay, onAllocate }: TimesheetDayProps) => {
   const issuesByField = useMemo(() => {
     const grouped = new Map<string, TimesheetIssue[]>();
     const row: TimesheetIssue[] = [];
@@ -73,7 +73,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
   const isWeekendOrHoliday = day.isWeekend || day.isHoliday;
   const shouldLockByInterruption = Boolean(evaluation?.hasCoreOnlyInterruption || evaluation?.hasProportionalInterruption);
   const coreLocked = shouldLockByInterruption;
-  const allocatedInputHours = (day.coreHours ?? 0) + Object.values(day.projectCells).reduce((sum, cell) => sum + cell.hours, 0);
+  const allocatedInputHours = (day.coreHours ?? 0) + Object.values(day.contractPartCells).reduce((sum, cell) => sum + cell.hours, 0);
   const canGenerateAttendance = tracksAttendance && issues.some((issue) => issue.code === "ERR-ATT-13") && (day.attendance.schedules.length > 0 || allocatedInputHours > 0);
   const stagMissing = !tracksAttendance && issues.some((issue) => issue.code === "ERR-ALL-02") ? roundHours(calculateStagHours(day) - (day.coreHours ?? 0)) : 0;
   const displayBalance = stagMissing > 0 ? Math.max(balance, stagMissing) : balance;
@@ -200,15 +200,15 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
           </LockableField>
         </ValidationField>
       </div>
-      {projects.map((project) => {
-        const active = project.activeDays[dayIndex] ?? true;
-        const cell = day.projectCells[project.id] ?? { hours: 0, locked: false };
-        const systemLocked = project.locked || shouldLockByInterruption || !active;
+      {contractParts.map((part) => {
+        const active = part.activeDays[dayIndex] ?? true;
+        const cell = day.contractPartCells[part.id] ?? { hours: 0, locked: false };
+        const systemLocked = part.locked || shouldLockByInterruption || !active;
         const locked = systemLocked || cell.locked;
         const lockLabel = cell.locked ? Texts.unlockProjectCell : Texts.lockProjectCell;
         return (
-          <div key={project.id} className={cellClass}>
-            <ValidationField validations={fieldIssues(`project:${project.id}`)}>
+          <div key={part.id} className={cellClass}>
+            <ValidationField validations={fieldIssues(`contractPart:${part.id}`)}>
               <div className="flex w-full items-center justify-end gap-1">
                 <LockableField locked={systemLocked}>
                   <HoursToHumanTooltip hours={cell.hours}>
@@ -216,9 +216,9 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
                       value={Number(cell.hours)}
                       onChange={(value) =>
                         update((draft) => {
-                          const current = draft.projectCells[project.id] ?? { hours: 0, locked: false };
+                          const current = draft.contractPartCells[part.id] ?? { hours: 0, locked: false };
                           const hours = value ?? 0;
-                          draft.projectCells[project.id] = { ...current, hours };
+                          draft.contractPartCells[part.id] = { ...current, hours };
                         })
                       }
                       commitOnChange
@@ -235,8 +235,8 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, projects, eval
                   className={cn("h-7 w-7 shrink-0", cell.locked ? "text-primary" : "text-slate-500")}
                   onClick={() =>
                     update((draft) => {
-                      const current = draft.projectCells[project.id] ?? { hours: 0, locked: false };
-                      draft.projectCells[project.id] = { ...current, locked: !current.locked };
+                      const current = draft.contractPartCells[part.id] ?? { hours: 0, locked: false };
+                      draft.contractPartCells[part.id] = { ...current, locked: !current.locked };
                     })
                   }
                   title={lockLabel}
