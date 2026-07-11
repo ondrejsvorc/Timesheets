@@ -24,17 +24,17 @@ internal static class ContractEmployeeAddPlanner
         int startKey = start.Year * 100 + start.Month;
         int? endKey = end.HasValue ? end.Value.Year * 100 + end.Value.Month : null;
 
-        List<Guid> statusIds = await dbContext.ProjectTimesheets
+        List<string> statusCodes = await dbContext.ProjectTimesheets
             .AsNoTracking()
             .Where(t => t.ContractId == contractId && t.EmployeeId == request.EmployeeId)
             .Where(t => (t.Year * 100 + t.Month) >= startKey)
             .Where(t => endKey == null || (t.Year * 100 + t.Month) <= endKey.Value)
-            .Where(t => t.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId || t.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId)
-            .Select(t => t.TimesheetStatusId)
+            .Where(t => t.TimesheetStatus.Code == TimesheetStatusCodes.Submitted || t.TimesheetStatus.Code == TimesheetStatusCodes.Approved)
+            .Select(t => t.TimesheetStatus.Code)
             .ToListAsync(cancellationToken);
 
-        int submitted = statusIds.Count(id => id == TimesheetWorkflow.SubmittedStatusId);
-        int approved = statusIds.Count(id => id == TimesheetWorkflow.ApprovedStatusId);
+        int submitted = statusCodes.Count(TimesheetWorkflow.IsSubmitted);
+        int approved = statusCodes.Count(TimesheetWorkflow.IsApproved);
 
         if (submitted > 0 || approved > 0)
         {

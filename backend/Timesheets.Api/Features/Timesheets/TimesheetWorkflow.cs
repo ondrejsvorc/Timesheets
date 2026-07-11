@@ -1,3 +1,5 @@
+using Timesheets.Api.Data.Models;
+
 namespace Timesheets.Api.Features.Timesheets;
 
 internal static class TimesheetWorkflow
@@ -10,30 +12,54 @@ internal static class TimesheetWorkflow
     public const string SubmittedStatusName = "Ke schválení";
     public const string ApprovedStatusName = "Schválený";
 
-    public static bool IsValidAttendanceTransition(Guid from, Guid to) => (from, to) switch
+    public static Guid StatusId(string code) => code switch
     {
-        (Guid f, Guid t) when f == DraftStatusId && t == SubmittedStatusId => true,
-        (Guid f, Guid t) when f == SubmittedStatusId && t == ApprovedStatusId => true,
-        (Guid f, Guid t) when f == SubmittedStatusId && t == DraftStatusId => true,
-        (Guid f, Guid t) when f == ApprovedStatusId && t == DraftStatusId => true,
-        (Guid f, Guid t) when f == t => true,
-        _ => false
+        TimesheetStatusCodes.Draft => DraftStatusId,
+        TimesheetStatusCodes.Submitted => SubmittedStatusId,
+        TimesheetStatusCodes.Approved => ApprovedStatusId,
+        _ => throw new ArgumentOutOfRangeException(nameof(code), code, null),
     };
 
-    public static bool IsValidProjectTransition(Guid from, Guid to) => (from, to) switch
+    public static bool IsDraft(TimesheetStatus status) => status.Code == TimesheetStatusCodes.Draft;
+    public static bool IsSubmitted(TimesheetStatus status) => status.Code == TimesheetStatusCodes.Submitted;
+    public static bool IsApproved(TimesheetStatus status) => status.Code == TimesheetStatusCodes.Approved;
+
+    public static bool IsDraft(string code) => code == TimesheetStatusCodes.Draft;
+    public static bool IsSubmitted(string code) => code == TimesheetStatusCodes.Submitted;
+    public static bool IsApproved(string code) => code == TimesheetStatusCodes.Approved;
+
+    public static bool IsValidAttendanceTransition(TimesheetStatus from, string toCode) => IsValidTransition(from.Code, toCode);
+    public static bool IsValidAttendanceTransition(TimesheetStatus from, TimesheetStatus to) => IsValidTransition(from.Code, to.Code);
+    public static bool IsValidAttendanceTransition(Guid fromId, Guid toId) => IsValidTransition(CodeForId(fromId), CodeForId(toId));
+
+    public static bool IsValidProjectTransition(TimesheetStatus from, string toCode) => IsValidTransition(from.Code, toCode);
+    public static bool IsValidProjectTransition(TimesheetStatus from, TimesheetStatus to) => IsValidTransition(from.Code, to.Code);
+    public static bool IsValidProjectTransition(Guid fromId, Guid toId) => IsValidTransition(CodeForId(fromId), CodeForId(toId));
+
+    public static string ResolveProjectDisplayStatus(string statusCode) => statusCode switch
     {
-        (Guid f, Guid t) when f == DraftStatusId && t == SubmittedStatusId => true,
-        (Guid f, Guid t) when f == SubmittedStatusId && t == ApprovedStatusId => true,
-        (Guid f, Guid t) when f == SubmittedStatusId && t == DraftStatusId => true,
-        (Guid f, Guid t) when f == ApprovedStatusId && t == DraftStatusId => true,
-        (Guid f, Guid t) when f == t => true,
-        _ => false
+        TimesheetStatusCodes.Submitted => SubmittedStatusName,
+        TimesheetStatusCodes.Approved => ApprovedStatusName,
+        _ => DraftStatusName,
     };
 
-    public static string ResolveProjectDisplayStatus(Guid projectStatusId) => projectStatusId switch
+    public static string ResolveProjectDisplayStatus(Guid projectStatusId) => ResolveProjectDisplayStatus(CodeForId(projectStatusId));
+
+    private static bool IsValidTransition(string fromCode, string toCode) => (fromCode, toCode) switch
     {
-        Guid id when id == SubmittedStatusId => SubmittedStatusName,
-        Guid id when id == ApprovedStatusId => ApprovedStatusName,
-        _ => DraftStatusName
+        (TimesheetStatusCodes.Draft, TimesheetStatusCodes.Submitted) => true,
+        (TimesheetStatusCodes.Submitted, TimesheetStatusCodes.Approved) => true,
+        (TimesheetStatusCodes.Submitted, TimesheetStatusCodes.Draft) => true,
+        (TimesheetStatusCodes.Approved, TimesheetStatusCodes.Draft) => true,
+        (string from, string to) when from == to => true,
+        _ => false,
+    };
+
+    private static string CodeForId(Guid id) => id switch
+    {
+        Guid statusId when statusId == DraftStatusId => TimesheetStatusCodes.Draft,
+        Guid statusId when statusId == SubmittedStatusId => TimesheetStatusCodes.Submitted,
+        Guid statusId when statusId == ApprovedStatusId => TimesheetStatusCodes.Approved,
+        _ => TimesheetStatusCodes.Draft,
     };
 }

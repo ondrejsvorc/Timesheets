@@ -241,6 +241,7 @@ internal static class ContractEmployeeUpdatePlanner
     {
         List<Data.Models.ProjectTimesheet> timesheets = await dbContext.ProjectTimesheets
             .AsNoTracking()
+            .Include(t => t.TimesheetStatus)
             .Include(t => t.Days)
             .Where(t => t.ContractEmployeeId == contractEmployeeId)
             .ToListAsync(cancellationToken);
@@ -251,9 +252,9 @@ internal static class ContractEmployeeUpdatePlanner
 
         foreach (Data.Models.ProjectTimesheet timesheet in timesheets)
         {
-            bool isSubmitted = timesheet.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId;
-            bool isApproved = timesheet.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId;
-            bool isDraft = timesheet.TimesheetStatusId == TimesheetWorkflow.DraftStatusId;
+            bool isSubmitted = TimesheetWorkflow.IsSubmitted(timesheet.TimesheetStatus);
+            bool isApproved = TimesheetWorkflow.IsApproved(timesheet.TimesheetStatus);
+            bool isDraft = TimesheetWorkflow.IsDraft(timesheet.TimesheetStatus);
 
             foreach (Data.Models.ProjectDay day in timesheet.Days)
             {
@@ -334,15 +335,15 @@ internal static class ContractEmployeeUpdatePlanner
 
     private static async Task<(int Draft, int Submitted, int Approved)> CountTimesheetsOnAssignmentAsync(Guid contractEmployeeId, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        List<Guid> statusIds = await dbContext.ProjectTimesheets
+        List<string> statusCodes = await dbContext.ProjectTimesheets
             .AsNoTracking()
             .Where(t => t.ContractEmployeeId == contractEmployeeId)
-            .Select(t => t.TimesheetStatusId)
+            .Select(t => t.TimesheetStatus.Code)
             .ToListAsync(cancellationToken);
 
         return (
-            statusIds.Count(id => id == TimesheetWorkflow.DraftStatusId),
-            statusIds.Count(id => id == TimesheetWorkflow.SubmittedStatusId),
-            statusIds.Count(id => id == TimesheetWorkflow.ApprovedStatusId));
+            statusCodes.Count(TimesheetWorkflow.IsDraft),
+            statusCodes.Count(TimesheetWorkflow.IsSubmitted),
+            statusCodes.Count(TimesheetWorkflow.IsApproved));
     }
 }

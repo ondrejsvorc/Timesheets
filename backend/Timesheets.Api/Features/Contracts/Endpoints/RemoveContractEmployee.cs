@@ -30,7 +30,7 @@ public sealed class RemoveContractEmployee : IEndpoint
 
         bool hasProtectedTimesheets = await dbContext.ProjectTimesheets
             .AsNoTracking()
-            .AnyAsync(timesheet => timesheet.ContractEmployeeId == contractEmployeeId && (timesheet.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId || timesheet.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId), cancellationToken);
+            .AnyAsync(timesheet => timesheet.ContractEmployeeId == contractEmployeeId && (timesheet.TimesheetStatus.Code == TimesheetStatusCodes.Submitted || timesheet.TimesheetStatus.Code == TimesheetStatusCodes.Approved), cancellationToken);
         if (hasProtectedTimesheets)
         {
             return TypedResults.Conflict("Pozici nelze odebrat, protože obsahuje výkazy ke schválení nebo schválené.");

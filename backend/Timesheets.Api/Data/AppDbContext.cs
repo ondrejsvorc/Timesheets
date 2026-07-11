@@ -609,14 +609,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.HasKey(ts => ts.Id);
 
+        builder.Property(ts => ts.Code)
+            .IsRequired()
+            .HasMaxLength(30);
+
         builder.Property(ts => ts.Name)
             .IsRequired()
             .HasMaxLength(100);
 
+        builder.HasIndex(ts => ts.Code)
+            .IsUnique();
+
         builder.HasData(
-            new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000020"), Name = "Rozpracovaný" },
-            new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000021"), Name = "Ke schválení" },
-            new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000022"), Name = "Schválený" }
+            new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000020"), Code = "DRAFT", Name = "Rozpracovaný" },
+            new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000021"), Code = "SUBMITTED", Name = "Ke schválení" },
+            new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000022"), Code = "APPROVED", Name = "Schválený" }
         );
     }
 

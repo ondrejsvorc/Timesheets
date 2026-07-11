@@ -208,7 +208,7 @@ public sealed class UpdateContractEmployee : IEndpoint
     {
         List<Guid> dayIds = await dbContext.ProjectTimesheets
             .Where(t => t.ContractEmployeeId == contractEmployeeId)
-            .Where(t => t.TimesheetStatusId == TimesheetWorkflow.DraftStatusId)
+            .Where(t => t.TimesheetStatus.Code == TimesheetStatusCodes.Draft)
             .SelectMany(t => t.Days)
             .Where(day => day.Date > newEnd)
             .Select(day => day.Id)

@@ -34,7 +34,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         string ContractRegistrationNumber,
         string Position,
         decimal Workload,
-        Guid TimesheetStatusId);
+        string StatusCode);
     private sealed record ManagerRowSource(Guid ContractId, string FullName);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle([AsParameters] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ICurrentUser user, CancellationToken cancellationToken)
@@ -84,7 +84,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
                     contract.RegistrationNumber,
                     x.contractEmployee.Position,
                     x.timesheet.Workload,
-                    x.timesheet.TimesheetStatusId))
+                    x.timesheet.TimesheetStatus.Code))
             .ToListAsync(cancellationToken);
 
         HashSet<DateOnly> holidays = holidaysFactory.Create(request.Year).Select(holiday => holiday.Date).ToHashSet();
@@ -114,7 +114,7 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         for (int index = 0; index < projectRows.Count; index++)
         {
             ProjectRowSource row = projectRows[index];
-            string projectStatus = TimesheetWorkflow.ResolveProjectDisplayStatus(row.TimesheetStatusId);
+            string projectStatus = TimesheetWorkflow.ResolveProjectDisplayStatus(row.StatusCode);
 
             items.Add(new OverviewItem(
                 row.TimesheetId,

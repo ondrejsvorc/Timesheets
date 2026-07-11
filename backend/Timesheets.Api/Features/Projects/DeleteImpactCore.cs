@@ -16,8 +16,8 @@ internal static class DeleteImpactCore
         return await dbContext.ProjectTimesheets
             .AsNoTracking()
             .Where(t => contractIds.Contains(t.ContractId)
-                && (t.TimesheetStatusId == TimesheetWorkflow.SubmittedStatusId
-                    || t.TimesheetStatusId == TimesheetWorkflow.ApprovedStatusId))
+                && (t.TimesheetStatus.Code == TimesheetStatusCodes.Submitted
+                    || t.TimesheetStatus.Code == TimesheetStatusCodes.Approved))
             .AnyAsync(cancellationToken);
     }
 }

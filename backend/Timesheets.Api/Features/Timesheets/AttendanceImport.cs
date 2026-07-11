@@ -112,11 +112,12 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
         Data.Models.AttendanceTimesheet? existingTimesheet = await dbContext.AttendanceTimesheets
             .AsNoTracking()
+            .Include(timesheet => timesheet.TimesheetStatus)
             .FirstOrDefaultAsync(timesheet => timesheet.EmployeeId == employee.Id && timesheet.Year == metadata.Year && timesheet.Month == metadata.Month, cancellationToken);
 
         if (existingTimesheet is not null)
         {
-            if (existingTimesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
+            if (existingTimesheet.TimesheetStatus.Code != TimesheetStatusCodes.Draft)
             {
                 return CreateDetection(file, metadata, canImport: false, isReimport: false, errorMessage: "Docházku lze znovu naimportovat jen ve stavu Rozpracovaný.");
             }
@@ -177,11 +178,12 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         }
 
         Data.Models.AttendanceTimesheet? existingTimesheet = await dbContext.AttendanceTimesheets
+            .Include(timesheet => timesheet.TimesheetStatus)
             .FirstOrDefaultAsync(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == importedTimesheet.Year && timesheet.Month == importedTimesheet.Month, cancellationToken);
 
         if (existingTimesheet is not null)
         {
-            if (existingTimesheet.TimesheetStatusId != TimesheetWorkflow.DraftStatusId)
+            if (existingTimesheet.TimesheetStatus.Code != TimesheetStatusCodes.Draft)
             {
                 throw new AttendanceImportException("Docházku lze znovu naimportovat jen ve stavu Rozpracovaný.");
             }
@@ -191,7 +193,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
         Data.Models.TimesheetStatus draftStatus = await dbContext.TimesheetStatuses
             .AsNoTracking()
-            .SingleAsync(s => s.Name == "Rozpracovaný", cancellationToken);
+            .SingleAsync(s => s.Code == TimesheetStatusCodes.Draft, cancellationToken);
 
         Guid? employeeTypeId = await dbContext.Employees
             .AsNoTracking()
@@ -283,7 +285,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         List<Data.Models.ProjectTimesheet> projectTimesheets = await dbContext.ProjectTimesheets
             .Include(pt => pt.Days)
             .Where(pt => pt.EmployeeId == employeeId && pt.Year == year && pt.Month == month)
-            .Where(pt => pt.TimesheetStatusId == TimesheetWorkflow.DraftStatusId)
+            .Where(pt => pt.TimesheetStatus.Code == TimesheetStatusCodes.Draft)
             .ToListAsync(cancellationToken);
 
         foreach (Data.Models.ProjectTimesheet projectTimesheet in projectTimesheets)
