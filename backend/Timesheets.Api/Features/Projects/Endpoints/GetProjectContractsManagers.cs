@@ -32,7 +32,8 @@ public sealed class GetProjectContractsManagers : IEndpoint
             .Include(cm => cm.Employee)
             .Include(cm => cm.Contract)
             .OrderBy(cm => cm.Contract.RegistrationNumber)
-            .ThenBy(cm => cm.Employee.FullName)
+            .ThenBy(cm => cm.Employee.Surname)
+            .ThenBy(cm => cm.Employee.FirstName)
             .ToListAsync(cancellationToken))
             .Select(cm => new ContractManagerItem(
                 cm.ContractId,

@@ -139,8 +139,8 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
         DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
         Guid attendanceTimesheetId = Guid.CreateVersion7();
         Guid contractEmployeeId = Guid.CreateVersion7();
-        Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, "emp-" + TestIdentifiers.Suffix(17), "Visible Employee");
-        Employee manager = await TestEmployeeFactory.CreateAsync(Factory.Services, "cm-" + TestIdentifiers.Suffix(17), "Contract Manager");
+        Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, "emp-" + TestIdentifiers.Suffix(17), "Visible", "Employee");
+        Employee manager = await TestEmployeeFactory.CreateAsync(Factory.Services, "cm-" + TestIdentifiers.Suffix(17), "Contract", "Manager");
 
         using (IServiceScope scope = CreateScope())
         {
@@ -227,7 +227,7 @@ public class TimesheetStatusActionTests : BaseIntegrationTest
     {
         WorkflowSetup workflow = await CreateWorkflowSetupAsync(TestTimesheetStatusIds.Submitted, TestTimesheetStatusIds.Submitted);
         string managerPersonalNumber = "pm-" + TestIdentifiers.Suffix(17);
-        Employee manager = await TestEmployeeFactory.CreateAsync(Factory.Services, managerPersonalNumber, "Project Manager");
+        Employee manager = await TestEmployeeFactory.CreateAsync(Factory.Services, managerPersonalNumber, "Project", "Manager");
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();

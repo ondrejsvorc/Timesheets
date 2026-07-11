@@ -11,7 +11,7 @@ public sealed partial class Employee
         {
             string before = string.IsNullOrWhiteSpace(TitleBefore) ? string.Empty : TitleBefore.Trim() + " ";
             string after = string.IsNullOrWhiteSpace(TitleAfter) ? string.Empty : " " + TitleAfter.Trim();
-            return before + FullName + after;
+            return before + $"{FirstName} {Surname}".Trim() + after;
         }
     }
 }

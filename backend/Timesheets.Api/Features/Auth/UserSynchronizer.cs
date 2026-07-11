@@ -8,12 +8,13 @@ namespace Timesheets.Api.Features.Auth;
 
 public sealed class UserSynchronizer(AppDbContext dbContext)
 {
-    private readonly record struct SynchronizedUser(string FullName, string PersonalNumber, string? TitleBefore, string? TitleAfter, Guid EmployeeTypeId);
+    private readonly record struct SynchronizedUser(string FirstName, string Surname, string PersonalNumber, string? TitleBefore, string? TitleAfter, Guid EmployeeTypeId);
 
     public async Task SyncFromPrincipalAsync(ClaimsPrincipal principal, CancellationToken cancellationToken)
     {
         SynchronizedUser synchronizedUser = new(
-            principal.GetFullName(),
+            principal.GetGivenName(),
+            principal.GetFamilyName(),
             principal.GetPersonalNumber(),
             principal.GetTitleBefore(),
             principal.GetTitleAfter(),
@@ -40,7 +41,8 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
         Employee employee = new()
         {
             Id = Guid.CreateVersion7(),
-            FullName = user.FullName,
+            FirstName = user.FirstName,
+            Surname = user.Surname,
             PersonalNumber = user.PersonalNumber,
             TitleBefore = user.TitleBefore,
             TitleAfter = user.TitleAfter,
@@ -57,9 +59,15 @@ public sealed class UserSynchronizer(AppDbContext dbContext)
     {
         bool hasChanges = false;
 
-        if (existing.FullName != user.FullName)
+        if (existing.FirstName != user.FirstName)
         {
-            existing.FullName = user.FullName;
+            existing.FirstName = user.FirstName;
+            hasChanges = true;
+        }
+
+        if (existing.Surname != user.Surname)
+        {
+            existing.Surname = user.Surname;
             hasChanges = true;
         }
 

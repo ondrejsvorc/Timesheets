@@ -38,7 +38,8 @@ public sealed class TimesheetEngineEvaluationTests
             Id = Guid.CreateVersion7(),
             EmployeeTypeId = EmployeeTypes.AcademicId,
             PersonalNumber = "1",
-            FullName = "Test Employee"
+            FirstName = "Test",
+            Surname = "Employee"
         };
 
         DataAttendanceTimesheet timesheet = new()

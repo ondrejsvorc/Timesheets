@@ -29,7 +29,8 @@ public sealed class GetProjectManagers : IEndpoint
             .AsNoTracking()
             .Where(pm => pm.ProjectId == id)
             .Include(pm => pm.Employee)
-            .OrderBy(pm => pm.Employee.FullName)
+            .OrderBy(pm => pm.Employee.Surname)
+            .ThenBy(pm => pm.Employee.FirstName)
             .ToListAsync(cancellationToken))
             .Select(pm => new ProjectManagerItem(
                 pm.ProjectId,

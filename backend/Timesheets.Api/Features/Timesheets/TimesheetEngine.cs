@@ -224,7 +224,7 @@ public static class TimesheetEngine
         }
 
         List<AttendanceDay> attendanceDays = sheet.Days.Select(day => new AttendanceDay(Date: day.Date, ClockIn: day.ClockIn, ClockOut: day.ClockOut, BreakStart: day.BreakStart, BreakEnd: day.BreakEnd, OtherInterruption: day.Description, Schedules: day.Schedules, IsHoliday: day.IsHoliday, Workload: loaded.TotalWorkload)).ToList();
-        AttendanceTimesheet attendance = new(EmployeePersonalNumber: loaded.Timesheet.Employee.PersonalNumber, EmployeeName: loaded.Timesheet.Employee.FullName, Workload: loaded.TotalWorkload, Year: loaded.Timesheet.Year, Month: loaded.Timesheet.Month, Days: attendanceDays);
+        AttendanceTimesheet attendance = new(EmployeePersonalNumber: loaded.Timesheet.Employee.PersonalNumber, EmployeeName: loaded.Timesheet.Employee.DisplayName, Workload: loaded.TotalWorkload, Year: loaded.Timesheet.Year, Month: loaded.Timesheet.Month, Days: attendanceDays);
 
         List<CombinedDay> combinedDays = sheet.Days.Select(day =>
         {

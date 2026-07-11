@@ -24,7 +24,8 @@ public static class AuthenticationConfig
             return value;
         }
 
-        string fullName = Required(dev, "FullName");
+        string firstName = Required(dev, "FirstName");
+        string surname = Required(dev, "Surname");
         string personalNumber = Required(dev, "PersonalNumber");
         string? titleBefore = dev.GetValue<string?>("TitleBefore", null);
         string? titleAfter = dev.GetValue<string?>("TitleAfter", null);
@@ -32,7 +33,8 @@ public static class AuthenticationConfig
 
         List<Claim> claims = new()
         {
-            new("displayName", fullName),
+            new("given_name", firstName),
+            new("family_name", surname),
             new("personalNumber", personalNumber)
         };
 

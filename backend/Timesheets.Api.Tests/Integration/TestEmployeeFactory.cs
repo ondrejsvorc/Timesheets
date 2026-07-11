@@ -11,7 +11,8 @@ internal static class TestEmployeeFactory
     public static async Task<Employee> CreateAsync(
         AppDbContext dbContext,
         string personalNumber,
-        string fullName,
+        string firstName,
+        string surname,
         Guid? employeeTypeId = null,
         bool isGlobalManager = false,
         CancellationToken cancellationToken = default)
@@ -21,7 +22,8 @@ internal static class TestEmployeeFactory
             Id = Guid.CreateVersion7(),
             EmployeeTypeId = employeeTypeId ?? DefaultEmployeeTypeId,
             PersonalNumber = personalNumber,
-            FullName = fullName,
+            FirstName = firstName,
+            Surname = surname,
             IsGlobalManager = isGlobalManager,
             CreatedAt = DateTime.UtcNow,
         };
@@ -34,13 +36,14 @@ internal static class TestEmployeeFactory
     public static async Task<Employee> CreateAsync(
         IServiceProvider services,
         string personalNumber,
-        string fullName,
+        string firstName,
+        string surname,
         Guid? employeeTypeId = null,
         bool isGlobalManager = false,
         CancellationToken cancellationToken = default)
     {
         using IServiceScope scope = services.CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        return await CreateAsync(dbContext, personalNumber, fullName, employeeTypeId, isGlobalManager, cancellationToken);
+        return await CreateAsync(dbContext, personalNumber, firstName, surname, employeeTypeId, isGlobalManager, cancellationToken);
     }
 }

@@ -103,12 +103,15 @@ public sealed class GetCombinedTimesheetOverview : IEndpoint
         ];
 
         Guid[] contractIds = projectRows.Select(row => row.ContractId).Distinct().ToArray();
-        List<ManagerRowSource> managerRows = await dbContext.ContractManagers
+        List<ManagerRowSource> managerRows = (await dbContext.ContractManagers
             .AsNoTracking()
+            .Include(manager => manager.Employee)
             .Where(manager => contractIds.Contains(manager.ContractId))
-            .OrderBy(manager => manager.Employee.FullName)
-            .Select(manager => new ManagerRowSource(manager.ContractId, manager.Employee.FullName))
-            .ToListAsync(cancellationToken);
+            .OrderBy(manager => manager.Employee.Surname)
+            .ThenBy(manager => manager.Employee.FirstName)
+            .ToListAsync(cancellationToken))
+            .Select(manager => new ManagerRowSource(manager.ContractId, manager.Employee.DisplayName))
+            .ToList();
         ILookup<Guid, string> managersByContract = managerRows.ToLookup(manager => manager.ContractId, manager => manager.FullName);
 
         for (int index = 0; index < projectRows.Count; index++)

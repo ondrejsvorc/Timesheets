@@ -21,7 +21,7 @@ public class ProjectManagerLifecycleTests : BaseIntegrationTest
         Guid projectId = projectBody.Project.Id;
 
         string managerPersonalNumber = "pm-" + TestIdentifiers.Suffix(17);
-        Guid managerId = await SeedEmployeeAsync(managerPersonalNumber, "Jane Project Manager");
+        Guid managerId = await SeedEmployeeAsync(managerPersonalNumber, "Jane", "Manager");
 
         HttpResponseMessage addResponse = await Client.PostAsJsonAsync($"/api/projects/{projectId}/managers", new AddProjectManager.Request(projectId, managerId));
         Assert.Equal(HttpStatusCode.Created, addResponse.StatusCode);

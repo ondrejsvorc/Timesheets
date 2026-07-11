@@ -144,11 +144,9 @@ public sealed class AddContractEmployee : IEndpoint
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var employee = await dbContext.Employees
+        Employee employee = await dbContext.Employees
             .AsNoTracking()
-            .Where(e => e.Id == request.EmployeeId)
-            .Select(e => new { e.PersonalNumber, e.FullName, e.EmployeeTypeId })
-            .FirstAsync(cancellationToken);
+            .FirstAsync(e => e.Id == request.EmployeeId, cancellationToken);
 
         Response response = new Response(
             id,
@@ -159,7 +157,7 @@ public sealed class AddContractEmployee : IEndpoint
             request.StartDate,
             effectiveEndDate,
             employee.PersonalNumber,
-            employee.FullName,
+            employee.DisplayName,
             employee.EmployeeTypeId);
 
         return TypedResults.Created($"/contracts/{id}/employees/{request.EmployeeId}", response);

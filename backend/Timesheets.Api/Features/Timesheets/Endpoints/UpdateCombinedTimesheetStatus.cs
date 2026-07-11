@@ -175,7 +175,7 @@ public sealed class UpdateCombinedTimesheetStatus : IEndpoint
         if (statusChanged && TimesheetWorkflow.IsSubmitted(targetStatus.Code))
         {
             Guid[] managerIds = await LoadPendingProjectManagerIdsAsync(scope, attendanceTimesheet.EmployeeId, dbContext, cancellationToken);
-            string notificationMessage = BuildApprovalRequestNotificationMessage(attendanceTimesheet.Employee.FullName, request.Year, request.Month);
+            string notificationMessage = BuildApprovalRequestNotificationMessage(attendanceTimesheet.Employee.DisplayName, request.Year, request.Month);
 
             foreach (Guid managerId in managerIds)
             {

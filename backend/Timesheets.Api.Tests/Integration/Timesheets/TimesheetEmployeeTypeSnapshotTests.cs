@@ -91,7 +91,7 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
     private async Task<SnapshotSetup> SeedSnapshotTimesheetAsync(int year, int month, Guid snapshotEmployeeTypeId, Guid currentEmployeeTypeId)
     {
         string personalNumber = "snap-" + TestIdentifiers.Suffix(16);
-        Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, personalNumber, "Snapshot Employee", snapshotEmployeeTypeId);
+        Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, personalNumber, "Snapshot", "Employee", snapshotEmployeeTypeId);
         Guid timesheetId = Guid.CreateVersion7();
         DateTime date = new(year, month, 2, 0, 0, 0, DateTimeKind.Utc);
 

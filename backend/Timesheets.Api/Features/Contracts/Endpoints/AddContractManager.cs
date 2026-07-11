@@ -70,18 +70,16 @@ public sealed class AddContractManager : IEndpoint
             .Where(c => c.Id == id)
             .Select(c => new { c.RegistrationNumber })
             .FirstAsync(cancellationToken);
-        var employee = await dbContext.Employees
+        Employee employee = await dbContext.Employees
             .AsNoTracking()
-            .Where(e => e.Id == request.EmployeeId)
-            .Select(e => new { e.PersonalNumber, e.FullName })
-            .FirstAsync(cancellationToken);
+            .FirstAsync(e => e.Id == request.EmployeeId, cancellationToken);
 
         var response = new Response(
             id,
             request.EmployeeId,
             contract.RegistrationNumber,
             employee.PersonalNumber,
-            employee.FullName);
+            employee.DisplayName);
 
         return TypedResults.Created($"/contracts/{id}/managers/{request.EmployeeId}", response);
     }

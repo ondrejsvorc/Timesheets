@@ -10,22 +10,11 @@ public static class ClaimsPrincipalExtensions
 
     public static bool IsAuthenticated(this ClaimsPrincipal principal) => principal.Identity?.IsAuthenticated == true;
 
-    public static string GetFullName(this ClaimsPrincipal principal)
-    {
-        string? name =
-            principal.FindFirstValue("displayName") ??
-            principal.FindFirstValue("name") ??
-            principal.FindFirstValue(ClaimTypes.Name);
+    public static string GetGivenName(this ClaimsPrincipal principal) =>
+        RequiredClaim(principal, "given_name");
 
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            string? given = principal.FindFirstValue("given_name");
-            string? family = principal.FindFirstValue("family_name");
-            name = $"{given} {family}".Trim();
-        }
-
-        return string.IsNullOrWhiteSpace(name) ? "Unknown" : name;
-    }
+    public static string GetFamilyName(this ClaimsPrincipal principal) =>
+        RequiredClaim(principal, "family_name");
 
     public static string GetPersonalNumber(this ClaimsPrincipal principal)
     {
@@ -46,6 +35,17 @@ public static class ClaimsPrincipalExtensions
 
     public static Guid GetEmployeeTypeId(this ClaimsPrincipal principal) =>
         principal.HasAffiliation("faculty") ? EmployeeTypes.AcademicId : EmployeeTypes.NonAcademicId;
+
+    private static string RequiredClaim(ClaimsPrincipal principal, string claimType)
+    {
+        string? value = principal.FindFirstValue(claimType);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException($"User {claimType} claim is missing.");
+        }
+
+        return value.Trim();
+    }
 
     private static bool IsAdminStudentException(this ClaimsPrincipal principal)
     {

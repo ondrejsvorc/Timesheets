@@ -66,9 +66,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.HasKey(e => e.Id);
 
-        builder.Property(e => e.FullName)
+        builder.Property(e => e.FirstName)
             .IsRequired()
             .HasMaxLength(100);
+
+        builder.Property(e => e.Surname)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        builder.HasIndex(e => e.Surname);
+        builder.HasIndex(e => new { e.Surname, e.FirstName });
 
         builder.Property(e => e.PersonalNumber)
             .IsRequired()

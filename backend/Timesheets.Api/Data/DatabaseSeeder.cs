@@ -22,7 +22,8 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("10000000-0000-0000-0000-000000000001"),
                     EmployeeTypeId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
                     PersonalNumber = "1001",
-                    FullName = "Jan Novák",
+                    FirstName = "Jan",
+                    Surname = "Novák",
                     IsGlobalManager = true
                 },
                 new()
@@ -30,7 +31,8 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("10000000-0000-0000-0000-000000000002"),
                     EmployeeTypeId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
                     PersonalNumber = "1002",
-                    FullName = "Marie Svobodová",
+                    FirstName = "Marie",
+                    Surname = "Svobodová",
                     IsGlobalManager = false
                 },
                 new()
@@ -38,7 +40,8 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("10000000-0000-0000-0000-000000000003"),
                     EmployeeTypeId = Guid.Parse("00000000-0000-0000-0000-000000000002"),
                     PersonalNumber = "2001",
-                    FullName = "Petr Dvořák",
+                    FirstName = "Petr",
+                    Surname = "Dvořák",
                     IsGlobalManager = false
                 }
             ];

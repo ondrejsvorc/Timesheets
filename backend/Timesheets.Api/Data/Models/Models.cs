@@ -72,7 +72,8 @@ public sealed partial class Employee
     public string PersonalNumber { get; set; } = string.Empty;
     public string? TitleBefore { get; set; }
     public string? TitleAfter { get; set; }
-    public string FullName { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+    public string Surname { get; set; } = string.Empty;
     public bool IsGlobalManager { get; set; }
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

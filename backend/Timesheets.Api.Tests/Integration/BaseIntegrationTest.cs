@@ -28,9 +28,9 @@ public abstract class BaseIntegrationTest
         return Factory.Services.CreateScope();
     }
 
-    protected async Task<Guid> SeedEmployeeAsync(string personalNumber, string fullName, Guid? employeeTypeId = null, CancellationToken cancellationToken = default)
+    protected async Task<Guid> SeedEmployeeAsync(string personalNumber, string firstName, string surname, Guid? employeeTypeId = null, CancellationToken cancellationToken = default)
     {
-        Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, personalNumber, fullName, employeeTypeId, cancellationToken: cancellationToken);
+        Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, personalNumber, firstName, surname, employeeTypeId, cancellationToken: cancellationToken);
         return employee.Id;
     }
 }

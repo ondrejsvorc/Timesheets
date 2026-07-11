@@ -26,8 +26,8 @@ public class NotificationTests : BaseIntegrationTest
     public async Task GetEmployeeNotifications_DoesNotReturnForeignNotifications_AndReturnsMax50Sorted()
     {
         // Arrange
-        Guid employee1Id = await SeedEmployeeAsync("NOTIF-EMP-1", "Notification Employee 1");
-        Guid employee2Id = await SeedEmployeeAsync("NOTIF-EMP-2", "Notification Employee 2");
+        Guid employee1Id = await SeedEmployeeAsync("NOTIF-EMP-1", "Notification", "Employee 1");
+        Guid employee2Id = await SeedEmployeeAsync("NOTIF-EMP-2", "Notification", "Employee 2");
 
         using (var scope = CreateScope())
         {
@@ -78,8 +78,8 @@ public class NotificationTests : BaseIntegrationTest
     public async Task MarkNotificationAsRead_ForeignNotification_ReturnsNotFoundAndRemainsUnread()
     {
         // Arrange
-        Guid employee1Id = await SeedEmployeeAsync("NOTIF-EMP-3", "Notification Employee 3");
-        Guid employee2Id = await SeedEmployeeAsync("NOTIF-EMP-4", "Notification Employee 4");
+        Guid employee1Id = await SeedEmployeeAsync("NOTIF-EMP-3", "Notification", "Employee 3");
+        Guid employee2Id = await SeedEmployeeAsync("NOTIF-EMP-4", "Notification", "Employee 4");
 
         Guid foreignNotificationId = Guid.NewGuid();
         using (var scope = CreateScope())
@@ -118,8 +118,8 @@ public class NotificationTests : BaseIntegrationTest
     public async Task MarkAllNotificationsAsRead_OnlyMarksOwnNotifications()
     {
         // Arrange
-        Guid employee1Id = await SeedEmployeeAsync("NOTIF-EMP-5", "Notification Employee 5");
-        Guid employee2Id = await SeedEmployeeAsync("NOTIF-EMP-6", "Notification Employee 6");
+        Guid employee1Id = await SeedEmployeeAsync("NOTIF-EMP-5", "Notification", "Employee 5");
+        Guid employee2Id = await SeedEmployeeAsync("NOTIF-EMP-6", "Notification", "Employee 6");
 
         Guid myNotificationId = Guid.NewGuid();
         Guid foreignNotificationId = Guid.NewGuid();
