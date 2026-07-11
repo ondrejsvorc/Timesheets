@@ -144,6 +144,17 @@ public sealed class Timesheet
     public Employee Employee { get; set; } = null!;
     public TimesheetStatus TimesheetStatus { get; set; } = null!;
     public Employee ApprovedByEmployee { get; set; } = null!;
+    public Attendance? Attendance { get; set; }
+}
+
+public sealed class Attendance
+{
+    public Guid Id { get; set; }
+    public Guid TimesheetId { get; set; }
+    public Guid EmployeeTypeId { get; set; }
+
+    public Timesheet Timesheet { get; set; } = null!;
+    public EmployeeType EmployeeType { get; set; } = null!;
 }
 
 public sealed class AttendanceTimesheet

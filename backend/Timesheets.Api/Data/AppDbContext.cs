@@ -15,6 +15,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<EmployeeType> EmployeeTypes { get; set; } = null!;
 
     public DbSet<Timesheet> Timesheets { get; set; } = null!;
+    public DbSet<Attendance> Attendances { get; set; } = null!;
     public DbSet<AttendanceTimesheet> AttendanceTimesheets { get; set; } = null!;
     public DbSet<AttendanceDay> AttendanceDays { get; set; } = null!;
     public DbSet<DayInterruption> DayInterruptions { get; set; } = null!;
@@ -43,6 +44,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         ConfigureContractEmployeesTable(modelBuilder);
 
         ConfigureTimesheetsTable(modelBuilder);
+        ConfigureAttendancesTable(modelBuilder);
         ConfigureAttendanceTimesheetsTable(modelBuilder);
         ConfigureAttendanceDaysTable(modelBuilder);
         ConfigureInterruptionsTable(modelBuilder);
@@ -347,6 +349,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.HasOne(t => t.ApprovedByEmployee)
             .WithMany()
             .HasForeignKey(t => t.ApprovedBy)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(t => t.Attendance)
+            .WithOne(a => a.Timesheet)
+            .HasForeignKey<Attendance>(a => a.TimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureAttendancesTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<Attendance>();
+
+        builder.ToTable("Attendance");
+
+        builder.HasKey(a => a.Id);
+
+        builder.Property(a => a.TimesheetId).IsRequired();
+        builder.Property(a => a.EmployeeTypeId).IsRequired();
+
+        builder.HasIndex(a => a.TimesheetId)
+            .IsUnique();
+
+        builder.HasOne(a => a.EmployeeType)
+            .WithMany()
+            .HasForeignKey(a => a.EmployeeTypeId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 
