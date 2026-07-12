@@ -59,16 +59,6 @@ jobs:
         TESTCONTAINERS_RYUK_DISABLED: true
       run: dotnet test Timesheets.slnx --no-build --configuration Release --verbosity normal --logger "trx;LogFileName=test-results.trx"
 
-    - name: Publish
-      run: dotnet publish Timesheets.Api/Timesheets.Api.csproj --no-restore --no-build --configuration Release --output .ci/publish /p:UseAppHost=false
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v6
-      with:
-        name: backend-publish
-        path: ./backend/.ci/publish
-        retention-days: 1
-
     - name: Test Report
       uses: dorny/test-reporter@v3
       if: ${{ !cancelled() }}
@@ -107,34 +97,41 @@ jobs:
     - name: Build
       run: npm run build
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v6
-      with:
-        name: frontend-dist
-        path: ./frontend/dist
-        retention-days: 1
-
   runtime:
     name: Runtime
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     needs: [backend, frontend]
 
     steps:
     - name: Checkout
       uses: actions/checkout@v6
 
-    - name: Download backend artifacts
-      uses: actions/download-artifact@v7
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
       with:
-        name: backend-publish
-        path: ./backend/.ci/publish
+        dotnet-version: '10.0.x'
+        cache: true
+        cache-dependency-path: backend/Timesheets.slnx
 
-    - name: Download frontend artifacts
-      uses: actions/download-artifact@v7
+    - name: Publish backend
+      working-directory: ./backend
+      run: dotnet publish Timesheets.Api/Timesheets.Api.csproj --configuration Release --output .ci/publish /p:UseAppHost=false
+
+    - name: Setup Node
+      uses: actions/setup-node@v6
       with:
-        name: frontend-dist
-        path: ./frontend/.ci/dist
+        node-version: 24
+        cache: npm
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Build frontend for containers
+      working-directory: ./frontend
+      run: |
+        npm ci
+        npm run build
+        mkdir -p .ci/dist
+        cp -r dist/. .ci/dist/
 
     - name: Pull database image
       run: docker pull public.ecr.aws/docker/library/postgres:17-alpine
