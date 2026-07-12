@@ -24,8 +24,7 @@ public sealed class Project
         return current >= start && (EndDate is null || current <= DateOnly.FromDateTime(EndDate.Value));
     }
 
-    public bool ContainsRange(DateTime startDate, DateTime? endDate) =>
-        ContainsDate(startDate) && (!endDate.HasValue || ContainsDate(endDate.Value));
+    public bool ContainsRange(DateTime startDate, DateTime? endDate) => ContainsDate(startDate) && (!endDate.HasValue || ContainsDate(endDate.Value));
 
     public string GetStatus(DateOnly date)
     {
