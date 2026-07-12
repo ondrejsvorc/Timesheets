@@ -91,6 +91,7 @@ export interface EmployeeItem {
 export interface GetContractEmployeesResponse {
   projectStartDate: string;
   projectEndDate: string | null;
+  isProjectArchived: boolean;
   employees: EmployeeItem[];
 }
 

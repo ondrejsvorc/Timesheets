@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
@@ -44,10 +45,17 @@ public sealed class UpdateProject : IEndpoint
             return TypedResults.Forbid();
         }
 
-        bool projectExists = await dbContext.Projects.AsNoTracking().AnyAsync(project => project.Id == id, cancellationToken);
-        if (!projectExists)
+        Domain.Models.Project? currentProject = await dbContext.Projects
+            .AsNoTracking()
+            .FirstOrDefaultAsync(project => project.Id == id, cancellationToken);
+        if (currentProject is null)
         {
             return TypedResults.NotFound();
+        }
+
+        if (currentProject.IsArchived())
+        {
+            return TypedResults.BadRequest(ProjectArchiveGuard.BlockMessage);
         }
 
         DateTime startDate = ContractEmployeeValidation.ToUtcDate(request.StartDate);
@@ -79,11 +87,17 @@ public sealed class UpdateProject : IEndpoint
             return TypedResults.BadRequest("Projekt s tímto Id nebo názvem už existuje.");
         }
 
-        ProjectItem? project = await dbContext.Projects
+        ProjectItem? project = (await dbContext.Projects
             .AsNoTracking()
             .Where(p => p.Id == id)
-            .Select(p => new ProjectItem(p.Id, p.Name, p.RegistrationNumber, p.StartDate, p.EndDate, p.ArchivedAt, p.Contracts.Count, p.Status))
-            .FirstOrDefaultAsync(cancellationToken);
+            .Select(p => new
+            {
+                Project = p,
+                ContractCount = p.Contracts.Count
+            })
+            .FirstOrDefaultAsync(cancellationToken)) is { } row
+            ? new ProjectItem(row.Project.Id, row.Project.Name, row.Project.RegistrationNumber, row.Project.StartDate, row.Project.EndDate, row.Project.ArchivedAt, row.ContractCount, row.Project.GetStatus(PragueClock.Today))
+            : null;
 
         return project is null ? TypedResults.NotFound() : TypedResults.Ok(new Response(project));
     }

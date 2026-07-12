@@ -7,6 +7,7 @@ using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Projects;
 using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Contracts.Endpoints;
@@ -41,10 +42,10 @@ public sealed class AddContractEmployee : IEndpoint
             return TypedResults.Forbid();
         }
 
-        var contract = await dbContext.Contracts
+        Contract? contract = await dbContext.Contracts
             .AsNoTracking()
+            .Include(c => c.Project)
             .Where(c => c.Id == id)
-            .Select(c => new { c.Project.StartDate, c.Project.EndDate })
             .SingleOrDefaultAsync(cancellationToken);
 
         if (contract is null)
@@ -52,7 +53,12 @@ public sealed class AddContractEmployee : IEndpoint
             return TypedResults.NotFound();
         }
 
-        string? projectRangeError = ContractEmployeeValidation.ValidateProjectRange(contract.StartDate, contract.EndDate, request.StartDate, request.EndDate);
+        if (contract.Project.IsArchived())
+        {
+            return TypedResults.BadRequest(ProjectArchiveGuard.BlockMessage);
+        }
+
+        string? projectRangeError = ContractEmployeeValidation.ValidateProjectRange(contract.Project, request.StartDate, request.EndDate);
         if (projectRangeError is not null)
         {
             return TypedResults.BadRequest(projectRangeError);
@@ -67,7 +73,7 @@ public sealed class AddContractEmployee : IEndpoint
             return TypedResults.NotFound();
         }
 
-        DateTime? effectiveEndDate = request.EndDate ?? contract.EndDate;
+        DateTime? effectiveEndDate = request.EndDate ?? contract.Project.EndDate;
 
         bool overlappingSamePositionExists = await dbContext.ContractEmployees
             .AsNoTracking()
@@ -87,7 +93,7 @@ public sealed class AddContractEmployee : IEndpoint
 
         ContractEmployeeAddImpact addImpact = await ContractEmployeeAddPlanner.PlanAsync(
             id,
-            contract.EndDate,
+            contract.Project.EndDate,
             new ContractEmployeeAddRequest(request.EmployeeId, request.StartDate, effectiveEndDate),
             dbContext,
             cancellationToken);

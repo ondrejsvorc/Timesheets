@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Projects.Endpoints;
 
@@ -27,10 +28,17 @@ public sealed class DeleteProjectContract : IEndpoint
             return TypedResults.NotFound();
         }
 
+        if (await ProjectArchiveGuard.BlockIfArchivedAsync(contractEmployeeId, dbContext, cancellationToken) is { } archiveBlock)
+        {
+            return TypedResults.Conflict(archiveBlock);
+        }
+
         if (await DeleteImpactCore.HasProtectedTimesheetsAsync([contractId], dbContext, cancellationToken))
         {
             return TypedResults.Conflict("Zakázku nelze smazat, protože obsahuje výkazy ke schválení nebo schválené.");
         }
+
+        await ContractPartCleanup.RemoveDraftPartsForContractIdsAsync([contractId], dbContext, cancellationToken);
 
         await dbContext.Contracts
             .Where(c => c.ProjectId == contractEmployeeId && c.Id == contractId)

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
 
@@ -11,19 +12,14 @@ public sealed class GetProject : IEndpoint
         app.MapGet("/{id}", Handle)
            .WithSummary("Get Project");
 
-    public sealed record ProjectItem(Guid Id, string Name, string RegistrationNumber);
+    public sealed record ProjectItem(Guid Id, string Name, string RegistrationNumber, DateTime? ArchivedAt, string Status);
     public sealed record Response(ProjectItem Project);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
-        ProjectItem? project = await dbContext.Projects
+        Domain.Models.Project? project = await dbContext.Projects
             .AsNoTracking()
             .Where(p => p.Id == id)
-            .Select(p => new ProjectItem(
-                p.Id,
-                p.Name,
-                p.RegistrationNumber
-            ))
             .SingleOrDefaultAsync(cancellationToken);
 
         if (project is null)
@@ -36,6 +32,8 @@ public sealed class GetProject : IEndpoint
             return TypedResults.Forbid();
         }
 
-        return TypedResults.Ok(new Response(project));
+        ProjectItem item = new(project.Id, project.Name, project.RegistrationNumber, project.ArchivedAt, project.GetStatus(PragueClock.Today));
+
+        return TypedResults.Ok(new Response(item));
     }
 }

@@ -41,6 +41,11 @@ public sealed class AddProjectManager : IEndpoint
             return TypedResults.NotFound();
         }
 
+        if (await ProjectArchiveGuard.BlockIfArchivedAsync(id, dbContext, cancellationToken) is { } archiveBlock)
+        {
+            return TypedResults.BadRequest(archiveBlock);
+        }
+
         Employee? employee = await dbContext.Employees
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == request.EmployeeId, cancellationToken);

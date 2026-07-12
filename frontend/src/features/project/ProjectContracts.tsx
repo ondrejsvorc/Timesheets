@@ -40,14 +40,14 @@ const ProjectContractsContent = () => {
   const [state, dispatch] = useImmerReducer(listCrudReducer, listCrudState(response.projectContracts));
   const { filter, setFilter, filtered } = useContractsFilter(state.items);
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const canAddContract = useCan(UiAction.contracts.add, { projectId: projectId ?? undefined });
+  const canAddContract = useCan(UiAction.contracts.add, { projectId: projectId ?? undefined }) && !response.isProjectArchived;
 
   return (
     <>
       <FilterBar filter={filter} setFilter={setFilter} actions={canAddContract ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addContract}</AddButton> : undefined}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-      <ContractsTable contracts={filtered} dispatch={dispatch} />
+      <ContractsTable contracts={filtered} dispatch={dispatch} isReadonly={response.isProjectArchived} />
       <AddContractDialog
         open={isAddOpen}
         projectId={projectId ?? ""}
@@ -75,9 +75,10 @@ const ProjectContractsContent = () => {
 interface ContractsTableProps {
   contracts: ProjectContractItem[];
   dispatch: Dispatch<ListCrudAction<ProjectContractItem>>;
+  isReadonly: boolean;
 }
 
-export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => {
+export const ContractsTable = ({ contracts, dispatch, isReadonly }: ContractsTableProps) => {
   const [contractToEdit, setContractToEdit] = useState<ProjectContractItem | null>(null);
 
   if (contracts.length === 0) {
@@ -97,7 +98,7 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
           </TableHeader>
           <TableBody>
             {contracts.map((contract) => (
-              <ContractRow key={contract.id} contract={contract} onEdit={setContractToEdit} onRequestDelete={(id) => dispatch({ type: "requestDelete", key: id })} />
+              <ContractRow key={contract.id} contract={contract} isReadonly={isReadonly} onEdit={setContractToEdit} onRequestDelete={(id) => dispatch({ type: "requestDelete", key: id })} />
             ))}
           </TableBody>
         </Table>
@@ -120,15 +121,16 @@ export const ContractsTable = ({ contracts, dispatch }: ContractsTableProps) => 
 
 interface ContractRowProps {
   contract: ProjectContractItem;
+  isReadonly: boolean;
   onEdit: (contract: ProjectContractItem) => void;
   onRequestDelete: (contractId: string) => void;
 }
 
-export const ContractRow = ({ contract, onEdit, onRequestDelete }: ContractRowProps) => {
+export const ContractRow = ({ contract, isReadonly, onEdit, onRequestDelete }: ContractRowProps) => {
   const go = useGo();
   const projectId = useParams().id;
-  const canEdit = useCan(UiAction.contracts.edit, { projectId, contractId: contract.id });
-  const canDelete = useCan(UiAction.contracts.delete, { projectId, contractId: contract.id });
+  const canEdit = useCan(UiAction.contracts.edit, { projectId, contractId: contract.id }) && !isReadonly;
+  const canDelete = useCan(UiAction.contracts.delete, { projectId, contractId: contract.id }) && !isReadonly;
 
   return (
     <TableRow className="cursor-pointer" onClick={() => projectId && go.forward(Routes.contract(projectId, contract.id))}>

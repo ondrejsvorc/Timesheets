@@ -42,14 +42,14 @@ const ProjectManagersContent = () => {
   const [state, dispatch] = useImmerReducer(projectManagersReducer, listCrudState<ProjectManagerItem, { employeeId: string }>(response.managers));
   const [isAddOpen, setIsAddOpen] = useState(false);
   const { filter, setFilter, filtered } = useProjectManagersFilter(state.items);
-  const canAddManager = useCan(UiAction.projectManagers.add, { projectId: projectId ?? undefined });
+  const canAddManager = useCan(UiAction.projectManagers.add, { projectId: projectId ?? undefined }) && !response.isProjectArchived;
 
   return (
     <>
       <FilterBar filter={filter} setFilter={setFilter} actions={canAddManager ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addManager}</AddButton> : undefined}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-      <ProjectManagersTable managers={filtered} dispatch={dispatch} />
+      <ProjectManagersTable managers={filtered} dispatch={dispatch} isReadonly={response.isProjectArchived} />
       <AddProjectManagerDialog
         projectId={projectId ?? ""}
         existingManagers={state.items}
@@ -78,9 +78,10 @@ const ProjectManagersContent = () => {
 interface ProjectManagersTableProps {
   managers: ProjectManagerItem[];
   dispatch: Dispatch<ListCrudAction<ProjectManagerItem, { employeeId: string }>>;
+  isReadonly: boolean;
 }
 
-export const ProjectManagersTable = ({ managers, dispatch }: ProjectManagersTableProps) => {
+export const ProjectManagersTable = ({ managers, dispatch, isReadonly }: ProjectManagersTableProps) => {
   if (managers.length === 0) {
     return <EmptyState />;
   }
@@ -97,7 +98,7 @@ export const ProjectManagersTable = ({ managers, dispatch }: ProjectManagersTabl
         </TableHeader>
         <TableBody>
           {managers.map((manager) => (
-            <ProjectManagerRow key={`${manager.projectId}-${manager.employeeId}`} manager={manager} dispatch={dispatch} />
+            <ProjectManagerRow key={`${manager.projectId}-${manager.employeeId}`} manager={manager} dispatch={dispatch} isReadonly={isReadonly} />
           ))}
         </TableBody>
       </Table>
@@ -108,12 +109,13 @@ export const ProjectManagersTable = ({ managers, dispatch }: ProjectManagersTabl
 interface ProjectManagerRowProps {
   manager: ProjectManagerItem;
   dispatch: Dispatch<ListCrudAction<ProjectManagerItem, { employeeId: string }>>;
+  isReadonly: boolean;
 }
 
-export const ProjectManagerRow = ({ manager, dispatch }: ProjectManagerRowProps) => {
+export const ProjectManagerRow = ({ manager, dispatch, isReadonly }: ProjectManagerRowProps) => {
   const go = useGo();
   const { id: projectId } = useParams<{ id: string }>();
-  const canRemove = useCan(UiAction.projectManagers.remove, { projectId: projectId ?? undefined });
+  const canRemove = useCan(UiAction.projectManagers.remove, { projectId: projectId ?? undefined }) && !isReadonly;
 
   return (
     <TableRow className="cursor-pointer" onClick={() => go.forward(Routes.employee(manager.employeeId))}>

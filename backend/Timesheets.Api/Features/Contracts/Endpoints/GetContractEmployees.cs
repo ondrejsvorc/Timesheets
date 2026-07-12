@@ -16,7 +16,7 @@ public sealed class GetContractEmployees : IEndpoint
 
     public sealed record PositionItem(Guid Id, string PositionCode, string Position, decimal Workload, DateTime StartDate, DateTime? EndDate, bool IsActive);
     public sealed record EmployeeItem(Guid Id, string PersonalNumber, string FullName, string EmployeeType, IReadOnlyList<PositionItem> Positions);
-    public sealed record Response(DateTime ProjectStartDate, DateTime? ProjectEndDate, IEnumerable<EmployeeItem> Employees);
+    public sealed record Response(DateTime ProjectStartDate, DateTime? ProjectEndDate, bool IsProjectArchived, IEnumerable<EmployeeItem> Employees);
 
     private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
@@ -28,7 +28,7 @@ public sealed class GetContractEmployees : IEndpoint
         var projectRange = await dbContext.Contracts
             .AsNoTracking()
             .Where(contract => contract.Id == id)
-            .Select(contract => new { contract.Project.StartDate, contract.Project.EndDate })
+            .Select(contract => new { contract.Project.StartDate, contract.Project.EndDate, contract.Project.ArchivedAt })
             .SingleOrDefaultAsync(cancellationToken);
 
         if (projectRange is null)
@@ -61,6 +61,6 @@ public sealed class GetContractEmployees : IEndpoint
                     (ce.EndDate ?? projectEndDate) == null || (ce.EndDate ?? projectEndDate) >= today)).ToList()))
             .ToList();
 
-        return TypedResults.Ok(new Response(projectRange.StartDate, projectRange.EndDate, employees));
+        return TypedResults.Ok(new Response(projectRange.StartDate, projectRange.EndDate, projectRange.ArchivedAt.HasValue, employees));
     }
 }

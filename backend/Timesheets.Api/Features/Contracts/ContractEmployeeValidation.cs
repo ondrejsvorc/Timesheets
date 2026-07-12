@@ -1,15 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Features.Contracts;
 
 internal static class ContractEmployeeValidation
 {
-    public static string? ValidateProjectRange(DateTime projectStartDate, DateTime? projectEndDate, DateTime startDate, DateTime? endDate)
+    public static string? ValidateProjectRange(Project project, DateTime startDate, DateTime? endDate)
     {
-        DateTime projectStart = ToUtcDate(projectStartDate);
+        DateTime projectStart = ToUtcDate(project.StartDate);
         DateTime start = ToUtcDate(startDate);
-        DateTime? projectEnd = projectEndDate.HasValue ? ToUtcDate(projectEndDate.Value) : null;
+        DateTime? projectEnd = project.EndDate.HasValue ? ToUtcDate(project.EndDate.Value) : null;
         DateTime? end = endDate.HasValue ? ToUtcDate(endDate.Value) : null;
 
         if (start < projectStart)
@@ -22,7 +23,7 @@ internal static class ContractEmployeeValidation
             return "Začátek úvazku musí být nejpozději v den ukončení projektu.";
         }
 
-        if (projectEnd.HasValue && end.HasValue && end.Value > projectEnd.Value)
+        if (end.HasValue && !project.ContainsDate(end.Value))
         {
             return "Konec úvazku musí být nejpozději v den ukončení projektu.";
         }

@@ -42,24 +42,24 @@ internal static class ContractEmployeeUpdatePlanner
 
     public static async Task<ContractEmployeeUpdateImpact> PlanAsync(ContractEmployee existing, ContractEmployeeUpdateRequest request, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        var projectRange = await dbContext.Contracts
+        Project project = await dbContext.Contracts
             .AsNoTracking()
             .Where(contract => contract.Id == existing.ContractId)
-            .Select(contract => new { contract.Project.StartDate, contract.Project.EndDate })
+            .Select(contract => contract.Project)
             .SingleAsync(cancellationToken);
 
-        string? projectRangeError = ContractEmployeeValidation.ValidateProjectRange(projectRange.StartDate, projectRange.EndDate, request.StartDate, request.EndDate);
+        string? projectRangeError = ContractEmployeeValidation.ValidateProjectRange(project, request.StartDate, request.EndDate);
         if (projectRangeError is not null)
         {
             return Blocked(projectRangeError);
         }
 
-        if (!request.EndDate.HasValue && projectRange.EndDate.HasValue)
+        if (!request.EndDate.HasValue && project.EndDate.HasValue)
         {
-            request = request with { EndDate = projectRange.EndDate };
+            request = request with { EndDate = project.EndDate };
         }
 
-        DateTime? projectEnd = projectRange.EndDate;
+        DateTime? projectEnd = project.EndDate;
 
         if (IsUnchanged(existing, request, projectEnd))
         {

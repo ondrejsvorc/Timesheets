@@ -6,6 +6,7 @@ using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Projects;
 
 namespace Timesheets.Api.Features.Contracts.Endpoints;
 
@@ -39,6 +40,11 @@ public sealed class AddContractManager : IEndpoint
         if (!contractExists)
         {
             return TypedResults.NotFound();
+        }
+
+        if (await ProjectArchiveGuard.BlockIfContractArchivedAsync(id, dbContext, cancellationToken) is { } archiveBlock)
+        {
+            return TypedResults.BadRequest(archiveBlock);
         }
 
         bool employeeExists = await dbContext.Employees

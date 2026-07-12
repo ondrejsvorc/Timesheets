@@ -167,18 +167,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .IsRequired()
             .HasMaxLength(ProjectSchema.RegistrationNumber.MaxLength);
 
-        builder.Property(p => p.NormalizedName)
-            .IsRequired()
-            .HasMaxLength(ProjectSchema.Name.MaxLength);
-
-        builder.Property(p => p.NormalizedRegistrationNumber)
-            .IsRequired()
-            .HasMaxLength(ProjectSchema.RegistrationNumber.MaxLength);
-
-        builder.HasIndex(p => p.NormalizedName)
+        builder.HasIndex(p => p.Name)
             .IsUnique();
 
-        builder.HasIndex(p => p.NormalizedRegistrationNumber)
+        builder.HasIndex(p => p.RegistrationNumber)
             .IsUnique();
 
         builder.Property(p => p.StartDate)
@@ -240,18 +232,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .IsRequired()
             .HasMaxLength(ContractSchema.RegistrationNumber.MaxLength);
 
-        builder.Property(c => c.NormalizedName)
-            .IsRequired()
-            .HasMaxLength(ContractSchema.Name.MaxLength);
-
-        builder.Property(c => c.NormalizedRegistrationNumber)
-            .IsRequired()
-            .HasMaxLength(ContractSchema.RegistrationNumber.MaxLength);
-
-        builder.HasIndex(c => new { c.ProjectId, c.NormalizedName })
+        builder.HasIndex(c => new { c.ProjectId, c.Name })
             .IsUnique();
 
-        builder.HasIndex(c => new { c.ProjectId, c.NormalizedRegistrationNumber })
+        builder.HasIndex(c => new { c.ProjectId, c.RegistrationNumber })
             .IsUnique();
 
         builder.Property(c => c.CreatedAt)

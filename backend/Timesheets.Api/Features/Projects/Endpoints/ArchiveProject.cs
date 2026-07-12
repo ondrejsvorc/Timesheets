@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
 
@@ -34,12 +35,11 @@ public sealed class ArchiveProject : IEndpoint
             return TypedResults.BadRequest("Projekt je jiÅ¾ archivovÃ¡n.");
         }
 
-        project.ArchivedAt = DateTime.UtcNow;
-        project.UpdatedAt = DateTime.UtcNow;
+        project.Archive(DateTime.UtcNow);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         int contractCount = await dbContext.Contracts.CountAsync(c => c.ProjectId == id, cancellationToken);
 
-        return TypedResults.Ok(new Response(new ProjectItem(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, contractCount, project.Status)));
+        return TypedResults.Ok(new Response(new ProjectItem(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, contractCount, project.GetStatus(PragueClock.Today))));
     }
 }

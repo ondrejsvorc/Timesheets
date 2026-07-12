@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Domain.Models;
@@ -65,7 +66,7 @@ public sealed class CreateProject : IEndpoint
             return TypedResults.BadRequest("Projekt s tímto Id nebo názvem už existuje.");
         }
 
-        ProjectItem projectItem = new(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, 0, project.Status);
+        ProjectItem projectItem = new(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, 0, project.GetStatus(PragueClock.Today));
 
         return TypedResults.Created($"/projects/{project.Id}", new Response(projectItem));
     }

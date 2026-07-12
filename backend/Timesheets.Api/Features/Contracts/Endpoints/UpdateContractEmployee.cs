@@ -7,6 +7,7 @@ using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Projects;
 using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Contracts.Endpoints;
@@ -49,6 +50,11 @@ public sealed class UpdateContractEmployee : IEndpoint
         if (!user.Satisfies(UserRole.ContractManager, contractId: id))
         {
             return TypedResults.Forbid();
+        }
+
+        if (await ProjectArchiveGuard.BlockIfContractArchivedAsync(id, dbContext, cancellationToken) is { } archiveBlock)
+        {
+            return TypedResults.BadRequest(archiveBlock);
         }
 
         ContractEmployee? existing = await dbContext.ContractEmployees

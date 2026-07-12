@@ -5,6 +5,8 @@ export interface GetProjectResponse {
     id: string;
     name: string;
     registrationNumber: string;
+    archivedAt?: string | null;
+    status: "active" | "inactive" | "archived";
   };
 }
 
@@ -16,6 +18,7 @@ export interface ProjectContractItem {
 }
 
 export interface GetProjectContractsResponse {
+  isProjectArchived: boolean;
   projectContracts: ProjectContractItem[];
 }
 
@@ -45,6 +48,7 @@ export interface ProjectManagerItem {
 }
 
 export interface GetProjectManagersResponse {
+  isProjectArchived: boolean;
   managers: ProjectManagerItem[];
 }
 export interface ProjectContractManagerItem {
@@ -56,6 +60,7 @@ export interface ProjectContractManagerItem {
 }
 
 export interface GetProjectContractsManagersResponse {
+  isProjectArchived: boolean;
   managers: ProjectContractManagerItem[];
 }
 

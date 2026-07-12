@@ -85,10 +85,21 @@ public class CreateProjectContractTests : BaseIntegrationTest
         HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", first);
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
 
-        CreateProjectContract.Request duplicate = new("  duplicate contract  ", TestIdentifiers.Contract(6));
+        CreateProjectContract.Request duplicate = new("Duplicate Contract", TestIdentifiers.Contract(6));
         HttpResponseMessage duplicateResponse = await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", duplicate);
         Assert.Equal(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
         Assert.Contains("existuje", await duplicateResponse.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task CreateProjectContract_WithNameVariantInSameProject_ReturnsCreated()
+    {
+        Guid contractEmployeeId = await CreateProjectAsync();
+        HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", new CreateProjectContract.Request("Variant Contract", TestIdentifiers.Contract(18)));
+        Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
+
+        HttpResponseMessage secondResponse = await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", new CreateProjectContract.Request("  variant contract  ", TestIdentifiers.Contract(19)));
+        Assert.Equal(HttpStatusCode.Created, secondResponse.StatusCode);
     }
 
     [Fact]
@@ -106,7 +117,7 @@ public class CreateProjectContractTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task DatabaseRejectsNormalizedDuplicateContract()
+    public async Task DatabaseAllowsNameVariantContract()
     {
         Guid contractEmployeeId = await CreateProjectAsync();
         HttpResponseMessage firstResponse = await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", new CreateProjectContract.Request("Database Contract", TestIdentifiers.Contract(8)));
@@ -116,6 +127,6 @@ public class CreateProjectContractTests : BaseIntegrationTest
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         dbContext.Contracts.Add(new Contract { Id = Guid.CreateVersion7(), ProjectId = contractEmployeeId, Name = "  database contract  ", RegistrationNumber = TestIdentifiers.Contract(9) });
 
-        await Assert.ThrowsAsync<DbUpdateException>(() => dbContext.SaveChangesAsync());
+        await dbContext.SaveChangesAsync();
     }
 }

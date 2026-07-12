@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Projects;
 
 namespace Timesheets.Api.Features.Contracts.Endpoints;
 
@@ -25,11 +26,16 @@ public sealed class GetContractEmployeeAddImpact : IEndpoint
         var contract = await dbContext.Contracts
             .AsNoTracking()
             .Where(c => c.Id == id)
-            .Select(c => new { c.Project.EndDate })
+            .Select(c => new { c.Project.EndDate, c.Project.ArchivedAt })
             .SingleOrDefaultAsync(cancellationToken);
         if (contract is null)
         {
             return TypedResults.NotFound();
+        }
+
+        if (contract.ArchivedAt.HasValue)
+        {
+            return TypedResults.Ok(new ContractEmployeeAddImpact(false, ProjectArchiveGuard.BlockMessage, 0, 0));
         }
 
         ContractEmployeeAddImpact impact = await ContractEmployeeAddPlanner.PlanAsync(

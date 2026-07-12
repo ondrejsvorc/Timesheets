@@ -6,6 +6,7 @@ using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Projects;
 
 namespace Timesheets.Api.Features.Contracts.Endpoints;
 
@@ -36,6 +37,11 @@ public sealed class GetContractEmployeeUpdateImpact : IEndpoint
         if (!user.Satisfies(UserRole.ContractManager, contractId: id))
         {
             return TypedResults.Forbid();
+        }
+
+        if (await ProjectArchiveGuard.BlockIfContractArchivedAsync(id, dbContext, cancellationToken) is not null)
+        {
+            return TypedResults.Ok(new ContractEmployeeUpdateImpact(false, false, ProjectArchiveGuard.BlockMessage, null, null, 0, 0, 0, 0, 0));
         }
 
         ContractEmployee? existing = await dbContext.ContractEmployees

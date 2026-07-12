@@ -6,8 +6,6 @@ public sealed class Contract
     public Guid ProjectId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string RegistrationNumber { get; set; } = string.Empty;
-    public string NormalizedName { get; set; } = string.Empty;
-    public string NormalizedRegistrationNumber { get; set; } = string.Empty;
     public DateTime CreatedAt { get; init; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
 

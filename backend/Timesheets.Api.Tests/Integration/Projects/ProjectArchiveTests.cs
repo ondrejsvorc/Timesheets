@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Timesheets.Api.Features.Contracts.Endpoints;
 using Timesheets.Api.Features.Projects;
 using Timesheets.Api.Features.Projects.Endpoints;
 using Xunit;
@@ -57,5 +58,34 @@ public class ProjectArchiveTests : BaseIntegrationTest
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 4, 1, 0, 0, 0, DateTimeKind.Utc));
         HttpResponseMessage response = await Client.PostAsync($"/api/projects/{setup.ProjectId}/unarchive", null);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ArchivedProject_BlocksWrites()
+    {
+        DateTime start = new(2024, 5, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime end = new(2024, 5, 31, 0, 0, 0, DateTimeKind.Utc);
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, start, end);
+
+        HttpResponseMessage archiveResponse = await Client.PostAsync($"/api/projects/{setup.ProjectId}/archive", null);
+        Assert.Equal(HttpStatusCode.OK, archiveResponse.StatusCode);
+
+        HttpResponseMessage updateProject = await Client.PutAsJsonAsync(
+            $"/api/projects/{setup.ProjectId}",
+            new UpdateProject.Request("Archived Project Update", TestIdentifiers.Project(12001), start, end.AddYears(1)));
+        Assert.Equal(HttpStatusCode.BadRequest, updateProject.StatusCode);
+
+        HttpResponseMessage createContract = await Client.PostAsJsonAsync(
+            $"/api/projects/{setup.ProjectId}/contracts",
+            new CreateProjectContract.Request("Archived Contract", TestIdentifiers.Contract(12001)));
+        Assert.Equal(HttpStatusCode.BadRequest, createContract.StatusCode);
+
+        HttpResponseMessage addPosition = await Client.PostAsJsonAsync(
+            $"/api/contracts/{setup.ContractId}/employees",
+            new AddContractEmployee.Request(Guid.CreateVersion7(), TestIdentifiers.Position(12001), "Blocked", 0.1m, start, end));
+        Assert.Equal(HttpStatusCode.BadRequest, addPosition.StatusCode);
+
+        HttpResponseMessage deleteContract = await Client.DeleteAsync($"/api/projects/{setup.ProjectId}/contracts/{setup.ContractId}");
+        Assert.Equal(HttpStatusCode.Conflict, deleteContract.StatusCode);
     }
 }

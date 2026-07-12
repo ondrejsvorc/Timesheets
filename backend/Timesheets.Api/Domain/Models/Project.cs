@@ -1,6 +1,3 @@
-using System.ComponentModel.DataAnnotations.Schema;
-using Timesheets.Api.Common;
-
 namespace Timesheets.Api.Domain.Models;
 
 public sealed class Project
@@ -8,8 +5,6 @@ public sealed class Project
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string RegistrationNumber { get; set; } = string.Empty;
-    public string NormalizedName { get; set; } = string.Empty;
-    public string NormalizedRegistrationNumber { get; set; } = string.Empty;
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public DateTime? ArchivedAt { get; set; }
@@ -21,7 +16,18 @@ public sealed class Project
 
     public bool IsArchived() => ArchivedAt.HasValue;
 
-    public ProjectStatus GetStatus(DateOnly date)
+    public bool ContainsDate(DateTime date)
+    {
+        DateOnly current = DateOnly.FromDateTime(date);
+        DateOnly start = DateOnly.FromDateTime(StartDate);
+
+        return current >= start && (EndDate is null || current <= DateOnly.FromDateTime(EndDate.Value));
+    }
+
+    public bool ContainsRange(DateTime startDate, DateTime? endDate) =>
+        ContainsDate(startDate) && (!endDate.HasValue || ContainsDate(endDate.Value));
+
+    public string GetStatus(DateOnly date)
     {
         if (IsArchived())
         {
@@ -43,7 +49,7 @@ public sealed class Project
         return "active";
     }
 
-    public bool IsActive(DateOnly date) => GetStatus(date) == ProjectStatus.Active;
+    public bool IsActive(DateOnly date) => GetStatus(date) == "active";
 
     public void Archive(DateTime archivedAt)
     {

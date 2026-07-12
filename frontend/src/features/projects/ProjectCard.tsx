@@ -48,15 +48,17 @@ export const ProjectCard = ({ project, onUpdate, onRequestDelete }: ProjectCardP
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsEditOpen(true);
-                    }}
-                  >
-                    <EditIcon />
-                    {Texts.edit}
-                  </DropdownMenuItem>
+                  {status !== "archived" && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditOpen(true);
+                      }}
+                    >
+                      <EditIcon />
+                      {Texts.edit}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={async (e) => {
                       e.stopPropagation();
@@ -67,17 +69,19 @@ export const ProjectCard = ({ project, onUpdate, onRequestDelete }: ProjectCardP
                     {status === "archived" ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                     {status === "archived" ? Texts.unarchive : Texts.archive}
                   </DropdownMenuItem>
-                  <Can action={UiAction.projects.delete}>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRequestDelete(project.id);
-                      }}
-                    >
-                      <DeleteIcon />
-                      {Texts.delete}
-                    </DropdownMenuItem>
-                  </Can>
+                  {status !== "archived" && (
+                    <Can action={UiAction.projects.delete}>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRequestDelete(project.id);
+                        }}
+                      >
+                        <DeleteIcon />
+                        {Texts.delete}
+                      </DropdownMenuItem>
+                    </Can>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </Can>

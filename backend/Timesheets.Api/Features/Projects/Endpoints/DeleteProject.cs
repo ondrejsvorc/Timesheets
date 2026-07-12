@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Projects.Endpoints;
 
@@ -24,6 +25,11 @@ public sealed class DeleteProject : IEndpoint
             return TypedResults.NotFound();
         }
 
+        if (await ProjectArchiveGuard.BlockIfArchivedAsync(id, dbContext, cancellationToken) is { } archiveBlock)
+        {
+            return TypedResults.Conflict(archiveBlock);
+        }
+
         List<Guid> contractIds = await dbContext.Contracts
             .AsNoTracking()
             .Where(c => c.ProjectId == id)
@@ -34,6 +40,8 @@ public sealed class DeleteProject : IEndpoint
         {
             return TypedResults.Conflict("Projekt nelze smazat, protože obsahuje výkazy ke schválení nebo schválené.");
         }
+
+        await ContractPartCleanup.RemoveDraftPartsForContractIdsAsync(contractIds, dbContext, cancellationToken);
 
         await dbContext.Projects
             .Where(p => p.Id == id)

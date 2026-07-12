@@ -58,7 +58,7 @@ public class UpdateProjectContractTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task UpdateProjectContract_WithNormalizedDuplicate_ReturnsBadRequest()
+    public async Task UpdateProjectContract_WithExactDuplicate_ReturnsBadRequest()
     {
         string suffix = TestIdentifiers.Suffix();
         CreateProject.Request projectRequest = new($"Project {suffix}", TestIdentifiers.Project(202), DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(30));
@@ -69,7 +69,7 @@ public class UpdateProjectContractTests : BaseIntegrationTest
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
         CreateProjectContract.Response? second = await (await Client.PostAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts", new CreateProjectContract.Request("Second Contract", TestIdentifiers.Contract(204)))).Content.ReadFromJsonAsync<CreateProjectContract.Response>();
 
-        HttpResponseMessage duplicateName = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts/{second!.ProjectContract.Id}", new UpdateProjectContract.Request("  first contract  ", TestIdentifiers.Contract(204)));
+        HttpResponseMessage duplicateName = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts/{second!.ProjectContract.Id}", new UpdateProjectContract.Request("First Contract", TestIdentifiers.Contract(204)));
         HttpResponseMessage duplicateRegistrationNumber = await Client.PutAsJsonAsync($"/api/projects/{contractEmployeeId}/contracts/{second.ProjectContract.Id}", new UpdateProjectContract.Request("Second Contract", TestIdentifiers.Contract(203)));
 
         Assert.Equal(HttpStatusCode.BadRequest, duplicateName.StatusCode);

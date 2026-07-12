@@ -17,7 +17,7 @@ public sealed class GetProjectContractsManagers : IEndpoint
         string ContractRegistrationNumber,
         string EmployeePersonalNumber,
         string EmployeeFullName);
-    public sealed record Response(IEnumerable<ContractManagerItem> Managers);
+    public sealed record Response(bool IsProjectArchived, IEnumerable<ContractManagerItem> Managers);
 
     private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
@@ -25,6 +25,12 @@ public sealed class GetProjectContractsManagers : IEndpoint
         {
             return TypedResults.Forbid();
         }
+
+        bool isArchived = await dbContext.Projects
+            .AsNoTracking()
+            .Where(p => p.Id == id)
+            .Select(p => p.ArchivedAt.HasValue)
+            .SingleOrDefaultAsync(cancellationToken);
 
         List<ContractManagerItem> managers = (await dbContext.ContractManagers
             .AsNoTracking()
@@ -44,6 +50,6 @@ public sealed class GetProjectContractsManagers : IEndpoint
             ))
             .ToList();
 
-        return TypedResults.Ok(new Response(managers));
+        return TypedResults.Ok(new Response(isArchived, managers));
     }
 }

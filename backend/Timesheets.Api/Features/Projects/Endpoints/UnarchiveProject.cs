@@ -35,12 +35,11 @@ public sealed class UnarchiveProject : IEndpoint
             return TypedResults.BadRequest("Projekt není archivován.");
         }
 
-        project.ArchivedAt = null;
-        project.UpdatedAt = DateTime.UtcNow;
+        project.Unarchive(DateTime.UtcNow);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         int contractCount = await dbContext.Contracts.CountAsync(c => c.ProjectId == id, cancellationToken);
 
-        return TypedResults.Ok(new Response(new ProjectItem(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, contractCount, project.GetStatus(PragueClock.Today).ToString().ToLowerInvariant())));
+        return TypedResults.Ok(new Response(new ProjectItem(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, contractCount, project.GetStatus(PragueClock.Today))));
     }
 }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Projects;
 using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Contracts.Endpoints;
@@ -19,6 +20,11 @@ public sealed class RemoveContractEmployee : IEndpoint
             return TypedResults.Forbid();
         }
 
+        if (await ProjectArchiveGuard.BlockIfContractArchivedAsync(id, dbContext, cancellationToken) is { } archiveBlock)
+        {
+            return TypedResults.Conflict(archiveBlock);
+        }
+
         bool exists = await dbContext.ContractEmployees
             .AsNoTracking()
             .AnyAsync(contractEmployee => contractEmployee.ContractId == id && contractEmployee.Id == contractEmployeeId, cancellationToken);
@@ -28,13 +34,12 @@ public sealed class RemoveContractEmployee : IEndpoint
             return TypedResults.NotFound();
         }
 
-        bool hasProtectedTimesheets = await dbContext.ContractParts
-            .AsNoTracking()
-            .AnyAsync(timesheet => timesheet.ContractEmployeeId == contractEmployeeId && (timesheet.TimesheetStatus.Code == TimesheetStatusCodes.Submitted || timesheet.TimesheetStatus.Code == TimesheetStatusCodes.Approved), cancellationToken);
-        if (hasProtectedTimesheets)
+        if (await ContractPartCleanup.HasProtectedPartsForAssignmentAsync(contractEmployeeId, dbContext, cancellationToken))
         {
             return TypedResults.Conflict("Pozici nelze odebrat, protože obsahuje výkazy ke schválení nebo schválené.");
         }
+
+        await ContractPartCleanup.RemoveDraftPartsForAssignmentAsync(contractEmployeeId, dbContext, cancellationToken);
 
         await dbContext.ContractEmployees
             .Where(contractEmployee => contractEmployee.ContractId == id && contractEmployee.Id == contractEmployeeId)

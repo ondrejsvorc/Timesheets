@@ -43,6 +43,11 @@ public sealed class CreateProjectContract : IEndpoint
             return TypedResults.NotFound();
         }
 
+        if (await ProjectArchiveGuard.BlockIfArchivedAsync(id, dbContext, cancellationToken) is { } archiveBlock)
+        {
+            return TypedResults.BadRequest(archiveBlock);
+        }
+
         string name = request.Name.Trim();
         string registrationNumber = request.RegistrationNumber.Trim();
         if (await ProjectContractValidation.HasDuplicateAsync(id, excludedContractId: null, name, registrationNumber, dbContext, cancellationToken))

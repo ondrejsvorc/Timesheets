@@ -1,7 +1,6 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Timesheets.Api.Common;
 using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Domain;
@@ -59,8 +58,6 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("20000000-0000-0000-0000-000000000001"),
                     Name = "Výzkumný projekt Alpha",
                     RegistrationNumber = "PROJ-2024-001",
-                    NormalizedName = CatalogNormalization.NormalizeName("Výzkumný projekt Alpha"),
-                    NormalizedRegistrationNumber = CatalogNormalization.NormalizeRegistrationNumber("PROJ-2024-001"),
                     StartDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
                     EndDate = new DateTime(2024, 12, 31, 0, 0, 0, DateTimeKind.Utc),
                 },
@@ -69,8 +66,6 @@ public static class DatabaseSeeder
                     Id = Guid.Parse("20000000-0000-0000-0000-000000000002"),
                     Name = "Vývojový projekt Beta",
                     RegistrationNumber = "PROJ-2024-002",
-                    NormalizedName = CatalogNormalization.NormalizeName("Vývojový projekt Beta"),
-                    NormalizedRegistrationNumber = CatalogNormalization.NormalizeRegistrationNumber("PROJ-2024-002"),
                     StartDate = new DateTime(2024, 3, 1, 0, 0, 0, DateTimeKind.Utc),
                 }
             ];
@@ -88,8 +83,6 @@ public static class DatabaseSeeder
                     ProjectId = Guid.Parse("20000000-0000-0000-0000-000000000001"),
                     Name = "Kontrakt Alpha-1",
                     RegistrationNumber = "CONT-2024-001",
-                    NormalizedName = CatalogNormalization.NormalizeName("Kontrakt Alpha-1"),
-                    NormalizedRegistrationNumber = CatalogNormalization.NormalizeRegistrationNumber("CONT-2024-001"),
                 },
                 new()
                 {
@@ -97,8 +90,6 @@ public static class DatabaseSeeder
                     ProjectId = Guid.Parse("20000000-0000-0000-0000-000000000002"),
                     Name = "Kontrakt Beta-1",
                     RegistrationNumber = "CONT-2024-002",
-                    NormalizedName = CatalogNormalization.NormalizeName("Kontrakt Beta-1"),
-                    NormalizedRegistrationNumber = CatalogNormalization.NormalizeRegistrationNumber("CONT-2024-002"),
                 }
             ];
             context.Contracts.AddRange(contracts);
@@ -560,4 +551,3 @@ public static class DatabaseSeeder
         await tx.CommitAsync();
     }
 }
-

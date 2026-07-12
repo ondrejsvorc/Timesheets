@@ -11,7 +11,7 @@ public sealed class GetProjectContracts : IEndpoint
         app.MapGet("/{id}/contracts", Handle)
            .WithSummary("Get Project Contracts");
 
-    public sealed record Response(IEnumerable<ProjectContractItem> ProjectContracts);
+    public sealed record Response(bool IsProjectArchived, IEnumerable<ProjectContractItem> ProjectContracts);
 
     private static async Task<Results<Ok<Response>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
@@ -19,6 +19,12 @@ public sealed class GetProjectContracts : IEndpoint
         {
             return TypedResults.Forbid();
         }
+
+        bool isArchived = await dbContext.Projects
+            .AsNoTracking()
+            .Where(p => p.Id == id)
+            .Select(p => p.ArchivedAt.HasValue)
+            .SingleOrDefaultAsync(cancellationToken);
 
         List<ProjectContractItem> contracts = await dbContext.Contracts
             .AsNoTracking()
@@ -31,6 +37,6 @@ public sealed class GetProjectContracts : IEndpoint
             ))
             .ToListAsync(cancellationToken);
 
-        return TypedResults.Ok(new Response(contracts));
+        return TypedResults.Ok(new Response(isArchived, contracts));
     }
 }
