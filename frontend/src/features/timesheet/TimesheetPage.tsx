@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { Suspense, useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { BackButton, FullscreenButton } from "@/components/shared/buttons/ActionButtons";
-import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
@@ -98,11 +97,9 @@ const TimesheetEditorSection = ({ overviewPromise }: TimesheetEditorSectionProps
   const timesheetData = useAsyncValue() as TimesheetData;
 
   return (
-    <Suspense fallback={<GenericSkeleton className="mt-6 min-h-96" />}>
-      <AwaitContent promise={overviewPromise}>
-        <TimesheetEditorWithOverview initialData={timesheetData} />
-      </AwaitContent>
-    </Suspense>
+    <AwaitContent promise={overviewPromise}>
+      <TimesheetEditorWithOverview initialData={timesheetData} />
+    </AwaitContent>
   );
 };
 
