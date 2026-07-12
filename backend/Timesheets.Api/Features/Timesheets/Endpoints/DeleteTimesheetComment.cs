@@ -13,6 +13,7 @@ public sealed class DeleteTimesheetComment : IEndpoint
            .WithSummary("Delete Timesheet Comment");
 
     public sealed record Request([FromQuery] Guid EmployeeId, [FromQuery] int Year, [FromQuery] int Month);
+    private sealed record EmployeeMonthScope(Guid TimesheetId, IReadOnlyDictionary<Guid, string> ContractPartLabels);
 
     private static async Task<Results<NoContent, NotFound, ForbidHttpResult>> Handle(Guid commentId, [AsParameters] Request request, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
     {
@@ -21,7 +22,7 @@ public sealed class DeleteTimesheetComment : IEndpoint
             return TypedResults.Forbid();
         }
 
-        TimesheetScope? scope = await TimesheetScopeLoader.LoadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
+        EmployeeMonthScope? scope = await LoadScopeAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
 
         if (scope is null)
         {
@@ -53,5 +54,32 @@ public sealed class DeleteTimesheetComment : IEndpoint
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return TypedResults.NoContent();
+    }
+
+    private static async Task<EmployeeMonthScope?> LoadScopeAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        Guid? timesheetId = await dbContext.Timesheets
+            .AsNoTracking()
+            .Where(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == year && timesheet.Month == month)
+            .Select(timesheet => (Guid?)timesheet.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (timesheetId is null)
+        {
+            return null;
+        }
+
+        List<(Guid Id, string ContractRegistrationNumber)> contractPartRows = await dbContext.ContractParts
+            .AsNoTracking()
+            .Where(part => part.TimesheetId == timesheetId.Value)
+            .Join(dbContext.ContractEmployees.AsNoTracking(), timesheet => timesheet.ContractEmployeeId, contractEmployee => contractEmployee.Id, (timesheet, contractEmployee) => new { timesheet, contractEmployee })
+            .Join(dbContext.Contracts.AsNoTracking(), x => x.contractEmployee.ContractId, contract => contract.Id, (x, contract) => new { x.timesheet.Id, contract.RegistrationNumber })
+            .OrderBy(x => x.RegistrationNumber)
+            .Select(x => new ValueTuple<Guid, string>(x.Id, x.RegistrationNumber))
+            .ToListAsync(cancellationToken);
+
+        Dictionary<Guid, string> labels = contractPartRows.ToDictionary(row => row.Id, row => row.ContractRegistrationNumber);
+
+        return new EmployeeMonthScope(timesheetId.Value, labels);
     }
 }

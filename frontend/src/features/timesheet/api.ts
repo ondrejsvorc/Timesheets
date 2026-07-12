@@ -28,6 +28,7 @@ interface GetTimesheetResponse {
   id: string;
   year: number;
   month: number;
+  totalWorkload: number;
   coreWorkload: number;
   tracksAttendance: boolean;
   contractParts: CompactContractPartDefinition[];
@@ -350,6 +351,18 @@ const mapComment = (item: TimesheetCommentItem): TimesheetComment => {
   };
 };
 
+export const getTimesheetOverview = (employeeId: string, year: number, month: number): Promise<GetTimesheetOverviewResponse> => {
+  const params = new URLSearchParams({
+    employeeId,
+    year: String(year),
+    month: String(month),
+  });
+
+  return withDelay("slow", () => {
+    return customFetch<GetTimesheetOverviewResponse>(`${ApiUrl}/timesheets/overview?${params.toString()}`);
+  });
+};
+
 export const getTimesheet = (employeeId: string, year: number, month: number): Promise<TimesheetData> => {
   const params = new URLSearchParams({
     employeeId,
@@ -361,18 +374,6 @@ export const getTimesheet = (employeeId: string, year: number, month: number): P
     const response = await customFetch<GetTimesheetResponse>(`${ApiUrl}/timesheets?${params.toString()}`);
     const timesheet = mapToTimesheet(response);
     return { timesheet, evaluation: await reviewTimesheet(timesheet) };
-  });
-};
-
-export const getTimesheetOverview = (employeeId: string, year: number, month: number): Promise<GetTimesheetOverviewResponse> => {
-  const params = new URLSearchParams({
-    employeeId,
-    year: String(year),
-    month: String(month),
-  });
-
-  return withDelay("slow", () => {
-    return customFetch<GetTimesheetOverviewResponse>(`${ApiUrl}/timesheets/overview?${params.toString()}`);
   });
 };
 

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
-using Timesheets.Api.Features.Timesheets;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Features.Attendance;
 
@@ -89,7 +89,7 @@ public sealed class AttendanceFileDetector(AttendanceFileReader reader, ILogger<
 
         if (existingTimesheet is not null)
         {
-            if (existingTimesheet.TimesheetStatus.Code != TimesheetStatusCodes.Draft)
+            if (existingTimesheet.TimesheetStatus.Code != TimesheetStatus.DraftCode)
             {
                 return CreateResult(file, metadata, canImport: false, isReimport: false, errorMessage: "Docházku lze znovu naimportovat jen ve stavu Rozpracovaný.");
             }

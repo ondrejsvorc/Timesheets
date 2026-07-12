@@ -9,6 +9,7 @@ using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Employees;
 using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Attendance.Endpoints;
@@ -49,6 +50,7 @@ public sealed class ImportAttendance : IEndpoint
         AttendanceFileDetector detector,
         AppDbContext dbContext,
         ICzechHolidaysFactory holidaysFactory,
+        TimesheetEvaluator evaluator,
         ICurrentUser user,
         ILogger<ImportAttendance> logger,
         CancellationToken cancellationToken)
@@ -78,7 +80,7 @@ public sealed class ImportAttendance : IEndpoint
 
         try
         {
-            Guid timesheetId = await PersistAsync(request.EmployeeId, attendance, dbContext, holidaysFactory, cancellationToken);
+            Guid timesheetId = await PersistAsync(request.EmployeeId, attendance, dbContext, holidaysFactory, evaluator, cancellationToken);
             return TypedResults.Ok(new Response(timesheetId, attendance.Year, attendance.Month));
         }
         catch (ImportException ex)
@@ -108,6 +110,7 @@ public sealed class ImportAttendance : IEndpoint
         AttendanceFile importedTimesheet,
         AppDbContext dbContext,
         ICzechHolidaysFactory holidaysFactory,
+        TimesheetEvaluator evaluator,
         CancellationToken cancellationToken)
     {
         HashSet<string> validInterruptionCodes = await dbContext.Interruptions
@@ -115,7 +118,7 @@ public sealed class ImportAttendance : IEndpoint
             .Select(i => i.Name)
             .ToHashSetAsync(StringComparer.OrdinalIgnoreCase, cancellationToken);
 
-        await ContractPartInitializer.EnsureForEmployeeMonthAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, dbContext, holidaysFactory, cancellationToken);
+        await EnsureForEmployeeMonthAsync(employeeId, importedTimesheet.Year, importedTimesheet.Month, dbContext, holidaysFactory, cancellationToken);
 
         decimal projectWorkload = await dbContext.ContractParts
             .AsNoTracking()
@@ -133,15 +136,15 @@ public sealed class ImportAttendance : IEndpoint
 
         if (existingTimesheet is not null)
         {
-            if (existingTimesheet.TimesheetStatus.Code != TimesheetStatusCodes.Draft)
+            if (existingTimesheet.TimesheetStatus.Code != TimesheetStatus.DraftCode)
             {
                 throw new ImportException("Docházku lze znovu naimportovat jen ve stavu Rozpracovaný.");
             }
 
-            return await ReimportAsync(existingTimesheet, employeeId, importedTimesheet, validInterruptionCodes, dbContext, cancellationToken);
+            return await ReimportAsync(existingTimesheet, employeeId, importedTimesheet, validInterruptionCodes, dbContext, evaluator, cancellationToken);
         }
 
-        return await CreateTimesheetAsync(employeeId, importedTimesheet, validInterruptionCodes, dbContext, cancellationToken);
+        return await CreateTimesheetAsync(employeeId, importedTimesheet, validInterruptionCodes, dbContext, evaluator, cancellationToken);
     }
 
     private static async Task<Guid> CreateTimesheetAsync(
@@ -149,12 +152,9 @@ public sealed class ImportAttendance : IEndpoint
         AttendanceFile importedTimesheet,
         HashSet<string> validInterruptionCodes,
         AppDbContext dbContext,
+        TimesheetEvaluator evaluator,
         CancellationToken cancellationToken)
     {
-        Domain.Models.TimesheetStatus draftStatus = await dbContext.TimesheetStatuses
-            .AsNoTracking()
-            .SingleAsync(s => s.Code == TimesheetStatusCodes.Draft, cancellationToken);
-
         Guid employeeTypeId = await dbContext.Employees
             .AsNoTracking()
             .Where(employee => employee.Id == employeeId)
@@ -165,7 +165,7 @@ public sealed class ImportAttendance : IEndpoint
         {
             Id = Guid.CreateVersion7(),
             EmployeeId = employeeId,
-            TimesheetStatusId = draftStatus.Id,
+            TimesheetStatusId = TimesheetStatus.DraftId,
             Year = importedTimesheet.Year,
             Month = importedTimesheet.Month,
             CreatedAt = DateTime.UtcNow
@@ -176,7 +176,7 @@ public sealed class ImportAttendance : IEndpoint
 
         await UpsertEmployeeWorkloadAsync(dbContext, employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await TimesheetEngine.ApplyInterruptionHoursAsync(timesheet.Id, dbContext, cancellationToken);
+        await ApplyInterruptionHoursAsync(timesheet.Id, dbContext, evaluator, cancellationToken);
         return timesheet.Id;
     }
 
@@ -186,6 +186,7 @@ public sealed class ImportAttendance : IEndpoint
         AttendanceFile importedTimesheet,
         HashSet<string> validInterruptionCodes,
         AppDbContext dbContext,
+        TimesheetEvaluator evaluator,
         CancellationToken cancellationToken)
     {
         Guid timesheetId = existingTimesheet.Id;
@@ -205,7 +206,7 @@ public sealed class ImportAttendance : IEndpoint
 
         await RecalculateDraftContractPartColumnsAsync(dbContext, employeeId, importedTimesheet.Year, importedTimesheet.Month, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await TimesheetEngine.ApplyInterruptionHoursAsync(timesheetId, dbContext, cancellationToken);
+        await ApplyInterruptionHoursAsync(timesheetId, dbContext, evaluator, cancellationToken);
         return timesheetId;
     }
 
@@ -223,8 +224,8 @@ public sealed class ImportAttendance : IEndpoint
                 BreakStart = day.BreakStart,
                 BreakEnd = day.BreakEnd,
                 Workload = day.Workload,
-                HoursWithoutBreak = TimesheetLogic.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd),
-                HoursObligation = TimesheetLogic.CalculateTotalHoursObligation(day.Date, day.IsHoliday, day.Workload),
+                HoursWithoutBreak = TimesheetEvaluator.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd),
+                HoursObligation = TimesheetEvaluator.CalculateTotalHoursObligation(day.Date, day.IsHoliday, day.Workload),
                 IsHoliday = day.IsHoliday,
                 Description = NormalizeInterruptions(day.OtherInterruption, validInterruptionCodes),
                 Schedules = JsonSerializer.Serialize(day.Schedules)
@@ -251,7 +252,7 @@ public sealed class ImportAttendance : IEndpoint
         List<Domain.Models.ContractPart> contractParts = await dbContext.ContractParts
             .Include(pt => pt.Days)
             .Where(pt => pt.Timesheet.EmployeeId == employeeId && pt.Timesheet.Year == year && pt.Timesheet.Month == month)
-            .Where(pt => pt.TimesheetStatus.Code == TimesheetStatusCodes.Draft)
+            .Where(pt => pt.TimesheetStatus.Code == TimesheetStatus.DraftCode)
             .ToListAsync(cancellationToken);
 
         foreach (Domain.Models.ContractPart projectTimesheet in contractParts)
@@ -264,7 +265,7 @@ public sealed class ImportAttendance : IEndpoint
                 }
 
                 contractPartDay.IsHoliday = attendanceDay.IsHoliday;
-                contractPartDay.HoursObligation = TimesheetLogic.CalculateTotalHoursObligation(contractPartDay.Date, attendanceDay.IsHoliday, projectTimesheet.Workload);
+                contractPartDay.HoursObligation = TimesheetEvaluator.CalculateTotalHoursObligation(contractPartDay.Date, attendanceDay.IsHoliday, projectTimesheet.Workload);
             }
 
             projectTimesheet.UpdatedAt = DateTime.UtcNow;
@@ -353,4 +354,255 @@ public sealed class ImportAttendance : IEndpoint
     }
 
     private sealed class ImportException(string message) : Exception(message);
+
+    private static async Task EnsureForEmployeeMonthAsync(Guid employeeId, int year, int month, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)
+    {
+        DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);
+        List<ContractEmployee> assignments = await dbContext.ContractEmployees
+            .AsNoTracking()
+            .Include(assignment => assignment.Contract)
+            .ThenInclude(contract => contract.Project)
+            .Where(assignment => assignment.EmployeeId == employeeId && assignment.StartDate <= periodEnd && (!assignment.EndDate.HasValue || assignment.EndDate >= periodStart))
+            .Where(assignment => !assignment.Contract.Project.EndDate.HasValue || assignment.Contract.Project.EndDate >= periodStart)
+            .ToListAsync(cancellationToken);
+
+        if (assignments.Count == 0)
+        {
+            return;
+        }
+
+        Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, employeeId, year, month, cancellationToken);
+        Guid[] assignmentIds = assignments.Select(assignment => assignment.Id).ToArray();
+        HashSet<Guid> existingAssignmentIds = await dbContext.ContractParts
+            .AsNoTracking()
+            .Where(part => part.TimesheetId == timesheetId && assignmentIds.Contains(part.ContractEmployeeId))
+            .Select(part => part.ContractEmployeeId)
+            .ToHashSetAsync(cancellationToken);
+        List<ContractEmployee> missingAssignments = assignments.Where(assignment => !existingAssignmentIds.Contains(assignment.Id)).ToList();
+
+        if (missingAssignments.Count == 0)
+        {
+            return;
+        }
+
+        HashSet<DateOnly> holidays = holidaysFactory.Create(year).Select(holiday => holiday.Date).ToHashSet();
+        dbContext.ContractParts.AddRange(missingAssignments.Select(assignment => CreateContractPart(assignment, year, month, holidays, timesheetId)));
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static ContractPart CreateContractPart(ContractEmployee assignment, int year, int month, HashSet<DateOnly> holidays, Guid timesheetId)
+    {
+        ContractPart contractPart = new()
+        {
+            Id = Guid.CreateVersion7(),
+            TimesheetId = timesheetId,
+            ContractEmployeeId = assignment.Id,
+            TimesheetStatusId = TimesheetStatus.DraftId,
+            Workload = assignment.Workload,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        ContractPartDateRange range = EffectiveContractPartRange(
+            assignment.StartDate,
+            assignment.EndDate,
+            assignment.Contract?.Project?.StartDate ?? assignment.StartDate,
+            assignment.Contract?.Project?.EndDate);
+        for (int day = 1; day <= DateTime.DaysInMonth(year, month); day++)
+        {
+            DateTime date = new(year, month, day, 0, 0, 0, DateTimeKind.Utc);
+            if (!range.Includes(date))
+            {
+                continue;
+            }
+
+            bool isHoliday = holidays.Contains(DateOnly.FromDateTime(date));
+            contractPart.Days.Add(new ContractPartDay
+            {
+                Id = Guid.CreateVersion7(),
+                ContractPartId = contractPart.Id,
+                Date = date,
+                Hours = 0m,
+                IsHoliday = isHoliday,
+                HoursObligation = TimesheetEvaluator.CalculateTotalHoursObligation(date, isHoliday, assignment.Workload),
+            });
+        }
+
+        return contractPart;
+    }
+
+    private static async Task ApplyInterruptionHoursAsync(Guid timesheetId, AppDbContext dbContext, TimesheetEvaluator evaluator, CancellationToken cancellationToken)
+    {
+        LoadedTimesheet? loaded = await LoadAsync(timesheetId, dbContext, cancellationToken);
+        if (loaded is null)
+        {
+            return;
+        }
+
+        EditableTimesheet sheet = evaluator.BuildEditableTimesheet(loaded, evaluator.CurrentEdit(loaded));
+        bool tracksAttendance = EmployeeTypes.TracksAttendance(loaded.Attendance.EmployeeTypeId);
+        foreach (EditableTimesheetDay day in sheet.Days)
+        {
+            TimesheetEvaluator.ApplyInterruptionToDayState(day, sheet.ContractParts, loaded.TotalWorkload, tracksAttendance);
+        }
+
+        TimesheetEdit request = new(
+            Days: sheet.Days.Select(day => new DayEdit(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.CoreHours, day.Description, day.Schedules)).ToList(),
+            ContractParts: sheet.ContractParts.Select(project => new ContractPartEdit(
+                project.Id,
+                sheet.Days.Select(day => new ContractPartDayEdit(day.Date, day.ContractPartHours.GetValueOrDefault(project.Id), day.ContractPartHoursFixed.GetValueOrDefault(project.Id))).ToList())).ToList());
+        ApplyEdits(loaded, request);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static void ApplyEdits(LoadedTimesheet loaded, TimesheetEdit request)
+    {
+        Dictionary<DateOnly, Domain.Models.AttendanceDay> days = loaded.Attendance.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
+        foreach (DayEdit update in request.Days)
+        {
+            if (!days.TryGetValue(DateOnly.FromDateTime(update.Date), out Domain.Models.AttendanceDay? day))
+            {
+                continue;
+            }
+
+            day.ClockIn = update.ClockIn;
+            day.ClockOut = update.ClockOut;
+            day.BreakStart = update.BreakStart;
+            day.BreakEnd = update.BreakEnd;
+            day.CoreHours = TimesheetEvaluator.Normalize(update.CoreHours);
+            day.Description = update.Description;
+            day.Schedules = JsonSerializer.Serialize(update.Schedules ?? []);
+            day.HoursWithoutBreak = TimesheetEvaluator.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
+        }
+
+        Dictionary<Guid, ContractPartEdit> projects = (request.ContractParts ?? []).ToDictionary(project => project.ContractEmployeeId);
+        foreach (Domain.Models.ContractPart project in loaded.ContractParts)
+        {
+            if (loaded.ContractPartRanges.TryGetValue(project.ContractEmployeeId, out ContractPartDateRange? range))
+            {
+                foreach (Domain.Models.ContractPartDay day in project.Days.Where(day => !range.Includes(day.Date)))
+                {
+                    day.Hours = 0m;
+                    day.HoursLocked = false;
+                }
+            }
+
+            if (!projects.TryGetValue(project.ContractEmployeeId, out ContractPartEdit? update))
+            {
+                continue;
+            }
+
+            project.UpdatedAt = DateTime.UtcNow;
+            if (project.LockedAt is not null)
+            {
+                continue;
+            }
+
+            Dictionary<DateOnly, Domain.Models.ContractPartDay> contractPartDays = project.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
+
+            foreach (ContractPartDayEdit contractPartDay in update.Days)
+            {
+                if (contractPartDays.TryGetValue(DateOnly.FromDateTime(contractPartDay.Date), out Domain.Models.ContractPartDay? day))
+                {
+                    bool active = loaded.ContractPartRanges.TryGetValue(project.ContractEmployeeId, out range) && range.Includes(contractPartDay.Date);
+                    day.Hours = active ? TimesheetEvaluator.Normalize(contractPartDay.Hours) : 0m;
+                    day.HoursLocked = active && contractPartDay.HoursLocked;
+                }
+            }
+        }
+
+        loaded.Timesheet.UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static async Task<LoadedTimesheet?> LoadAsync(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        Domain.Models.Timesheet? timesheet = await dbContext.Timesheets
+            .Include(value => value.Employee)
+            .Include(value => value.TimesheetStatus)
+            .SingleOrDefaultAsync(value => value.Id == id, cancellationToken);
+
+        if (timesheet is null)
+        {
+            return null;
+        }
+
+        Domain.Models.Attendance? attendance = await dbContext.Attendances
+            .Include(value => value.Days)
+            .SingleOrDefaultAsync(value => value.TimesheetId == id, cancellationToken);
+
+        if (attendance is null)
+        {
+            return null;
+        }
+
+        List<Domain.Models.ContractPart> projects = await dbContext.ContractParts
+            .Include(value => value.Days)
+            .Where(value => value.TimesheetId == timesheet.Id)
+            .ToListAsync(cancellationToken);
+
+        Guid[] assignmentIds = projects.Select(project => project.ContractEmployeeId).ToArray();
+        var rangeRows = await (
+            from assignment in dbContext.ContractEmployees.AsNoTracking()
+            join contract in dbContext.Contracts.AsNoTracking() on assignment.ContractId equals contract.Id
+            join project in dbContext.Projects.AsNoTracking() on contract.ProjectId equals project.Id
+            where assignmentIds.Contains(assignment.Id)
+            select new
+            {
+                assignment.Id,
+                assignment.StartDate,
+                AssignmentEndDate = assignment.EndDate,
+                ProjectStartDate = project.StartDate,
+                ProjectEndDate = project.EndDate
+            })
+            .ToListAsync(cancellationToken);
+        Dictionary<Guid, ContractPartDateRange> projectRanges = rangeRows.ToDictionary(
+            row => row.Id,
+            row => EffectiveContractPartRange(row.StartDate, row.AssignmentEndDate, row.ProjectStartDate, row.ProjectEndDate));
+
+        decimal totalWorkload = await GetWorkloadAsync(timesheet.EmployeeId, timesheet.Year, timesheet.Month, dbContext, cancellationToken);
+        decimal coreWorkload = Math.Max(0m, totalWorkload - projects.Sum(project => project.Workload));
+        return new LoadedTimesheet(Timesheet: timesheet, Attendance: attendance, ContractParts: projects, ContractPartRanges: projectRanges, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
+    }
+
+    private static async Task<decimal> GetWorkloadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        decimal? monthly = await dbContext.EmployeeWorkloads
+            .AsNoTracking()
+            .Where(workload => workload.EmployeeId == employeeId && workload.Year == year && workload.Month == month)
+            .Select(workload => (decimal?)workload.Workload)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (monthly.HasValue)
+        {
+            return monthly.Value;
+        }
+
+        DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);
+
+        return await dbContext.CoreEmployments
+            .AsNoTracking()
+            .Where(employment => employment.EmployeeId == employeeId)
+            .Where(employment => employment.StartDate <= periodEnd && (employment.EndDate == null || employment.EndDate >= periodStart))
+            .OrderByDescending(employment => employment.StartDate)
+            .Select(employment => (decimal?)employment.Workload)
+            .FirstOrDefaultAsync(cancellationToken) ?? 0m;
+    }
+
+    private static ContractPartDateRange EffectiveContractPartRange(DateTime assignmentStartDate, DateTime? assignmentEndDate, DateTime projectStartDate, DateTime? projectEndDate)
+    {
+        DateTime start = Max(ToUtcDate(assignmentStartDate), ToUtcDate(projectStartDate));
+        DateTime? end = Min(assignmentEndDate.HasValue ? ToUtcDate(assignmentEndDate.Value) : null, projectEndDate.HasValue ? ToUtcDate(projectEndDate.Value) : null);
+        return new ContractPartDateRange(start, end);
+    }
+
+    private static DateTime Max(DateTime first, DateTime second) => first >= second ? first : second;
+
+    private static DateTime? Min(DateTime? first, DateTime? second) => (first, second) switch
+    {
+        (null, null) => null,
+        (DateTime value, null) => value,
+        (null, DateTime value) => value,
+        (DateTime left, DateTime right) => left <= right ? left : right
+    };
 }

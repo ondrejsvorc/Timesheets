@@ -2,7 +2,7 @@ using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Tests.Unit;
 
-public sealed class TimesheetLogicTests
+public sealed class TimesheetEvaluatorTests
 {
     [Fact]
     public void Overnight_shift_is_valid()

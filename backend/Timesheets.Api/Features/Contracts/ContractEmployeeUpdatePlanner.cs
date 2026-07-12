@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Domain.Models;
-using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Contracts;
 
@@ -252,9 +251,9 @@ internal static class ContractEmployeeUpdatePlanner
 
         foreach (Domain.Models.ContractPart timesheet in timesheets)
         {
-            bool isSubmitted = TimesheetWorkflow.IsSubmitted(timesheet.TimesheetStatus);
-            bool isApproved = TimesheetWorkflow.IsApproved(timesheet.TimesheetStatus);
-            bool isDraft = TimesheetWorkflow.IsDraft(timesheet.TimesheetStatus);
+            bool isSubmitted = timesheet.TimesheetStatus.IsSubmitted;
+            bool isApproved = timesheet.TimesheetStatus.IsApproved;
+            bool isDraft = timesheet.TimesheetStatus.IsDraft;
 
             foreach (Domain.Models.ContractPartDay day in timesheet.Days)
             {
@@ -342,8 +341,8 @@ internal static class ContractEmployeeUpdatePlanner
             .ToListAsync(cancellationToken);
 
         return (
-            statusCodes.Count(TimesheetWorkflow.IsDraft),
-            statusCodes.Count(TimesheetWorkflow.IsSubmitted),
-            statusCodes.Count(TimesheetWorkflow.IsApproved));
+            statusCodes.Count(code => code == TimesheetStatus.DraftCode),
+            statusCodes.Count(code => code == TimesheetStatus.SubmittedCode),
+            statusCodes.Count(code => code == TimesheetStatus.ApprovedCode));
     }
 }

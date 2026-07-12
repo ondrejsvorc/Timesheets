@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
-using Timesheets.Api.Features.Timesheets;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Features.Contracts;
 
@@ -29,12 +29,12 @@ internal static class ContractEmployeeAddPlanner
             .Where(t => t.ContractEmployee.ContractId == contractId && t.ContractEmployee.EmployeeId == request.EmployeeId)
             .Where(t => (t.Timesheet.Year * 100 + t.Timesheet.Month) >= startKey)
             .Where(t => endKey == null || (t.Timesheet.Year * 100 + t.Timesheet.Month) <= endKey.Value)
-            .Where(t => t.TimesheetStatus.Code == TimesheetStatusCodes.Submitted || t.TimesheetStatus.Code == TimesheetStatusCodes.Approved)
+            .Where(t => t.TimesheetStatus.Code == TimesheetStatus.SubmittedCode || t.TimesheetStatus.Code == TimesheetStatus.ApprovedCode)
             .Select(t => t.TimesheetStatus.Code)
             .ToListAsync(cancellationToken);
 
-        int submitted = statusCodes.Count(TimesheetWorkflow.IsSubmitted);
-        int approved = statusCodes.Count(TimesheetWorkflow.IsApproved);
+        int submitted = statusCodes.Count(code => code == TimesheetStatus.SubmittedCode);
+        int approved = statusCodes.Count(code => code == TimesheetStatus.ApprovedCode);
 
         if (submitted > 0 || approved > 0)
         {
@@ -48,4 +48,3 @@ internal static class ContractEmployeeAddPlanner
         return new ContractEmployeeAddImpact(CanAdd: true, BlockReason: null, SubmittedTimesheetCount: 0, ApprovedTimesheetCount: 0);
     }
 }
-

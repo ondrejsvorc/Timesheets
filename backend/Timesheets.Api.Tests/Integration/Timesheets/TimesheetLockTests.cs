@@ -7,8 +7,8 @@ using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Employees;
 using ContractPartDayEdit = Timesheets.Api.Features.Timesheets.ContractPartDayEdit;
 using ContractPartEdit = Timesheets.Api.Features.Timesheets.ContractPartEdit;
-using TimesheetDayEdit = Timesheets.Api.Features.Timesheets.TimesheetDayEdit;
-using TimesheetEditRequest = Timesheets.Api.Features.Timesheets.TimesheetEditRequest;
+using DayEdit = Timesheets.Api.Features.Timesheets.DayEdit;
+using TimesheetEdit = Timesheets.Api.Features.Timesheets.TimesheetEdit;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
 
@@ -25,7 +25,7 @@ public class TimesheetLockTests : BaseIntegrationTest
         Guid contractPartId = Guid.CreateVersion7();
         await SeedTimesheetsAsync(timesheetId, contractEmployeeId, contractPartId, date);
 
-        TimesheetEditRequest forgedRequest = CreateDraft(contractEmployeeId, date, hours: 9m);
+        TimesheetEdit forgedRequest = CreateDraft(contractEmployeeId, date, hours: 9m);
         HttpResponseMessage forgedResponse = await Client.PutAsJsonAsync($"/api/timesheets/{timesheetId}", forgedRequest);
         Assert.Equal(HttpStatusCode.OK, forgedResponse.StatusCode);
 
@@ -46,7 +46,7 @@ public class TimesheetLockTests : BaseIntegrationTest
         Guid contractPartId = Guid.CreateVersion7();
         await SeedTimesheetsAsync(timesheetId, contractEmployeeId, contractPartId, date, locked: false);
 
-        TimesheetEditRequest request = CreateDraft(contractEmployeeId, date, hours: 2m, coreHours: 1m);
+        TimesheetEdit request = CreateDraft(contractEmployeeId, date, hours: 2m, coreHours: 1m);
         HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{timesheetId}", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -65,7 +65,7 @@ public class TimesheetLockTests : BaseIntegrationTest
         Guid contractPartId = Guid.CreateVersion7();
         await SeedTimesheetsAsync(timesheetId, contractEmployeeId, contractPartId, date, locked: false);
 
-        TimesheetEditRequest request = CreateDraft(contractEmployeeId, date, hours: 9m, hoursLocked: true);
+        TimesheetEdit request = CreateDraft(contractEmployeeId, date, hours: 9m, hoursLocked: true);
         HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{timesheetId}", request);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -92,10 +92,10 @@ public class TimesheetLockTests : BaseIntegrationTest
         await dbContext.SaveChangesAsync();
     }
 
-    private static TimesheetEditRequest CreateDraft(Guid contractEmployeeId, DateTime date, decimal hours, decimal coreHours = 0m, bool hoursLocked = false)
+    private static TimesheetEdit CreateDraft(Guid contractEmployeeId, DateTime date, decimal hours, decimal coreHours = 0m, bool hoursLocked = false)
     {
-        TimesheetDayEdit attendanceDay = new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: coreHours, Description: null, Schedules: []);
+        DayEdit attendanceDay = new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: coreHours, Description: null, Schedules: []);
         ContractPartEdit project = new(ContractEmployeeId: contractEmployeeId, Days: [new ContractPartDayEdit(Date: date, Hours: hours, HoursLocked: hoursLocked)]);
-        return new TimesheetEditRequest(Days: [attendanceDay], ContractParts: [project]);
+        return new TimesheetEdit(Days: [attendanceDay], ContractParts: [project]);
     }
 }

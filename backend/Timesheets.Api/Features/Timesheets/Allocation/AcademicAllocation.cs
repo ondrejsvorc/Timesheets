@@ -1,13 +1,13 @@
 namespace Timesheets.Api.Features.Timesheets.Allocation;
 
 /// <summary>Generates academic timesheets: no attendance, randomized human-looking spread over weekdays and STAG days.</summary>
-internal sealed class AcademicTimesheetAllocator
+internal sealed class AcademicAllocation
 {
     private readonly EditableTimesheet _sheet;
     private readonly decimal _totalWorkload;
     private readonly HumanHours _humanHours = new();
 
-    public AcademicTimesheetAllocator(LoadedTimesheet loaded, EditableTimesheet sheet)
+    public AcademicAllocation(LoadedTimesheet loaded, EditableTimesheet sheet)
     {
         _sheet = sheet;
         _totalWorkload = loaded.TotalWorkload;
@@ -27,7 +27,7 @@ internal sealed class AcademicTimesheetAllocator
         List<EditableTimesheetDay> candidates = _sheet.Days
             .Where(day =>
                 CanAllocateDay(day) &&
-                !TimesheetInterruptions.SkipAllocationRules(day.Description) &&
+                !TimesheetEvaluator.SkipAllocationRules(day.Description) &&
                 !day.HasLockedContractPartHours() &&
                 CanDayReceiveHours(day))
             .ToList();
@@ -62,20 +62,20 @@ internal sealed class AcademicTimesheetAllocator
 
     private void ApplyInterruptions()
     {
-        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => TimesheetInterruptions.SkipAllocationRules(day.Description)))
+        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => TimesheetEvaluator.SkipAllocationRules(day.Description)))
         {
-            TimesheetInterruptionHours.ApplyToDayState(day, _sheet.ContractParts, _totalWorkload, tracksAttendance: false);
+            TimesheetEvaluator.ApplyInterruptionToDayState(day, _sheet.ContractParts, _totalWorkload, tracksAttendance: false);
         }
     }
 
     private void TopUpCoreToStag()
     {
-        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => !day.CoreHoursFixed && !TimesheetInterruptions.SkipAllocationRules(day.Description) && !day.HasLockedContractPartHours()))
+        foreach (EditableTimesheetDay day in _sheet.Days.Where(day => !day.CoreHoursFixed && !TimesheetEvaluator.SkipAllocationRules(day.Description) && !day.HasLockedContractPartHours()))
         {
-            decimal stagMissing = TimesheetLogic.Normalize(TimesheetLogic.CalculateStagHours(day.Schedules) - day.CoreHours);
+            decimal stagMissing = TimesheetEvaluator.Normalize(TimesheetEvaluator.CalculateStagHours(day.Schedules) - day.CoreHours);
             if (stagMissing > 0m)
             {
-                day.CoreHours = TimesheetLogic.Normalize(day.CoreHours + stagMissing);
+                day.CoreHours = TimesheetEvaluator.Normalize(day.CoreHours + stagMissing);
             }
         }
     }
@@ -92,7 +92,7 @@ internal sealed class AcademicTimesheetAllocator
             activeDays.Add(day);
         }
 
-        decimal neededCapacity = TimesheetLogic.Normalize(activeDays.Sum(day => day.TotalHours()) + remaining);
+        decimal neededCapacity = TimesheetEvaluator.Normalize(activeDays.Sum(day => day.TotalHours()) + remaining);
         foreach (EditableTimesheetDay day in candidates.Except(activeDays).OrderBy(_ => Random.Shared.Next()))
         {
             if (activeDays.Sum(DayMaxHours) >= neededCapacity)
@@ -109,7 +109,7 @@ internal sealed class AcademicTimesheetAllocator
     private Dictionary<EditableTimesheetDay, decimal> DistributeDayTargets(List<EditableTimesheetDay> activeDays, decimal remaining)
     {
         Dictionary<EditableTimesheetDay, decimal> dayTargets = activeDays.ToDictionary(day => day, day => day.TotalHours());
-        decimal finalTotal = TimesheetLogic.Normalize(dayTargets.Values.Sum() + remaining);
+        decimal finalTotal = TimesheetEvaluator.Normalize(dayTargets.Values.Sum() + remaining);
         if (finalTotal >= 6m)
         {
             foreach (EditableTimesheetDay day in activeDays.OrderBy(_ => Random.Shared.Next()))
@@ -118,8 +118,8 @@ internal sealed class AcademicTimesheetAllocator
                 decimal add = Math.Min(Math.Min(6m - dayTargets[day], dayMax - dayTargets[day]), remaining);
                 if (add > 0m)
                 {
-                    dayTargets[day] = TimesheetLogic.Normalize(dayTargets[day] + add);
-                    remaining = TimesheetLogic.Normalize(remaining - add);
+                    dayTargets[day] = TimesheetEvaluator.Normalize(dayTargets[day] + add);
+                    remaining = TimesheetEvaluator.Normalize(remaining - add);
                 }
             }
         }
@@ -130,8 +130,8 @@ internal sealed class AcademicTimesheetAllocator
             decimal add = Math.Min(Math.Min(_humanHours.RandomDayHours() - dayTargets[day], dayMax - dayTargets[day]), remaining);
             if (add > 0m)
             {
-                dayTargets[day] = TimesheetLogic.Normalize(dayTargets[day] + add);
-                remaining = TimesheetLogic.Normalize(remaining - add);
+                dayTargets[day] = TimesheetEvaluator.Normalize(dayTargets[day] + add);
+                remaining = TimesheetEvaluator.Normalize(remaining - add);
             }
         }
 
@@ -146,8 +146,8 @@ internal sealed class AcademicTimesheetAllocator
             EditableTimesheetDay day = available[Random.Shared.Next(available.Count)];
             decimal dayMax = DayMaxHours(day);
             decimal add = Math.Min(Math.Min(_humanHours.RandomAmount(dayMax - dayTargets[day]), dayMax - dayTargets[day]), remaining);
-            dayTargets[day] = TimesheetLogic.Normalize(dayTargets[day] + add);
-            remaining = TimesheetLogic.Normalize(remaining - add);
+            dayTargets[day] = TimesheetEvaluator.Normalize(dayTargets[day] + add);
+            remaining = TimesheetEvaluator.Normalize(remaining - add);
         }
 
         return dayTargets;
@@ -161,7 +161,7 @@ internal sealed class AcademicTimesheetAllocator
             List<(EditableTimesheetDay Day, Guid? ProjectId, decimal Gap, decimal Remaining)> options = [];
             foreach ((EditableTimesheetDay day, decimal target) in dayTargets)
             {
-                decimal gap = TimesheetLogic.Normalize(target - day.TotalHours());
+                decimal gap = TimesheetEvaluator.Normalize(target - day.TotalHours());
                 if (gap <= 0m)
                 {
                     continue;
@@ -218,12 +218,12 @@ internal sealed class AcademicTimesheetAllocator
             decimal amount = _humanHours.RandomAmount(maxAmount);
             if (selectedProjectId is null)
             {
-                selectedDay.CoreHours = TimesheetLogic.Normalize(selectedDay.CoreHours + amount);
+                selectedDay.CoreHours = TimesheetEvaluator.Normalize(selectedDay.CoreHours + amount);
                 targets.ConsumeCore(amount);
             }
             else
             {
-                selectedDay.ContractPartHours[selectedProjectId.Value] = TimesheetLogic.Normalize(selectedDay.ContractPartHours.GetValueOrDefault(selectedProjectId.Value) + amount);
+                selectedDay.ContractPartHours[selectedProjectId.Value] = TimesheetEvaluator.Normalize(selectedDay.ContractPartHours.GetValueOrDefault(selectedProjectId.Value) + amount);
                 targets.ConsumeProject(selectedProjectId.Value, amount);
             }
         }
@@ -267,13 +267,13 @@ internal sealed class AcademicTimesheetAllocator
                 continue;
             }
 
-            decimal add = TimesheetLogic.Normalize(Math.Min(targets.Project(project.Id), FreeHours(day)));
+            decimal add = TimesheetEvaluator.Normalize(Math.Min(targets.Project(project.Id), FreeHours(day)));
             if (add <= 0m)
             {
                 continue;
             }
 
-            day.ContractPartHours[project.Id] = TimesheetLogic.Normalize(current + add);
+            day.ContractPartHours[project.Id] = TimesheetEvaluator.Normalize(current + add);
             targets.ConsumeProject(project.Id, add);
         }
     }
@@ -295,13 +295,13 @@ internal sealed class AcademicTimesheetAllocator
                 continue;
             }
 
-            decimal add = TimesheetLogic.Normalize(Math.Min(targets.Core, FreeHours(day)));
+            decimal add = TimesheetEvaluator.Normalize(Math.Min(targets.Core, FreeHours(day)));
             if (add <= 0m)
             {
                 continue;
             }
 
-            day.CoreHours = TimesheetLogic.Normalize(day.CoreHours + add);
+            day.CoreHours = TimesheetEvaluator.Normalize(day.CoreHours + add);
             targets.ConsumeCore(add);
         }
     }
@@ -309,10 +309,10 @@ internal sealed class AcademicTimesheetAllocator
     private void EnsureMonthTargets()
     {
         List<string> errors = [];
-        MonthlyTargets.AppendMismatch(errors, "core", TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.CoreHours)), MonthlyTargets.CoreTarget(_sheet, _totalWorkload));
+        MonthlyTargets.AppendMismatch(errors, "core", TimesheetEvaluator.Normalize(_sheet.Days.Sum(day => day.CoreHours)), MonthlyTargets.CoreTarget(_sheet, _totalWorkload));
         foreach (ContractPartColumn project in _sheet.ContractParts)
         {
-            MonthlyTargets.AppendMismatch(errors, $"project {project.Id}", TimesheetLogic.Normalize(_sheet.Days.Sum(day => day.ContractPartHours.GetValueOrDefault(project.Id))), MonthlyTargets.ContractPartTarget(_sheet, project));
+            MonthlyTargets.AppendMismatch(errors, $"project {project.Id}", TimesheetEvaluator.Normalize(_sheet.Days.Sum(day => day.ContractPartHours.GetValueOrDefault(project.Id))), MonthlyTargets.ContractPartTarget(_sheet, project));
         }
 
         if (errors.Count > 0)
@@ -322,21 +322,21 @@ internal sealed class AcademicTimesheetAllocator
     }
 
     private static bool CanAllocateDay(EditableTimesheetDay day) =>
-        TimesheetLogic.IsWeekday(day.Date) || TimesheetLogic.CalculateStagHours(day.Schedules) > 0m;
+        TimesheetEvaluator.IsWeekday(day.Date) || TimesheetEvaluator.CalculateStagHours(day.Schedules) > 0m;
 
     private static decimal DayMaxHours(EditableTimesheetDay day)
     {
-        if (TimesheetLogic.IsWeekday(day.Date) || !string.IsNullOrWhiteSpace(day.Description))
+        if (TimesheetEvaluator.IsWeekday(day.Date) || !string.IsNullOrWhiteSpace(day.Description))
         {
             return 12m;
         }
 
-        decimal stagHours = TimesheetLogic.CalculateStagHours(day.Schedules);
-        return stagHours > 0m ? TimesheetLogic.Normalize(Math.Min(12m, stagHours)) : 0m;
+        decimal stagHours = TimesheetEvaluator.CalculateStagHours(day.Schedules);
+        return stagHours > 0m ? TimesheetEvaluator.Normalize(Math.Min(12m, stagHours)) : 0m;
     }
 
     private static decimal FreeHours(EditableTimesheetDay day) =>
-        TimesheetLogic.Normalize(DayMaxHours(day) - day.TotalHours());
+        TimesheetEvaluator.Normalize(DayMaxHours(day) - day.TotalHours());
 
     private int ChooseActiveDayCount(int candidatesCount, int activeCount, decimal totalHours)
     {

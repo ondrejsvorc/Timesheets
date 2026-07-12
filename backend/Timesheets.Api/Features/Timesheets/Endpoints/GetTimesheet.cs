@@ -4,9 +4,9 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Auth;
 using Timesheets.Api.Features.Employees;
-using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Timesheets.Endpoints;
 
@@ -21,6 +21,7 @@ public sealed class GetTimesheet : IEndpoint
     public sealed record ContractPartCell(decimal Hours, bool Locked);
     public sealed record DayItem(int Day, int?[] Work, int?[] Break, decimal CoreHours, ContractPartCell[] ContractPartCells, bool IsHoliday, bool IsWeekend, string? Note, IReadOnlyList<int[]>? Schedules);
     public sealed record Response(Guid Id, int Year, int Month, decimal TotalWorkload, decimal CoreWorkload, bool TracksAttendance, IEnumerable<ContractPartDefinition> ContractParts, IEnumerable<DayItem> Days);
+
     private sealed record AttendanceDaySource(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal Workload, decimal HoursWithoutBreak, decimal CoreHours, bool IsHoliday, string? Description, string Schedules);
     private sealed record ContractPartDaySource(DateTime Date, decimal Hours, bool HoursLocked, bool IsHoliday);
     private sealed record ContractPartSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, ContractPartDateRange Range, List<ContractPartDaySource> Days);
@@ -50,8 +51,6 @@ public sealed class GetTimesheet : IEndpoint
             return TypedResults.NotFound();
         }
 
-        await ContractPartInitializer.EnsureForEmployeeMonthAsync(request.EmployeeId, request.Year, request.Month, dbContext, holidaysFactory, cancellationToken);
-
         List<ContractPartRow> contractPartRows = await (
             from part in dbContext.ContractParts.AsNoTracking()
             join contractEmployee in dbContext.ContractEmployees.AsNoTracking() on part.ContractEmployeeId equals contractEmployee.Id
@@ -73,6 +72,7 @@ public sealed class GetTimesheet : IEndpoint
                 part.Days.Select(d => new ContractPartDaySource(d.Date, d.Hours, d.HoursLocked, d.IsHoliday)).ToList()
             )
         ).ToListAsync(cancellationToken);
+
         List<ContractPartSource> contractParts = contractPartRows
             .Select(row => new ContractPartSource(
                 row.ActivityId,
@@ -82,12 +82,12 @@ public sealed class GetTimesheet : IEndpoint
                 row.Position,
                 row.Workload,
                 row.LockedAt,
-                TimesheetEngine.EffectiveContractPartRange(row.AssignmentStartDate, row.AssignmentEndDate, row.ProjectStartDate, row.ProjectEndDate),
+                EffectiveContractPartRange(row.AssignmentStartDate, row.AssignmentEndDate, row.ProjectStartDate, row.ProjectEndDate),
                 row.Days))
             .ToList();
 
         decimal totalProjectWorkload = contractParts.Sum(t => t.Workload);
-        decimal totalWorkload = await TimesheetWorkloads.GetAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
+        decimal totalWorkload = await GetEmployeeWorkloadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
         bool tracksAttendance = EmployeeTypes.TracksAttendance(attendanceTimesheet.EmployeeTypeId);
         List<ContractPartColumn> contractPartStates = contractParts
@@ -139,7 +139,7 @@ public sealed class GetTimesheet : IEndpoint
             holidayByDate[date] = attendanceDay.IsHoliday || holidayByDate.GetValueOrDefault(date);
         }
 
-        foreach (var contractPartDay in contractParts.SelectMany(timesheet => timesheet.Days))
+        foreach (ContractPartDaySource contractPartDay in contractParts.SelectMany(timesheet => timesheet.Days))
         {
             DateOnly date = DateOnly.FromDateTime(contractPartDay.Date);
             holidayByDate[date] = contractPartDay.IsHoliday || holidayByDate.GetValueOrDefault(date);
@@ -185,11 +185,11 @@ public sealed class GetTimesheet : IEndpoint
                             project => Guid.Parse(project.Id),
                             project =>
                             {
-                                var cell = contractPartCellsArray[contractPartIndexById[project.Id]];
+                                ContractPartCell cell = contractPartCellsArray[contractPartIndexById[project.Id]];
                                 return cell.Locked && cell.Hours > 0m ? cell.Hours : 0m;
                             })
                     };
-                    TimesheetInterruptionHours.ApplyToDayState(dayState, contractPartStates, totalWorkload, tracksAttendance);
+                    TimesheetEvaluator.ApplyInterruptionToDayState(dayState, contractPartStates, totalWorkload, tracksAttendance);
                     coreHours = dayState.CoreHours;
                     foreach (ContractPartDefinition project in projects)
                     {
@@ -215,15 +215,39 @@ public sealed class GetTimesheet : IEndpoint
         return TypedResults.Ok(new Response(attendanceTimesheet.Id, request.Year, request.Month, totalWorkload, coreWorkload, tracksAttendance, projects, days));
     }
 
-    private static int? ToMinutes(TimeSpan? value)
+    private static async Task<decimal> GetEmployeeWorkloadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        if (!value.HasValue)
+        decimal? monthly = await dbContext.EmployeeWorkloads
+            .AsNoTracking()
+            .Where(workload => workload.EmployeeId == employeeId && workload.Year == year && workload.Month == month)
+            .Select(workload => (decimal?)workload.Workload)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (monthly.HasValue)
         {
-            return null;
+            return monthly.Value;
         }
 
-        return (int)Math.Round(value.Value.TotalMinutes);
+        DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);
+
+        return await dbContext.CoreEmployments
+            .AsNoTracking()
+            .Where(employment => employment.EmployeeId == employeeId)
+            .Where(employment => employment.StartDate <= periodEnd && (employment.EndDate == null || employment.EndDate >= periodStart))
+            .OrderByDescending(employment => employment.StartDate)
+            .Select(employment => (decimal?)employment.Workload)
+            .FirstOrDefaultAsync(cancellationToken) ?? 0m;
     }
+
+    private static ContractPartDateRange EffectiveContractPartRange(DateTime assignmentStartDate, DateTime? assignmentEndDate, DateTime projectStartDate, DateTime? projectEndDate)
+    {
+        DateTime start = Max(ToUtcDate(assignmentStartDate), ToUtcDate(projectStartDate));
+        DateTime? end = Min(assignmentEndDate.HasValue ? ToUtcDate(assignmentEndDate.Value) : null, projectEndDate.HasValue ? ToUtcDate(projectEndDate.Value) : null);
+        return new ContractPartDateRange(start, end);
+    }
+
+    private static int? ToMinutes(TimeSpan? value) => value.HasValue ? (int)Math.Round(value.Value.TotalMinutes) : null;
 
     private static bool[] BuildActiveDays(int year, int month, ContractPartDateRange range) => Enumerable.Range(1, DateTime.DaysInMonth(year, month))
         .Select(day => range.Includes(new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc)))
@@ -274,6 +298,18 @@ public sealed class GetTimesheet : IEndpoint
         minutes = (int)Math.Round(parsed.TotalMinutes);
         return true;
     }
+
+    private static DateTime Max(DateTime first, DateTime second) => first >= second ? first : second;
+
+    private static DateTime? Min(DateTime? first, DateTime? second) => (first, second) switch
+    {
+        (null, null) => null,
+        (DateTime value, null) => value,
+        (null, DateTime value) => value,
+        (DateTime left, DateTime right) => left <= right ? left : right
+    };
+
+    private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value.Date : DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
 
     private sealed record JsonTimeRange(string Start, string End);
 }

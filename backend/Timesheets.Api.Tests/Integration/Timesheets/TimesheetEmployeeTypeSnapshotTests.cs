@@ -34,10 +34,10 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
     {
         SnapshotSetup setup = await SeedSnapshotTimesheetAsync(year: 2059, month: 1, snapshotEmployeeTypeId: EmployeeTypes.AcademicId, currentEmployeeTypeId: NonAcademicEmployeeTypeId);
         DateTime date = new(setup.Year, setup.Month, 2, 0, 0, 0, DateTimeKind.Utc);
-        TimesheetEditRequest request = new(
+        TimesheetEdit request = new(
             Days:
             [
-                new TimesheetDayEdit(
+                new DayEdit(
                     Date: date,
                     ClockIn: null,
                     ClockOut: null,
@@ -62,10 +62,10 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
     {
         SnapshotSetup setup = await SeedSnapshotTimesheetAsync(year: 2060, month: 1, snapshotEmployeeTypeId: EmployeeTypes.AcademicId, currentEmployeeTypeId: NonAcademicEmployeeTypeId);
         DateTime date = new(setup.Year, setup.Month, 2, 0, 0, 0, DateTimeKind.Utc);
-        TimesheetEditRequest request = new(
+        TimesheetEdit request = new(
             Days:
             [
-                new TimesheetDayEdit(
+                new DayEdit(
                     Date: date,
                     ClockIn: null,
                     ClockOut: null,

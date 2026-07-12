@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain.Models;
-using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Domain;
 
@@ -38,7 +37,7 @@ public static class TimesheetBootstrap
         {
             Id = Guid.CreateVersion7(),
             EmployeeId = employeeId,
-            TimesheetStatusId = TimesheetWorkflow.DraftStatusId,
+            TimesheetStatusId = TimesheetStatus.DraftId,
             Year = year,
             Month = month,
             CreatedAt = DateTime.UtcNow,

@@ -11,7 +11,7 @@ public sealed class TimesheetEngineEvaluationTests
     [Fact]
     public void Evaluate_uses_holidays_for_monthly_obligation_totals()
     {
-        TimesheetEvaluation evaluation = EvaluateJanuary2026(date => TimesheetLogic.IsWorkday(date, isHoliday: date.Day == 1) ? 8m : 0m);
+        TimesheetEvaluation evaluation = EvaluateJanuary2026(date => TimesheetEvaluator.IsWorkday(date, isHoliday: date.Day == 1) ? 8m : 0m);
 
         Assert.False(evaluation.HasErrors);
         Assert.Equal(168m, evaluation.Totals.AllocatedHours);
@@ -22,7 +22,7 @@ public sealed class TimesheetEngineEvaluationTests
     [Fact]
     public void Evaluate_allows_overtime_against_holiday_adjusted_monthly_obligation()
     {
-        TimesheetEvaluation evaluation = EvaluateJanuary2026(date => TimesheetLogic.IsWeekday(date) ? 8m : 0m);
+        TimesheetEvaluation evaluation = EvaluateJanuary2026(date => TimesheetEvaluator.IsWeekday(date) ? 8m : 0m);
 
         Assert.Equal(176m, evaluation.Totals.AllocatedHours);
         Assert.Equal(168m, evaluation.Totals.HoursObligation);
@@ -80,6 +80,6 @@ public sealed class TimesheetEngineEvaluationTests
             TotalWorkload: 1m,
             CoreWorkload: 1m);
 
-        return TimesheetEngine.Evaluate(loaded, TimesheetEngine.CurrentEditRequest(loaded));
+        return new TimesheetEvaluator().Evaluate(loaded, new TimesheetEvaluator().CurrentEdit(loaded));
     }
 }

@@ -17,6 +17,8 @@ using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Attendance;
 using Timesheets.Api.Features.Auth;
 using Timesheets.Api.Features.Notifications;
+using Timesheets.Api.Features.Timesheets;
+using Timesheets.Api.Features.Timesheets.Allocation;
 
 namespace Timesheets.Api;
 
@@ -287,6 +289,8 @@ public static class ConfigureServices
         builder.Services.AddSingleton<AttendanceFileDetector>();
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
         builder.Services.AddSignalR();
+        builder.Services.AddSingleton<TimesheetEvaluator>();
+        builder.Services.AddSingleton<TimesheetAllocator>();
         builder.Services.AddScoped<NotificationSender>();
     }
 }

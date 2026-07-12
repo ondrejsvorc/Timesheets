@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
+import { Suspense, useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { BackButton, FullscreenButton } from "@/components/shared/buttons/ActionButtons";
+import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
@@ -23,43 +24,115 @@ import type { Timesheet, TimesheetData, TimesheetDay, TimesheetEvaluation } from
 import { TimesheetsOverview } from "./TimesheetsOverview";
 import { TimesheetWorkflowToolbar } from "./TimesheetWorkflowToolbar";
 
-export interface TimesheetPageData {
-  employee: GetEmployeeResponse;
-  overview: GetTimesheetOverviewResponse;
-  timesheetData: TimesheetData;
-  comments: TimesheetComment[];
+export interface TimesheetLoaderData {
+  employeePromise: Promise<GetEmployeeResponse>;
+  overviewPromise: Promise<GetTimesheetOverviewResponse>;
+  timesheetPromise: Promise<TimesheetData>;
+  commentsPromise: Promise<TimesheetComment[]>;
 }
 
 export const TimesheetPage = () => {
-  const { promise } = useLoaderData() as { promise: Promise<TimesheetPageData> };
+  const loaderData = useLoaderData() as TimesheetLoaderData;
 
   return (
-    <AwaitContent promise={promise}>
-      <TimesheetPageLoaded />
+    <AwaitContent promise={loaderData.employeePromise}>
+      <TimesheetPageContent loaderData={loaderData} />
     </AwaitContent>
   );
 };
 
-const TimesheetPageLoaded = () => {
-  const { employee, overview, timesheetData, comments } = useAsyncValue() as TimesheetPageData;
+interface TimesheetPageContentProps {
+  loaderData: TimesheetLoaderData;
+}
+
+const TimesheetPageContent = ({ loaderData }: TimesheetPageContentProps) => {
+  const employee = useAsyncValue() as GetEmployeeResponse;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const employeeId = searchParams.get("employeeId") ?? "";
 
   const employeeType = resolveEmployeeTypeName(employee.employee.employeeTypeId);
-  const subtitleParts = [employeeType, `${formatMonthYear(overview.month, overview.year)} (${formatWorkload(overview.summary.totalWorkload)})`].filter((part) => part.length > 0);
 
   return (
     <>
       <PageHeader leading={<BackButton onClick={() => navigate(Routes.employee(employee.employee.id))} />}>
         <PageTitle>{employee.employee.fullName}</PageTitle>
-        <PageSubtitle>{subtitleParts.join(" · ")}</PageSubtitle>
+        <Suspense fallback={<PageSubtitle>{employeeType}</PageSubtitle>}>
+          <AwaitContent promise={loaderData.overviewPromise}>
+            <TimesheetPageSubtitle employeeType={employeeType} />
+          </AwaitContent>
+        </Suspense>
       </PageHeader>
-      <TimesheetsOverview overview={overview} />
-      <TimesheetEditor key={timesheetData.timesheet.id} initialData={timesheetData} overview={overview} />
-      {employeeId && <TimesheetComments scope={{ employeeId, year: overview.year, month: overview.month }} comments={comments} />}
+
+      <AwaitContent promise={loaderData.overviewPromise}>
+        <TimesheetOverviewSection />
+      </AwaitContent>
+
+      <AwaitContent promise={loaderData.timesheetPromise}>
+        <TimesheetEditorSection overviewPromise={loaderData.overviewPromise} />
+      </AwaitContent>
+
+      {employeeId && (
+        <AwaitContent promise={loaderData.commentsPromise}>
+          <TimesheetCommentsSection employeeId={employeeId} overviewPromise={loaderData.overviewPromise} />
+        </AwaitContent>
+      )}
     </>
   );
+};
+
+const TimesheetPageSubtitle = ({ employeeType }: { employeeType: string }) => {
+  const overview = useAsyncValue() as GetTimesheetOverviewResponse;
+  const subtitleParts = [employeeType, `${formatMonthYear(overview.month, overview.year)} (${formatWorkload(overview.summary.totalWorkload)})`].filter((part) => part.length > 0);
+  return <PageSubtitle>{subtitleParts.join(" · ")}</PageSubtitle>;
+};
+
+const TimesheetOverviewSection = () => {
+  const overview = useAsyncValue() as GetTimesheetOverviewResponse;
+  return <TimesheetsOverview overview={overview} />;
+};
+
+interface TimesheetEditorSectionProps {
+  overviewPromise: Promise<GetTimesheetOverviewResponse>;
+}
+
+const TimesheetEditorSection = ({ overviewPromise }: TimesheetEditorSectionProps) => {
+  const timesheetData = useAsyncValue() as TimesheetData;
+
+  return (
+    <Suspense fallback={<GenericSkeleton className="mt-6 min-h-96" />}>
+      <AwaitContent promise={overviewPromise}>
+        <TimesheetEditorWithOverview initialData={timesheetData} />
+      </AwaitContent>
+    </Suspense>
+  );
+};
+
+const TimesheetEditorWithOverview = ({ initialData }: { initialData: TimesheetData }) => {
+  const overview = useAsyncValue() as GetTimesheetOverviewResponse;
+  return <TimesheetEditor initialData={initialData} overview={overview} />;
+};
+
+interface TimesheetCommentsSectionProps {
+  employeeId: string;
+  overviewPromise: Promise<GetTimesheetOverviewResponse>;
+}
+
+const TimesheetCommentsSection = ({ employeeId, overviewPromise }: TimesheetCommentsSectionProps) => {
+  const comments = useAsyncValue() as TimesheetComment[];
+
+  return (
+    <Suspense fallback={null}>
+      <AwaitContent promise={overviewPromise}>
+        <TimesheetCommentsWithScope employeeId={employeeId} comments={comments} />
+      </AwaitContent>
+    </Suspense>
+  );
+};
+
+const TimesheetCommentsWithScope = ({ employeeId, comments }: { employeeId: string; comments: TimesheetComment[] }) => {
+  const overview = useAsyncValue() as GetTimesheetOverviewResponse;
+  return <TimesheetComments scope={{ employeeId, year: overview.year, month: overview.month }} comments={comments} />;
 };
 
 interface TimesheetEditorProps {

@@ -214,7 +214,7 @@ public sealed class UpdateContractEmployee : IEndpoint
     {
         List<Guid> dayIds = await dbContext.ContractParts
             .Where(t => t.ContractEmployeeId == contractEmployeeId)
-            .Where(t => t.TimesheetStatus.Code == TimesheetStatusCodes.Draft)
+            .Where(t => t.TimesheetStatus.Code == TimesheetStatus.DraftCode)
             .SelectMany(t => t.Days)
             .Where(day => day.Date > newEnd)
             .Select(day => day.Id)
@@ -250,7 +250,7 @@ public sealed class UpdateContractEmployee : IEndpoint
 
             if (existing is null)
             {
-                await ContractPartInitializer.EnsureForAssignmentMonthAsync(contractEmployee, cursor.Year, cursor.Month, dbContext, holidaysFactory, cancellationToken);
+                await EnsureForAssignmentMonthAsync(contractEmployee, cursor.Year, cursor.Month, dbContext, holidaysFactory, cancellationToken);
             }
             else
             {
@@ -261,4 +261,101 @@ public sealed class UpdateContractEmployee : IEndpoint
             cursor = cursor.AddMonths(1);
         }
     }
+
+    private static bool IsAssignmentActiveForMonth(ContractEmployee assignment, int year, int month)
+    {
+        DateTime periodStart = new(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+        DateTime periodEnd = periodStart.AddMonths(1).AddDays(-1);
+        DateTime start = ContractEmployeeValidation.ToUtcDate(assignment.StartDate);
+
+        if (start > periodEnd)
+        {
+            return false;
+        }
+
+        if (!assignment.EndDate.HasValue)
+        {
+            return true;
+        }
+
+        DateTime end = ContractEmployeeValidation.ToUtcDate(assignment.EndDate.Value);
+        return end >= periodStart;
+    }
+
+    private static async Task<bool> EnsureForAssignmentMonthAsync(ContractEmployee assignment, int year, int month, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)
+    {
+        if (!IsAssignmentActiveForMonth(assignment, year, month))
+        {
+            return false;
+        }
+
+        Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, assignment.EmployeeId, year, month, cancellationToken);
+        bool exists = dbContext.ContractParts.Local.Any(part => part.TimesheetId == timesheetId && part.ContractEmployeeId == assignment.Id)
+            || await dbContext.ContractParts.AnyAsync(part => part.TimesheetId == timesheetId && part.ContractEmployeeId == assignment.Id, cancellationToken);
+
+        if (exists)
+        {
+            return false;
+        }
+
+        dbContext.ContractParts.Add(CreateContractPart(assignment, year, month, holidaysFactory.Create(year).Select(holiday => holiday.Date).ToHashSet(), timesheetId));
+        return true;
+    }
+
+    private static ContractPart CreateContractPart(ContractEmployee assignment, int year, int month, HashSet<DateOnly> holidays, Guid timesheetId)
+    {
+        ContractPart contractPart = new()
+        {
+            Id = Guid.CreateVersion7(),
+            TimesheetId = timesheetId,
+            ContractEmployeeId = assignment.Id,
+            TimesheetStatusId = TimesheetStatus.DraftId,
+            Workload = assignment.Workload,
+            CreatedAt = DateTime.UtcNow,
+        };
+
+        ContractPartDateRange range = EffectiveContractPartRange(
+            assignment.StartDate,
+            assignment.EndDate,
+            assignment.Contract?.Project?.StartDate ?? assignment.StartDate,
+            assignment.Contract?.Project?.EndDate);
+        for (int day = 1; day <= DateTime.DaysInMonth(year, month); day++)
+        {
+            DateTime date = new(year, month, day, 0, 0, 0, DateTimeKind.Utc);
+            if (!range.Includes(date))
+            {
+                continue;
+            }
+
+            bool isHoliday = holidays.Contains(DateOnly.FromDateTime(date));
+            contractPart.Days.Add(new ContractPartDay
+            {
+                Id = Guid.CreateVersion7(),
+                ContractPartId = contractPart.Id,
+                Date = date,
+                Hours = 0m,
+                IsHoliday = isHoliday,
+                HoursObligation = TimesheetEvaluator.CalculateTotalHoursObligation(date, isHoliday, assignment.Workload),
+            });
+        }
+
+        return contractPart;
+    }
+
+    private static ContractPartDateRange EffectiveContractPartRange(DateTime assignmentStartDate, DateTime? assignmentEndDate, DateTime projectStartDate, DateTime? projectEndDate)
+    {
+        DateTime start = Max(ContractEmployeeValidation.ToUtcDate(assignmentStartDate), ContractEmployeeValidation.ToUtcDate(projectStartDate));
+        DateTime? end = Min(assignmentEndDate.HasValue ? ContractEmployeeValidation.ToUtcDate(assignmentEndDate.Value) : null, projectEndDate.HasValue ? ContractEmployeeValidation.ToUtcDate(projectEndDate.Value) : null);
+        return new ContractPartDateRange(start, end);
+    }
+
+    private static DateTime Max(DateTime first, DateTime second) => first >= second ? first : second;
+
+    private static DateTime? Min(DateTime? first, DateTime? second) => (first, second) switch
+    {
+        (null, null) => null,
+        (DateTime value, null) => value,
+        (null, DateTime value) => value,
+        (DateTime left, DateTime right) => left <= right ? left : right
+    };
 }

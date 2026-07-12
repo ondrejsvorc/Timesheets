@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
-using Timesheets.Api.Features.Timesheets;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Features.Projects;
 
@@ -16,8 +16,8 @@ internal static class DeleteImpactCore
         return await dbContext.ContractParts
             .AsNoTracking()
             .Where(t => contractIds.Contains(t.ContractEmployee.ContractId)
-                && (t.TimesheetStatus.Code == TimesheetStatusCodes.Submitted
-                    || t.TimesheetStatus.Code == TimesheetStatusCodes.Approved))
+                && (t.TimesheetStatus.Code == TimesheetStatus.SubmittedCode
+                    || t.TimesheetStatus.Code == TimesheetStatus.ApprovedCode))
             .AnyAsync(cancellationToken);
     }
 }
