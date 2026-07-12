@@ -29,7 +29,6 @@ public sealed class GetProjects : IEndpoint
             query = query.Where(p => user.VisibleProjectIds.Contains(p.Id));
         }
 
-        DateOnly today = PragueClock.Today;
         List<ProjectItem> projects = (await query
             .Select(p => new
             {
@@ -37,7 +36,7 @@ public sealed class GetProjects : IEndpoint
                 ContractCount = p.Contracts.Count
             })
             .ToListAsync(cancellationToken))
-            .Select(p => new ProjectItem(p.Project.Id, p.Project.Name, p.Project.RegistrationNumber, p.Project.StartDate, p.Project.EndDate, p.Project.ArchivedAt, p.ContractCount, p.Project.GetStatus(today)))
+            .Select(p => new ProjectItem(p.Project.Id, p.Project.Name, p.Project.RegistrationNumber, p.Project.StartDate, p.Project.EndDate, p.Project.ArchivedAt, p.ContractCount, p.Project.GetStatus(PragueClock.Today)))
             .ToList();
 
         return TypedResults.Ok(new Response(projects));

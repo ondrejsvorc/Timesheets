@@ -33,7 +33,6 @@ public sealed class GetProject : IEndpoint
         }
 
         ProjectItem item = new(project.Id, project.Name, project.RegistrationNumber, project.ArchivedAt, project.GetStatus(PragueClock.Today));
-
         return TypedResults.Ok(new Response(item));
     }
 }
