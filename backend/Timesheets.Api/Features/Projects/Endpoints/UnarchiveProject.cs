@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
+using Timesheets.Api.Common;
+using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
 
 namespace Timesheets.Api.Features.Projects.Endpoints;
@@ -21,7 +22,7 @@ public sealed class UnarchiveProject : IEndpoint
             return TypedResults.Forbid();
         }
 
-        Data.Models.Project? project = await dbContext.Projects
+        Domain.Models.Project? project = await dbContext.Projects
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         if (project is null)
@@ -40,6 +41,6 @@ public sealed class UnarchiveProject : IEndpoint
 
         int contractCount = await dbContext.Contracts.CountAsync(c => c.ProjectId == id, cancellationToken);
 
-        return TypedResults.Ok(new Response(new ProjectItem(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, contractCount, project.Status)));
+        return TypedResults.Ok(new Response(new ProjectItem(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, contractCount, project.GetStatus(PragueClock.Today).ToString().ToLowerInvariant())));
     }
 }

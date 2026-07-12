@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Tests.Integration;
 

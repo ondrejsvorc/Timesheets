@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Contracts.Endpoints;
 using Timesheets.Api.Features.Projects.Endpoints;
 

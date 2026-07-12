@@ -5,8 +5,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Auth;
 using Timesheets.Api.Features.Notifications;
 
@@ -51,7 +51,7 @@ public sealed class UpdateTimesheetStatus : IEndpoint
             return TypedResults.NotFound();
         }
 
-        Data.Models.Timesheet? monthTimesheet = await dbContext.Timesheets
+        Domain.Models.Timesheet? monthTimesheet = await dbContext.Timesheets
             .Include(t => t.Employee)
             .Include(t => t.TimesheetStatus)
             .FirstOrDefaultAsync(t => t.Id == scope.TimesheetId, cancellationToken);
@@ -92,7 +92,7 @@ public sealed class UpdateTimesheetStatus : IEndpoint
         return await UpdateProjectStatusesAsync(request, monthTimesheet, selectedContractPartIds, targetStatus, user, dbContext, notificationSender, cancellationToken);
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateAttendanceStatusAsync(Request request, TimesheetScope scope, Data.Models.Timesheet monthTimesheet, TargetStatus targetStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
+    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateAttendanceStatusAsync(Request request, TimesheetScope scope, Domain.Models.Timesheet monthTimesheet, TargetStatus targetStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
     {
         Guid currentStatusId = monthTimesheet.TimesheetStatusId;
 
@@ -186,7 +186,7 @@ public sealed class UpdateTimesheetStatus : IEndpoint
         return TypedResults.Ok();
     }
 
-    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateProjectStatusesAsync(Request request, Data.Models.Timesheet monthTimesheet, HashSet<Guid> selectedContractPartIds, TargetStatus targetStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
+    private static async Task<Results<Ok, BadRequest<string>, NotFound, UnauthorizedHttpResult>> UpdateProjectStatusesAsync(Request request, Domain.Models.Timesheet monthTimesheet, HashSet<Guid> selectedContractPartIds, TargetStatus targetStatus, ICurrentUser user, AppDbContext dbContext, NotificationSender notificationSender, CancellationToken cancellationToken)
     {
         List<ContractPartScope> contractPartScopes = await LoadContractPartScopesAsync(selectedContractPartIds, dbContext, cancellationToken);
 
@@ -201,7 +201,7 @@ public sealed class UpdateTimesheetStatus : IEndpoint
             return TypedResults.BadRequest("Projektové sloupce lze schvalovat nebo vracet pouze ve výkazu odeslaném ke schválení.");
         }
 
-        List<Data.Models.ContractPart> contractParts = await dbContext.ContractParts
+        List<Domain.Models.ContractPart> contractParts = await dbContext.ContractParts
             .Include(t => t.TimesheetStatus)
             .Where(t => selectedContractPartIds.Contains(t.Id))
             .ToListAsync(cancellationToken);
@@ -214,7 +214,7 @@ public sealed class UpdateTimesheetStatus : IEndpoint
         bool isProjectReturn = TimesheetWorkflow.IsDraft(targetStatus.Code);
         bool anyProjectStatusChanged = false;
 
-        foreach (Data.Models.ContractPart projectTimesheet in contractParts)
+        foreach (Domain.Models.ContractPart projectTimesheet in contractParts)
         {
             Guid currentStatusId = projectTimesheet.TimesheetStatusId;
 
@@ -360,11 +360,11 @@ public sealed class UpdateTimesheetStatus : IEndpoint
 
     private static async Task ResetProjectStatusesAsync(TimesheetScope scope, Guid changedByEmployeeId, string? comment, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        List<Data.Models.ContractPart> contractParts = await dbContext.ContractParts
+        List<Domain.Models.ContractPart> contractParts = await dbContext.ContractParts
             .Where(timesheet => scope.ContractPartLabels.Keys.Contains(timesheet.Id))
             .ToListAsync(cancellationToken);
 
-        foreach (Data.Models.ContractPart projectTimesheet in contractParts)
+        foreach (Domain.Models.ContractPart projectTimesheet in contractParts)
         {
             if (projectTimesheet.TimesheetStatusId == TimesheetWorkflow.DraftStatusId && projectTimesheet.LockedAt is null)
             {
@@ -390,11 +390,11 @@ public sealed class UpdateTimesheetStatus : IEndpoint
 
     private static async Task SubmitProjectStatusesAsync(TimesheetScope scope, Guid changedByEmployeeId, string? comment, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        List<Data.Models.ContractPart> contractParts = await dbContext.ContractParts
+        List<Domain.Models.ContractPart> contractParts = await dbContext.ContractParts
             .Where(timesheet => scope.ContractPartLabels.Keys.Contains(timesheet.Id) && timesheet.TimesheetStatus.Code == TimesheetStatusCodes.Draft)
             .ToListAsync(cancellationToken);
 
-        foreach (Data.Models.ContractPart projectTimesheet in contractParts)
+        foreach (Domain.Models.ContractPart projectTimesheet in contractParts)
         {
             Guid previousStatusId = projectTimesheet.TimesheetStatusId;
             projectTimesheet.TimesheetStatusId = TimesheetWorkflow.SubmittedStatusId;

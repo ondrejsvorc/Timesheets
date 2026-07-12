@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
 
 namespace Timesheets.Api.Features.Projects.Endpoints;
@@ -21,7 +21,7 @@ public sealed class ArchiveProject : IEndpoint
             return TypedResults.Forbid();
         }
 
-        Data.Models.Project? project = await dbContext.Projects
+        Domain.Models.Project? project = await dbContext.Projects
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
 
         if (project is null)
@@ -31,7 +31,7 @@ public sealed class ArchiveProject : IEndpoint
 
         if (project.ArchivedAt.HasValue)
         {
-            return TypedResults.BadRequest("Projekt je již archivován.");
+            return TypedResults.BadRequest("Projekt je jiÅ¾ archivovÃ¡n.");
         }
 
         project.ArchivedAt = DateTime.UtcNow;

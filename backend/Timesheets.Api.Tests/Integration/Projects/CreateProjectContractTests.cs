@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Projects.Endpoints;
 using Xunit;
 

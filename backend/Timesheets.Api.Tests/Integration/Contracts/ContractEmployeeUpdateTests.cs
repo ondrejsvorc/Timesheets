@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Contracts;
 using Timesheets.Api.Features.Contracts.Endpoints;
 using Xunit;
@@ -45,7 +45,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
 
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        Data.Models.ContractEmployee? oldAssignment = await dbContext.ContractEmployees.AsNoTracking().SingleOrDefaultAsync(assignment => assignment.Id == setup.ContractEmployeeId);
+        Domain.Models.ContractEmployee? oldAssignment = await dbContext.ContractEmployees.AsNoTracking().SingleOrDefaultAsync(assignment => assignment.Id == setup.ContractEmployeeId);
         Assert.NotNull(oldAssignment);
         Assert.Equal(new DateTime(2024, 5, 31, 0, 0, 0, DateTimeKind.Utc), oldAssignment!.EndDate);
     }
@@ -189,7 +189,7 @@ public class ContractEmployeeUpdateTests : BaseIntegrationTest
         using (IServiceScope scope = CreateScope())
         {
             AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            Data.Models.ContractEmployee? assignment = await dbContext.ContractEmployees.SingleAsync(assignment => assignment.Id == setup.ContractEmployeeId);
+            Domain.Models.ContractEmployee? assignment = await dbContext.ContractEmployees.SingleAsync(assignment => assignment.Id == setup.ContractEmployeeId);
             assignment.EndDate = null;
             await dbContext.SaveChangesAsync();
         }

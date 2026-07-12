@@ -1,8 +1,8 @@
 using Timesheets.Api.Features.Employees;
 using Timesheets.Api.Features.Timesheets;
-using DataAttendanceDay = Timesheets.Api.Data.Models.AttendanceDay;
-using DataEmployee = Timesheets.Api.Data.Models.Employee;
-using DataTimesheet = Timesheets.Api.Data.Models.Timesheet;
+using DataAttendanceDay = Timesheets.Api.Domain.Models.AttendanceDay;
+using DataEmployee = Timesheets.Api.Domain.Models.Employee;
+using DataTimesheet = Timesheets.Api.Domain.Models.Timesheet;
 
 namespace Timesheets.Api.Tests.Unit;
 
@@ -50,7 +50,7 @@ public sealed class TimesheetEngineEvaluationTests
             Month = 1,
         };
 
-        Data.Models.Attendance attendance = new()
+        Domain.Models.Attendance attendance = new()
         {
             Id = timesheet.Id,
             TimesheetId = timesheet.Id,

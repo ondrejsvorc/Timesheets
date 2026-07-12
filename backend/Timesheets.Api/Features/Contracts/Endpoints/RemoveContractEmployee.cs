@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
 using Timesheets.Api.Features.Timesheets;
 

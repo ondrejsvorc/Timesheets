@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Options;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Features.Auth.Endpoints;
 

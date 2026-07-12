@@ -2,8 +2,8 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Employees.Endpoints;
 using Timesheets.Api.Features.Timesheets.Endpoints;
 using Xunit.Abstractions;
@@ -84,7 +84,7 @@ public sealed class ExpectedLoadTests : BaseIntegrationTest
         Guid timesheetId = Guid.CreateVersion7();
         TimesheetBootstrap.AddMonthWithDays(
             dbContext,
-            new Data.Models.Timesheet
+            new Domain.Models.Timesheet
             {
                 Id = timesheetId,
                 EmployeeId = target.Id,

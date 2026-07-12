@@ -1,4 +1,4 @@
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Features.Timesheets;
 

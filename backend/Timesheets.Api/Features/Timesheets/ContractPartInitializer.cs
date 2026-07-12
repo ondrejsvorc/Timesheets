@@ -1,7 +1,7 @@
 using CzechHolidays;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Features.Timesheets;
 

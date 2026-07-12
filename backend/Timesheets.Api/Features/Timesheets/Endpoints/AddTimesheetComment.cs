@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Common.Extensions;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Auth;
 
 namespace Timesheets.Api.Features.Timesheets.Endpoints;
@@ -49,7 +49,7 @@ public sealed class AddTimesheetComment : IEndpoint
             .AsNoTracking()
             .FirstAsync(e => e.Id == user.EmployeeId, cancellationToken);
 
-        Data.Models.TimesheetComment comment = new()
+        Domain.Models.TimesheetComment comment = new()
         {
             Id = Guid.CreateVersion7(),
             TimesheetId = timesheetScope.TimesheetId,

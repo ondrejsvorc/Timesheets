@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Timesheets;
 using Timesheets.Api.Features.Timesheets.Endpoints;
 
@@ -775,7 +775,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = firstDate.Year, Month = firstDate.Month, Workload = 1m });
         TimesheetBootstrap.AddMonthWithDays(
             dbContext,
-            new Data.Models.Timesheet
+            new Domain.Models.Timesheet
             {
                 Id = timesheetId,
                 EmployeeId = SeededTestData.JanNovakEmployeeId,
@@ -802,7 +802,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = date.Year, Month = date.Month, Workload = totalWorkload });
         TimesheetBootstrap.AddMonthWithDays(
             dbContext,
-            new Data.Models.Timesheet
+            new Domain.Models.Timesheet
             {
                 Id = timesheetId,
                 EmployeeId = SeededTestData.JanNovakEmployeeId,
@@ -816,7 +816,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         if (assignmentId.HasValue)
         {
             dbContext.ContractEmployees.Add(Assignment(assignmentId.Value, $"GEN-{date:yyyy-MM}", $"Generation {date:yyyy-MM}", date, assignmentWorkload));
-            dbContext.ContractParts.Add(new Data.Models.ContractPart
+            dbContext.ContractParts.Add(new Domain.Models.ContractPart
             {
                 Id = Guid.CreateVersion7(),
                 TimesheetId = timesheetId,
@@ -844,7 +844,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         dbContext.ContractEmployees.Add(Assignment(assignmentId, $"MONTH-{year}-{month}", $"Month {year}-{month}", firstDate, assignmentWorkload, lastDate));
         TimesheetBootstrap.AddMonthWithDays(
             dbContext,
-            new Data.Models.Timesheet
+            new Domain.Models.Timesheet
             {
                 Id = timesheetId,
                 EmployeeId = SeededTestData.JanNovakEmployeeId,
@@ -854,7 +854,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
             },
             AcademicEmployeeTypeId,
             dates.Select(date => AttendanceDay(date, null)).ToList());
-        dbContext.ContractParts.Add(new Data.Models.ContractPart
+        dbContext.ContractParts.Add(new Domain.Models.ContractPart
         {
             Id = Guid.CreateVersion7(),
             TimesheetId = timesheetId,
@@ -880,7 +880,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = SeededTestData.JanNovakEmployeeId, Year = year, Month = month, Workload = 1m });
         TimesheetBootstrap.AddMonthWithDays(
             dbContext,
-            new Data.Models.Timesheet
+            new Domain.Models.Timesheet
             {
                 Id = timesheetId,
                 EmployeeId = SeededTestData.JanNovakEmployeeId,
@@ -895,7 +895,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         {
             (Guid id, decimal workload) = assignments[index];
             dbContext.ContractEmployees.Add(Assignment(id, $"NONACA-{year}-{month}-{index}", $"Non-academic {year}-{month}-{index}", firstDate, workload, lastDate));
-            dbContext.ContractParts.Add(new Data.Models.ContractPart
+            dbContext.ContractParts.Add(new Domain.Models.ContractPart
             {
                 Id = Guid.CreateVersion7(),
                 TimesheetId = timesheetId,
@@ -928,9 +928,9 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         EndDate = endDate ?? date.AddDays(2)
     };
 
-    private static Data.Models.AttendanceDay AttendanceDay(DateTime date, string? description) => new() { Id = Guid.CreateVersion7(), Date = date, Workload = 1m, HoursObligation = 8m, Description = description, Schedules = "[]" };
+    private static Domain.Models.AttendanceDay AttendanceDay(DateTime date, string? description) => new() { Id = Guid.CreateVersion7(), Date = date, Workload = 1m, HoursObligation = 8m, Description = description, Schedules = "[]" };
 
-    private static Data.Models.ContractPart CreateContractPart(Guid assignmentId, DateTime firstDate, Guid timesheetId) => new()
+    private static Domain.Models.ContractPart CreateContractPart(Guid assignmentId, DateTime firstDate, Guid timesheetId) => new()
     {
         Id = Guid.CreateVersion7(),
         TimesheetId = timesheetId,
@@ -945,7 +945,7 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         ]
     };
 
-    private static Data.Models.ContractPartDay CreateContractPartDay(DateTime date, decimal workload = 0.25m) => new() { Id = Guid.CreateVersion7(), Date = date, HoursObligation = 8m * workload };
+    private static Domain.Models.ContractPartDay CreateContractPartDay(DateTime date, decimal workload = 0.25m) => new() { Id = Guid.CreateVersion7(), Date = date, HoursObligation = 8m * workload };
     private static TimesheetDayEdit Day(DateTime date, string description) => new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: 0m, Description: description, Schedules: []);
     private static ContractPartEdit Project(Guid assignmentId, DateTime firstDate) => new(ContractEmployeeId: assignmentId, Days: [new ContractPartDayEdit(firstDate, 0m), new ContractPartDayEdit(firstDate.AddDays(1), 0m), new ContractPartDayEdit(firstDate.AddDays(2), 0m)]);
     private static DateTime[] MonthDates(int year, int month) => Enumerable.Range(1, DateTime.DaysInMonth(year, month)).Select(day => new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc)).ToArray();

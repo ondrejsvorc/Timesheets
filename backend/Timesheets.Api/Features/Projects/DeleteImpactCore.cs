@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Projects;

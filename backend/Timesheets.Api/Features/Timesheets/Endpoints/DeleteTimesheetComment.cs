@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
 
 namespace Timesheets.Api.Features.Timesheets.Endpoints;
@@ -28,7 +28,7 @@ public sealed class DeleteTimesheetComment : IEndpoint
             return TypedResults.NotFound();
         }
 
-        Data.Models.TimesheetComment? comment = await dbContext.TimesheetComments.FirstOrDefaultAsync(entry => entry.Id == commentId, cancellationToken);
+        Domain.Models.TimesheetComment? comment = await dbContext.TimesheetComments.FirstOrDefaultAsync(entry => entry.Id == commentId, cancellationToken);
 
         if (comment is null)
         {

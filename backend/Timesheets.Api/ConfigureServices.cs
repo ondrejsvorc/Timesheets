@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
 using Timesheets.Api.Features.Notifications;
 using Timesheets.Api.Features.Timesheets;

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Employees;
 using Timesheets.Api.Features.Timesheets.Allocation;
 
@@ -68,7 +68,7 @@ public sealed record ContractPartDateRange(DateTime StartDate, DateTime? EndDate
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value.Date : DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
 }
 
-public sealed record LoadedTimesheet(Data.Models.Timesheet Timesheet, Data.Models.Attendance Attendance, IReadOnlyList<Data.Models.ContractPart> ContractParts, IReadOnlyDictionary<Guid, ContractPartDateRange> ContractPartRanges, decimal TotalWorkload, decimal CoreWorkload);
+public sealed record LoadedTimesheet(Domain.Models.Timesheet Timesheet, Domain.Models.Attendance Attendance, IReadOnlyList<Domain.Models.ContractPart> ContractParts, IReadOnlyDictionary<Guid, ContractPartDateRange> ContractPartRanges, decimal TotalWorkload, decimal CoreWorkload);
 
 public sealed record ContractPartColumn(Guid Id, decimal Workload, bool Locked, ContractPartDateRange Range)
 {
@@ -101,7 +101,7 @@ public static class TimesheetEngine
 {
     public static async Task<LoadedTimesheet?> LoadAsync(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        Data.Models.Timesheet? timesheet = await dbContext.Timesheets
+        Domain.Models.Timesheet? timesheet = await dbContext.Timesheets
             .Include(value => value.Employee)
             .Include(value => value.TimesheetStatus)
             .SingleOrDefaultAsync(value => value.Id == id, cancellationToken);
@@ -111,7 +111,7 @@ public static class TimesheetEngine
             return null;
         }
 
-        Data.Models.Attendance? attendance = await dbContext.Attendances
+        Domain.Models.Attendance? attendance = await dbContext.Attendances
             .Include(value => value.Days)
             .SingleOrDefaultAsync(value => value.TimesheetId == id, cancellationToken);
 
@@ -120,7 +120,7 @@ public static class TimesheetEngine
             return null;
         }
 
-        List<Data.Models.ContractPart> projects = await dbContext.ContractParts
+        List<Domain.Models.ContractPart> projects = await dbContext.ContractParts
             .Include(value => value.Days)
             .Where(value => value.TimesheetId == timesheet.Id)
             .ToListAsync(cancellationToken);
@@ -166,7 +166,7 @@ public static class TimesheetEngine
                 Dictionary<Guid, bool> projectHoursFixed = [];
                 Dictionary<Guid, decimal> projectHoursFloor = [];
 
-                foreach (Data.Models.ContractPart project in loaded.ContractParts)
+                foreach (Domain.Models.ContractPart project in loaded.ContractParts)
                 {
                     ContractPartColumn projectState = contractPartStatesById[project.ContractEmployeeId];
                     ContractPartEdit? contractPartUpdate = projects.GetValueOrDefault(project.ContractEmployeeId);
@@ -175,7 +175,7 @@ public static class TimesheetEngine
                         contractPartUpdate = null;
                     }
 
-                    Data.Models.ContractPartDay? persistedDay = projectState.IsActiveOn(day.Date)
+                    Domain.Models.ContractPartDay? persistedDay = projectState.IsActiveOn(day.Date)
                         ? project.Days.FirstOrDefault(contractPartDay => DateOnly.FromDateTime(contractPartDay.Date) == date)
                         : null;
                     decimal persisted = persistedDay?.Hours ?? 0m;
@@ -318,10 +318,10 @@ public static class TimesheetEngine
 
     public static void ApplyEdits(LoadedTimesheet loaded, TimesheetEditRequest request)
     {
-        Dictionary<DateOnly, Data.Models.AttendanceDay> days = loaded.Attendance.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
+        Dictionary<DateOnly, Domain.Models.AttendanceDay> days = loaded.Attendance.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
         foreach (TimesheetDayEdit update in request.Days)
         {
-            if (!days.TryGetValue(DateOnly.FromDateTime(update.Date), out Data.Models.AttendanceDay? day))
+            if (!days.TryGetValue(DateOnly.FromDateTime(update.Date), out Domain.Models.AttendanceDay? day))
             {
                 continue;
             }
@@ -337,11 +337,11 @@ public static class TimesheetEngine
         }
 
         Dictionary<Guid, ContractPartEdit> projects = (request.ContractParts ?? []).ToDictionary(project => project.ContractEmployeeId);
-        foreach (Data.Models.ContractPart project in loaded.ContractParts)
+        foreach (Domain.Models.ContractPart project in loaded.ContractParts)
         {
             if (loaded.ContractPartRanges.TryGetValue(project.ContractEmployeeId, out ContractPartDateRange? range))
             {
-                foreach (Data.Models.ContractPartDay day in project.Days.Where(day => !range.Includes(day.Date)))
+                foreach (Domain.Models.ContractPartDay day in project.Days.Where(day => !range.Includes(day.Date)))
                 {
                     day.Hours = 0m;
                     day.HoursLocked = false;
@@ -359,11 +359,11 @@ public static class TimesheetEngine
                 continue;
             }
 
-            Dictionary<DateOnly, Data.Models.ContractPartDay> contractPartDays = project.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
+            Dictionary<DateOnly, Domain.Models.ContractPartDay> contractPartDays = project.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
 
             foreach (ContractPartDayEdit contractPartDay in update.Days)
             {
-                if (contractPartDays.TryGetValue(DateOnly.FromDateTime(contractPartDay.Date), out Data.Models.ContractPartDay? day))
+                if (contractPartDays.TryGetValue(DateOnly.FromDateTime(contractPartDay.Date), out Domain.Models.ContractPartDay? day))
                 {
                     bool active = loaded.ContractPartRanges.TryGetValue(project.ContractEmployeeId, out range) && range.Includes(contractPartDay.Date);
                     day.Hours = active ? TimesheetLogic.Normalize(contractPartDay.Hours) : 0m;

@@ -3,8 +3,8 @@ using System.Text.RegularExpressions;
 using CzechHolidays;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Features.Timesheets;
 
@@ -110,7 +110,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             return CreateDetection(file, metadata, canImport: false, isReimport: false, errorMessage: "Soubor nepatří vybranému zaměstnanci.");
         }
 
-        Data.Models.Timesheet? existingTimesheet = await dbContext.Timesheets
+        Domain.Models.Timesheet? existingTimesheet = await dbContext.Timesheets
             .AsNoTracking()
             .Include(timesheet => timesheet.TimesheetStatus)
             .FirstOrDefaultAsync(timesheet => timesheet.EmployeeId == employee.Id && timesheet.Year == metadata.Year && timesheet.Month == metadata.Month, cancellationToken);
@@ -177,7 +177,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             throw new AttendanceImportException($"Nelze importovat. Projektové úvazky pro {importedTimesheet.Month:00}/{importedTimesheet.Year} jsou {projectWorkload:0.##}, ale importovaný celkový úvazek je {importedTimesheet.Workload:0.##}. Nejdřív upravte přiřazení na zakázky.");
         }
 
-        Data.Models.Timesheet? existingTimesheet = await dbContext.Timesheets
+        Domain.Models.Timesheet? existingTimesheet = await dbContext.Timesheets
             .Include(timesheet => timesheet.TimesheetStatus)
             .FirstOrDefaultAsync(timesheet => timesheet.EmployeeId == employeeId && timesheet.Year == importedTimesheet.Year && timesheet.Month == importedTimesheet.Month, cancellationToken);
 
@@ -191,7 +191,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             return await ReimportAsync(existingTimesheet, employeeId, importedTimesheet, validInterruptionCodes, cancellationToken);
         }
 
-        Data.Models.TimesheetStatus draftStatus = await dbContext.TimesheetStatuses
+        Domain.Models.TimesheetStatus draftStatus = await dbContext.TimesheetStatuses
             .AsNoTracking()
             .SingleAsync(s => s.Code == TimesheetStatusCodes.Draft, cancellationToken);
 
@@ -201,7 +201,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             .Select(employee => employee.EmployeeTypeId)
             .SingleAsync(cancellationToken);
 
-        Data.Models.Timesheet timesheet = new()
+        Domain.Models.Timesheet timesheet = new()
         {
             Id = Guid.CreateVersion7(),
             EmployeeId = employeeId,
@@ -220,11 +220,11 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
         return timesheet.Id;
     }
 
-    private async Task<Guid> ReimportAsync(Data.Models.Timesheet existingTimesheet, Guid employeeId, AttendanceTimesheet importedTimesheet, HashSet<string> validInterruptionCodes, CancellationToken cancellationToken)
+    private async Task<Guid> ReimportAsync(Domain.Models.Timesheet existingTimesheet, Guid employeeId, AttendanceTimesheet importedTimesheet, HashSet<string> validInterruptionCodes, CancellationToken cancellationToken)
     {
         Guid timesheetId = existingTimesheet.Id;
 
-        List<Data.Models.AttendanceDay> existingDays = await dbContext.AttendanceDays
+        List<Domain.Models.AttendanceDay> existingDays = await dbContext.AttendanceDays
             .Where(day => day.AttendanceId == timesheetId)
             .ToListAsync(cancellationToken);
         dbContext.AttendanceDays.RemoveRange(existingDays);
@@ -247,7 +247,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
     {
         foreach (Features.Timesheets.AttendanceDay day in importedTimesheet.Days)
         {
-            dbContext.AttendanceDays.Add(new Data.Models.AttendanceDay
+            dbContext.AttendanceDays.Add(new Domain.Models.AttendanceDay
             {
                 Id = Guid.CreateVersion7(),
                 AttendanceId = attendanceId,
@@ -268,7 +268,7 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
     private async Task RecalculateDraftContractPartColumnsAsync(Guid employeeId, int year, int month, CancellationToken cancellationToken)
     {
-        Data.Models.Attendance? attendance = await dbContext.Attendances
+        Domain.Models.Attendance? attendance = await dbContext.Attendances
             .AsNoTracking()
             .Include(a => a.Days)
             .Where(a => a.Timesheet.EmployeeId == employeeId && a.Timesheet.Year == year && a.Timesheet.Month == month)
@@ -279,20 +279,20 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
             return;
         }
 
-        Dictionary<DateTime, Data.Models.AttendanceDay> attendanceByDate = attendance.Days
+        Dictionary<DateTime, Domain.Models.AttendanceDay> attendanceByDate = attendance.Days
             .ToDictionary(day => ToUtcDate(day.Date).Date);
 
-        List<Data.Models.ContractPart> contractParts = await dbContext.ContractParts
+        List<Domain.Models.ContractPart> contractParts = await dbContext.ContractParts
             .Include(pt => pt.Days)
             .Where(pt => pt.Timesheet.EmployeeId == employeeId && pt.Timesheet.Year == year && pt.Timesheet.Month == month)
             .Where(pt => pt.TimesheetStatus.Code == TimesheetStatusCodes.Draft)
             .ToListAsync(cancellationToken);
 
-        foreach (Data.Models.ContractPart projectTimesheet in contractParts)
+        foreach (Domain.Models.ContractPart projectTimesheet in contractParts)
         {
-            foreach (Data.Models.ContractPartDay contractPartDay in projectTimesheet.Days)
+            foreach (Domain.Models.ContractPartDay contractPartDay in projectTimesheet.Days)
             {
-                if (!attendanceByDate.TryGetValue(ToUtcDate(contractPartDay.Date).Date, out Data.Models.AttendanceDay? attendanceDay))
+                if (!attendanceByDate.TryGetValue(ToUtcDate(contractPartDay.Date).Date, out Domain.Models.AttendanceDay? attendanceDay))
                 {
                     continue;
                 }
@@ -307,12 +307,12 @@ public sealed class AttendanceImport(AppDbContext dbContext, ICzechHolidaysFacto
 
     private async Task UpsertEmployeeWorkloadAsync(Guid employeeId, int year, int month, decimal workload, CancellationToken cancellationToken)
     {
-        Data.Models.EmployeeWorkload? existing = await dbContext.EmployeeWorkloads
+        Domain.Models.EmployeeWorkload? existing = await dbContext.EmployeeWorkloads
             .FirstOrDefaultAsync(w => w.EmployeeId == employeeId && w.Year == year && w.Month == month, cancellationToken);
 
         if (existing is null)
         {
-            dbContext.EmployeeWorkloads.Add(new Data.Models.EmployeeWorkload
+            dbContext.EmployeeWorkloads.Add(new Domain.Models.EmployeeWorkload
             {
                 Id = Guid.CreateVersion7(),
                 EmployeeId = employeeId,

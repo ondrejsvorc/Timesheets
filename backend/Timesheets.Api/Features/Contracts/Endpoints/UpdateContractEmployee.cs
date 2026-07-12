@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Common.Extensions;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Auth;
 using Timesheets.Api.Features.Timesheets;
 
@@ -237,7 +237,7 @@ public sealed class UpdateContractEmployee : IEndpoint
         while (cursor <= last)
         {
             Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, contractEmployee.EmployeeId, cursor.Year, cursor.Month, cancellationToken);
-            Data.Models.ContractPart? existing = await dbContext.ContractParts
+            Domain.Models.ContractPart? existing = await dbContext.ContractParts
                 .FirstOrDefaultAsync(
                     t => t.ContractEmployeeId == contractEmployee.Id && t.TimesheetId == timesheetId,
                     cancellationToken);

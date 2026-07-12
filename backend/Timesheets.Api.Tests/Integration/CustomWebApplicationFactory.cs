@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Testcontainers.PostgreSql;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 
 namespace Timesheets.Api.Tests.Integration;
 

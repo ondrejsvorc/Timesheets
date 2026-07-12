@@ -2,8 +2,8 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Employees;
 using Timesheets.Api.Features.Timesheets;
 using Timesheets.Api.Features.Timesheets.Endpoints;
@@ -102,7 +102,7 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
         dbContext.EmployeeWorkloads.Add(new EmployeeWorkload { Id = Guid.CreateVersion7(), EmployeeId = employee.Id, Year = year, Month = month, Workload = 1m });
         TimesheetBootstrap.AddMonthWithDays(
             dbContext,
-            new Data.Models.Timesheet
+            new Domain.Models.Timesheet
             {
                 Id = timesheetId,
                 EmployeeId = employee.Id,
@@ -112,7 +112,7 @@ public sealed class TimesheetEmployeeTypeSnapshotTests : BaseIntegrationTest
             },
             snapshotEmployeeTypeId,
             [
-                new Data.Models.AttendanceDay
+                new Domain.Models.AttendanceDay
                 {
                     Id = Guid.CreateVersion7(),
                     Date = date,

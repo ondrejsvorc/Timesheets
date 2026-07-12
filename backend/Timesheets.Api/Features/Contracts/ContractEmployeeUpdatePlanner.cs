@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api.Features.Contracts;
@@ -239,7 +239,7 @@ internal static class ContractEmployeeUpdatePlanner
 
     private static async Task<(int Submitted, int Approved, int DraftDaysOutside)> AnalyzeProtectedOutsideRangeAsync(Guid contractEmployeeId, DateTime newEnd, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        List<Data.Models.ContractPart> timesheets = await dbContext.ContractParts
+        List<Domain.Models.ContractPart> timesheets = await dbContext.ContractParts
             .AsNoTracking()
             .Include(t => t.TimesheetStatus)
             .Include(t => t.Days)
@@ -250,13 +250,13 @@ internal static class ContractEmployeeUpdatePlanner
         HashSet<Guid> approvedOutside = [];
         int draftDaysOutside = 0;
 
-        foreach (Data.Models.ContractPart timesheet in timesheets)
+        foreach (Domain.Models.ContractPart timesheet in timesheets)
         {
             bool isSubmitted = TimesheetWorkflow.IsSubmitted(timesheet.TimesheetStatus);
             bool isApproved = TimesheetWorkflow.IsApproved(timesheet.TimesheetStatus);
             bool isDraft = TimesheetWorkflow.IsDraft(timesheet.TimesheetStatus);
 
-            foreach (Data.Models.ContractPartDay day in timesheet.Days)
+            foreach (Domain.Models.ContractPartDay day in timesheet.Days)
             {
                 if (ContractEmployeeValidation.ToUtcDate(day.Date) <= newEnd)
                 {
