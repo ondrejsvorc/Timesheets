@@ -663,7 +663,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         builder.Property(day => day.Hours)
             .IsRequired()
-            .HasPrecision(5, 2);
+            .HasPrecision(5, 2)
+            .HasDefaultValue(0m);
 
         builder.Property(day => day.HoursLocked)
             .IsRequired()
@@ -905,5 +906,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         builder.Property(n => n.IsRead)
             .IsRequired()
             .HasDefaultValue(false);
+
+        builder.HasIndex(n => new { n.EmployeeId, n.IsRead });
     }
 }
