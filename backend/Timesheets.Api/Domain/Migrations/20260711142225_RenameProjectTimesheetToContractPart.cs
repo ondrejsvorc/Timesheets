@@ -19,12 +19,6 @@ namespace Timesheets.Api.Domain.Migrations
                 name: "FK_TimesheetStatusHistory_ProjectTimesheet_ProjectTimesheetId",
                 table: "TimesheetStatusHistory");
 
-            migrationBuilder.DropTable(
-                name: "ProjectDay");
-
-            migrationBuilder.DropTable(
-                name: "ProjectTimesheet");
-
             migrationBuilder.DropCheckConstraint(
                 name: "CK_TimesheetStatusHistory_ExactlyOneTimesheet",
                 table: "TimesheetStatusHistory");
@@ -116,6 +110,24 @@ namespace Timesheets.Api.Domain.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.Sql("""
+                INSERT INTO "ContractPart" ("Id", "TimesheetId", "ContractEmployeeId", "TimesheetStatusId", "Workload", "LockedAt", "LockedBy", "CreatedAt", "UpdatedAt")
+                SELECT "Id", "TimesheetId", "ContractEmployeeId", "TimesheetStatusId", "Workload", "LockedAt", "LockedBy", "CreatedAt", "UpdatedAt"
+                FROM "ProjectTimesheet";
+                """);
+
+            migrationBuilder.Sql("""
+                INSERT INTO "ContractPartDay" ("Id", "ContractPartId", "Date", "Hours", "HoursLocked", "IsHoliday", "HoursObligation")
+                SELECT "Id", "ProjectTimesheetId", "Date", "Hours", "HoursLocked", "IsHoliday", "HoursObligation"
+                FROM "ProjectDay";
+                """);
+
+            migrationBuilder.DropTable(
+                name: "ProjectDay");
+
+            migrationBuilder.DropTable(
+                name: "ProjectTimesheet");
 
             migrationBuilder.AddCheckConstraint(
                 name: "CK_TimesheetStatusHistory_ExactlyOneTimesheet",
