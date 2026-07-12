@@ -1,3 +1,4 @@
+using Timesheets.Api.Features.Attendance.Endpoints;
 using Timesheets.Api.Features.Auth;
 using Timesheets.Api.Features.Auth.Endpoints;
 using Timesheets.Api.Features.Contracts.Endpoints;
@@ -47,6 +48,7 @@ public static class Endpoints
         endpoints.MapProjectEndpoints();
         endpoints.MapContractEndpoints();
         endpoints.MapEmployeeEndpoints();
+        endpoints.MapAttendanceEndpoints();
         endpoints.MapTimesheetEndpoints();
         endpoints.MapNotificationEndpoints();
     }
@@ -85,6 +87,11 @@ public static class Endpoints
         .MapEndpoint<AddContractManager>()
         .MapEndpoint<RemoveContractManager>();
 
+    private static void MapAttendanceEndpoints(this IEndpointRouteBuilder app) =>
+        app.MapGroup("/attendance").WithTags("Attendance")
+        .MapEndpoint<DetectAttendance>()
+        .MapEndpoint<ImportAttendance>();
+
     private static void MapTimesheetEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/timesheets").WithTags("Timesheets")
         .MapEndpoint<GetTimesheetOverview>()
@@ -97,9 +104,7 @@ public static class Endpoints
         .MapEndpoint<GetTimesheetComments>()
         .MapEndpoint<AddTimesheetComment>()
         .MapEndpoint<DeleteTimesheetComment>()
-        .MapEndpoint<ReviewTimesheet>()
-        .MapEndpoint<DetectTimesheetImport>()
-        .MapEndpoint<ImportTimesheet>();
+        .MapEndpoint<ReviewTimesheet>();
 
     private static void MapEmployeeEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/employees").WithTags("Employees")

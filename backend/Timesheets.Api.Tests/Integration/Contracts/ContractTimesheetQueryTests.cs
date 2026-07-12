@@ -56,7 +56,7 @@ public class ContractTimesheetQueryTests : BaseIntegrationTest
     {
         byte[] file = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", year, month, workloadPercent);
         using MultipartFormDataContent form = TimesheetImportFormFactory.Create(setup.EmployeeId, file, "attendance.xlsx");
-        HttpResponseMessage response = await Client.PostAsync("/api/timesheets/", form);
+        HttpResponseMessage response = await Client.PostAsync("/api/attendance", form);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }

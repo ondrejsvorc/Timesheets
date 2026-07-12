@@ -2,25 +2,25 @@ using FluentValidation;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Timesheets.Api.Common.Extensions;
+using Timesheets.Api.Domain;
 using Timesheets.Api.Features.Auth;
-using Timesheets.Api.Features.Timesheets;
 
-namespace Timesheets.Api.Features.Timesheets.Endpoints;
+namespace Timesheets.Api.Features.Attendance.Endpoints;
 
-public sealed class ImportTimesheet : IEndpoint
+public sealed class DetectAttendance : IEndpoint
 {
     public static void Map(IEndpointRouteBuilder app) => app
-        .MapPost("/", Handle)
-        .WithSummary("Create Attendance Timesheet")
+        .MapPost("/detect", Handle)
+        .WithSummary("Detect Attendance File Metadata")
         .DisableAntiforgery()
-        .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = AttendanceImport.MaxMultipartBodySizeBytes })
+        .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = AttendanceFileDetector.MaxMultipartBodySizeBytes })
         .WithRequestValidation<Request>();
 
     public sealed record Request(Guid EmployeeId, IFormFile File);
-    public sealed record Response(AttendanceTimesheetImportResult Result);
+
     public sealed class Validator : AbstractValidator<Request>
     {
-        public Validator()
+        public Validator(AttendanceFileDetector detector)
         {
             RuleFor(x => x.EmployeeId)
                 .NotEmpty().WithMessage("Zaměstnanec je povinný.");
@@ -29,7 +29,7 @@ public sealed class ImportTimesheet : IEndpoint
                 .NotNull().WithMessage("Soubor je povinný.")
                 .Custom((file, context) =>
                 {
-                    if (file is not null && AttendanceImport.GetFileValidationError(file) is string error)
+                    if (file is not null && detector.GetFileValidationError(file) is string error)
                     {
                         context.AddFailure(error);
                     }
@@ -37,14 +37,19 @@ public sealed class ImportTimesheet : IEndpoint
         }
     }
 
-    private static async Task<Results<Ok<Response>, BadRequest<string>, ForbidHttpResult>> Handle([FromForm] Request request, AttendanceImport import, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<AttendanceFileDetectionResult>, ForbidHttpResult>> Handle(
+        [FromForm] Request request,
+        AttendanceFileDetector detector,
+        AppDbContext dbContext,
+        ICurrentUser user,
+        CancellationToken cancellationToken)
     {
         if (!user.IsGlobalManagerRole() && user.EmployeeId != request.EmployeeId)
         {
             return TypedResults.Forbid();
         }
 
-        AttendanceTimesheetImportResult result = await import.ImportAsync(request.EmployeeId, request.File, cancellationToken);
-        return TypedResults.Ok(new Response(result));
+        AttendanceFileDetectionResult result = await detector.DetectAsync(request.File, request.EmployeeId, dbContext, cancellationToken);
+        return TypedResults.Ok(result);
     }
 }

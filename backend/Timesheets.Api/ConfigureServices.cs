@@ -14,9 +14,9 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Timesheets.Api.Common;
 using Timesheets.Api.Common.Extensions;
 using Timesheets.Api.Domain;
+using Timesheets.Api.Features.Attendance;
 using Timesheets.Api.Features.Auth;
 using Timesheets.Api.Features.Notifications;
-using Timesheets.Api.Features.Timesheets;
 
 namespace Timesheets.Api;
 
@@ -283,7 +283,8 @@ public static class ConfigureServices
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ICurrentUser, CurrentUser>();
         builder.Services.AddSingleton<ICzechHolidaysFactory, CzechHolidaysFactory>();
-        builder.Services.AddScoped<AttendanceImport>();
+        builder.Services.AddSingleton<AttendanceFileReader>();
+        builder.Services.AddSingleton<AttendanceFileDetector>();
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
         builder.Services.AddSignalR();
         builder.Services.AddScoped<NotificationSender>();

@@ -4,8 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Domain.Models;
+using Timesheets.Api.Features.Attendance;
+using Timesheets.Api.Features.Attendance.Endpoints;
 using Timesheets.Api.Features.Employees;
-using Timesheets.Api.Features.Timesheets.Endpoints;
 using Xunit;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
@@ -15,110 +16,109 @@ public class TimesheetReimportTests : BaseIntegrationTest
     public TimesheetReimportTests(CustomWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
-    public async Task DetectTimesheetImport_WithEmptyFile_ReturnsBadRequest()
+    public async Task DetectAttendance_WithEmptyFile_ReturnsBadRequest()
     {
         using MultipartFormDataContent form = TimesheetImportFormFactory.Create(SeededTestData.JanNovakEmployeeId, [], "attendance.xlsx");
-        HttpResponseMessage response = await Client.PostAsync("/api/timesheets/detect", form);
+        HttpResponseMessage response = await Client.PostAsync("/api/attendance/detect", form);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task DetectTimesheetImport_WithOversizedFile_ReturnsBadRequest()
+    public async Task DetectAttendance_WithOversizedFile_ReturnsBadRequest()
     {
         using MultipartFormDataContent form = TimesheetImportFormFactory.Create(SeededTestData.JanNovakEmployeeId, new byte[10 * 1024 * 1024 + 1], "attendance.xlsx");
-        HttpResponseMessage response = await Client.PostAsync("/api/timesheets/detect", form);
+        HttpResponseMessage response = await Client.PostAsync("/api/attendance/detect", form);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
-    public async Task DetectTimesheetImport_WithMalformedFile_ReturnsGenericError()
+    public async Task DetectAttendance_WithMalformedFile_ReturnsGenericError()
     {
         using MultipartFormDataContent form = TimesheetImportFormFactory.Create(SeededTestData.JanNovakEmployeeId, [1, 2, 3], "attendance.xlsx");
-        HttpResponseMessage response = await Client.PostAsync("/api/timesheets/detect", form);
+        HttpResponseMessage response = await Client.PostAsync("/api/attendance/detect", form);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        DetectTimesheetImport.Response? payload = await response.Content.ReadFromJsonAsync<DetectTimesheetImport.Response>();
-        Assert.Equal("Soubor se nepodařilo přečíst.", payload!.Result.ErrorMessage);
+        AttendanceFileDetectionResult? payload = await response.Content.ReadFromJsonAsync<AttendanceFileDetectionResult>();
+        Assert.Equal("Soubor se nepodařilo přečíst.", payload!.ErrorMessage);
     }
 
     [Fact]
-    public async Task DetectTimesheetImport_ForNewMonth_ReturnsCanImportWithoutReimport()
+    public async Task DetectAttendance_ForNewMonth_ReturnsCanImportWithoutReimport()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
         byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
         using MultipartFormDataContent form = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx");
-        HttpResponseMessage response = await Client.PostAsync("/api/timesheets/detect", form);
+        HttpResponseMessage response = await Client.PostAsync("/api/attendance/detect", form);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        DetectTimesheetImport.Response? payload = await response.Content.ReadFromJsonAsync<DetectTimesheetImport.Response>();
+        AttendanceFileDetectionResult? payload = await response.Content.ReadFromJsonAsync<AttendanceFileDetectionResult>();
         Assert.NotNull(payload);
-        Assert.True(payload!.Result.CanImport);
-        Assert.False(payload.Result.IsReimport);
+        Assert.True(payload!.CanImport);
+        Assert.False(payload.IsReimport);
     }
 
     [Fact]
-    public async Task DetectTimesheetImport_ForDraftMonth_ReturnsReimport()
+    public async Task DetectAttendance_ForDraftMonth_ReturnsReimport()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
         byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
 
         using (MultipartFormDataContent importForm = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx"))
         {
-            HttpResponseMessage importResponse = await Client.PostAsync("/api/timesheets/", importForm);
+            HttpResponseMessage importResponse = await Client.PostAsync("/api/attendance", importForm);
             Assert.Equal(HttpStatusCode.OK, importResponse.StatusCode);
         }
 
         using MultipartFormDataContent detectForm = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx");
-        HttpResponseMessage detectResponse = await Client.PostAsync("/api/timesheets/detect", detectForm);
+        HttpResponseMessage detectResponse = await Client.PostAsync("/api/attendance/detect", detectForm);
         Assert.Equal(HttpStatusCode.OK, detectResponse.StatusCode);
 
-        DetectTimesheetImport.Response? payload = await detectResponse.Content.ReadFromJsonAsync<DetectTimesheetImport.Response>();
+        AttendanceFileDetectionResult? payload = await detectResponse.Content.ReadFromJsonAsync<AttendanceFileDetectionResult>();
         Assert.NotNull(payload);
-        Assert.True(payload!.Result.CanImport);
-        Assert.True(payload.Result.IsReimport);
+        Assert.True(payload!.CanImport);
+        Assert.True(payload.IsReimport);
     }
 
     [Fact]
-    public async Task DetectTimesheetImport_ForSubmittedMonth_ReturnsBlocked()
+    public async Task DetectAttendance_ForSubmittedMonth_ReturnsBlocked()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
         byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
 
         using (MultipartFormDataContent importForm = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx"))
         {
-            HttpResponseMessage importResponse = await Client.PostAsync("/api/timesheets/", importForm);
+            HttpResponseMessage importResponse = await Client.PostAsync("/api/attendance", importForm);
             Assert.Equal(HttpStatusCode.OK, importResponse.StatusCode);
         }
 
         await SetTimesheetStatusAsync(setup.EmployeeId, 2024, 10, TestTimesheetStatusIds.Submitted);
 
         using MultipartFormDataContent detectForm = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx");
-        HttpResponseMessage detectResponse = await Client.PostAsync("/api/timesheets/detect", detectForm);
+        HttpResponseMessage detectResponse = await Client.PostAsync("/api/attendance/detect", detectForm);
         Assert.Equal(HttpStatusCode.OK, detectResponse.StatusCode);
 
-        DetectTimesheetImport.Response? payload = await detectResponse.Content.ReadFromJsonAsync<DetectTimesheetImport.Response>();
+        AttendanceFileDetectionResult? payload = await detectResponse.Content.ReadFromJsonAsync<AttendanceFileDetectionResult>();
         Assert.NotNull(payload);
-        Assert.False(payload!.Result.CanImport);
-        Assert.False(payload.Result.IsReimport);
-        Assert.Contains("Rozpracovaný", payload.Result.ErrorMessage, StringComparison.Ordinal);
+        Assert.False(payload!.CanImport);
+        Assert.False(payload.IsReimport);
+        Assert.Contains("Rozpracovaný", payload.ErrorMessage, StringComparison.Ordinal);
     }
 
     [Fact]
-    public async Task ImportTimesheet_SnapshotsCurrentEmployeeType()
+    public async Task ImportAttendance_SnapshotsCurrentEmployeeType()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
         await SetEmployeeTypeAsync(setup.EmployeeId, EmployeeTypes.NonAcademicId);
         byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
 
         using MultipartFormDataContent importForm = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx");
-        HttpResponseMessage importResponse = await Client.PostAsync("/api/timesheets/", importForm);
+        HttpResponseMessage importResponse = await Client.PostAsync("/api/attendance", importForm);
 
         Assert.Equal(HttpStatusCode.OK, importResponse.StatusCode);
-        ImportTimesheet.Response? importPayload = await importResponse.Content.ReadFromJsonAsync<ImportTimesheet.Response>();
+        ImportAttendance.Response? importPayload = await importResponse.Content.ReadFromJsonAsync<ImportAttendance.Response>();
         Assert.NotNull(importPayload);
-        Assert.True(importPayload!.Result.Success);
 
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -132,7 +132,7 @@ public class TimesheetReimportTests : BaseIntegrationTest
     }
 
     [Fact]
-    public async Task ImportTimesheet_Reimport_PreservesTimesheetIdAndComments()
+    public async Task ImportAttendance_Reimport_PreservesTimesheetIdAndComments()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
         byte[] initialFileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
@@ -140,13 +140,11 @@ public class TimesheetReimportTests : BaseIntegrationTest
 
         using (MultipartFormDataContent importForm = TimesheetImportFormFactory.Create(setup.EmployeeId, initialFileBytes, "attendance.xlsx"))
         {
-            HttpResponseMessage importResponse = await Client.PostAsync("/api/timesheets/", importForm);
+            HttpResponseMessage importResponse = await Client.PostAsync("/api/attendance", importForm);
             Assert.Equal(HttpStatusCode.OK, importResponse.StatusCode);
-            ImportTimesheet.Response? importPayload = await importResponse.Content.ReadFromJsonAsync<ImportTimesheet.Response>();
+            ImportAttendance.Response? importPayload = await importResponse.Content.ReadFromJsonAsync<ImportAttendance.Response>();
             Assert.NotNull(importPayload);
-            Assert.True(importPayload!.Result.Success);
-            Assert.NotNull(importPayload.Result.TimesheetId);
-            timesheetId = importPayload.Result.TimesheetId!.Value;
+            timesheetId = importPayload!.TimesheetId;
         }
 
         await AddAttendanceCommentAsync(timesheetId, "Test comment preserved on reimport");
@@ -154,12 +152,11 @@ public class TimesheetReimportTests : BaseIntegrationTest
         byte[] updatedFileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
         using (MultipartFormDataContent reimportForm = TimesheetImportFormFactory.Create(setup.EmployeeId, updatedFileBytes, "attendance-updated.xlsx"))
         {
-            HttpResponseMessage reimportResponse = await Client.PostAsync("/api/timesheets/", reimportForm);
+            HttpResponseMessage reimportResponse = await Client.PostAsync("/api/attendance", reimportForm);
             Assert.Equal(HttpStatusCode.OK, reimportResponse.StatusCode);
-            ImportTimesheet.Response? reimportPayload = await reimportResponse.Content.ReadFromJsonAsync<ImportTimesheet.Response>();
+            ImportAttendance.Response? reimportPayload = await reimportResponse.Content.ReadFromJsonAsync<ImportAttendance.Response>();
             Assert.NotNull(reimportPayload);
-            Assert.True(reimportPayload!.Result.Success, reimportPayload.Result.ErrorMessage ?? "Reimport failed without error message.");
-            Assert.Equal(timesheetId, reimportPayload.Result.TimesheetId);
+            Assert.Equal(timesheetId, reimportPayload!.TimesheetId);
         }
 
         using IServiceScope scope = CreateScope();

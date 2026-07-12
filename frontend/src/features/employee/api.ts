@@ -1,5 +1,6 @@
 import { redirect } from "react-router";
 import { ApiUrl, customFetch, withDelay } from "@/constants/api";
+import { Texts } from "@/constants/texts";
 import { normalizeEmployeeTimesheetsFilter } from "./utils/normalizeEmployeeTimesheetsFilter";
 
 export interface EmployeeItem {
@@ -73,12 +74,10 @@ export interface TimesheetDetectionResult {
   month: number | null;
 }
 
-interface ImportTimesheetResponse {
-  result: ImportResult;
-}
-
-interface DetectTimesheetResponse {
-  result: TimesheetDetectionResult;
+interface ImportAttendanceResponse {
+  timesheetId: string;
+  year: number;
+  month: number;
 }
 
 export const getEmployee = (employeeId: string): Promise<GetEmployeeResponse> => {
@@ -144,8 +143,7 @@ export const detectTimesheetImport = async (employeeId: string, file: File, sign
   formData.append("employeeId", employeeId);
   formData.append("file", file);
 
-  const response = await customFetch<DetectTimesheetResponse>(`${ApiUrl}/timesheets/detect`, { method: "POST", body: formData, signal });
-  return response.result;
+  return customFetch<TimesheetDetectionResult>(`${ApiUrl}/attendance/detect`, { method: "POST", body: formData, signal });
 };
 
 export const importTimesheet = async (employeeId: string, file: File, signal?: AbortSignal): Promise<ImportResult> => {
@@ -153,6 +151,33 @@ export const importTimesheet = async (employeeId: string, file: File, signal?: A
   formData.append("employeeId", employeeId);
   formData.append("file", file);
 
-  const response = await customFetch<ImportTimesheetResponse>(`${ApiUrl}/timesheets/`, { method: "POST", body: formData, signal });
-  return response.result;
+  try {
+    const response = await customFetch<ImportAttendanceResponse>(`${ApiUrl}/attendance`, { method: "POST", body: formData, signal });
+    return {
+      fileName: file.name,
+      success: true,
+      errorMessage: null,
+      timesheetId: response.timesheetId,
+      year: response.year,
+      month: response.month,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.includes(": ")
+        ? error.message
+            .split(": ")
+            .slice(1)
+            .join(": ")
+            .replace(/^"(.*)"$/, "$1")
+        : Texts.importError;
+
+    return {
+      fileName: file.name,
+      success: false,
+      errorMessage: message,
+      timesheetId: null,
+      year: null,
+      month: null,
+    };
+  }
 };

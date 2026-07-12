@@ -3,12 +3,15 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using ClosedXML.Excel;
+using Timesheets.Api.Features.Timesheets;
 
-namespace Timesheets.Api.Features.Timesheets;
+namespace Timesheets.Api.Features.Attendance;
 
-public sealed record AttendanceTimesheetMetadata(string EmployeePersonalNumber, string? EmployeeName, decimal Workload, int Year, int Month, int DaysInMonth);
+public sealed record AttendanceFile(string EmployeePersonalNumber, string? EmployeeName, decimal Workload, int Year, int Month, IReadOnlyList<AttendanceFileDay> Days);
+public sealed record AttendanceFileDay(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, string? OtherInterruption, IReadOnlyList<TimeRange> Schedules, bool IsHoliday, decimal Workload);
+public sealed record AttendanceFileMetadata(string EmployeePersonalNumber, string? EmployeeName, decimal Workload, int Year, int Month, int DaysInMonth);
 
-public static partial class AttendanceSpreadsheet
+public sealed partial class AttendanceFileReader
 {
     private static readonly string[] AllowedTimeFormats = ["h\\:mm", "hh\\:mm", "h\\:mm\\:ss", "hh\\:mm\\:ss"];
 
@@ -36,7 +39,7 @@ public static partial class AttendanceSpreadsheet
     [GeneratedRegex(@"\s+")]
     private static partial Regex WhitespaceRegex();
 
-    public static AttendanceTimesheet Read(Stream stream)
+    public AttendanceFile Read(Stream stream)
     {
         byte[] content = ReadAllBytes(stream);
         if (LooksLikeHtml(content))
@@ -48,7 +51,7 @@ public static partial class AttendanceSpreadsheet
         return ReadWorkbook(workbookStream);
     }
 
-    public static AttendanceTimesheetMetadata ReadMetadata(Stream stream)
+    public AttendanceFileMetadata ReadMetadata(Stream stream)
     {
         byte[] content = ReadAllBytes(stream);
         if (LooksLikeHtml(content))
@@ -61,12 +64,22 @@ public static partial class AttendanceSpreadsheet
         return ReadMetadata(workbook.Worksheets.Worksheet(1));
     }
 
-    private static AttendanceTimesheet ReadWorkbook(Stream stream)
+    public static TimeSpan? ParseTime(IXLCell cell) => ParseTimeText(ParseString(cell));
+
+    public static string? ParseString(IXLCell cell)
+    {
+        string text = cell.GetString().Trim();
+        return text.Length == 0 ? null : text;
+    }
+
+    public static IReadOnlyList<TimeRange> ParseTimeRanges(IXLCell cell) => ParseTimeRangesText(ParseString(cell));
+
+    private static AttendanceFile ReadWorkbook(Stream stream)
     {
         using XLWorkbook workbook = new(stream);
         IXLWorksheet sheet = workbook.Worksheets.Worksheet(1);
-        AttendanceTimesheetMetadata metadata = ReadMetadata(sheet);
-        List<AttendanceDay> days = [];
+        AttendanceFileMetadata metadata = ReadMetadata(sheet);
+        List<AttendanceFileDay> days = [];
 
         for (int index = 0; index < metadata.DaysInMonth; index++)
         {
@@ -78,18 +91,18 @@ public static partial class AttendanceSpreadsheet
             TimeSpan? breakEnd = ParseTime(sheet.Cell($"E{row}"));
             string? interruption = ParseString(sheet.Cell($"F{row}"));
             IReadOnlyList<TimeRange> schedules = ParseTimeRanges(sheet.Cell($"K{row}"));
-            days.Add(new AttendanceDay(Date: date, ClockIn: clockIn, ClockOut: clockOut, BreakStart: breakStart, BreakEnd: breakEnd, OtherInterruption: interruption, Schedules: schedules, IsHoliday: false, Workload: metadata.Workload));
+            days.Add(new AttendanceFileDay(date, clockIn, clockOut, breakStart, breakEnd, interruption, schedules, IsHoliday: false, metadata.Workload));
         }
 
-        return new AttendanceTimesheet(EmployeePersonalNumber: metadata.EmployeePersonalNumber, EmployeeName: metadata.EmployeeName, Workload: metadata.Workload, Year: metadata.Year, Month: metadata.Month, Days: days);
+        return new AttendanceFile(metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Workload, metadata.Year, metadata.Month, days);
     }
 
-    private static AttendanceTimesheet ReadHtml(byte[] content)
+    private static AttendanceFile ReadHtml(byte[] content)
     {
         string html = DecodeHtml(content);
-        AttendanceTimesheetMetadata metadata = ReadHtmlMetadata(html);
+        AttendanceFileMetadata metadata = ReadHtmlMetadata(html);
         List<string[]> rows = ReadHtmlRows(html).Where(row => row.Length > 1 && PeriodRegex().IsMatch(row[0])).ToList();
-        List<AttendanceDay> days = [];
+        List<AttendanceFileDay> days = [];
 
         for (int index = 0; index < metadata.DaysInMonth; index++)
         {
@@ -101,41 +114,23 @@ public static partial class AttendanceSpreadsheet
                 schedules = ParseTimeRangesText(GetHtmlCell(row, 10));
             }
 
-            days.Add(new AttendanceDay(
-                Date: date,
-                ClockIn: ParseTimeText(GetHtmlCell(row, 1)),
-                ClockOut: ParseTimeText(GetHtmlCell(row, 2)),
-                BreakStart: ParseTimeText(GetHtmlCell(row, 3)),
-                BreakEnd: ParseTimeText(GetHtmlCell(row, 4)),
-                OtherInterruption: GetHtmlCell(row, 5),
-                Schedules: schedules,
+            days.Add(new AttendanceFileDay(
+                date,
+                ParseTimeText(GetHtmlCell(row, 1)),
+                ParseTimeText(GetHtmlCell(row, 2)),
+                ParseTimeText(GetHtmlCell(row, 3)),
+                ParseTimeText(GetHtmlCell(row, 4)),
+                GetHtmlCell(row, 5),
+                schedules,
                 IsHoliday: false,
-                Workload: metadata.Workload));
+                metadata.Workload));
         }
 
-        return new AttendanceTimesheet(EmployeePersonalNumber: metadata.EmployeePersonalNumber, EmployeeName: metadata.EmployeeName, Workload: metadata.Workload, Year: metadata.Year, Month: metadata.Month, Days: days);
+        return new AttendanceFile(metadata.EmployeePersonalNumber, metadata.EmployeeName, metadata.Workload, metadata.Year, metadata.Month, days);
     }
 
-    public static TimeSpan? ParseTime(IXLCell cell)
-    {
-        return ParseTimeText(ParseString(cell));
-    }
-
-    public static string? ParseString(IXLCell cell)
-    {
-        string text = cell.GetString().Trim();
-        return text.Length == 0 ? null : text;
-    }
-
-    public static IReadOnlyList<TimeRange> ParseTimeRanges(IXLCell cell)
-    {
-        return ParseTimeRangesText(ParseString(cell));
-    }
-
-    private static TimeSpan? ParseTimeText(string? text)
-    {
-        return TimeSpan.TryParseExact(text, AllowedTimeFormats, CultureInfo.InvariantCulture, out TimeSpan parsed) ? parsed : null;
-    }
+    private static TimeSpan? ParseTimeText(string? text) =>
+        TimeSpan.TryParseExact(text, AllowedTimeFormats, CultureInfo.InvariantCulture, out TimeSpan parsed) ? parsed : null;
 
     private static IReadOnlyList<TimeRange> ParseTimeRangesText(string? text)
     {
@@ -159,7 +154,7 @@ public static partial class AttendanceSpreadsheet
         return ranges;
     }
 
-    private static AttendanceTimesheetMetadata ReadHtmlMetadata(string html)
+    private static AttendanceFileMetadata ReadHtmlMetadata(string html)
     {
         string heading = HtmlHeadingRegex().Matches(html).Select(match => CleanHtmlText(match.Groups[1].Value)).FirstOrDefault(text => text.Length > 0) ?? string.Empty;
         string firstRow = string.Join(' ', ReadHtmlRows(html).FirstOrDefault() ?? []);
@@ -176,7 +171,7 @@ public static partial class AttendanceSpreadsheet
         int daysInMonth = period.Success && year > 0 && month is >= 1 and <= 12 ? DateTime.DaysInMonth(year, month) : 31;
         decimal workload = workloadMatch.Success ? decimal.Parse(workloadMatch.Groups[1].Value, CultureInfo.InvariantCulture) / 100m : 1m;
 
-        return new AttendanceTimesheetMetadata(EmployeePersonalNumber: personalNumber, EmployeeName: name, Workload: workload, Year: year, Month: month, DaysInMonth: daysInMonth);
+        return new AttendanceFileMetadata(personalNumber, name, workload, year, month, daysInMonth);
     }
 
     private static List<string[]> ReadHtmlRows(string html) =>
@@ -196,7 +191,7 @@ public static partial class AttendanceSpreadsheet
         return WhitespaceRegex().Replace(decoded, " ").Trim();
     }
 
-    private static AttendanceTimesheetMetadata ReadMetadata(IXLWorksheet sheet)
+    private static AttendanceFileMetadata ReadMetadata(IXLWorksheet sheet)
     {
         Match employee = EmployeeRegex().Match(sheet.Cell("A1").GetString());
         Match period = PeriodRegex().Match(sheet.Cell("A2").GetString());
@@ -209,7 +204,7 @@ public static partial class AttendanceSpreadsheet
         int daysInMonth = period.Success ? DateTime.DaysInMonth(year, month) : 31;
         decimal workload = workloadMatch.Success ? decimal.Parse(workloadMatch.Groups[1].Value, CultureInfo.InvariantCulture) / 100m : 1m;
 
-        return new AttendanceTimesheetMetadata(EmployeePersonalNumber: personalNumber, EmployeeName: name, Workload: workload, Year: year, Month: month, DaysInMonth: daysInMonth);
+        return new AttendanceFileMetadata(personalNumber, name, workload, year, month, daysInMonth);
     }
 
     private static byte[] ReadAllBytes(Stream stream)

@@ -1,18 +1,21 @@
 using ClosedXML.Excel;
 using NSubstitute;
+using Timesheets.Api.Features.Attendance;
 using Timesheets.Api.Features.Timesheets;
 using Xunit;
 
 namespace Timesheets.Api.Tests;
 
-public class AttendanceSpreadsheetTests
+public class AttendanceFileReaderTests
 {
+    private readonly AttendanceFileReader reader = new();
+
     [Fact]
     public void Read_ValidFile_ReturnsCorrectTimesheet()
     {
         string filePath = Path.Combine("Unit", "TestData", "valid_attendance.xlsx");
         using FileStream stream = File.OpenRead(filePath);
-        AttendanceTimesheet result = AttendanceSpreadsheet.Read(stream);
+        AttendanceFile result = reader.Read(stream);
 
         Assert.NotNull(result);
         Assert.Multiple(() =>
@@ -24,7 +27,7 @@ public class AttendanceSpreadsheetTests
             Assert.Equal(31, result.Days.Count);
         });
 
-        AttendanceDay firstDay = result.Days[0];
+        AttendanceFileDay firstDay = result.Days[0];
         Assert.Equal(new DateTime(2024, 10, 1), firstDay.Date);
     }
 
@@ -33,7 +36,7 @@ public class AttendanceSpreadsheetTests
     {
         string filePath = Path.Combine("Unit", "TestData", "invalid_attendance_malformed_metadata.xlsx");
         using FileStream stream = File.OpenRead(filePath);
-        AttendanceTimesheet result = AttendanceSpreadsheet.Read(stream);
+        AttendanceFile result = reader.Read(stream);
 
         Assert.NotNull(result);
         Assert.Multiple(() =>
@@ -49,7 +52,7 @@ public class AttendanceSpreadsheetTests
     {
         string filePath = Path.Combine("Unit", "TestData", "invalid_attendance_malformed_times.xlsx");
         using FileStream stream = File.OpenRead(filePath);
-        AttendanceTimesheet result = AttendanceSpreadsheet.Read(stream);
+        AttendanceFile result = reader.Read(stream);
 
         Assert.NotNull(result);
         Assert.Multiple(() =>
@@ -64,7 +67,7 @@ public class AttendanceSpreadsheetTests
     {
         string filePath = Path.Combine("Unit", "TestData", "valid_attendance_html.xls");
         using FileStream stream = File.OpenRead(filePath);
-        AttendanceTimesheet result = AttendanceSpreadsheet.Read(stream);
+        AttendanceFile result = reader.Read(stream);
 
         Assert.Multiple(() =>
         {
@@ -76,7 +79,7 @@ public class AttendanceSpreadsheetTests
             Assert.Equal(31, result.Days.Count);
         });
 
-        AttendanceDay firstDay = result.Days[0];
+        AttendanceFileDay firstDay = result.Days[0];
         Assert.Multiple(() =>
         {
             Assert.Equal(new DateTime(2026, 1, 1), firstDay.Date);
@@ -99,7 +102,7 @@ public class AttendanceSpreadsheetTests
     {
         IXLCell cell = Substitute.For<IXLCell>();
         cell.GetString().Returns(input);
-        Assert.Equal(new TimeSpan(expectedHours, expectedMinutes, 0), AttendanceSpreadsheet.ParseTime(cell));
+        Assert.Equal(new TimeSpan(expectedHours, expectedMinutes, 0), AttendanceFileReader.ParseTime(cell));
     }
 
     [Theory]
@@ -112,7 +115,7 @@ public class AttendanceSpreadsheetTests
     {
         IXLCell cell = Substitute.For<IXLCell>();
         cell.GetString().Returns(input);
-        Assert.Null(AttendanceSpreadsheet.ParseTime(cell));
+        Assert.Null(AttendanceFileReader.ParseTime(cell));
     }
 
     [Fact]
@@ -120,7 +123,7 @@ public class AttendanceSpreadsheetTests
     {
         IXLCell cell = Substitute.For<IXLCell>();
         cell.GetString().Returns("08:00-12:00, 13:00-17:00");
-        IReadOnlyList<TimeRange> result = AttendanceSpreadsheet.ParseTimeRanges(cell);
+        IReadOnlyList<TimeRange> result = AttendanceFileReader.ParseTimeRanges(cell);
         Assert.Equal([new TimeRange(new TimeSpan(8, 0, 0), new TimeSpan(12, 0, 0)), new TimeRange(new TimeSpan(13, 0, 0), new TimeSpan(17, 0, 0))], result);
     }
 
@@ -132,7 +135,7 @@ public class AttendanceSpreadsheetTests
     {
         IXLCell cell = Substitute.For<IXLCell>();
         cell.GetString().Returns(input);
-        Assert.Empty(AttendanceSpreadsheet.ParseTimeRanges(cell));
+        Assert.Empty(AttendanceFileReader.ParseTimeRanges(cell));
     }
 
     [Fact]
@@ -140,7 +143,7 @@ public class AttendanceSpreadsheetTests
     {
         string filePath = Path.Combine("Unit", "TestData", "valid_attendance.xlsx");
         using FileStream stream = File.OpenRead(filePath);
-        AttendanceTimesheetMetadata result = AttendanceSpreadsheet.ReadMetadata(stream);
+        AttendanceFileMetadata result = reader.ReadMetadata(stream);
         Assert.Multiple(() =>
         {
             Assert.False(string.IsNullOrWhiteSpace(result.EmployeePersonalNumber));
@@ -156,7 +159,7 @@ public class AttendanceSpreadsheetTests
     {
         string filePath = Path.Combine("Unit", "TestData", "invalid_attendance_malformed_metadata.xlsx");
         using FileStream stream = File.OpenRead(filePath);
-        AttendanceTimesheetMetadata result = AttendanceSpreadsheet.ReadMetadata(stream);
+        AttendanceFileMetadata result = reader.ReadMetadata(stream);
         Assert.Multiple(() =>
         {
             Assert.Equal(string.Empty, result.EmployeePersonalNumber);
@@ -171,7 +174,7 @@ public class AttendanceSpreadsheetTests
     {
         string filePath = Path.Combine("Unit", "TestData", "valid_attendance_html.xls");
         using FileStream stream = File.OpenRead(filePath);
-        AttendanceTimesheetMetadata result = AttendanceSpreadsheet.ReadMetadata(stream);
+        AttendanceFileMetadata result = reader.ReadMetadata(stream);
 
         Assert.Multiple(() =>
         {
