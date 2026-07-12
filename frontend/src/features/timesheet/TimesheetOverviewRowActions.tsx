@@ -1,8 +1,6 @@
 import { Check, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { useRevalidator, useSearchParams } from "react-router";
-import { UiAction } from "@/auth/uiPermissions";
-import { useCan } from "@/auth/useCan";
 import { Button } from "@/components/ui/button";
 import { Texts } from "@/constants/texts";
 import { formatMonthYear } from "@/features/contract/utils/czechMonths";
@@ -21,17 +19,10 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
 
   const employeeId = searchParams.get("employeeId") ?? "";
   const periodLabel = formatMonthYear(overview.month, overview.year);
-  const isSubmitted = overview.status === Texts.statusPendingApproval;
-
   const timesheetId = item.timesheetId;
-  const showActions = item.kind === "contractPart" && Boolean(timesheetId) && isSubmitted;
-
-  const canManagePart = useCan(UiAction.timesheet.approveProject, {
-    timesheetContractId: item.contractId ?? undefined,
-    timesheetProjectId: item.projectId ?? undefined,
-  });
-  const canApprove = showActions && canManagePart && item.status === Texts.statusPendingApproval;
-  const canReturn = showActions && canManagePart && item.status === Texts.statusApproved;
+  const actions = item.actions;
+  const canApprove = Boolean(actions?.approveProject);
+  const canReturn = Boolean(actions?.returnProject);
 
   const changeProjectStatus = async (action: TimesheetStatusAction, comment: string, signal: AbortSignal) => {
     if (!timesheetId) return;
@@ -58,7 +49,7 @@ export const TimesheetOverviewRowActions = ({ item, overview }: TimesheetOvervie
     }
   };
 
-  if (!showActions || (!canApprove && !canReturn)) {
+  if (!canApprove && !canReturn) {
     return Texts.dash;
   }
 

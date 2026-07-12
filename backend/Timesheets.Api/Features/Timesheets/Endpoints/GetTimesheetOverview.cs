@@ -25,12 +25,14 @@ public sealed class GetTimesheetOverview : IEndpoint
         decimal Workload,
         IEnumerable<string> Managers,
         string Status,
+        string StatusCode,
+        TimesheetContractPartActions? Actions,
         Guid? ContractId,
         Guid? ProjectId);
 
     public sealed record MonthSummary(DateTime PeriodStart, DateTime PeriodEnd, int Workdays, int VacationDays, int SickDays, int Holidays, decimal TotalWorkload);
 
-    public sealed record Response(Guid EmployeeId, int Year, int Month, string Status, IEnumerable<OverviewItem> Items, MonthSummary Summary);
+    public sealed record Response(Guid EmployeeId, int Year, int Month, string Status, string StatusCode, TimesheetMonthActions Actions, IEnumerable<OverviewItem> Items, MonthSummary Summary);
 
     private sealed record SummaryDay(DateTime Date, bool IsHoliday, string? Description);
 
@@ -63,6 +65,7 @@ public sealed class GetTimesheetOverview : IEndpoint
             {
                 timesheet.Id,
                 Status = timesheet.TimesheetStatus.Name,
+                StatusCode = timesheet.TimesheetStatus.Code,
                 Days = attendance.Days
                     .OrderBy(day => day.Date)
                     .Select(day => new SummaryDay(day.Date, day.IsHoliday, day.Description))
@@ -108,10 +111,12 @@ public sealed class GetTimesheetOverview : IEndpoint
         decimal totalWorkload = await GetEmployeeWorkloadAsync(request.EmployeeId, request.Year, request.Month, dbContext, cancellationToken);
         decimal coreWorkload = Math.Max(0m, totalWorkload - totalProjectWorkload);
         MonthSummary summary = ComputeMonthSummary(request.Year, request.Month, summaryDays, totalWorkload);
+        bool allContractPartsApproved = contractPartRows.Count == 0 || contractPartRows.All(row => row.StatusCode == TimesheetStatus.ApprovedCode);
+        TimesheetMonthActions monthActions = TimesheetActions.ResolveMonthActions(user, request.EmployeeId, attendanceInfo.StatusCode, allContractPartsApproved);
 
         List<OverviewItem> items =
         [
-            new(attendanceInfo.Id, "core", "Kmen", null, null, coreWorkload, [], attendanceInfo.Status, null, null),
+            new(attendanceInfo.Id, "core", "Kmen", null, null, coreWorkload, [], attendanceInfo.Status, attendanceInfo.StatusCode, null, null, null),
         ];
 
         Guid[] contractIds = contractPartRows.Select(row => row.ContractId).Distinct().ToArray();
@@ -137,11 +142,13 @@ public sealed class GetTimesheetOverview : IEndpoint
                 row.Workload,
                 managersByContract[row.ContractId],
                 TimesheetStatus.ResolveContractPartDisplayStatus(row.StatusCode),
+                row.StatusCode,
+                TimesheetActions.ResolveContractPartActions(user, attendanceInfo.StatusCode, row.StatusCode, row.ContractId, row.ProjectId),
                 row.ContractId,
                 row.ProjectId));
         }
 
-        return TypedResults.Ok(new Response(request.EmployeeId, request.Year, request.Month, attendanceInfo.Status, items, summary));
+        return TypedResults.Ok(new Response(request.EmployeeId, request.Year, request.Month, attendanceInfo.Status, attendanceInfo.StatusCode, monthActions, items, summary));
     }
 
     private static async Task EnsureContractPartsForEmployeeMonthAsync(Guid employeeId, int year, int month, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, CancellationToken cancellationToken)

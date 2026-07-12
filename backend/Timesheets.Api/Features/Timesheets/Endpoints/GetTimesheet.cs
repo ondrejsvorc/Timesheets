@@ -20,14 +20,14 @@ public sealed class GetTimesheet : IEndpoint
     public sealed record ContractPartDefinition(string Id, string RegistrationNumber, string Name, string Position, decimal Workload, bool Locked, bool[] ActiveDays);
     public sealed record ContractPartCell(decimal Hours, bool Locked);
     public sealed record DayItem(int Day, int?[] Work, int?[] Break, decimal CoreHours, ContractPartCell[] ContractPartCells, bool IsHoliday, bool IsWeekend, string? Note, IReadOnlyList<int[]>? Schedules);
-    public sealed record Response(Guid Id, int Year, int Month, decimal TotalWorkload, decimal CoreWorkload, bool TracksAttendance, IEnumerable<ContractPartDefinition> ContractParts, IEnumerable<DayItem> Days);
+    public sealed record Response(Guid Id, int Year, int Month, decimal TotalWorkload, decimal CoreWorkload, bool TracksAttendance, IEnumerable<ContractPartDefinition> ContractParts, IEnumerable<DayItem> Days, TimesheetEvaluation Evaluation);
 
     private sealed record AttendanceDaySource(DateTime Date, TimeSpan? ClockIn, TimeSpan? ClockOut, TimeSpan? BreakStart, TimeSpan? BreakEnd, decimal Workload, decimal HoursWithoutBreak, decimal CoreHours, bool IsHoliday, string? Description, string Schedules);
     private sealed record ContractPartDaySource(DateTime Date, decimal Hours, bool HoursLocked, bool IsHoliday);
     private sealed record ContractPartSource(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, ContractPartDateRange Range, List<ContractPartDaySource> Days);
     private sealed record ContractPartRow(Guid ActivityId, Guid ProjectId, string RegistrationNumber, string ProjectName, string Position, decimal Workload, DateTime? LockedAt, DateTime AssignmentStartDate, DateTime? AssignmentEndDate, DateTime ProjectStartDate, DateTime? ProjectEndDate, List<ContractPartDaySource> Days);
 
-    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle([AsParameters] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ICurrentUser user, CancellationToken cancellationToken)
+    private static async Task<Results<Ok<Response>, NotFound, ForbidHttpResult>> Handle([AsParameters] Request request, AppDbContext dbContext, ICzechHolidaysFactory holidaysFactory, ICurrentUser user, TimesheetEvaluator evaluator, CancellationToken cancellationToken)
     {
         if (!await user.CanAccessEmployeeAsync(request.EmployeeId, cancellationToken))
         {
@@ -212,7 +212,65 @@ public sealed class GetTimesheet : IEndpoint
             })
             .ToList();
 
-        return TypedResults.Ok(new Response(attendanceTimesheet.Id, request.Year, request.Month, totalWorkload, coreWorkload, tracksAttendance, projects, days));
+        LoadedTimesheet? loaded = await LoadForEvaluationAsync(attendanceTimesheet.Id, dbContext, cancellationToken);
+        TimesheetEvaluation evaluation = loaded is null
+            ? new TimesheetEvaluation(false, [], [], [], new TimesheetTotals(0m, 0m, 0m, 0m, 0m, true, true, []))
+            : evaluator.Evaluate(loaded, evaluator.CurrentEdit(loaded));
+
+        return TypedResults.Ok(new Response(attendanceTimesheet.Id, request.Year, request.Month, totalWorkload, coreWorkload, tracksAttendance, projects, days, evaluation));
+    }
+
+    private static async Task<LoadedTimesheet?> LoadForEvaluationAsync(Guid id, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        Domain.Models.Timesheet? timesheet = await dbContext.Timesheets
+            .AsNoTracking()
+            .Include(value => value.Employee)
+            .Include(value => value.TimesheetStatus)
+            .SingleOrDefaultAsync(value => value.Id == id, cancellationToken);
+
+        if (timesheet is null)
+        {
+            return null;
+        }
+
+        Domain.Models.Attendance? attendance = await dbContext.Attendances
+            .AsNoTracking()
+            .Include(value => value.Days)
+            .SingleOrDefaultAsync(value => value.TimesheetId == id, cancellationToken);
+
+        if (attendance is null)
+        {
+            return null;
+        }
+
+        List<Domain.Models.ContractPart> projects = await dbContext.ContractParts
+            .AsNoTracking()
+            .Include(value => value.Days)
+            .Where(value => value.TimesheetId == timesheet.Id)
+            .ToListAsync(cancellationToken);
+
+        Guid[] assignmentIds = projects.Select(project => project.ContractEmployeeId).ToArray();
+        var rangeRows = await (
+            from assignment in dbContext.ContractEmployees.AsNoTracking()
+            join contract in dbContext.Contracts.AsNoTracking() on assignment.ContractId equals contract.Id
+            join project in dbContext.Projects.AsNoTracking() on contract.ProjectId equals project.Id
+            where assignmentIds.Contains(assignment.Id)
+            select new
+            {
+                assignment.Id,
+                assignment.StartDate,
+                AssignmentEndDate = assignment.EndDate,
+                ProjectStartDate = project.StartDate,
+                ProjectEndDate = project.EndDate
+            })
+            .ToListAsync(cancellationToken);
+        Dictionary<Guid, ContractPartDateRange> projectRanges = rangeRows.ToDictionary(
+            row => row.Id,
+            row => EffectiveContractPartRange(row.StartDate, row.AssignmentEndDate, row.ProjectStartDate, row.ProjectEndDate));
+
+        decimal totalWorkload = await GetEmployeeWorkloadAsync(timesheet.EmployeeId, timesheet.Year, timesheet.Month, dbContext, cancellationToken);
+        decimal coreWorkload = Math.Max(0m, totalWorkload - projects.Sum(project => project.Workload));
+        return new LoadedTimesheet(Timesheet: timesheet, Attendance: attendance, ContractParts: projects, ContractPartRanges: projectRanges, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
     }
 
     private static async Task<decimal> GetEmployeeWorkloadAsync(Guid employeeId, int year, int month, AppDbContext dbContext, CancellationToken cancellationToken)

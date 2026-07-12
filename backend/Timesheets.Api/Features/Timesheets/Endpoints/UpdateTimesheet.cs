@@ -89,7 +89,7 @@ public sealed class UpdateTimesheet : IEndpoint
         return new LoadedTimesheet(Timesheet: timesheet, Attendance: attendance, ContractParts: projects, ContractPartRanges: projectRanges, TotalWorkload: totalWorkload, CoreWorkload: coreWorkload);
     }
 
-    private static void ApplyEdits(LoadedTimesheet loaded, TimesheetEdit request)
+    internal static void ApplyEdits(LoadedTimesheet loaded, TimesheetEdit request)
     {
         Dictionary<DateOnly, Domain.Models.AttendanceDay> days = loaded.Attendance.Days.ToDictionary(day => DateOnly.FromDateTime(day.Date));
         foreach (DayEdit update in request.Days)

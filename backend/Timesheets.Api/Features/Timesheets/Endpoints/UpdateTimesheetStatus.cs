@@ -24,7 +24,7 @@ public sealed class UpdateTimesheetStatus : IEndpoint
            .DisableAntiforgery()
            .WithRequestValidation<Request>();
 
-    public sealed record Request(Guid EmployeeId, int Year, int Month, string Action, string? Comment, IReadOnlyList<Guid> TimesheetIds);
+    public sealed record Request(Guid EmployeeId, int Year, int Month, string Action, string? Comment, IReadOnlyList<Guid> TimesheetIds, TimesheetEdit? Draft = null);
     private sealed record TargetStatus(Guid Id, string Code, string Name);
     private sealed record EmployeeMonthScope(Guid TimesheetId, IReadOnlyDictionary<Guid, string> ContractPartLabels);
 
@@ -143,10 +143,25 @@ public sealed class UpdateTimesheetStatus : IEndpoint
                 return TypedResults.NotFound();
             }
 
-            TimesheetEvaluation evaluation = evaluator.Evaluate(loaded, evaluator.CurrentEdit(loaded));
+            if (request.Draft is not null)
+            {
+                if (evaluator.HasInactiveContractPartHours(loaded, request.Draft))
+                {
+                    return TypedResults.BadRequest("Zakázkové hodiny nelze vyplnit mimo platnost pozice nebo projektu.");
+                }
+
+                UpdateTimesheet.ApplyEdits(loaded, request.Draft);
+            }
+
+            TimesheetEvaluation evaluation = evaluator.Evaluate(loaded, request.Draft ?? evaluator.CurrentEdit(loaded));
             if (evaluation.HasErrors)
             {
                 return TypedResults.BadRequest("Výkaz obsahuje chyby a nelze ho odeslat ke schválení.");
+            }
+
+            if (request.Draft is not null)
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
             }
         }
 

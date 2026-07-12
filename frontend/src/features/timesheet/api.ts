@@ -33,6 +33,21 @@ interface GetTimesheetResponse {
   tracksAttendance: boolean;
   contractParts: CompactContractPartDefinition[];
   days: CompactDayItem[];
+  evaluation: ApiTimesheetEvaluation;
+}
+
+export interface TimesheetMonthActions {
+  edit: boolean;
+  save: boolean;
+  submit: boolean;
+  finalApprove: boolean;
+  returnWhole: boolean;
+  unlock: boolean;
+}
+
+export interface TimesheetContractPartActions {
+  approveProject: boolean;
+  returnProject: boolean;
 }
 
 export interface TimesheetOverviewItem {
@@ -44,6 +59,8 @@ export interface TimesheetOverviewItem {
   workload: number;
   managers: string[];
   status: string;
+  statusCode: string;
+  actions: TimesheetContractPartActions | null;
   contractId: string | null;
   projectId: string | null;
 }
@@ -63,6 +80,8 @@ export interface GetTimesheetOverviewResponse {
   year: number;
   month: number;
   status: string;
+  statusCode: string;
+  actions: TimesheetMonthActions;
   items: TimesheetOverviewItem[];
   summary: TimesheetMonthSummary;
 }
@@ -183,6 +202,7 @@ export interface UpdateTimesheetStatusRequest {
   action: TimesheetStatusAction;
   comment?: string | null;
   timesheetIds: string[];
+  timesheet?: Timesheet;
 }
 
 const pad2 = (value: number) => {
@@ -373,7 +393,7 @@ export const getTimesheet = (employeeId: string, year: number, month: number): P
   return withDelay("slowest", async () => {
     const response = await customFetch<GetTimesheetResponse>(`${ApiUrl}/timesheets?${params.toString()}`);
     const timesheet = mapToTimesheet(response);
-    return { timesheet, evaluation: await reviewTimesheet(timesheet) };
+    return { timesheet, evaluation: mapTimesheetEvaluation(response.evaluation) };
   });
 };
 
@@ -429,6 +449,7 @@ export const updateTimesheetStatus = async (request: UpdateTimesheetStatusReques
       action: request.action,
       comment: request.comment?.trim() ? request.comment.trim() : null,
       timesheetIds: request.timesheetIds,
+      draft: request.timesheet ? buildTimesheetDraft(request.timesheet) : null,
     }),
     signal,
   });

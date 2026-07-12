@@ -20,25 +20,6 @@ const cellLastClass = "sticky right-0 z-10 border-l border-slate-300";
 const hoursCellClass = "w-full text-right tabular-nums cursor-help border-b border-dotted border-slate-300";
 const dayLevelFields = new Set(["workedHours", "allocatedHours"]);
 
-const roundHours = (hours: number) => Math.round(Math.max(0, hours) * 100) / 100;
-
-const timeToMinutes = (time: string) => {
-  const [hours, minutes] = time.slice(0, 5).split(":").map(Number);
-  return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : 0;
-};
-
-const calculateStagHours = (day: TimesheetDayModel) =>
-  roundHours(
-    Math.min(
-      12,
-      day.attendance.schedules.reduce((total, schedule) => {
-        const start = timeToMinutes(schedule.start);
-        const end = timeToMinutes(schedule.end);
-        return end > start ? total + (end - start) / 60 : total;
-      }, 0),
-    ),
-  );
-
 interface TimesheetDayProps {
   tracksAttendance: boolean;
   day: TimesheetDayModel;
@@ -69,15 +50,10 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
   const workedHours = evaluation?.workedHours ?? 0;
   const nightHours = evaluation?.nightHours ?? 0;
   const allocatedHours = evaluation?.allocatedHours ?? 0;
-  const balance = evaluation?.balance ?? 0;
+  const displayBalance = evaluation?.displayBalance ?? 0;
   const isWeekendOrHoliday = day.isWeekend || day.isHoliday;
-  const shouldLockByInterruption = Boolean(evaluation?.hasCoreOnlyInterruption || evaluation?.hasProportionalInterruption);
-  const coreLocked = shouldLockByInterruption;
-  const allocatedInputHours = (day.coreHours ?? 0) + Object.values(day.contractPartCells).reduce((sum, cell) => sum + cell.hours, 0);
-  const canGenerateAttendance = tracksAttendance && issues.some((issue) => issue.code === "ERR-ATT-13") && (day.attendance.schedules.length > 0 || allocatedInputHours > 0);
-  const stagMissing = !tracksAttendance && issues.some((issue) => issue.code === "ERR-ALL-02") ? roundHours(calculateStagHours(day) - (day.coreHours ?? 0)) : 0;
-  const displayBalance = stagMissing > 0 ? Math.max(balance, stagMissing) : balance;
-  const canAllocateRow = displayBalance !== 0 || canGenerateAttendance;
+  const coreLocked = evaluation?.coreLocked ?? false;
+  const canAllocateRow = evaluation?.canAllocate ?? false;
   const attendanceAdjustedClass = day.attendanceAdjusted ? "bg-amber-50 ring-1 ring-inset ring-amber-300" : "";
   const balanceTone = displayBalance === 0 ? "bg-green-50 text-green-600" : displayBalance > 0 ? "bg-red-50 text-red-500" : "bg-amber-50 text-amber-700";
 
@@ -203,7 +179,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
       {contractParts.map((part) => {
         const active = part.activeDays[dayIndex] ?? true;
         const cell = day.contractPartCells[part.id] ?? { hours: 0, locked: false };
-        const systemLocked = part.locked || shouldLockByInterruption || !active;
+        const systemLocked = part.locked || coreLocked || !active;
         const locked = systemLocked || cell.locked;
         const lockLabel = cell.locked ? Texts.unlockProjectCell : Texts.lockProjectCell;
         return (

@@ -67,6 +67,10 @@ export interface TimesheetDayEvaluation {
   nightHours: number;
   allocatedHours: number;
   balance: number;
+  displayBalance: number;
+  canAllocate: boolean;
+  canGenerateAttendance: boolean;
+  coreLocked: boolean;
   hasBusinessTrip: boolean;
   hasCoreOnlyInterruption: boolean;
   hasProportionalInterruption: boolean;
@@ -76,6 +80,7 @@ export interface ContractPartTotal {
   contractEmployeeId: string;
   hours: number;
   obligation: number;
+  matchesObligation: boolean;
 }
 
 export interface TimesheetTotals {
@@ -84,6 +89,8 @@ export interface TimesheetTotals {
   allocatedHours: number;
   coreHours: number;
   coreHoursObligation: number;
+  workedHoursMeetsObligation: boolean;
+  coreHoursWithinTolerance: boolean;
   contractParts: ContractPartTotal[];
 }
 

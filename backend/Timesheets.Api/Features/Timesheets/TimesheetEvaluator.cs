@@ -62,11 +62,31 @@ public enum IssueType { Warning = 0, Error = 1 }
 public sealed record TimesheetIssue(string Code, IssueType Type, string Description);
 public sealed record DayIssue(string Code, IssueType Type, string Description, int Day, string Field);
 
-public sealed record TimesheetDayEvaluation(int Day, decimal WorkedHours, decimal NightHours, decimal AllocatedHours, decimal Balance, bool HasBusinessTrip, bool HasCoreOnlyInterruption, bool HasProportionalInterruption);
+public sealed record TimesheetDayEvaluation(
+    int Day,
+    decimal WorkedHours,
+    decimal NightHours,
+    decimal AllocatedHours,
+    decimal Balance,
+    decimal DisplayBalance,
+    bool CanAllocate,
+    bool CanGenerateAttendance,
+    bool CoreLocked,
+    bool HasBusinessTrip,
+    bool HasCoreOnlyInterruption,
+    bool HasProportionalInterruption);
 
-public sealed record ContractPartTotal(Guid ContractEmployeeId, decimal Hours, decimal Obligation);
+public sealed record ContractPartTotal(Guid ContractEmployeeId, decimal Hours, decimal Obligation, bool MatchesObligation);
 
-public sealed record TimesheetTotals(decimal WorkedHours, decimal HoursObligation, decimal AllocatedHours, decimal CoreHours, decimal CoreHoursObligation, IReadOnlyList<ContractPartTotal> ContractParts);
+public sealed record TimesheetTotals(
+    decimal WorkedHours,
+    decimal HoursObligation,
+    decimal AllocatedHours,
+    decimal CoreHours,
+    decimal CoreHoursObligation,
+    bool WorkedHoursMeetsObligation,
+    bool CoreHoursWithinTolerance,
+    IReadOnlyList<ContractPartTotal> ContractParts);
 
 public sealed record TimesheetEvaluation(bool HasErrors, IReadOnlyList<TimesheetIssue> Issues, IReadOnlyList<DayIssue> DayIssues, IReadOnlyList<TimesheetDayEvaluation> Days, TimesheetTotals Totals);
 
@@ -149,11 +169,23 @@ public sealed class TimesheetEvaluator
         {
             decimal hours = Normalize(sheet.Days.Sum(day => day.ContractPartHours.GetValueOrDefault(project.Id)));
             decimal obligation = Normalize(sheet.Days.Count(day => IsWorkday(day.Date, day.IsHoliday) && project.IsActiveOn(day.Date)) * 8m * project.Workload);
-            return new ContractPartTotal(ContractEmployeeId: project.Id, Hours: hours, Obligation: obligation);
+            return new ContractPartTotal(ContractEmployeeId: project.Id, Hours: hours, Obligation: obligation, MatchesObligation: !HasUnequalHours(hours, obligation));
         }).ToList();
 
         decimal hoursObligation = Normalize(fundedDays * 8m * loaded.TotalWorkload);
-        TimesheetTotals totals = new(WorkedHours: Normalize(evaluatedDays.Sum(day => day.WorkedHours)), HoursObligation: hoursObligation, AllocatedHours: Normalize(evaluatedDays.Sum(day => day.AllocatedHours)), CoreHours: Normalize(sheet.Days.Sum(day => day.CoreHours)), CoreHoursObligation: Normalize(hoursObligation - contractPartTotals.Sum(project => project.Obligation)), ContractParts: contractPartTotals);
+        decimal coreHours = Normalize(sheet.Days.Sum(day => day.CoreHours));
+        decimal coreHoursObligation = Normalize(hoursObligation - contractPartTotals.Sum(project => project.Obligation));
+        decimal workedHours = Normalize(evaluatedDays.Sum(day => day.WorkedHours));
+        decimal tolerance = AllocationDayExtensions.CoreToleranceHours;
+        TimesheetTotals totals = new(
+            WorkedHours: workedHours,
+            HoursObligation: hoursObligation,
+            AllocatedHours: Normalize(evaluatedDays.Sum(day => day.AllocatedHours)),
+            CoreHours: coreHours,
+            CoreHoursObligation: coreHoursObligation,
+            WorkedHoursMeetsObligation: workedHours + 0.009m >= hoursObligation,
+            CoreHoursWithinTolerance: coreHours + 0.009m >= coreHoursObligation - tolerance && coreHours <= coreHoursObligation + tolerance + 0.009m,
+            ContractParts: contractPartTotals);
 
         TimesheetReview review = new EvaluatedTimesheetReviewer().Review(evaluated, attendance, tracksAttendance);
         IReadOnlyList<TimesheetIssue> issues = review.Issues.Concat(ReviewContractPartTotals(contractPartTotals)).Concat(ReviewCoreTolerance(totals)).ToArray();
@@ -164,9 +196,33 @@ public sealed class TimesheetEvaluator
             (EditableTimesheetDay day, EvaluatedDay evaluatedDay) = pair;
             bool businessTrip = HasBusinessTripInterruption(day.Description);
             bool proportional = HasProportionalInterruption(day.Description);
+            bool coreOnly = false;
+            bool coreLocked = coreOnly || proportional;
             decimal balance = evaluatedDay.SkipAllocationRules || !evaluatedDay.HasAttendanceFilled ? 0m : Round(evaluatedDay.WorkedHours - evaluatedDay.AllocatedHours);
             decimal nightHours = CalculateNightHours(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
-            return new TimesheetDayEvaluation(Day: day.Date.Day, WorkedHours: evaluatedDay.WorkedHours, NightHours: nightHours, AllocatedHours: evaluatedDay.AllocatedHours, Balance: balance, HasBusinessTrip: businessTrip, HasCoreOnlyInterruption: false, HasProportionalInterruption: proportional);
+            IEnumerable<DayIssue> issuesForDay = dayIssues.Where(issue => issue.Day == day.Date.Day);
+            decimal allocatedInputHours = Normalize(day.CoreHours + day.ContractPartHours.Values.Sum());
+            bool canGenerateAttendance = tracksAttendance
+                && issuesForDay.Any(issue => issue.Code == "ERR-ATT-13")
+                && (day.Schedules.Count > 0 || allocatedInputHours > 0m);
+            decimal stagMissing = !tracksAttendance && issuesForDay.Any(issue => issue.Code == "ERR-ALL-02")
+                ? Math.Max(0m, Round(evaluatedDay.StagHours - day.CoreHours))
+                : 0m;
+            decimal displayBalance = stagMissing > 0m ? Math.Max(balance, stagMissing) : balance;
+            bool canAllocate = displayBalance != 0m || canGenerateAttendance;
+            return new TimesheetDayEvaluation(
+                Day: day.Date.Day,
+                WorkedHours: evaluatedDay.WorkedHours,
+                NightHours: nightHours,
+                AllocatedHours: evaluatedDay.AllocatedHours,
+                Balance: balance,
+                DisplayBalance: displayBalance,
+                CanAllocate: canAllocate,
+                CanGenerateAttendance: canGenerateAttendance,
+                CoreLocked: coreLocked,
+                HasBusinessTrip: businessTrip,
+                HasCoreOnlyInterruption: coreOnly,
+                HasProportionalInterruption: proportional);
         }).ToList();
 
         return new TimesheetEvaluation(HasErrors: issues.Any(issue => issue.Type is IssueType.Error) || dayIssues.Any(issue => issue.Type is IssueType.Error), Issues: issues, DayIssues: dayIssues, Days: days, Totals: totals);

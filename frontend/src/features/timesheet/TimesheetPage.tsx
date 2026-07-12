@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Suspense, useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
-import { UiAction } from "@/auth/uiPermissions";
-import { useCan } from "@/auth/useCan";
 import { BackButton, FullscreenButton } from "@/components/shared/buttons/ActionButtons";
 import { GenericSkeleton } from "@/components/shared/data/GenericSkeleton";
 import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBadge";
@@ -143,18 +141,11 @@ interface TimesheetEditorProps {
 const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
   const [timesheet, setTimesheet] = useImmer<Timesheet>(initialData.timesheet);
   const [evaluation, setEvaluation] = useState<TimesheetEvaluation>(initialData.evaluation);
-  const [searchParams] = useSearchParams();
-  const timesheetEmployeeId = searchParams.get("employeeId") ?? "";
-  const canEditTimesheet = useCan(UiAction.timesheet.edit, { employeeId: timesheetEmployeeId });
-  const canSubmit = useCan(UiAction.timesheet.submit, { employeeId: timesheetEmployeeId });
-  const canManageWhole = useCan(UiAction.timesheet.finalApprove, { employeeId: timesheetEmployeeId });
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const isDraft = overview.status === Texts.statusInProgress;
-  const isSubmitted = overview.status === Texts.statusPendingApproval;
-  const isApproved = overview.status === Texts.statusApproved;
-  const isEditable = overview.status === Texts.statusInProgress && canEditTimesheet;
-  const hasWorkflowButtons = (isDraft && canSubmit) || (isSubmitted && canManageWhole) || (isApproved && canManageWhole);
+  const { actions } = overview;
+  const isEditable = actions.edit;
+  const hasWorkflowButtons = actions.submit || actions.save || actions.finalApprove || actions.returnWhole || actions.unlock;
 
   useEffect(() => {
     const controller = new AbortController();
