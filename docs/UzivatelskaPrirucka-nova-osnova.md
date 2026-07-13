@@ -235,14 +235,37 @@ S červenými hláškami nelze výkaz odeslat ke schváleni, s žlutými je odes
 
 ![Stránka pro kombinovaný výkaz - tlačítko Uložit změny](./images/v-04-01-22-vykaz-prehled-sipka-ulozit_zmeny.png)
 
-### Odeslání výkazu ke schválení
+### Schválování výkazu
+
+#### Odeslání kombinovaného výkazu ke schválení
 
 ![Stránka pro kombinovaný výkaz - tlačítko Odeslat ke schválení](./images/v-04-01-21-vykaz-prehled-sipka-odeslat_ke_schvalenit.png)
 ![Dialog pro odeslání výkazu ke schválení](./images/v-04-00-03-vykaz-modal-odeslat_ke%20schvaleni.png)
 
-### Schválení výkazu
+#### Vrácení kombinovaného výkazu k přepracování
 
-### Vrácení výkazu k přepracování
+![Stránka pro kombinovaný výkaz - tlačítko Vrátit k přepracování](./images/v-04-02-21-vykaz-ke_schvaleni-sipka-vratit.png)
+![Dialog pro vrácení celého výkazu k přepracování](./images/v-04-00-07-vykaz-modal-vratit_cely.png)
+
+#### Schválení projektové činnosti
+
+![Stránka pro kombinovaný výkaz - tlačítko Schválit u projektové činnosti](./images/v-04-02-20-vykaz-ke_schvaleni-sipka-schvalit-projekt.png)
+![Dialog pro schválení projektové činnosti](./images/v-04-00-04-vykaz-modal-schvalit_projekt.png)
+
+#### Vrácení projektové činnosti k přepracování
+
+![Stránka pro kombinovaný výkaz - tlačítko Vrátit u projektové činnosti](./images/v-04-02-20-vykaz-ke_schvaleni-02-sipka-vratit_projekt.png)
+![Dialog pro vrácení projektové činnosti k přepracování](./images/v-04-00-05-vykaz-modal-vratit_projekt.png)
+
+#### Schválení kombimovaného výkazu
+
+![Stránka pro kombinovaný výkaz - tlačítko Schválit](./images/v-04-02-20-vykaz-ke_schvaleni-03-sipka-schvalit.png)
+![Dialog pro schválení celého kombinovaného výkazu](./images/v-04-00-06-vykaz-modal-schvalit_cely.png)
+
+#### Odemknutí kombinovaného výkazu
+
+![Stránka pro kombinovaný výkaz - tlačítko Odemknout](./images/v-04-02-20-vykaz-ke_schvaleni-04-sipka-odemknout.png)
+![Dialog pro odemčení celého kombinovanýho výkazu](./images/v-04-00-08-vykaz-modal-odemknout.png)
 
 ### Historie schvalování a komentářová sekce
 
