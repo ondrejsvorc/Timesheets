@@ -670,7 +670,6 @@ file static class TimesheetLimits
     public const decimal MaxNightWorkHours = 8m;
     public const decimal MinRestBetweenShiftsHours = 11m;
     public const decimal MinBreakDurationHours = 0.5m;
-    public const decimal MinHoursBeforeBreak = 4m;
 }
 
 public sealed class EvaluatedTimesheetReviewer
@@ -920,10 +919,6 @@ public sealed class AttendanceTimesheetReviewer
             else
             {
                 decimal beforeBreak = HoursBetween(day.ClockIn.Value, day.BreakStart.Value);
-                if (beforeBreak < TimesheetLimits.MinHoursBeforeBreak)
-                {
-                    yield return Issue(day, "ERR-ATT-11", IssueType.Error, "Přestávka nejdříve po 4 h práce.", "breakStart");
-                }
                 if (!BreakIsInsideShift(day))
                 {
                     yield return Issue(day, "ERR-ATT-09", IssueType.Error, "Přestávka musí být mezi příchodem a odchodem.", "breakStart");
