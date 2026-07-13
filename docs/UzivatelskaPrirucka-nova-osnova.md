@@ -57,16 +57,22 @@ Modul Projekty slouží ke správě univerzitních projektů. Projekt představu
 
 ### Vytvoření projektu
 
+Vytvoření projektu může provést uživatel s rolí *Globálního manažera* kliknutím na tlačítko *Vytvořit projekt* na stránce projektů.
+
 ![Stránka Projekty - Tlačítko Vytvořit projekt](./images/v-01-00-21-projekty-sipka-vytvorit.png)
 ![Dialog pro vytvoření nového projektu](./images/v-01-00-05-projekty-modal-vytvorit.png)
 
 ### Úprava projektu
+
+Upravit údaje projektu může provést uživatel s rolí *Globálního manažera* nebo *Manažera projektu* kliknutím na *Upravit* v nabídce akcí u daného projektu.
 
 ![Stránka Projekty - otevření nabídky](./images/v-01-00-23-projekty-sipka-tri_tecky.png)
 ![Stránka Projekty - nabídka - upravit](./images/v-01-00-24-projekty-sipka-upravit.png)
 ![Dialog pro úpravu projektu](./images/v-01-00-06-projekty-modal-upravit.png)
 
 ### Přidání manažera projektu
+
+Přidat manažera k projektu může provést uživatel s rolí *Globálního manažera* kliknutím na *Přidat manažera* na stránce detailu projektu, v záložce *Manažeři projektu*.
 
 ![Rozkliknutí detailu projektu](./images/v-01-00-22-projekty-sipka-projekt.png)
 ![Stránka detailu projektu - překliknutí záložky](./images/v-01-01-24-projekt-zakazky-sipka-zalozka-manazeri_projektu.png)
@@ -75,15 +81,21 @@ Modul Projekty slouží ke správě univerzitních projektů. Projekt představu
 
 ### Archivace projektu
 
+Archivovat projekt může uživatel s rolí *Globálního manažera* nebo *Manažera projektu* kliknutím na *Archovovat* v nabídce akcí daného projektu.
+
 ![Stránka Projekty - otevření nabídky](./images/v-01-00-23-projekty-sipka-tri_tecky.png)
 ![Stránka Projekty - nabídka - archivovat](./images/v-01-00-25-projekty-sipka-archivovat.png)
 
 ### Obnovení projektu z archivu
 
+Obnovit projekt může uživatel s rolí *Globálního manažera* nebo *Manažera projektu* kliknutím na *Obnovit z archivu* v nabídce akcí daného projektu.
+
 ![Stránka Projekty - filtrovat projekty - archivované](./images/v-01-00-27-projekty-sipka-filtr_archovovane.png)
 ![Stránka Projekty - nabídka archivovaného projektu](./images/v-01-00-28-projekty-sipka-archovovane_obnovit.png)
 
 ### Smazání projektu
+
+Smazat projekt může uživatel s rolí *Globálního manažera* nebo *Manažera projektu* kliknutím na *Smazat* v nabídce akcí daného projektu.
 
 ![Stránka Projekty - otevření nabídky](./images/v-01-00-23-projekty-sipka-tri_tecky.png)
 ![Stránka Projekty - nabídka - smazat](./images/v-01-00-26-projekty-sipka-smazat.png)
@@ -98,15 +110,21 @@ Modul Zakázky představují dílčí části projektů, ke kterým jsou přiřa
 
 ### Vytvoření zakázky
 
+Vytvořit zakázku může uživatel s rolí *Globálního manažera* nebo *Manažera projektu* kliknutím na *Vytvořit zakázku* na stránce detailu projektu, v záložce *Zakázky*.
+
 ![Tlačítko vytvořit zakázku](./images/v-01-01-20-projekt-zakazky-sipka-vytvorit.png)
 ![Dialog pro vytvoření nové zakázky](./images/v-01-01-01-projekt-zakazka-modal-pridat.png)
 
 ### Úprava zakázky
 
+Úpravu údajů zakázky může provést uživatel s rolí *Globálního manažera* nebo *Manažera projektu* kliknutím na ikonu upravit pro danou zakázku na stránce detailu projektu, v záložce *Zakázky*.
+
 ![Stránka detailu projektu - záložka Zakázky - tlačítko upravit](./images/v-01-01-21-projekt-zakazky-sipka-upravit.png)
 ![Dialog pro upravení zakázky](./images/v-01-01-02-projekt-zakazka-modal-upravit.png)
 
 ### Přidání manažera zakázky
+
+Přidat manažera k zakázce může uživatel s rolí *Globálního manažera* nebo *Manažera projektu* kliknutím na *Přidat manažera* na stránce detailu projektu, v záložce *Manažeři zakázek*.
 
 ![Stránka detailu projektu - překliknutí záložky](./images/v-01-01-25-projekt-zakazky-sipka-zalozka-manazeri_zakazek.png)
 ![Stránka detailu projektu - záložka Manažeři zakázek](./images/v-01-03-20-projekt-manazeri_zakazek-sipka-vytvorit.png)
@@ -114,15 +132,21 @@ Modul Zakázky představují dílčí části projektů, ke kterým jsou přiřa
 
 ### Zobrazení detailu zakázky
 
+Zobrazení detailu zakázky může uživatel s rolí *Globálního manažera* nebo *Manažera projektu* nebo *Manažera zakázky* rozkliknutím daného záznamu zakázky v tabulce na stránce detailu projektu, v záložce *zakázky*.
+
 ![Rozkliknutí detailu dané zakázky](./images/v-01-01-23-projekt-zakazky-sipka-detail.png)
 ![Stránka pro detail zakáky - záložka Výkazy](./images/v-02-00-01-zakazka-vykazy-seskupeni1.png)
 
 #### Přehled výkazů v zakázce - změna seskupení
 
+Přehled výkazů na stránce detailu zakázky lze seskupovat dvojím způsobem. Změna seskupení se provádí volbou v sekci filtování výsledku v přehledu.
+
 ![Stránka detailu dané zakázky - změna seskupení](./images/v-02-00-21-zakazka-vykazy-sipka-zmena_seskupeni.png)
 ![Stránka detailu dané zakázky - seskupení 2](./images/v-02-00-01-zakazka-vykazy-seskupeni2.png)
 
 ### Přidání zaměstnance do zakázky (vytvoření pracovní pozice zaměstnance)
+
+Přidat zamstnance do zakázky, tzn. vytvořit mu v zakázce pracovní pozici, může uživatel s rolí *Globálního manažera* nebo *Manažera projektu* nebo *Manažera zakázky* kliknutím na *Přidat zaměstnanci pozici* na stránce detailu zakázky, v záložce *Zaměstnanci*.
 
 ![Rozkliknutí detailu dané zakázky](./images/v-01-01-23-projekt-zakazky-sipka-detail.png)
 ![Stránka detailu zakázky - překliknutí záložky](./images/v-02-00-20-zakazka-vykazy-sipka-zalozka_zamestnanci.png)
@@ -131,10 +155,14 @@ Modul Zakázky představují dílčí části projektů, ke kterým jsou přiřa
 
 ### Úprava pozice zaměstnance v zakázce
 
+Upravit zaměstnanci pracovní pozici v zakázce může uživatel s rolí *Globálního manažera* nebo *Manažera projektu* nebo *Manažera zakázky* kliknutím na ikonu upravit u dané pozice na stránce detailu zakázky, v záložce *Zaměstnanci*.
+
 ![Stránka detailu zakázky - záložka Zaměstnanci](./images/v-02-01-21-zakazka-zamestnanci-sipka-upravit.png)
 ![Dialog pro úpravu pocize v zakázce](./images/v-02-01-02-zakazka-zamestnanci-modal-upravit.png)
 
 ### Smazání pozice zaměstnance v zakázce
+
+Upravit zaměstnanci pracovní pozici v zakázce může uživatel s rolí *Globálního manažera* nebo *Manažera projektu* nebo *Manažera zakázky* kliknutím na ikonu smazat u dané pozice na stránce detailu zakázky, v záložce *Zaměstnanci*.
 
 ![Stránka detailu zakázky - záložka Zaměstnanci](./images/v-02-01-22-zakazka-zamestnanci-sipka-smazat.png)
 
@@ -144,10 +172,14 @@ Modul Zaměstnanci slouží ke správě pracovních pozic zaměstnanců v jednot
 
 ### Přehled pracovních pozic
 
+Každý zaměstnanec může zorbrazit přehled svých pracovních pozic. Zobrazení pozic ostatních zaměstnanců mohou uživatelé s vyšším oprávněním než je role *Zaměstnanec* rozkliknutím záznamu v tabulce pro daného zaměstnance.
+
 ![Rozkliknutí detailu daného zaměstnance](./images/v-03-00-20-zamestnanec-sipka-detail.png)
 ![Stránka detailu zaměstnanec - překliknutí záložky](./images/v-03-01-91-zamestnanec-detail-vykazy-sipka-pozice.png)
 
 ### Vytvoření pracovní pozice
+
+Vytvořit pracovní pozici zaměstnanci mohou uživatelé s vyšším oprávněním než je role *Zaměstnanec*.
 
 Vytvořit pozici lze dvěma způsoby:
 1) Přes zaměstnance
@@ -158,6 +190,8 @@ Otevření přehledu pracovních pozic daného zaměstnance viz *Zaměstnanci > 
 2) Přes zakázku – viz *Zakázky > Přidání zaměstnance do zakázky (vytvoření pracovní pozice zaměstnance)*
 
 ### Úprava pracovní pozice
+
+Upravit pracovní pozici zaměstnanci mohou uživatelé s vyšším oprávněním než je role *Zaměstnanec*.
 
 Vytvořit pozici lze dvěma způsoby:
 1) Přes zaměstnance
@@ -171,12 +205,15 @@ Vytvořit pozici lze dvěma způsoby:
 Modul Docházka slouží k nahrání docházkových dat exportovaných ze systému IMIS. Nahraná data představují podklad pro vytváření pracovních výkazů a kontrolu vykázané pracovní doby.
 
 ### Export docházky z IMIS
+
 ![Export docházky z IMIS - krok 1](./images/v-imis-01.png)
 ![Export docházky z IMIS - krok 2](./images/v-imis-02.png)
 ![Export docházky z IMIS - krok 3](./images/v-imis-03.png)
+
 Příklad exportu docházky za měsíc duben 2026. Pokud není datum vylněn, exportuje se automaticky aktuální měsíc. Datum pro export měsíční docházky je potřeba zadat vždy od 1. daného měsíce do 1. následujícího měsíce, nikoliv od 1. do 31. téhož měsíce.
 
 ### Nahrání docházky z IMIS
+
 V současné době není aplikace propojena se systémem IMIS. Docházku je proto nutné nejprve exportovat ze systému IMIS a následně ji nahrát do aplikace Výkazy.
 
 ![Stránka Moje Výkazy / Detail zaměstnance](./images/v-03-01-22-zamestnanec-sipka-nahrat.png)
@@ -189,6 +226,7 @@ Modul Výkazy slouží k evidenci, úpravám a schvalování pracovních výkaz�
 ### Zobrazení výkazu
 
 1) Přes zaměstnance
+
 ![Stránka Zaměstnanci - zobrazení stránky detailu daného zaměstnance](./images/v-04-00-20-zamestnaneci-zamestnanec-sipka-zamestnanec.png)
 ![Stránka detailu zaměstnance - záložka Výkazy - zobrazení kombinovaného výkazu pro daný měsíc](./images/v-04-00-21-zamestnanec-vykazy-sipka-detail_mesice.png)
 ![Stránka pro kombinovaný výkaz](./images/v-04-01-00-vykaz-prehled.png)
@@ -225,6 +263,7 @@ Níže na obrázku jsou popsány základní prvky a operace kombinovaného výka
 ![Kombinovaný výkaz - popis](./images/v-04-01-20-vykaz_zoom-sipka-popis.png)
 
 #### Chybové hlášky
+
 Chybové hlášky jsou dvojí závažnosti:
 - červené – výstražné,
 - žluté – upozorňující.
@@ -233,36 +272,50 @@ S červenými hláškami nelze výkaz odeslat ke schváleni, s žlutými je odes
 
 ### Uložení změn v kombinovaném výkazu
 
+Po provedení úprav je vždy zapotřebí uloži změny kliknutím na tlačítko *Uložit změny*.
+
 ![Stránka pro kombinovaný výkaz - tlačítko Uložit změny](./images/v-04-01-22-vykaz-prehled-sipka-ulozit_zmeny.png)
 
 ### Schválování výkazu
 
 #### Odeslání kombinovaného výkazu ke schválení
 
+Pokud je vyplněný kombinovaný výkaz bez červených chybových hlášek, lze jej odeslat ke schválení kliknutím na tlačítko *Odeslat ke schválení*. Po odeslání jsou všechny části kombinovaného výkazu ve stavu *Ke schválení*. Provádí zaměstnanec, jehož se pracovní výkaz týka.
+
 ![Stránka pro kombinovaný výkaz - tlačítko Odeslat ke schválení](./images/v-04-01-21-vykaz-prehled-sipka-odeslat_ke_schvalenit.png)
 ![Dialog pro odeslání výkazu ke schválení](./images/v-04-00-03-vykaz-modal-odeslat_ke%20schvaleni.png)
 
 #### Vrácení kombinovaného výkazu k přepracování
+
+*Globální manažer*, *Manažer projektu* či *Manažer zakázky* může vrátit celý kombinovaný výkaz k přepracování kliknutím na tlačítko *Vrátit k přepracování*. Po této akci jsou všechny části kombinovaného výkazu ve stavu *Rozpracovaný*. 
 
 ![Stránka pro kombinovaný výkaz - tlačítko Vrátit k přepracování](./images/v-04-02-21-vykaz-ke_schvaleni-sipka-vratit.png)
 ![Dialog pro vrácení celého výkazu k přepracování](./images/v-04-00-07-vykaz-modal-vratit_cely.png)
 
 #### Schválení projektové činnosti
 
+Pokud je stav projektové činnosti ve stavu *Ke schválení* může *Manažer projektu* či *Manažer zakázky* schválit projektovou část kombinovaného výkazu kliknutím na tlačítko *Schválit* u dané projektové činnosti. Po této akce je projektová část ve stavu *Schváleno*.
+
 ![Stránka pro kombinovaný výkaz - tlačítko Schválit u projektové činnosti](./images/v-04-02-20-vykaz-ke_schvaleni-sipka-schvalit-projekt.png)
 ![Dialog pro schválení projektové činnosti](./images/v-04-00-04-vykaz-modal-schvalit_projekt.png)
 
 #### Vrácení projektové činnosti k přepracování
+
+*Manažer projektu* či *Manažer zakázky* může vrátit projektovou část kombinovaného výkazu kliknutím na tlačítko *Vrátit* u dané projektové činnosti.
 
 ![Stránka pro kombinovaný výkaz - tlačítko Vrátit u projektové činnosti](./images/v-04-02-20-vykaz-ke_schvaleni-02-sipka-vratit_projekt.png)
 ![Dialog pro vrácení projektové činnosti k přepracování](./images/v-04-00-05-vykaz-modal-vratit_projekt.png)
 
 #### Schválení kombimovaného výkazu
 
+Pokud jsou všechny části kombinovaného výkazu ve stavu *Ke schválení* může poté zaměstnanec (jehož se pracovní výkaz týká) nebo *Globální manažer* provést schválení celého výkazu kliknutím na tlačítko *Schválit*. Po této akci jsou všechy části kombinovaného výkazu ve stavu *Schváleno* a výkaz je uzamčený úpravám.
+
 ![Stránka pro kombinovaný výkaz - tlačítko Schválit](./images/v-04-02-20-vykaz-ke_schvaleni-03-sipka-schvalit.png)
 ![Dialog pro schválení celého kombinovaného výkazu](./images/v-04-00-06-vykaz-modal-schvalit_cely.png)
 
 #### Odemknutí kombinovaného výkazu
+
+Odemknout zpět schválený výkaz může zaměstnanec nebo *Globální manažer* kliknutím na talčítko *Odemknout*. Po této akci jsou všechny části kombinovaného výkazu ve stavu *Rozpracováno* a je možná jejich editace.
 
 ![Stránka pro kombinovaný výkaz - tlačítko Odemknout](./images/v-04-02-20-vykaz-ke_schvaleni-04-sipka-odemknout.png)
 ![Dialog pro odemčení celého kombinovanýho výkazu](./images/v-04-00-08-vykaz-modal-odemknout.png)
