@@ -6,6 +6,7 @@ import { UiAction } from "@/auth/uiPermissions";
 import { useCan } from "@/auth/useCan";
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
+import { createFilterControls } from "@/components/shared/layout/createFilterControls";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,10 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import type { EmployeeItem, GetEmployeesResponse } from "@/features/employees/api/getEmployees";
+import type { EmployeeItem, GetEmployeesResponse } from "@/features/employees/api";
 import { type EmployeesFilterCriteria, useEmployeesFilter } from "@/features/employees/hooks/useEmployeesFilters";
-import { createFilterControls } from "@/utils/createFilterControls";
-import { updateEmployeeGlobalManager } from "./api/updateEmployeeGlobalManager";
+import { updateEmployeeGlobalManager } from "./api";
 
 const EmployeeRolesPageContentLazy = lazy(async () => ({
   default: EmployeeRolesPageContent,
@@ -76,7 +76,7 @@ const EmployeeRolesPageContent = () => {
   return (
     <>
       <FilterBar filter={filter} setFilter={setFilter}>
-        <FilterSearchInput placeholder={Texts.searchByNameEmailOrNumber} />
+        <FilterSearchInput placeholder={Texts.searchByNameOrNumber} />
       </FilterBar>
       {filtered.length === 0 ? (
         <EmptyState />
@@ -87,7 +87,6 @@ const EmployeeRolesPageContent = () => {
               <TableRow>
                 <TableHead>{Texts.personalNumber}</TableHead>
                 <TableHead>{Texts.fullName}</TableHead>
-                <TableHead>{Texts.email}</TableHead>
                 <TableHead>{Texts.globalManager}</TableHead>
               </TableRow>
             </TableHeader>
@@ -100,7 +99,6 @@ const EmployeeRolesPageContent = () => {
                   <TableRow key={employee.id}>
                     <TableCell>{employee.personalNumber ?? Texts.dash}</TableCell>
                     <TableCell>{employee.fullName}</TableCell>
-                    <TableCell>{employee.email ?? Texts.dash}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Checkbox

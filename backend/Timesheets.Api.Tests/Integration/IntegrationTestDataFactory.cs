@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using Timesheets.Api.Contracts.Endpoints;
-using Timesheets.Api.Data.Models;
-using Timesheets.Api.Projects.Endpoints;
+using Timesheets.Api.Domain.Models;
+using Timesheets.Api.Features.Contracts.Endpoints;
+using Timesheets.Api.Features.Projects.Endpoints;
 
 namespace Timesheets.Api.Tests.Integration;
 
@@ -29,7 +29,7 @@ internal static class IntegrationTestDataFactory
 
         CreateProject.Request createProjectRequest = new(
             $"Test Project {suffix}",
-            $"REG-TEST-{suffix}",
+            TestIdentifiers.Project(sequence),
             positionStart,
             positionEnd?.AddYears(1));
 
@@ -39,7 +39,7 @@ internal static class IntegrationTestDataFactory
         Assert.NotNull(createdProject);
         Guid projectId = createdProject!.Project.Id;
 
-        CreateProjectContract.Request createContractRequest = new($"Test Contract {suffix}", $"CONT-{suffix}");
+        CreateProjectContract.Request createContractRequest = new($"Test Contract {suffix}", TestIdentifiers.Contract(sequence));
         HttpResponseMessage contractResponse = await client.PostAsJsonAsync($"/api/projects/{projectId}/contracts", createContractRequest);
         Assert.Equal(HttpStatusCode.Created, contractResponse.StatusCode);
         CreateProjectContract.Response? createdContract = await contractResponse.Content.ReadFromJsonAsync<CreateProjectContract.Response>();
@@ -47,12 +47,12 @@ internal static class IntegrationTestDataFactory
         Guid contractId = createdContract!.ProjectContract.Id;
 
         string personalNumber = $"9{suffix.PadLeft(3, '0')}";
-        Employee employee = await TestEmployeeFactory.CreateAsync(services, personalNumber, $"Test Employee {suffix}", $"test.employee.{suffix}@example.com");
+        Employee employee = await TestEmployeeFactory.CreateAsync(services, personalNumber, "Test", $"Employee {suffix}");
         Guid employeeId = employee.Id;
 
         AddContractEmployee.Request addPositionRequest = new(
             employeeId,
-            "POS-01",
+            TestIdentifiers.Position(1),
             "Developer",
             workload,
             positionStart,
@@ -69,7 +69,7 @@ internal static class IntegrationTestDataFactory
         GetContractEmployees.PositionItem position = employees!.Employees
             .Single(employeeItem => employeeItem.Id == employeeId)
             .Positions
-            .Single(item => item.PositionCode == "POS-01");
+            .Single(item => item.PositionCode == TestIdentifiers.Position(1));
 
         return new TestProjectSetup(projectId, contractId, employeeId, position.Id, personalNumber);
     }

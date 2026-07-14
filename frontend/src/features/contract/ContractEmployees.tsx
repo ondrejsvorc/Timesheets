@@ -1,4 +1,3 @@
-import { isBefore, parseISO, startOfDay } from "date-fns";
 import { useState } from "react";
 import { useAsyncValue, useLoaderData, useParams, useRevalidator } from "react-router";
 import { UiAction } from "@/auth/uiPermissions";
@@ -7,19 +6,16 @@ import { AddButton, DeleteButton, EditButton } from "@/components/shared/buttons
 import { EmptyState } from "@/components/shared/data/EmptyState";
 import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
+import { createFilterControls } from "@/components/shared/layout/createFilterControls";
 import { FilterBar } from "@/components/shared/layout/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Texts } from "@/constants/texts";
-import { createFilterControls } from "@/utils/createFilterControls";
-import { formatDate } from "@/utils/formatDate";
-import { formatWorkloadPercent } from "@/utils/formatWorkload";
+import { formatDate, formatWorkloadPercent } from "@/utils/format";
 import { AddEmployeeDialog } from "./AddEmployeeDialog";
-import { deleteContractEmployee } from "./api/deleteContractEmployee";
-import type { EmployeeItem, GetContractEmployeesResponse, PositionItem } from "./api/getContractEmployees";
-import type { UpdateContractEmployeeRequest } from "./api/updateContractEmployee";
-import { ContractEmployeeUpdateDialog } from "./ContractEmployeeUpdateDialog";
-import { EditContractEmployeePositionDialog } from "./EditContractEmployeePositionDialog";
+import { deleteContractEmployee, type EmployeeItem, type GetContractEmployeesResponse, type PositionItem, type UpdateContractEmployeeRequest } from "./api";
 import { type ContractEmployeesFilterCriteria, useContractEmployeesFilter } from "./hooks/useContractEmployeesFilter";
+import { UpdateContractEmployeeDialog } from "./UpdateContractEmployeeDialog";
+import { UpdateEmployeePositionDialog } from "./UpdateEmployeePositionDialog";
 
 export const ContractEmployees = () => {
   const { promise } = useLoaderData() as {
@@ -51,21 +47,30 @@ const ContractEmployeesContent = () => {
   } | null>(null);
   const { id: projectId, contractId } = useParams();
   const revalidator = useRevalidator();
-  const canAddEmployee = useCan(UiAction.contractEmployees.add, {
-    contractId: contractId ?? undefined,
-    projectId: projectId ?? undefined,
-  });
+  const canAddEmployee =
+    useCan(UiAction.contractEmployees.add, {
+      contractId: contractId ?? undefined,
+      projectId: projectId ?? undefined,
+    }) && !response.isProjectArchived;
 
   return (
     <>
       <FilterBar filter={filter} setFilter={setFilter} actions={canAddEmployee ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addEmployeePositionToEmployeeTitle}</AddButton> : undefined}>
         <FilterSearchInput placeholder={Texts.search} />
       </FilterBar>
-      <ContractEmployeesList contractId={contractId} employees={filtered} onDeleteRequested={(payload) => setPositionToDelete(payload)} onEditRequested={(payload) => setPositionToEdit(payload)} />
+      <ContractEmployeesList
+        contractId={contractId}
+        employees={filtered}
+        isReadonly={response.isProjectArchived}
+        onDeleteRequested={(payload) => setPositionToDelete(payload)}
+        onEditRequested={(payload) => setPositionToEdit(payload)}
+      />
       {contractId && (
         <AddEmployeeDialog
           open={isAddOpen}
           contractId={contractId}
+          projectStartDate={response.projectStartDate}
+          projectEndDate={response.projectEndDate}
           existingContractEmployees={response.employees}
           onClose={() => setIsAddOpen(false)}
           onSaved={() => {
@@ -76,9 +81,11 @@ const ContractEmployeesContent = () => {
       )}
 
       {positionToEdit && (
-        <EditContractEmployeePositionDialog
+        <UpdateEmployeePositionDialog
           open
           position={positionToEdit.position}
+          projectStartDate={response.projectStartDate}
+          projectEndDate={response.projectEndDate}
           onClose={() => setPositionToEdit(null)}
           onContinue={(request) => {
             setPendingUpdate({
@@ -92,7 +99,7 @@ const ContractEmployeesContent = () => {
       )}
 
       {pendingUpdate && (
-        <ContractEmployeeUpdateDialog
+        <UpdateContractEmployeeDialog
           contractId={pendingUpdate.contractId}
           contractEmployeeId={pendingUpdate.contractEmployeeId}
           request={pendingUpdate.request}
@@ -123,11 +130,12 @@ const ContractEmployeesContent = () => {
 interface ContractEmployeesListProps {
   contractId?: string;
   employees: EmployeeItem[];
+  isReadonly: boolean;
   onDeleteRequested: (payload: { contractId: string; contractEmployeeId: string }) => void;
   onEditRequested: (payload: { contractId: string; position: PositionItem }) => void;
 }
 
-const ContractEmployeesList = ({ contractId, employees, onDeleteRequested, onEditRequested }: ContractEmployeesListProps) => {
+const ContractEmployeesList = ({ contractId, employees, isReadonly, onDeleteRequested, onEditRequested }: ContractEmployeesListProps) => {
   if (employees.length === 0) {
     return <EmptyState />;
   }
@@ -135,7 +143,7 @@ const ContractEmployeesList = ({ contractId, employees, onDeleteRequested, onEdi
   return (
     <div className="space-y-6">
       {employees.map((employee) => (
-        <EmployeeSection key={employee.id} contractId={contractId} employee={employee} onDeleteRequested={onDeleteRequested} onEditRequested={onEditRequested} />
+        <EmployeeSection key={employee.id} contractId={contractId} employee={employee} isReadonly={isReadonly} onDeleteRequested={onDeleteRequested} onEditRequested={onEditRequested} />
       ))}
     </div>
   );
@@ -144,11 +152,12 @@ const ContractEmployeesList = ({ contractId, employees, onDeleteRequested, onEdi
 interface EmployeeSectionProps {
   contractId?: string;
   employee: EmployeeItem;
+  isReadonly: boolean;
   onDeleteRequested: (payload: { contractId: string; contractEmployeeId: string }) => void;
   onEditRequested: (payload: { contractId: string; position: PositionItem }) => void;
 }
 
-const EmployeeSection = ({ contractId, employee, onDeleteRequested, onEditRequested }: EmployeeSectionProps) => {
+const EmployeeSection = ({ contractId, employee, isReadonly, onDeleteRequested, onEditRequested }: EmployeeSectionProps) => {
   return (
     <div className="rounded-md border p-4">
       <div className="mb-3 font-medium text-foreground">{employee.fullName}</div>
@@ -158,17 +167,18 @@ const EmployeeSection = ({ contractId, employee, onDeleteRequested, onEditReques
         <Table className="table-fixed w-full">
           <TableHeader>
             <TableRow>
-              <TableHead>{Texts.position}</TableHead>
-              <TableHead className="w-24">{Texts.workload}</TableHead>
-              <TableHead className="w-28">{Texts.from}</TableHead>
-              <TableHead className="w-28">{Texts.to}</TableHead>
-              <TableHead className="w-24">{Texts.status}</TableHead>
-              <TableHead className="w-28">{Texts.actions}</TableHead>
+              <TableHead className="w-[13%]">{Texts.positionCode}</TableHead>
+              <TableHead className="w-[19%]">{Texts.position}</TableHead>
+              <TableHead className="w-[11%]">{Texts.workload}</TableHead>
+              <TableHead className="w-[13%]">{Texts.from}</TableHead>
+              <TableHead className="w-[13%]">{Texts.to}</TableHead>
+              <TableHead className="w-[13%]">{Texts.status}</TableHead>
+              <TableHead className="w-[18%] text-right">{Texts.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {employee.positions.map((position) => (
-              <PositionRow key={position.id} contractId={contractId} position={position} onDeleteRequested={onDeleteRequested} onEditRequested={onEditRequested} />
+              <PositionRow key={position.id} contractId={contractId} position={position} isReadonly={isReadonly} onDeleteRequested={onDeleteRequested} onEditRequested={onEditRequested} />
             ))}
           </TableBody>
         </Table>
@@ -180,25 +190,30 @@ const EmployeeSection = ({ contractId, employee, onDeleteRequested, onEditReques
 interface PositionRowProps {
   contractId?: string;
   position: PositionItem;
+  isReadonly: boolean;
   onDeleteRequested: (payload: { contractId: string; contractEmployeeId: string }) => void;
   onEditRequested: (payload: { contractId: string; position: PositionItem }) => void;
 }
 
-const PositionRow = ({ contractId, position, onDeleteRequested, onEditRequested }: PositionRowProps) => {
+const PositionRow = ({ contractId, position, isReadonly, onDeleteRequested, onEditRequested }: PositionRowProps) => {
   const { id: projectId } = useParams();
-  const active = isPositionActive(position);
   const permissionContext = { contractId: contractId ?? undefined, projectId: projectId ?? undefined };
-  const canRemove = useCan(UiAction.contractEmployees.remove, permissionContext);
-  const canUpdate = useCan(UiAction.contractEmployees.update, permissionContext);
+  const canRemove = useCan(UiAction.contractEmployees.remove, permissionContext) && !isReadonly;
+  const canUpdate = useCan(UiAction.contractEmployees.update, permissionContext) && !isReadonly;
 
   return (
     <TableRow className="cursor-pointer">
-      <TableCell>{position.position ?? Texts.dash}</TableCell>
+      <TableCell className="truncate" title={position.positionCode ?? ""}>
+        {position.positionCode ?? Texts.dash}
+      </TableCell>
+      <TableCell className="truncate" title={position.position ?? ""}>
+        {position.position ?? Texts.dash}
+      </TableCell>
       <TableCell>{formatWorkloadPercent(position.workload)}</TableCell>
       <TableCell>{formatDate(position.startDate)}</TableCell>
       <TableCell>{formatDate(position.endDate) ?? Texts.dash}</TableCell>
-      <TableCell>{active ? Texts.active : Texts.inactive}</TableCell>
-      <TableCell className="space-x-1">
+      <TableCell>{position.isActive ? Texts.active : Texts.inactive}</TableCell>
+      <TableCell className="space-x-1 text-right">
         {canUpdate && (
           <EditButton
             onClick={() => {
@@ -220,12 +235,3 @@ const PositionRow = ({ contractId, position, onDeleteRequested, onEditRequested 
     </TableRow>
   );
 };
-
-/** Aktivní, pokud není endDate nebo endDate je dnes či v budoucnu. */
-/** TODO: Posílat příznak z backendu, protože zde může být chyba kvůli časové zóně klienta. */
-function isPositionActive(position: PositionItem): boolean {
-  if (!position.endDate) return true;
-  const today = startOfDay(new Date());
-  const end = parseISO(position.endDate);
-  return !isBefore(end, today);
-}

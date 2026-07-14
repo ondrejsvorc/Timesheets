@@ -1,0 +1,106 @@
+using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common.Extensions;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
+
+namespace Timesheets.Api.Features.Auth;
+
+public sealed class UserSynchronizer(AppDbContext dbContext)
+{
+    private readonly record struct SynchronizedUser(string FirstName, string Surname, string PersonalNumber, string? TitleBefore, string? TitleAfter, Guid EmployeeTypeId);
+
+    public async Task SyncFromPrincipalAsync(ClaimsPrincipal principal, CancellationToken cancellationToken)
+    {
+        SynchronizedUser synchronizedUser = new(
+            principal.GetGivenName(),
+            principal.GetFamilyName(),
+            principal.GetPersonalNumber(),
+            principal.GetTitleBefore(),
+            principal.GetTitleAfter(),
+            principal.GetEmployeeTypeId());
+        await SyncUserAsync(synchronizedUser, cancellationToken);
+    }
+
+    private async Task SyncUserAsync(SynchronizedUser user, CancellationToken cancellationToken)
+    {
+        Employee? existing = await dbContext.Employees.FirstOrDefaultAsync(e => e.PersonalNumber == user.PersonalNumber, cancellationToken);
+
+        if (existing is null)
+        {
+            await CreateEmployeeAsync(user, cancellationToken);
+        }
+        else
+        {
+            await UpdateEmployeeAsync(existing, user, cancellationToken);
+        }
+    }
+
+    private async Task CreateEmployeeAsync(SynchronizedUser user, CancellationToken cancellationToken)
+    {
+        Employee employee = new()
+        {
+            Id = Guid.CreateVersion7(),
+            FirstName = user.FirstName,
+            Surname = user.Surname,
+            PersonalNumber = user.PersonalNumber,
+            TitleBefore = user.TitleBefore,
+            TitleAfter = user.TitleAfter,
+            IsGlobalManager = false,
+            EmployeeTypeId = user.EmployeeTypeId,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        dbContext.Employees.Add(employee);
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task UpdateEmployeeAsync(Employee existing, SynchronizedUser user, CancellationToken cancellationToken)
+    {
+        bool hasChanges = false;
+
+        if (existing.FirstName != user.FirstName)
+        {
+            existing.FirstName = user.FirstName;
+            hasChanges = true;
+        }
+
+        if (existing.Surname != user.Surname)
+        {
+            existing.Surname = user.Surname;
+            hasChanges = true;
+        }
+
+        if (existing.PersonalNumber != user.PersonalNumber)
+        {
+            existing.PersonalNumber = user.PersonalNumber;
+            hasChanges = true;
+        }
+
+        if (existing.TitleBefore != user.TitleBefore)
+        {
+            existing.TitleBefore = user.TitleBefore;
+            hasChanges = true;
+        }
+
+        if (existing.TitleAfter != user.TitleAfter)
+        {
+            existing.TitleAfter = user.TitleAfter;
+            hasChanges = true;
+        }
+
+        if (existing.EmployeeTypeId != user.EmployeeTypeId)
+        {
+            existing.EmployeeTypeId = user.EmployeeTypeId;
+            hasChanges = true;
+        }
+
+        if (!hasChanges)
+        {
+            return;
+        }
+
+        existing.UpdatedAt = DateTime.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+}

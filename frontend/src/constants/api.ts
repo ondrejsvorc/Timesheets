@@ -10,6 +10,21 @@ export const BaseUrl = ApiUrl.replace(/\/api\/?$/, "");
 const delayEnabled = false;
 const delayMs = { fast: 600, slow: 1200, slowest: 1800 } as const;
 
+const sessionExpiredHandlers = new Set<() => void>();
+let loginRedirectStarted = false;
+
+if (typeof window !== "undefined") {
+  const path = window.location.pathname;
+  if (!path.startsWith("/auth/") && path !== "/login-oidc" && path !== "/logout-oidc") {
+    loginRedirectStarted = false;
+  }
+}
+
+export const onSessionExpired = (handler: () => void): (() => void) => {
+  sessionExpiredHandlers.add(handler);
+  return () => sessionExpiredHandlers.delete(handler);
+};
+
 export const withDelay = async <T>(speed: keyof typeof delayMs, fn: () => Promise<T>): Promise<T> => {
   if (delayEnabled) {
     await new Promise<void>((resolve) => setTimeout(resolve, delayMs[speed]));
@@ -17,10 +32,48 @@ export const withDelay = async <T>(speed: keyof typeof delayMs, fn: () => Promis
   return fn();
 };
 
-export const goToLogin = () => {
-  const returnTo = `${window.location.pathname}${window.location.search}`;
-  const safeReturnTo = returnTo.startsWith("/redirecting") ? "/" : returnTo;
-  window.location.assign(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(safeReturnTo)}`);
+export const goToLogin = (returnTo?: string) => {
+  if (loginRedirectStarted || typeof window === "undefined") {
+    return;
+  }
+
+  const currentPath = window.location.pathname;
+  if (currentPath.startsWith("/auth/") || currentPath === "/login-oidc" || currentPath === "/logout-oidc") {
+    return;
+  }
+
+  loginRedirectStarted = true;
+  for (const handler of sessionExpiredHandlers) {
+    handler();
+  }
+
+  const resolvedReturnTo = returnTo ?? `${window.location.pathname}${window.location.search}`;
+  const safeReturnTo = resolvedReturnTo.startsWith("/redirecting") ? "/" : resolvedReturnTo;
+  window.location.replace(`${BaseUrl}/auth/login?returnUrl=${encodeURIComponent(safeReturnTo)}`);
+};
+
+const isAuthFailure = (response: Response): boolean => response.status === 401;
+
+export const fetchWithAuth = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  let response: Response;
+  try {
+    response = await fetch(input, {
+      ...init,
+      credentials: "include",
+    });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      goToLogin();
+      return new Promise(() => {});
+    }
+    throw error;
+  }
+
+  if (isAuthFailure(response)) {
+    goToLogin();
+    return new Promise(() => {});
+  }
+  return response;
 };
 
 export const parseApiErrorMessage = (error: unknown, fallback: string): string => {
@@ -42,11 +95,7 @@ export const parseApiErrorMessage = (error: unknown, fallback: string): string =
 };
 
 export const customFetch = async <T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> => {
-  const response = await fetch(input, { credentials: "include", ...init });
-  if (response.status === 401) {
-    goToLogin();
-    return new Promise<T>(() => {});
-  }
+  const response = await fetchWithAuth(input, init);
   if (!response.ok) {
     let details = "";
     try {

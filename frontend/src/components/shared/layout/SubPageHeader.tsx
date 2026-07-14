@@ -1,11 +1,16 @@
+import { cn } from "@/utils/common";
+
 interface SubPageHeaderProps {
   children: React.ReactNode;
+  actions?: React.ReactNode;
+  className?: string;
 }
 
-export const SubPageHeader = ({ children }: SubPageHeaderProps) => {
+export const SubPageHeader = ({ children, actions, className }: SubPageHeaderProps) => {
   return (
-    <div className="py-6">
+    <div className={cn("flex items-start justify-between gap-4 py-6", className)}>
       <div className="min-w-0 space-y-1">{children}</div>
+      {actions && <div className="shrink-0 flex items-center gap-2">{actions}</div>}
     </div>
   );
 };

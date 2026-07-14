@@ -6,10 +6,10 @@ import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { PageHeader, PageSubtitle, PageTitle } from "@/components/shared/layout/PageHeader";
 import { TabbedOutlet } from "@/components/shared/layout/TabbedOutlet";
 import { Routes } from "@/constants/routes";
-import { useBackFromLocationState } from "@/hooks/useBackFromLocationState";
-import { resolveEmployeeTypeName } from "@/utils/resolveEmployeeTypeName";
-import type { GetEmployeeResponse } from "./api/getEmployee";
+import { useGo } from "@/hooks/useGo";
+import type { GetEmployeeResponse } from "./api";
 import { EmployeeTabs } from "./EmployeeTabs";
+import { resolveEmployeeTypeName } from "./employeeType";
 
 export const EmployeePage = () => {
   const { promise } = useLoaderData() as {
@@ -31,13 +31,13 @@ export const EmployeePage = () => {
 const EmployeePageHeader = () => {
   const response = useAsyncValue() as GetEmployeeResponse;
   const employee = response.employee;
-  const handleBack = useBackFromLocationState(Routes.employees());
+  const go = useGo();
   const employeeType = resolveEmployeeTypeName(employee.employeeTypeId);
-  const subtitleParts = [employee.personalNumber, employee.email, employeeType].filter((v) => Boolean(v && v.trim().length > 0));
+  const subtitleParts = [employee.personalNumber, employeeType].filter((v) => Boolean(v && v.trim().length > 0));
 
   return (
     <>
-      <PageHeader leading={<BackButton onClick={handleBack} />}>
+      <PageHeader leading={<BackButton onClick={go.back(Routes.employees())} />}>
         <PageTitle>{employee.fullName}</PageTitle>
         <PageSubtitle>{subtitleParts.join(" · ")}</PageSubtitle>
       </PageHeader>

@@ -1,0 +1,45 @@
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Common;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Features.Auth;
+
+namespace Timesheets.Api.Features.Projects.Endpoints;
+
+public sealed class UnarchiveProject : IEndpoint
+{
+    public static void Map(IEndpointRouteBuilder app) =>
+        app.MapPost("/{id}/unarchive", Handle)
+           .WithSummary("Unarchive Project")
+           .DisableAntiforgery();
+
+    public sealed record Response(ProjectItem Project);
+
+    private static async Task<Results<Ok<Response>, NotFound, BadRequest<string>, ForbidHttpResult>> Handle(Guid id, AppDbContext dbContext, ICurrentUser user, CancellationToken cancellationToken)
+    {
+        if (!user.CanManageProject(id))
+        {
+            return TypedResults.Forbid();
+        }
+
+        Domain.Models.Project? project = await dbContext.Projects
+            .FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
+
+        if (project is null)
+        {
+            return TypedResults.NotFound();
+        }
+
+        if (!project.ArchivedAt.HasValue)
+        {
+            return TypedResults.BadRequest("Projekt není archivován.");
+        }
+
+        project.Unarchive(DateTime.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        int contractCount = await dbContext.Contracts.CountAsync(c => c.ProjectId == id, cancellationToken);
+
+        return TypedResults.Ok(new Response(new ProjectItem(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, contractCount, project.GetStatus(PragueClock.Today))));
+    }
+}

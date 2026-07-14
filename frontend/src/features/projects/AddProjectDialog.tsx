@@ -2,8 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { FormDialog } from "@/components/shared/dialogs/FormDialog";
 import { Texts } from "@/constants/texts";
-import { type CreateProjectRequest, createProject } from "./api/createProject";
-import type { ProjectItem } from "./api/shared/projectItem";
+import { type CreateProjectRequest, createProject, type ProjectItem } from "./api";
 import { ProjectFormFields, type ProjectFormValues, projectFormDefaultValues, projectFormSchema } from "./ProjectFormFields";
 
 interface AddProjectDialogProps {
@@ -13,27 +12,23 @@ interface AddProjectDialogProps {
 }
 
 export const AddProjectDialog = ({ open, onClose, onSaved }: AddProjectDialogProps) => {
-  const form = useForm<ProjectFormValues>({
-    defaultValues: projectFormDefaultValues,
-    resolver: zodResolver(projectFormSchema),
-    mode: "onChange",
-  });
-
-  const handleClose = () => {
-    form.reset(projectFormDefaultValues);
-    onClose();
-  };
+  const form = useForm<ProjectFormValues>({ defaultValues: projectFormDefaultValues, resolver: zodResolver(projectFormSchema), mode: "onChange" });
 
   const handleSubmit = async (values: ProjectFormValues, signal: AbortSignal) => {
     const request: CreateProjectRequest = {
       name: values.name,
-      registrationNumber: values.registrationNumber,
+      registrationNumber: values.registrationNumber.trim(),
       startDate: values.startDate,
       endDate: values.endDate ?? null,
     };
     const response = await createProject(request, signal);
     onSaved(response.project);
     form.reset(projectFormDefaultValues);
+  };
+
+  const handleClose = () => {
+    form.reset(projectFormDefaultValues);
+    onClose();
   };
 
   return (

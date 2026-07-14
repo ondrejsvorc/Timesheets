@@ -7,8 +7,8 @@ import { DialogCancelButton, DialogConfirmButton } from "@/components/shared/but
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
-import { detectTimesheetImport, type ImportResult, importTimesheet, type TimesheetDetectionResult } from "./api/uploadTimesheets";
+import { cn } from "@/utils/common";
+import { detectTimesheetImport, type ImportResult, importTimesheet, type TimesheetDetectionResult } from "./api";
 
 interface UploadTimesheetsDialogProps {
   open: boolean;
@@ -53,7 +53,6 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
 
   const addFiles = (newFiles: File[]) => {
     const validFiles = newFiles.filter((file) => /\.(xls|xlsx)$/i.test(file.name));
-    const filesToDetect: File[] = [];
 
     if (validFiles.length !== newFiles.length) {
       toast.error(Texts.importXlsOnly);
@@ -63,26 +62,30 @@ export const UploadTimesheetsDialog = ({ open, onClose, onSuccess }: UploadTimes
       return;
     }
 
-    setUploadItems((current) => {
-      const merged = [...current];
-
-      for (const file of validFiles) {
-        const key = getFileKey(file);
-        const exists = merged.some((existing) => existing.key === key);
-
-        if (!exists) {
-          merged.push({ key, file, status: "detecting", detection: null, result: null });
-          filesToDetect.push(file);
-        }
+    const queuedKeys = new Set(uploadItems.map((item) => item.key));
+    const filesToDetect = validFiles.filter((file) => {
+      const key = getFileKey(file);
+      if (queuedKeys.has(key)) {
+        return false;
       }
 
-      return merged;
+      queuedKeys.add(key);
+      return true;
     });
 
-    if (filesToDetect.length > 0) {
-      setMode("selection");
-      void detectFiles(filesToDetect);
+    if (filesToDetect.length === 0) {
+      return;
     }
+
+    setUploadItems((current) => {
+      const currentKeys = new Set(current.map((item) => item.key));
+      const added = filesToDetect.filter((file) => !currentKeys.has(getFileKey(file))).map((file) => ({ key: getFileKey(file), file, status: "detecting" as const, detection: null, result: null }));
+
+      return [...current, ...added];
+    });
+
+    setMode("selection");
+    void detectFiles(filesToDetect);
   };
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {

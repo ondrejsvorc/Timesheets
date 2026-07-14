@@ -1,10 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Tests.Integration;
 
-public abstract class BaseIntegrationTest : IClassFixture<CustomWebApplicationFactory>
+[Collection("Integration")]
+public abstract class BaseIntegrationTest
 {
     protected readonly CustomWebApplicationFactory Factory;
     protected readonly HttpClient Client;
@@ -27,9 +28,9 @@ public abstract class BaseIntegrationTest : IClassFixture<CustomWebApplicationFa
         return Factory.Services.CreateScope();
     }
 
-    protected async Task<Guid> SeedEmployeeAsync(string personalNumber, string fullName, string email, Guid? employeeTypeId = null, CancellationToken cancellationToken = default)
+    protected async Task<Guid> SeedEmployeeAsync(string personalNumber, string firstName, string surname, Guid? employeeTypeId = null, CancellationToken cancellationToken = default)
     {
-        Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, personalNumber, fullName, email, employeeTypeId, cancellationToken);
+        Employee employee = await TestEmployeeFactory.CreateAsync(Factory.Services, personalNumber, firstName, surname, employeeTypeId, cancellationToken: cancellationToken);
         return employee.Id;
     }
 }

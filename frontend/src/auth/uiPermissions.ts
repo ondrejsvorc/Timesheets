@@ -1,4 +1,4 @@
-import type { CurrentUserPermissions } from "./api/getCurrentUserPermissions";
+import type { CurrentUserPermissions } from "./api";
 import { isAtLeast, UserRole } from "./userRole";
 
 export const UiAction = {
@@ -20,6 +20,11 @@ export const UiAction = {
     delete: "contracts.delete",
     view: "contracts.view",
   },
+  projectManagers: {
+    view: "projectManagers.view",
+    add: "projectManagers.add",
+    remove: "projectManagers.remove",
+  },
   contractManagers: {
     view: "contractManagers.view",
     add: "contractManagers.add",
@@ -37,7 +42,6 @@ export const UiAction = {
   employees: {
     list: "employees.list",
     view: "employees.view",
-    editType: "employees.editType",
   },
   timesheet: {
     view: "timesheet.view",
@@ -69,9 +73,13 @@ const isGlobalManager = (permissions: CurrentUserPermissions) => isAtLeast(permi
 const isManager = (permissions: CurrentUserPermissions) => isAtLeast(permissions.role, UserRole.ContractManager);
 const isOwnEmployee = (currentUserId: string | undefined, employeeId: string | undefined) => Boolean(currentUserId && employeeId && currentUserId === employeeId);
 
-const canSeeProject = (permissions: CurrentUserPermissions, projectId?: string) => isGlobalManager(permissions) || Boolean(projectId && permissions.visibleProjectIds.includes(projectId));
+const canSeeProject = (permissions: CurrentUserPermissions, projectId?: string) =>
+  isManager(permissions) && (isGlobalManager(permissions) || Boolean(projectId && permissions.visibleProjectIds.includes(projectId)));
 
-const canSeeContract = (permissions: CurrentUserPermissions, contractId?: string) => isGlobalManager(permissions) || Boolean(contractId && permissions.visibleContractIds.includes(contractId));
+const canSeeContract = (permissions: CurrentUserPermissions, contractId?: string) =>
+  isManager(permissions) && (isGlobalManager(permissions) || Boolean(contractId && permissions.visibleContractIds.includes(contractId)));
+
+const canManageProject = (permissions: CurrentUserPermissions, projectId?: string) => isGlobalManager(permissions) || Boolean(projectId && permissions.projectManagerOf.includes(projectId));
 
 const canManageContractScope = (permissions: CurrentUserPermissions, ctx: UiContext) => {
   if (isGlobalManager(permissions)) {
@@ -96,7 +104,7 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
 
   switch (action) {
     case UiAction.nav.projects:
-      return isGlobalManager(permissions) || permissions.visibleProjectIds.length > 0;
+      return isManager(permissions);
     case UiAction.nav.employees:
       return isManager(permissions);
     case UiAction.nav.myTimesheets:
@@ -105,17 +113,19 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
       return permissions.role === UserRole.Admin;
 
     case UiAction.projects.add:
-    case UiAction.projects.edit:
     case UiAction.projects.delete:
+      return isGlobalManager(permissions);
+
+    case UiAction.timesheet.import:
+      return isGlobalManager(permissions) || isOwnEmployee(currentUserId, ctx.employeeId);
+
+    case UiAction.projects.edit:
+      return canManageProject(permissions, ctx.projectId);
     case UiAction.contracts.add:
+      return canManageProject(permissions, ctx.projectId);
     case UiAction.contracts.edit:
     case UiAction.contracts.delete:
-    case UiAction.employees.editType:
-    case UiAction.timesheet.import:
-    case UiAction.timesheet.finalApprove:
-    case UiAction.timesheet.returnWhole:
-    case UiAction.timesheet.unlock:
-      return isGlobalManager(permissions);
+      return canManageContractScope(permissions, ctx);
 
     case UiAction.projects.view:
       return canSeeProject(permissions, ctx.projectId);
@@ -123,6 +133,9 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
     case UiAction.contractEmployees.view:
       return canSeeContract(permissions, ctx.contractId);
 
+    case UiAction.projectManagers.view:
+    case UiAction.projectManagers.add:
+    case UiAction.projectManagers.remove:
     case UiAction.contractManagers.view:
     case UiAction.contractManagers.add:
     case UiAction.contractManagers.remove:
@@ -142,8 +155,17 @@ export const can = (permissions: CurrentUserPermissions | null, currentUserId: s
       return isOwnEmployee(currentUserId, ctx.employeeId) || isManager(permissions);
 
     case UiAction.timesheet.edit:
+      return isGlobalManager(permissions) || isOwnEmployee(currentUserId, ctx.employeeId);
+
     case UiAction.timesheet.submit:
+      return isGlobalManager(permissions) || isOwnEmployee(currentUserId, ctx.employeeId);
+
+    case UiAction.timesheet.returnWhole:
+    case UiAction.timesheet.unlock:
       return isOwnEmployee(currentUserId, ctx.employeeId);
+
+    case UiAction.timesheet.finalApprove:
+      return isGlobalManager(permissions) || isOwnEmployee(currentUserId, ctx.employeeId);
 
     case UiAction.timesheet.approveProject:
     case UiAction.timesheet.returnProject:

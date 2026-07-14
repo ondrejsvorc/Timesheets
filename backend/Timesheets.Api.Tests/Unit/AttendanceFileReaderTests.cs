@@ -1,0 +1,189 @@
+using ClosedXML.Excel;
+using NSubstitute;
+using Timesheets.Api.Features.Attendance;
+using Timesheets.Api.Features.Timesheets;
+using Xunit;
+
+namespace Timesheets.Api.Tests;
+
+public class AttendanceFileReaderTests
+{
+    private readonly AttendanceFileReader reader = new();
+
+    [Fact]
+    public void Read_ValidFile_ReturnsCorrectTimesheet()
+    {
+        string filePath = Path.Combine("Unit", "TestData", "valid_attendance.xlsx");
+        using FileStream stream = File.OpenRead(filePath);
+        AttendanceFile result = reader.Read(stream);
+
+        Assert.NotNull(result);
+        Assert.Multiple(() =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(result.EmployeePersonalNumber));
+            Assert.False(string.IsNullOrWhiteSpace(result.EmployeeName));
+            Assert.Equal(2024, result.Year);
+            Assert.Equal(10, result.Month);
+            Assert.Equal(31, result.Days.Count);
+        });
+
+        AttendanceFileDay firstDay = result.Days[0];
+        Assert.Equal(new DateTime(2024, 10, 1), firstDay.Date);
+    }
+
+    [Fact]
+    public void Read_MalformedMetadata_HandlesGracefully()
+    {
+        string filePath = Path.Combine("Unit", "TestData", "invalid_attendance_malformed_metadata.xlsx");
+        using FileStream stream = File.OpenRead(filePath);
+        AttendanceFile result = reader.Read(stream);
+
+        Assert.NotNull(result);
+        Assert.Multiple(() =>
+        {
+            Assert.Equal(string.Empty, result.EmployeePersonalNumber);
+            Assert.Equal(2024, result.Year);
+            Assert.Equal(10, result.Month);
+        });
+    }
+
+    [Fact]
+    public void Read_MalformedTimes_ReturnsNullForInvalidCells()
+    {
+        string filePath = Path.Combine("Unit", "TestData", "invalid_attendance_malformed_times.xlsx");
+        using FileStream stream = File.OpenRead(filePath);
+        AttendanceFile result = reader.Read(stream);
+
+        Assert.NotNull(result);
+        Assert.Multiple(() =>
+        {
+            Assert.Null(result.Days[1].ClockIn);
+            Assert.Empty(result.Days[1].Schedules);
+        });
+    }
+
+    [Fact]
+    public void Read_HtmlExcelExport_ReturnsCorrectTimesheet()
+    {
+        string filePath = Path.Combine("Unit", "TestData", "valid_attendance_html.xls");
+        using FileStream stream = File.OpenRead(filePath);
+        AttendanceFile result = reader.Read(stream);
+
+        Assert.Multiple(() =>
+        {
+            Assert.Equal("15710", result.EmployeePersonalNumber);
+            Assert.Equal("Nováková Petra", result.EmployeeName);
+            Assert.Equal(0.5m, result.Workload);
+            Assert.Equal(2026, result.Year);
+            Assert.Equal(1, result.Month);
+            Assert.Equal(31, result.Days.Count);
+        });
+
+        AttendanceFileDay firstDay = result.Days[0];
+        Assert.Multiple(() =>
+        {
+            Assert.Equal(new DateTime(2026, 1, 1), firstDay.Date);
+            Assert.Equal(new TimeSpan(7, 30, 0), firstDay.ClockIn);
+            Assert.Equal(new TimeSpan(15, 30, 0), firstDay.ClockOut);
+            Assert.Equal(new TimeSpan(11, 30, 0), firstDay.BreakStart);
+            Assert.Equal(new TimeSpan(12, 0, 0), firstDay.BreakEnd);
+            Assert.Equal(2, firstDay.Schedules.Count);
+        });
+
+        Assert.Equal("DOV", result.Days[1].OtherInterruption);
+    }
+
+    [Theory]
+    [InlineData("8:00", 8, 0)]
+    [InlineData("08:00", 8, 0)]
+    [InlineData("17:30:00", 17, 30)]
+    [InlineData(" 8:15 ", 8, 15)]
+    public void ParseTime_ValidFormat_ReturnsTimeSpan(string input, int expectedHours, int expectedMinutes)
+    {
+        IXLCell cell = Substitute.For<IXLCell>();
+        cell.GetString().Returns(input);
+        Assert.Equal(new TimeSpan(expectedHours, expectedMinutes, 0), AttendanceFileReader.ParseTime(cell));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    [InlineData("8.30")]
+    [InlineData("invalid")]
+    [InlineData("25:00")]
+    public void ParseTime_InvalidFormatOrEmpty_ReturnsNull(string input)
+    {
+        IXLCell cell = Substitute.For<IXLCell>();
+        cell.GetString().Returns(input);
+        Assert.Null(AttendanceFileReader.ParseTime(cell));
+    }
+
+    [Fact]
+    public void ParseTimeRanges_ValidRanges_ReturnsRanges()
+    {
+        IXLCell cell = Substitute.For<IXLCell>();
+        cell.GetString().Returns("08:00-12:00, 13:00-17:00");
+        IReadOnlyList<TimeRange> result = AttendanceFileReader.ParseTimeRanges(cell);
+        Assert.Equal([new TimeRange(new TimeSpan(8, 0, 0), new TimeSpan(12, 0, 0)), new TimeRange(new TimeSpan(13, 0, 0), new TimeSpan(17, 0, 0))], result);
+    }
+
+    [Theory]
+    [InlineData("08:00 to 12:00")]
+    [InlineData("08:00-")]
+    [InlineData("invalid-range")]
+    public void ParseTimeRanges_InvalidFormat_ReturnsEmptyList(string input)
+    {
+        IXLCell cell = Substitute.For<IXLCell>();
+        cell.GetString().Returns(input);
+        Assert.Empty(AttendanceFileReader.ParseTimeRanges(cell));
+    }
+
+    [Fact]
+    public void ReadMetadata_ValidFile_ReturnsCorrectMetadata()
+    {
+        string filePath = Path.Combine("Unit", "TestData", "valid_attendance.xlsx");
+        using FileStream stream = File.OpenRead(filePath);
+        AttendanceFileMetadata result = reader.ReadMetadata(stream);
+        Assert.Multiple(() =>
+        {
+            Assert.False(string.IsNullOrWhiteSpace(result.EmployeePersonalNumber));
+            Assert.False(string.IsNullOrWhiteSpace(result.EmployeeName));
+            Assert.Equal(2024, result.Year);
+            Assert.Equal(10, result.Month);
+            Assert.Equal(31, result.DaysInMonth);
+        });
+    }
+
+    [Fact]
+    public void ReadMetadata_MalformedMetadata_HandlesGracefully()
+    {
+        string filePath = Path.Combine("Unit", "TestData", "invalid_attendance_malformed_metadata.xlsx");
+        using FileStream stream = File.OpenRead(filePath);
+        AttendanceFileMetadata result = reader.ReadMetadata(stream);
+        Assert.Multiple(() =>
+        {
+            Assert.Equal(string.Empty, result.EmployeePersonalNumber);
+            Assert.Equal(2024, result.Year);
+            Assert.Equal(10, result.Month);
+            Assert.Equal(31, result.DaysInMonth);
+        });
+    }
+
+    [Fact]
+    public void ReadMetadata_HtmlExcelExport_ReturnsCorrectMetadata()
+    {
+        string filePath = Path.Combine("Unit", "TestData", "valid_attendance_html.xls");
+        using FileStream stream = File.OpenRead(filePath);
+        AttendanceFileMetadata result = reader.ReadMetadata(stream);
+
+        Assert.Multiple(() =>
+        {
+            Assert.Equal("15710", result.EmployeePersonalNumber);
+            Assert.Equal("Nováková Petra", result.EmployeeName);
+            Assert.Equal(0.5m, result.Workload);
+            Assert.Equal(2026, result.Year);
+            Assert.Equal(1, result.Month);
+            Assert.Equal(31, result.DaysInMonth);
+        });
+    }
+}

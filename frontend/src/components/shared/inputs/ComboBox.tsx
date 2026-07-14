@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 
 export interface ComboBoxItem {
   value: string;
   label: string;
+  /** Extra text for cmdk search; `value` is used as the unique item key. */
+  searchText?: string;
 }
 
 interface ComboBoxProps {
@@ -47,7 +49,8 @@ export const ComboBox = ({ value, items, placeholder, loading, disabled, onChang
                 {items.map((item) => (
                   <CommandItem
                     key={item.value}
-                    value={item.label}
+                    value={item.value}
+                    keywords={item.searchText ? [item.label, item.searchText] : [item.label]}
                     onSelect={() => {
                       onChange(item.value);
                       setOpen(false);

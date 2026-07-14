@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.HttpOverrides;
-using Timesheets.Api.Auth;
 using Timesheets.Api.Common.Extensions;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Features.Auth;
 
 namespace Timesheets.Api;
 

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Testcontainers.PostgreSql;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 
 namespace Timesheets.Api.Tests.Integration;
 
@@ -16,7 +16,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     public CustomWebApplicationFactory()
     {
         _dbContainer = new PostgreSqlBuilder()
-            .WithImage("postgres:16-alpine")
+            .WithImage("public.ecr.aws/docker/library/postgres:17-alpine")
             .WithDatabase("timesheets_test_db")
             .WithUsername("postgres")
             .WithPassword("postgres")
@@ -69,6 +69,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
         try
         {
             await db.Database.MigrateAsync();
+            await TestEmployeeFactory.CreateAsync(db, TestAuthHandler.PersonalNumber, "Test", "User", isGlobalManager: true);
         }
         catch (Exception ex)
         {

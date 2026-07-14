@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 
 namespace Timesheets.Api.Common.Extensions;
 

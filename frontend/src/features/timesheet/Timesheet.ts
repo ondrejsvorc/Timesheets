@@ -9,7 +9,6 @@ export interface Attendance {
   breakStart: string;
   breakEnd: string;
   interruptions: string;
-  nightHours: number;
   schedules: TimeRange[];
 }
 
@@ -17,32 +16,92 @@ export interface CoreDefinition {
   workload: number;
 }
 
-export interface ProjectDefinition {
+export interface ContractPartDefinition {
   id: string;
   registrationNumber: string;
   name: string;
   position: string;
   workload: number;
-  lockedAt: string | null;
-  lockedBy: string | null;
+  locked: boolean;
+  activeDays: boolean[];
+}
+
+export interface ContractPartCell {
+  hours: number;
+  locked: boolean;
 }
 
 export interface TimesheetDay {
   date: string;
   attendance: Attendance;
   coreHours: number | null;
-  projectHours: Record<string, number>;
+  contractPartCells: Record<string, ContractPartCell>;
   isHoliday: boolean;
   isWeekend: boolean;
+  attendanceAdjusted?: boolean;
 }
 
 export interface Timesheet {
   id: string;
   year: number;
   month: number;
-  totalWorkload: number;
-  hasBaseWorkload: boolean;
+  tracksAttendance: boolean;
   core: CoreDefinition;
-  projects: ProjectDefinition[];
+  contractParts: ContractPartDefinition[];
   days: TimesheetDay[];
+}
+
+export type IssueType = "error" | "warning";
+
+export interface TimesheetIssue {
+  code: string;
+  type: IssueType;
+  message: string;
+  day?: number;
+  field?: string;
+}
+
+export interface TimesheetDayEvaluation {
+  day: number;
+  workedHours: number;
+  nightHours: number;
+  allocatedHours: number;
+  balance: number;
+  displayBalance: number;
+  canAllocate: boolean;
+  canGenerateAttendance: boolean;
+  coreLocked: boolean;
+  hasBusinessTrip: boolean;
+  hasCoreOnlyInterruption: boolean;
+  hasProportionalInterruption: boolean;
+}
+
+export interface ContractPartTotal {
+  contractEmployeeId: string;
+  hours: number;
+  obligation: number;
+  matchesObligation: boolean;
+}
+
+export interface TimesheetTotals {
+  workedHours: number;
+  hoursObligation: number;
+  allocatedHours: number;
+  coreHours: number;
+  coreHoursObligation: number;
+  workedHoursMeetsObligation: boolean;
+  coreHoursWithinTolerance: boolean;
+  contractParts: ContractPartTotal[];
+}
+
+export interface TimesheetEvaluation {
+  hasErrors: boolean;
+  issues: TimesheetIssue[];
+  days: TimesheetDayEvaluation[];
+  totals: TimesheetTotals;
+}
+
+export interface TimesheetData {
+  timesheet: Timesheet;
+  evaluation: TimesheetEvaluation;
 }

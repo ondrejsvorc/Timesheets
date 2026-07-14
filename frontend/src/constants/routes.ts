@@ -2,6 +2,7 @@ export const Routes = {
   projects: () => "/projects",
   project: (id: string) => `/projects/${id}`,
   projectContracts: (id: string) => `/projects/${id}`,
+  projectManagers: (id: string) => `/projects/${id}/project-managers`,
   projectContractsManagers: (id: string) => `/projects/${id}/contracts-managers`,
   contract: (projectId: string, contractId: string) => `/projects/${projectId}/contracts/${contractId}`,
   contractTimesheets: (projectId: string, contractId: string) => `/projects/${projectId}/contracts/${contractId}`,

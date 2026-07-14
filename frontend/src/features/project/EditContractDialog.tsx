@@ -1,8 +1,7 @@
 import { useParams } from "react-router";
 import { FormDialog } from "@/components/shared/dialogs/FormDialog";
 import { Texts } from "@/constants/texts";
-import type { ProjectContractItem } from "./api/shared/projectContractItem";
-import { updateProjectContract } from "./api/updateProjectContract";
+import { type ProjectContractItem, updateProjectContract } from "./api";
 import { ContractForm, type ContractFormValues } from "./ContractForm";
 
 interface EditContractDialogProps {

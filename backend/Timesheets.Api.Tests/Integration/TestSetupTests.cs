@@ -1,5 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
-using Timesheets.Api.Data;
+using Timesheets.Api.Domain;
 using Xunit;
 
 namespace Timesheets.Api.Tests.Integration;

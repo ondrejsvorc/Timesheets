@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
 import { CZECH_MONTH_NAMES } from "@/features/contract/utils/czechMonths";
-import { type EmployeeTimesheetsFilterCriteria, filterToSearchParams, type GetEmployeeTimesheetsResponse } from "./api/getEmployeeTimesheets";
+import { type EmployeeTimesheetsFilterCriteria, filterToSearchParams, type GetEmployeeTimesheetsResponse } from "./api";
 import { UploadTimesheetsDialog } from "./UploadTimesheetsDialog";
 
 export type EmployeeTimesheetsLoaderData = {
@@ -76,7 +76,7 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
           filter={filter}
           setFilter={setFilter}
           actions={
-            <Can action={UiAction.timesheet.import}>
+            <Can action={UiAction.timesheet.import} context={{ employeeId: response.employeeId }}>
               <Button variant="outline" onClick={handleUploadClick}>
                 <Upload className="mr-2 h-4 w-4" />
                 {Texts.importFiles}
@@ -98,7 +98,7 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
         filter={filter}
         setFilter={setFilter}
         actions={
-          <Can action={UiAction.timesheet.import}>
+          <Can action={UiAction.timesheet.import} context={{ employeeId: response.employeeId }}>
             <Button variant="outline" onClick={handleUploadClick}>
               <Upload className="mr-2 h-4 w-4" />
               {Texts.importFiles}
@@ -109,11 +109,11 @@ const EmployeeTimesheetsContent = ({ filter }: EmployeeTimesheetsContentProps) =
         <EmployeeTimesheetsFilterControls availableYears={availableYears} availableMonths={availableMonths} onlyUnapproved={onlyUnapproved} onOnlyUnapprovedChange={setOnlyUnapproved} />
       </FilterBar>
       <div className="rounded-md border p-4">
-        <Table>
+        <Table className="table-fixed w-full">
           <TableHeader>
             <TableRow>
-              <TableHead>{Texts.month}</TableHead>
-              <TableHead>{Texts.timesheetStatus}</TableHead>
+              <TableHead className="w-1/2">{Texts.month}</TableHead>
+              <TableHead className="w-1/2">{Texts.timesheetStatus}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -7,11 +7,8 @@ import { ComboBox, type ComboBoxItem } from "@/components/shared/inputs/ComboBox
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Texts } from "@/constants/texts";
-import { type EmployeeItem, getEmployees } from "@/features/employees/api/getEmployees";
-import { addContractManager, toProjectContractManagerItem } from "./api/addContractManager";
-import { getProjectContracts } from "./api/getProjectContracts";
-import type { ProjectContractManagerItem } from "./api/getProjectContractsManagers";
-import type { ProjectContractItem } from "./api/shared/projectContractItem";
+import { type EmployeeItem, getEmployees } from "@/features/employees/api";
+import { addContractManager, getProjectContracts, type ProjectContractItem, type ProjectContractManagerItem } from "./api";
 
 const schema = z.object({
   contractId: z.string().min(1, Texts.contract),
@@ -56,13 +53,13 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
 
   const contractItems: ComboBoxItem[] = contracts.map((contract) => ({
     value: contract.id,
-    label: contract.name,
+    label: contract.registrationNumber,
   }));
 
   const employeeItems = useMemo(() => {
     if (!selectedContractId) return [];
     const managerEmployeeIds = new Set(existingManagers.filter((m) => m.contractId === selectedContractId).map((m) => m.employeeId));
-    return employees.filter((e) => !managerEmployeeIds.has(e.id)).map((e) => ({ value: e.id, label: e.fullName }));
+    return employees.filter((e) => !managerEmployeeIds.has(e.id)).map((e) => ({ value: e.id, label: e.fullName, searchText: e.personalNumber }));
   }, [selectedContractId, existingManagers, employees]);
 
   const handleOpenChange = (isOpen: boolean) => {
@@ -79,7 +76,7 @@ export const AddContractManagerDialog = ({ projectId, existingManagers, open, on
 
   const handleSubmit = async (values: FormValues, signal: AbortSignal) => {
     const response = await addContractManager(values.contractId, values.employeeId, signal);
-    onSaved(toProjectContractManagerItem(response));
+    onSaved(response);
     onClose();
   };
 

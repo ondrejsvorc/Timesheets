@@ -1,10 +1,9 @@
-import { Trash2 } from "lucide-react";
-import type { MouseEvent, ReactNode } from "react";
+import type { ComponentProps, MouseEvent, ReactNode } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { parseApiErrorMessage } from "@/constants/api";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
+import { cn } from "@/utils/common";
 import { BusyButton } from "../buttons/BusyButton";
 import { DialogCancelButton } from "../buttons/DialogButtons";
 
@@ -14,6 +13,8 @@ interface ConsequenceDialogProps {
   description: string;
   consequences: string[];
   confirmLabel: string;
+  confirmVariant?: ComponentProps<typeof BusyButton>["variant"];
+  confirmIcon?: ReactNode;
   confirmDisabled?: boolean;
   loading?: boolean;
   loadingContent?: ReactNode;
@@ -21,7 +22,20 @@ interface ConsequenceDialogProps {
   onConfirm: (event: MouseEvent<HTMLButtonElement>, signal: AbortSignal) => Promise<void>;
 }
 
-export const ConsequenceDialog = ({ open, title, description, consequences, confirmLabel, confirmDisabled = false, loading = false, loadingContent, onCancel, onConfirm }: ConsequenceDialogProps) => {
+export const ConsequenceDialog = ({
+  open,
+  title,
+  description,
+  consequences,
+  confirmLabel,
+  confirmVariant = "destructive",
+  confirmIcon,
+  confirmDisabled = false,
+  loading = false,
+  loadingContent,
+  onCancel,
+  onConfirm,
+}: ConsequenceDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <DialogContent>
@@ -43,9 +57,9 @@ export const ConsequenceDialog = ({ open, title, description, consequences, conf
         <DialogFooter>
           <DialogCancelButton onClick={onCancel} />
           <BusyButton
-            variant="destructive"
+            variant={confirmVariant}
             disabled={confirmDisabled || loading}
-            icon={<Trash2 className="size-4" />}
+            icon={confirmIcon}
             onClick={onConfirm}
             onSuccess={() => toast.success(Texts.actionSuccessful)}
             onError={(error) => toast.error(parseApiErrorMessage(error, Texts.actionFailed))}

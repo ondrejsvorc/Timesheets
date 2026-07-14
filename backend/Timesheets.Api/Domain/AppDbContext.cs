@@ -1,0 +1,912 @@
+using Microsoft.EntityFrameworkCore;
+using Timesheets.Api.Domain.Models;
+
+namespace Timesheets.Api.Domain;
+
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+{
+    public DbSet<Project> Projects { get; set; } = null!;
+    public DbSet<ProjectManager> ProjectManagers { get; set; } = null!;
+    public DbSet<Contract> Contracts { get; set; } = null!;
+    public DbSet<ContractManager> ContractManagers { get; set; } = null!;
+    public DbSet<ContractEmployee> ContractEmployees { get; set; } = null!;
+
+    public DbSet<Employee> Employees { get; set; } = null!;
+    public DbSet<EmployeeType> EmployeeTypes { get; set; } = null!;
+
+    public DbSet<Timesheet> Timesheets { get; set; } = null!;
+    public DbSet<Attendance> Attendances { get; set; } = null!;
+    public DbSet<AttendanceDay> AttendanceDays { get; set; } = null!;
+    public DbSet<DayInterruption> DayInterruptions { get; set; } = null!;
+    public DbSet<Interruption> Interruptions { get; set; } = null!;
+
+    public DbSet<ContractPart> ContractParts { get; set; } = null!;
+    public DbSet<ContractPartDay> ContractPartDays { get; set; } = null!;
+    public DbSet<CoreEmployment> CoreEmployments { get; set; } = null!;
+    public DbSet<EmployeeWorkload> EmployeeWorkloads { get; set; } = null!;
+
+    public DbSet<TimesheetStatus> TimesheetStatuses { get; set; } = null!;
+    public DbSet<TimesheetStatusHistory> TimesheetStatusHistories { get; set; } = null!;
+    public DbSet<TimesheetComment> TimesheetComments { get; set; } = null!;
+    public DbSet<Notification> Notifications { get; set; } = null!;
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        ConfigureEmployeesTable(modelBuilder);
+        ConfigureEmployeeTypesTable(modelBuilder);
+
+        ConfigureProjectsTable(modelBuilder);
+        ConfigureProjectManagersTable(modelBuilder);
+
+        ConfigureContractsTable(modelBuilder);
+        ConfigureContractManagersTable(modelBuilder);
+        ConfigureContractEmployeesTable(modelBuilder);
+
+        ConfigureTimesheetsTable(modelBuilder);
+        ConfigureAttendancesTable(modelBuilder);
+        ConfigureAttendanceDaysTable(modelBuilder);
+        ConfigureInterruptionsTable(modelBuilder);
+        ConfigureDayInterruptionsTable(modelBuilder);
+
+        ConfigureContractPartsTable(modelBuilder);
+        ConfigureContractPartDaysTable(modelBuilder);
+        ConfigureTimesheetStatusesTable(modelBuilder);
+        ConfigureTimesheetStatusHistoriesTable(modelBuilder);
+        ConfigureTimesheetCommentsTable(modelBuilder);
+        ConfigureCoreEmploymentsTable(modelBuilder);
+        ConfigureEmployeeWorkloadsTable(modelBuilder);
+
+        ConfigureNotificationsTable(modelBuilder);
+        base.OnModelCreating(modelBuilder);
+    }
+
+    private static void ConfigureEmployeesTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<Employee>();
+
+        builder.ToTable("Employee");
+
+        builder.HasKey(e => e.Id);
+
+        builder.Property(e => e.FirstName)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        builder.Property(e => e.Surname)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        builder.HasIndex(e => e.Surname);
+        builder.HasIndex(e => new { e.Surname, e.FirstName });
+
+        builder.Property(e => e.PersonalNumber)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        builder.HasIndex(e => e.PersonalNumber)
+            .IsUnique();
+
+        builder.Property(e => e.TitleBefore)
+            .HasMaxLength(50);
+
+        builder.Property(e => e.TitleAfter)
+            .HasMaxLength(50);
+
+        builder.Property(e => e.IsGlobalManager)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(e => e.CreatedAt)
+            .IsRequired();
+
+        builder.Property(e => e.EmployeeTypeId)
+            .IsRequired();
+
+        builder.HasOne(e => e.EmployeeType)
+            .WithMany(et => et.Employees)
+            .HasForeignKey(e => e.EmployeeTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(e => e.CoreEmployments)
+            .WithOne(e => e.Employee)
+            .HasForeignKey(ce => ce.EmployeeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(e => e.EmployeeWorkloads)
+            .WithOne(e => e.Employee)
+            .HasForeignKey(ew => ew.EmployeeId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(e => e.Notifications)
+            .WithOne(e => e.Employee)
+            .HasForeignKey(n => n.EmployeeId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureEmployeeTypesTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<EmployeeType>();
+
+        builder.ToTable("EmployeeType");
+
+        builder.HasKey(et => et.Id);
+
+        builder.Property(et => et.Name)
+            .IsRequired()
+            .HasMaxLength(20);
+
+        builder.HasIndex(et => et.Name)
+            .IsUnique();
+
+        builder.HasData(
+            new EmployeeType { Id = Guid.Parse("00000000-0000-0000-0000-000000000001"), Name = "Akademik" },
+            new EmployeeType { Id = Guid.Parse("00000000-0000-0000-0000-000000000002"), Name = "Neakademik" }
+        );
+    }
+
+    private static void ConfigureProjectsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<Project>();
+
+        builder.ToTable("Project", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_Project_ValidDateRange",
+                """
+                "EndDate" IS NULL OR "EndDate" >= "StartDate"
+                """);
+        });
+
+        builder.HasKey(p => p.Id);
+
+        builder.Property(p => p.Name)
+            .IsRequired()
+            .HasMaxLength(ProjectSchema.Name.MaxLength);
+
+        builder.Property(p => p.RegistrationNumber)
+            .IsRequired()
+            .HasMaxLength(ProjectSchema.RegistrationNumber.MaxLength);
+
+        builder.HasIndex(p => p.Name)
+            .IsUnique();
+
+        builder.HasIndex(p => p.RegistrationNumber)
+            .IsUnique();
+
+        builder.Property(p => p.StartDate)
+            .IsRequired();
+
+        builder.Property(p => p.EndDate);
+
+        builder.Property(p => p.CreatedAt)
+            .IsRequired();
+
+        builder.Property(p => p.UpdatedAt);
+
+        builder.HasMany(p => p.ProjectManagers)
+            .WithOne(m => m.Project)
+            .HasForeignKey(pm => pm.ProjectId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(p => p.Contracts)
+            .WithOne(c => c.Project)
+            .HasForeignKey(c => c.ProjectId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureProjectManagersTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<ProjectManager>();
+
+        builder.ToTable("ProjectManager");
+
+        builder.HasKey(pm => pm.Id);
+
+        builder.Property(pm => pm.ProjectId)
+            .IsRequired();
+
+        builder.Property(pm => pm.EmployeeId)
+            .IsRequired();
+
+        builder.HasIndex(pm => new { pm.ProjectId, pm.EmployeeId })
+            .IsUnique();
+
+        builder.HasOne(pm => pm.Employee)
+            .WithMany()
+            .HasForeignKey(pm => pm.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureContractsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<Contract>();
+
+        builder.ToTable("Contract");
+        builder.HasKey(c => c.Id);
+
+        builder.Property(c => c.Name)
+            .IsRequired()
+            .HasMaxLength(ContractSchema.Name.MaxLength);
+
+        builder.Property(c => c.RegistrationNumber)
+            .IsRequired()
+            .HasMaxLength(ContractSchema.RegistrationNumber.MaxLength);
+
+        builder.HasIndex(c => new { c.ProjectId, c.Name })
+            .IsUnique();
+
+        builder.HasIndex(c => new { c.ProjectId, c.RegistrationNumber })
+            .IsUnique();
+
+        builder.Property(c => c.CreatedAt)
+            .IsRequired();
+
+        builder.Property(c => c.UpdatedAt);
+
+        builder.HasMany(c => c.ContractManagers)
+            .WithOne(m => m.Contract)
+            .HasForeignKey(cm => cm.ContractId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(c => c.ContractEmployees)
+            .WithOne(e => e.Contract)
+            .HasForeignKey(ce => ce.ContractId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureContractManagersTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<ContractManager>();
+
+        builder.ToTable("ContractManager");
+
+        builder.HasKey(cm => cm.Id);
+
+        builder.Property(cm => cm.ContractId)
+            .IsRequired();
+
+        builder.Property(cm => cm.EmployeeId)
+            .IsRequired();
+
+        builder.HasIndex(cm => new { cm.ContractId, cm.EmployeeId })
+            .IsUnique();
+
+        builder.HasOne(cm => cm.Employee)
+            .WithMany()
+            .HasForeignKey(cm => cm.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureContractEmployeesTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<ContractEmployee>();
+
+        builder.ToTable("ContractEmployee", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_ContractEmployee_WorkloadRange",
+                """
+                "Workload" >= 0 AND "Workload" <= 1
+                """);
+            table.HasCheckConstraint(
+                "CK_ContractEmployee_ValidDateRange",
+                """
+                "EndDate" IS NULL OR "EndDate" >= "StartDate"
+                """);
+        });
+
+        builder.HasKey(ce => ce.Id);
+
+        builder.Property(ce => ce.ContractId)
+            .IsRequired();
+
+        builder.Property(ce => ce.EmployeeId)
+            .IsRequired();
+
+        builder.Property(ce => ce.PositionCode)
+            .IsRequired()
+            .HasMaxLength(ContractEmployeeSchema.PositionCode.MaxLength);
+
+        builder.Property(ce => ce.Position)
+            .IsRequired()
+            .HasMaxLength(ContractEmployeeSchema.Position.MaxLength);
+
+        builder.Property(ce => ce.Workload)
+            .IsRequired()
+            .HasPrecision(7, 4);
+
+        builder.Property(ce => ce.StartDate)
+            .IsRequired();
+
+        builder.Property(ce => ce.EndDate);
+
+        builder.HasIndex(ce => new { ce.ContractId, ce.EmployeeId, ce.PositionCode, ce.StartDate })
+            .IsUnique();
+
+        builder.HasIndex(ce => new { ce.EmployeeId, ce.StartDate, ce.EndDate });
+
+        builder.HasOne(ce => ce.Employee)
+            .WithMany()
+            .HasForeignKey(ce => ce.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureTimesheetsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<Timesheet>();
+
+        builder.ToTable("Timesheet", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_Timesheet_ValidMonth",
+                """
+                "Month" >= 1 AND "Month" <= 12
+                """);
+        });
+
+        builder.HasKey(t => t.Id);
+
+        builder.Property(t => t.EmployeeId).IsRequired();
+        builder.Property(t => t.TimesheetStatusId).IsRequired();
+        builder.Property(t => t.Year).IsRequired();
+        builder.Property(t => t.Month).IsRequired();
+        builder.Property(t => t.CreatedAt).IsRequired();
+
+        builder.HasIndex(t => new { t.EmployeeId, t.Year, t.Month })
+            .IsUnique();
+
+        builder.HasOne(t => t.Employee)
+            .WithMany(e => e.Timesheets)
+            .HasForeignKey(t => t.EmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(t => t.TimesheetStatus)
+            .WithMany(ts => ts.Timesheets)
+            .HasForeignKey(t => t.TimesheetStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(t => t.ApprovedByEmployee)
+            .WithMany()
+            .HasForeignKey(t => t.ApprovedBy)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(t => t.Attendance)
+            .WithOne(a => a.Timesheet)
+            .HasForeignKey<Attendance>(a => a.TimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(t => t.StatusHistory)
+            .WithOne(history => history.Timesheet)
+            .HasForeignKey(history => history.TimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(t => t.Comments)
+            .WithOne(comment => comment.Timesheet)
+            .HasForeignKey(comment => comment.TimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureAttendancesTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<Attendance>();
+
+        builder.ToTable("Attendance");
+
+        builder.HasKey(a => a.Id);
+
+        builder.Property(a => a.TimesheetId).IsRequired();
+        builder.Property(a => a.EmployeeTypeId).IsRequired();
+
+        builder.HasIndex(a => a.TimesheetId)
+            .IsUnique();
+
+        builder.HasOne(a => a.EmployeeType)
+            .WithMany()
+            .HasForeignKey(a => a.EmployeeTypeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(a => a.Days)
+            .WithOne(d => d.Attendance)
+            .HasForeignKey(d => d.AttendanceId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureAttendanceDaysTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<AttendanceDay>();
+
+        builder.ToTable("AttendanceDay", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_AttendanceDay_WorkloadAndHours",
+                """
+                "Workload" >= 0 AND "Workload" <= 1
+                AND "HoursWithoutBreak" >= 0
+                AND "HoursObligation" >= 0
+                AND "CoreHours" >= 0
+                """);
+        });
+
+        builder.HasKey(ad => ad.Id);
+
+        builder.Property(ad => ad.AttendanceId)
+            .IsRequired();
+
+        builder.Property(ad => ad.Date)
+            .IsRequired();
+
+        builder.Property(ad => ad.ClockIn);
+
+        builder.Property(ad => ad.ClockOut);
+
+        builder.Property(ad => ad.BreakStart);
+
+        builder.Property(ad => ad.BreakEnd);
+
+        builder.Property(ad => ad.IsHoliday)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(ad => ad.Workload)
+            .IsRequired()
+            .HasPrecision(7, 4);
+
+        builder.Property(ad => ad.HoursWithoutBreak)
+            .IsRequired()
+            .HasPrecision(5, 2);
+
+        builder.Property(ad => ad.HoursObligation)
+            .IsRequired()
+            .HasPrecision(5, 2);
+
+        builder.Property(ad => ad.CoreHours)
+            .IsRequired()
+            .HasPrecision(5, 2)
+            .HasDefaultValue(0m);
+
+        builder.Property(ad => ad.Schedules)
+            .IsRequired()
+            .HasColumnType("jsonb")
+            .HasDefaultValueSql("'[]'::jsonb");
+
+        builder.HasIndex(ad => new { ad.AttendanceId, ad.Date })
+            .IsUnique();
+
+        builder.HasMany(ad => ad.DayInterruptions)
+            .WithOne(di => di.AttendanceDay)
+            .HasForeignKey(di => di.AttendanceDayId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureDayInterruptionsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<DayInterruption>();
+
+        builder.ToTable("DayInterruption");
+
+        builder.HasKey(di => di.Id);
+
+        builder.Property(di => di.AttendanceDayId)
+            .IsRequired();
+
+        builder.Property(di => di.InterruptionId)
+            .IsRequired();
+
+        builder.HasIndex(di => new { di.AttendanceDayId, di.InterruptionId })
+            .IsUnique();
+
+        builder.HasOne<Interruption>(di => di.Interruption)
+            .WithMany()
+            .HasForeignKey(di => di.InterruptionId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
+
+    private static void ConfigureInterruptionsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<Interruption>();
+
+        builder.ToTable("Interruption");
+
+        builder.HasKey(i => i.Id);
+
+        builder.Property(i => i.Name)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        builder.Property(i => i.Description)
+            .HasMaxLength(200);
+
+        builder.Property(i => i.HoursObligationOverride)
+            .HasPrecision(5, 2);
+
+        builder.HasIndex(i => i.Name)
+            .IsUnique();
+
+        builder.HasData(
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000010"), Name = "D", Description = "Dovolenka", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000011"), Name = "JMV/HO", Description = "práce na dálku od 1.10.2023", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000012"), Name = "KAHO", Description = "Karanténa -home office", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000013"), Name = "M", Description = "Omluvená nepřítomnost - tvůrčí volno", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000014"), Name = "MD/OD", Description = "Mateřská dovolená / Otcovská dovolená", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000015"), Name = "N", Description = "Nemocenská", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000016"), Name = "NA", Description = "Neomluvená absence", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000017"), Name = "NK", Description = "Návštěva lékaře - krátkodobá", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000018"), Name = "NL", Description = "Návštěva lékaře - celý den", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000019"), Name = "NP", Description = "Pracovní úraz", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000020"), Name = "NV", Description = "Náhradní volno za odprac. dobu", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000021"), Name = "O", Description = "Ošetřovné", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000022"), Name = "OPN", Description = "Osobní překážky", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000023"), Name = "PN", Description = "Narození dítěte", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000024"), Name = "PO", Description = "Odběr krve", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000025"), Name = "PS", Description = "Svatba", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000026"), Name = "PU", Description = "Úmrtí rod. příslušníka", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000027"), Name = "PVB", Description = "Pracovní volno pro brannou povinnost", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000028"), Name = "PVM", Description = "Pracovní volno pro s akcí pro děti a mládež", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000029"), Name = "PZ", Description = "Překážka na straně zaměstnavatele", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000030"), Name = "RD", Description = "Rodičovská dovolená", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000031"), Name = "SCP", Description = "Tuzemská služební cesta Projekt", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000032"), Name = "SCS", Description = "Tuzemská služební cesta Stáž", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000033"), Name = "SCT", Description = "Služební cesta", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000034"), Name = "SCZ", Description = "Služební cesta zahraniční", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000035"), Name = "SCZE", Description = "Zahraniční služební cesta Erasmus", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000036"), Name = "SCZP", Description = "Zahraniční služební cesta Projekt", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000037"), Name = "SCZS", Description = "Zahraniční služební cesta Stáž", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000038"), Name = "ST", Description = "Studium s náhradou mzdy", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000039"), Name = "VN", Description = "Neplacené volno", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000040"), Name = "VZ", Description = "Nové zaměstnání", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000041"), Name = "Z", Description = "Volno pro obecný zájem", HoursObligationOverride = 0 },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000042"), Name = "Zp", Description = "Veřejná funkce - poslanec", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000043"), Name = "Zs", Description = "Dlouhodobý pobyt v cizině", HoursObligationOverride = null },
+            new Interruption { Id = Guid.Parse("00000000-0000-0000-0000-000000000044"), Name = "Zv", Description = "Zdravotní volno", HoursObligationOverride = 0 }
+        );
+    }
+
+    private static void ConfigureContractPartsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<ContractPart>();
+
+        builder.ToTable("ContractPart", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_ContractPart_WorkloadRange",
+                """
+                "Workload" >= 0 AND "Workload" <= 1
+                """);
+            table.HasCheckConstraint(
+                "CK_ContractPart_Lock",
+                """
+                ("LockedAt" IS NULL AND "LockedBy" IS NULL)
+                OR
+                ("LockedAt" IS NOT NULL AND "LockedBy" IS NOT NULL)
+                """);
+        });
+
+        builder.HasKey(part => part.Id);
+
+        builder.Property(part => part.TimesheetId)
+            .IsRequired();
+
+        builder.Property(part => part.ContractEmployeeId)
+            .IsRequired();
+
+        builder.Property(part => part.Workload)
+            .IsRequired()
+            .HasPrecision(7, 4);
+
+        builder.Property(part => part.TimesheetStatusId)
+            .IsRequired();
+
+        builder.HasOne(part => part.TimesheetStatus)
+            .WithMany()
+            .HasForeignKey(part => part.TimesheetStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(part => part.LockedAt);
+        builder.Property(part => part.LockedBy);
+
+        builder.Property(part => part.CreatedAt)
+            .IsRequired();
+
+        builder.Property(part => part.UpdatedAt);
+
+        builder.HasIndex(part => part.LockedBy);
+
+        builder.HasIndex(part => new { part.TimesheetId, part.ContractEmployeeId })
+            .IsUnique();
+
+        builder.HasOne(part => part.Timesheet)
+            .WithMany(t => t.ContractParts)
+            .HasForeignKey(part => part.TimesheetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(part => part.ContractEmployee)
+            .WithMany()
+            .HasForeignKey(part => part.ContractEmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne<Employee>()
+            .WithMany()
+            .HasForeignKey(part => part.LockedBy)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(part => part.Days)
+            .WithOne(day => day.ContractPart)
+            .HasForeignKey(day => day.ContractPartId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+
+    private static void ConfigureContractPartDaysTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<ContractPartDay>();
+
+        builder.ToTable("ContractPartDay", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_ContractPartDay_Hours",
+                """
+                "Hours" >= 0
+                """);
+            table.HasCheckConstraint(
+                "CK_ContractPartDay_HoursObligation",
+                """
+                "HoursObligation" >= 0
+                """);
+        });
+
+        builder.HasKey(day => day.Id);
+
+        builder.Property(day => day.ContractPartId)
+            .IsRequired();
+
+        builder.Property(day => day.Date)
+            .IsRequired();
+
+        builder.Property(day => day.Hours)
+            .IsRequired()
+            .HasPrecision(5, 2)
+            .HasDefaultValue(0m);
+
+        builder.Property(day => day.HoursLocked)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(day => day.IsHoliday)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(day => day.HoursObligation)
+            .IsRequired()
+            .HasPrecision(5, 2);
+
+        builder.HasIndex(day => new { day.ContractPartId, day.Date })
+            .IsUnique();
+    }
+
+    private static void ConfigureCoreEmploymentsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<CoreEmployment>();
+
+        builder.ToTable("CoreEmployment", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_CoreEmployment_WorkloadRange",
+                """
+                "Workload" >= 0 AND "Workload" <= 1
+                """);
+            table.HasCheckConstraint(
+                "CK_CoreEmployment_ValidDateRange",
+                """
+                "EndDate" IS NULL OR "EndDate" >= "StartDate"
+                """);
+        });
+
+        builder.HasKey(ce => ce.Id);
+
+        builder.Property(ce => ce.EmployeeId)
+            .IsRequired();
+
+        builder.Property(ce => ce.Workload)
+            .IsRequired()
+            .HasPrecision(7, 4);
+
+        builder.Property(ce => ce.StartDate)
+            .IsRequired();
+
+        builder.Property(ce => ce.EndDate);
+
+        builder.HasIndex(ce => new { ce.EmployeeId, ce.StartDate, ce.EndDate });
+    }
+
+    private static void ConfigureEmployeeWorkloadsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<EmployeeWorkload>();
+
+        builder.ToTable("EmployeeWorkload", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_EmployeeWorkload_WorkloadRange",
+                """
+                "Workload" >= 0
+                """);
+            table.HasCheckConstraint(
+                "CK_EmployeeWorkload_ValidMonth",
+                """
+                "Month" >= 1 AND "Month" <= 12
+                """);
+        });
+
+        builder.HasKey(ew => ew.Id);
+
+        builder.Property(ew => ew.EmployeeId)
+            .IsRequired();
+
+        builder.Property(ew => ew.Year)
+            .IsRequired();
+
+        builder.Property(ew => ew.Month)
+            .IsRequired();
+
+        builder.Property(ew => ew.Workload)
+            .IsRequired()
+            .HasPrecision(7, 4);
+
+        builder.HasIndex(ew => new { ew.EmployeeId, ew.Year, ew.Month })
+            .IsUnique();
+    }
+
+    private static void ConfigureTimesheetStatusesTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<TimesheetStatus>();
+
+        builder.ToTable("TimesheetStatus");
+
+        builder.HasKey(ts => ts.Id);
+
+        builder.Property(ts => ts.Code)
+            .IsRequired()
+            .HasMaxLength(30);
+
+        builder.Property(ts => ts.Name)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        builder.HasIndex(ts => ts.Code)
+            .IsUnique();
+
+        builder.HasIndex(ts => ts.Name)
+            .IsUnique();
+
+        builder.HasData(
+            new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000020"), Code = "DRAFT", Name = "Rozpracovaný" },
+            new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000021"), Code = "SUBMITTED", Name = "Ke schválení" },
+            new TimesheetStatus { Id = Guid.Parse("00000000-0000-0000-0000-000000000022"), Code = "APPROVED", Name = "Schválený" }
+        );
+    }
+
+    private static void ConfigureTimesheetStatusHistoriesTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<TimesheetStatusHistory>();
+
+        builder.ToTable("TimesheetStatusHistory", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_TimesheetStatusHistory_ExactlyOneTimesheet",
+                """
+                ("TimesheetId" IS NOT NULL AND "ContractPartId" IS NULL)
+                OR
+                ("TimesheetId" IS NULL AND "ContractPartId" IS NOT NULL)
+                """);
+            table.HasCheckConstraint(
+                "CK_TimesheetStatusHistory_DistinctStatuses",
+                """
+                "FromStatusId" IS NULL OR "FromStatusId" <> "ToStatusId"
+                """);
+        });
+
+        builder.HasKey(history => history.Id);
+
+        builder.Property(history => history.ToStatusId)
+            .IsRequired();
+
+        builder.Property(history => history.ChangedByEmployeeId)
+            .IsRequired();
+
+        builder.Property(history => history.ChangedAt)
+            .IsRequired();
+
+        builder.Property(history => history.Comment)
+            .HasMaxLength(500);
+
+        builder.HasOne(history => history.ContractPart)
+            .WithMany(part => part.StatusHistory)
+            .HasForeignKey(history => history.ContractPartId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(history => history.FromStatus)
+            .WithMany()
+            .HasForeignKey(history => history.FromStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(history => history.ToStatus)
+            .WithMany()
+            .HasForeignKey(history => history.ToStatusId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(history => history.ChangedByEmployee)
+            .WithMany()
+            .HasForeignKey(history => history.ChangedByEmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(history => history.TimesheetId);
+        builder.HasIndex(history => history.ContractPartId);
+        builder.HasIndex(history => history.ChangedByEmployeeId);
+        builder.HasIndex(history => history.ChangedAt);
+    }
+
+    private static void ConfigureTimesheetCommentsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<TimesheetComment>();
+
+        builder.ToTable("TimesheetComment", table =>
+        {
+            table.HasCheckConstraint(
+                "CK_TimesheetComment_ExactlyOneTimesheet",
+                """
+                ("TimesheetId" IS NOT NULL AND "ContractPartId" IS NULL)
+                OR
+                ("TimesheetId" IS NULL AND "ContractPartId" IS NOT NULL)
+                """);
+        });
+
+        builder.HasKey(comment => comment.Id);
+
+        builder.Property(comment => comment.AuthorEmployeeId)
+            .IsRequired();
+
+        builder.Property(comment => comment.Text)
+            .IsRequired()
+            .HasMaxLength(500);
+
+        builder.Property(comment => comment.CreatedAt)
+            .IsRequired();
+
+        builder.HasOne(comment => comment.ContractPart)
+            .WithMany(part => part.Comments)
+            .HasForeignKey(comment => comment.ContractPartId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(comment => comment.AuthorEmployee)
+            .WithMany()
+            .HasForeignKey(comment => comment.AuthorEmployeeId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(comment => comment.TimesheetId);
+        builder.HasIndex(comment => comment.ContractPartId);
+        builder.HasIndex(comment => comment.AuthorEmployeeId);
+        builder.HasIndex(comment => comment.CreatedAt);
+    }
+
+    private static void ConfigureNotificationsTable(ModelBuilder modelBuilder)
+    {
+        var builder = modelBuilder.Entity<Notification>();
+
+        builder.ToTable("Notification");
+
+        builder.HasKey(n => n.Id);
+
+        builder.Property(n => n.EmployeeId)
+            .IsRequired();
+
+        builder.Property(n => n.Message)
+            .IsRequired();
+
+        builder.Property(n => n.CreatedAt)
+            .IsRequired();
+
+        builder.Property(n => n.IsRead)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.HasIndex(n => new { n.EmployeeId, n.IsRead });
+    }
+}

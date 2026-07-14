@@ -10,7 +10,7 @@ public class DeleteProjectTests : BaseIntegrationTest
     [Fact]
     public async Task DeleteProject_WithNonExistentId_ReturnsNotFound()
     {
-        Guid nonExistentId = Guid.NewGuid();
+        Guid nonExistentId = Guid.CreateVersion7();
         HttpResponseMessage response = await Client.DeleteAsync($"/api/projects/{nonExistentId}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }

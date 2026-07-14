@@ -1,11 +1,12 @@
-using Timesheets.Api.Auth;
-using Timesheets.Api.Auth.Endpoints;
-using Timesheets.Api.Contracts.Endpoints;
-using Timesheets.Api.Employees.Endpoints;
-using Timesheets.Api.Notifications;
-using Timesheets.Api.Notifications.Endpoints;
-using Timesheets.Api.Projects.Endpoints;
-using Timesheets.Api.Timesheets.Endpoints;
+using Timesheets.Api.Features.Attendance.Endpoints;
+using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Auth.Endpoints;
+using Timesheets.Api.Features.Contracts.Endpoints;
+using Timesheets.Api.Features.Employees.Endpoints;
+using Timesheets.Api.Features.Notifications;
+using Timesheets.Api.Features.Notifications.Endpoints;
+using Timesheets.Api.Features.Projects.Endpoints;
+using Timesheets.Api.Features.Timesheets.Endpoints;
 
 namespace Timesheets.Api;
 
@@ -30,10 +31,10 @@ public static class Endpoints
         {
             endpoints.MapEndpoint<Login>();
             endpoints.MapEndpoint<Logout>();
+            endpoints.MapEndpoint<EmployeeOnly>();
         }
 
         endpoints.MapEndpoint<GetCurrentUser>();
-        endpoints.MapEndpoint<GetCurrentUserPermissions>();
     }
 
     private static void MapProtectedApiEndpoints(this WebApplication app)
@@ -47,13 +48,13 @@ public static class Endpoints
         endpoints.MapProjectEndpoints();
         endpoints.MapContractEndpoints();
         endpoints.MapEmployeeEndpoints();
+        endpoints.MapAttendanceEndpoints();
         endpoints.MapTimesheetEndpoints();
         endpoints.MapNotificationEndpoints();
     }
 
     private static void MapProjectEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/projects").WithTags("Projects")
-        .MapEndpoint<GetProjectDeleteImpact>()
         .MapEndpoint<GetProject>()
         .MapEndpoint<UpdateProject>()
         .MapEndpoint<ArchiveProject>()
@@ -64,18 +65,21 @@ public static class Endpoints
         .MapEndpoint<CreateProject>()
         .MapEndpoint<GetProjectContract>()
         .MapEndpoint<GetProjectContracts>()
+        .MapEndpoint<GetProjectManagers>()
         .MapEndpoint<GetProjectContractsManagers>()
+        .MapEndpoint<AddProjectManager>()
+        .MapEndpoint<RemoveProjectManager>()
         .MapEndpoint<CreateProjectContract>()
         .MapEndpoint<UpdateProjectContract>()
         .MapEndpoint<DeleteProjectContract>();
 
     private static void MapContractEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/contracts").WithTags("Contracts")
-        .MapEndpoint<GetContractDeleteImpact>()
         .MapEndpoint<GetContractCatalog>()
         .MapEndpoint<GetContractTimesheetsFilterOptions>()
         .MapEndpoint<GetContractTimesheets>()
         .MapEndpoint<GetContractEmployees>()
+        .MapEndpoint<GetContractEmployeeAddImpact>()
         .MapEndpoint<AddContractEmployee>()
         .MapEndpoint<GetContractEmployeeUpdateImpact>()
         .MapEndpoint<UpdateContractEmployee>()
@@ -83,25 +87,27 @@ public static class Endpoints
         .MapEndpoint<AddContractManager>()
         .MapEndpoint<RemoveContractManager>();
 
+    private static void MapAttendanceEndpoints(this IEndpointRouteBuilder app) =>
+        app.MapGroup("/attendance").WithTags("Attendance")
+        .MapEndpoint<DetectAttendance>()
+        .MapEndpoint<ImportAttendance>();
+
     private static void MapTimesheetEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/timesheets").WithTags("Timesheets")
-        .MapEndpoint<GetCombinedTimesheetOverview>()
-        .MapEndpoint<GetCombinedTimesheet>()
-        .MapEndpoint<GetTimesheetCatalog>()
-        .MapEndpoint<GetTimesheetStatuses>()
+        .MapEndpoint<GetTimesheetOverview>()
+        .MapEndpoint<GetTimesheet>()
         .MapEndpoint<UpdateTimesheet>()
-        .MapEndpoint<UpdateCombinedTimesheetStatus>()
+        .MapEndpoint<AllocateTimesheet>()
+        .MapEndpoint<UpdateTimesheetStatus>()
         .MapEndpoint<GetTimesheetComments>()
         .MapEndpoint<AddTimesheetComment>()
-        .MapEndpoint<ReviewTimesheet>()
-        .MapEndpoint<DetectTimesheetImport>()
-        .MapEndpoint<ImportTimesheet>();
+        .MapEndpoint<DeleteTimesheetComment>()
+        .MapEndpoint<ReviewTimesheet>();
 
     private static void MapEmployeeEndpoints(this IEndpointRouteBuilder app) =>
         app.MapGroup("/employees").WithTags("Employees")
         .MapEndpoint<GetEmployee>()
         .MapEndpoint<UpdateEmployeeGlobalManagerRole>()
-        .MapEndpoint<UpdateEmployeeType>()
         .MapEndpoint<GetEmployees>()
         .MapEndpoint<GetEmployeePositions>()
         .MapEndpoint<GetEmployeeTimesheets>();
@@ -111,6 +117,7 @@ public static class Endpoints
         var endpoints = app.MapGroup("/notifications").WithTags("Notifications");
         endpoints.MapEndpoint<GetEmployeeNotifications>();
         endpoints.MapEndpoint<MarkNotificationAsRead>();
+        endpoints.MapEndpoint<MarkAllNotificationsAsRead>();
         app.MapHub<NotificationHub>("/notifications/hub");
     }
 

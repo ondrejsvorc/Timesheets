@@ -1,5 +1,5 @@
 import { type FilterCriteria, useFilter } from "@/hooks/useFilter";
-import type { EmployeeItem } from "../api/getEmployees";
+import type { EmployeeItem } from "../api";
 
 export interface EmployeesFilterCriteria extends FilterCriteria {}
 
@@ -11,5 +11,5 @@ export const useEmployeesFilter = (items: EmployeeItem[]) =>
   useFilter<EmployeeItem, EmployeesFilterCriteria>({
     items,
     initialFilter,
-    keys: [(item) => item.fullName, (item) => item.personalNumber ?? "", (item) => item.email?.toString() ?? ""],
+    keys: [(item) => item.fullName, (item) => item.personalNumber ?? ""],
   });

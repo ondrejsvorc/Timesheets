@@ -1,0 +1,142 @@
+import type { Dispatch } from "react";
+import { useState } from "react";
+import { useAsyncValue, useLoaderData, useParams } from "react-router";
+import { useImmerReducer } from "use-immer";
+import { UiAction } from "@/auth/uiPermissions";
+import { useCan } from "@/auth/useCan";
+import { AddButton, DeleteButton } from "@/components/shared/buttons/ActionButtons";
+import { EmptyState } from "@/components/shared/data/EmptyState";
+import { ConfirmationDialog } from "@/components/shared/dialogs/ConfirmationDialog";
+import { AwaitContent } from "@/components/shared/layout/AwaitContent";
+import { createFilterControls } from "@/components/shared/layout/createFilterControls";
+import { FilterBar } from "@/components/shared/layout/FilterBar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Routes } from "@/constants/routes";
+import { Texts } from "@/constants/texts";
+import { useGo } from "@/hooks/useGo";
+import { compareIds } from "@/utils/common";
+import { createListCrudReducer, type ListCrudAction, listCrudState } from "@/utils/listCrudReducer";
+import { AddProjectManagerDialog } from "./AddProjectManagerDialog";
+import { type GetProjectManagersResponse, type ProjectManagerItem, removeProjectManager } from "./api";
+import { type ProjectManagersFilterCriteria, useProjectManagersFilter } from "./hooks/useProjectManagersFilter";
+
+const projectManagersReducer = createListCrudReducer<ProjectManagerItem, { employeeId: string }>((m, key) => compareIds(m.employeeId, key.employeeId));
+
+export const ProjectManagers = () => {
+  const { promise } = useLoaderData() as {
+    promise: Promise<GetProjectManagersResponse>;
+  };
+
+  return (
+    <AwaitContent promise={promise}>
+      <ProjectManagersContent />
+    </AwaitContent>
+  );
+};
+
+const { FilterSearchInput } = createFilterControls<ProjectManagersFilterCriteria>();
+
+const ProjectManagersContent = () => {
+  const { id: projectId } = useParams<{ id: string }>();
+  const response = useAsyncValue() as GetProjectManagersResponse;
+  const [state, dispatch] = useImmerReducer(projectManagersReducer, listCrudState<ProjectManagerItem, { employeeId: string }>(response.managers));
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const { filter, setFilter, filtered } = useProjectManagersFilter(state.items);
+  const canAddManager = useCan(UiAction.projectManagers.add, { projectId: projectId ?? undefined }) && !response.isProjectArchived;
+
+  return (
+    <>
+      <FilterBar filter={filter} setFilter={setFilter} actions={canAddManager ? <AddButton onClick={() => setIsAddOpen(true)}>{Texts.addManager}</AddButton> : undefined}>
+        <FilterSearchInput placeholder={Texts.search} />
+      </FilterBar>
+      <ProjectManagersTable managers={filtered} dispatch={dispatch} isReadonly={response.isProjectArchived} />
+      <AddProjectManagerDialog
+        projectId={projectId ?? ""}
+        existingManagers={state.items}
+        open={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
+        onSaved={(manager) => {
+          dispatch({ type: "add", item: manager });
+          setIsAddOpen(false);
+        }}
+      />
+      <ConfirmationDialog
+        open={state.pendingDelete !== null}
+        onCancel={() => dispatch({ type: "cancelDelete" })}
+        onConfirm={async (_event, signal) => {
+          if (!state.pendingDelete || !projectId) return;
+          await removeProjectManager(projectId, state.pendingDelete.employeeId, signal);
+          if (!signal.aborted) {
+            dispatch({ type: "confirmDelete" });
+          }
+        }}
+      />
+    </>
+  );
+};
+
+interface ProjectManagersTableProps {
+  managers: ProjectManagerItem[];
+  dispatch: Dispatch<ListCrudAction<ProjectManagerItem, { employeeId: string }>>;
+  isReadonly: boolean;
+}
+
+export const ProjectManagersTable = ({ managers, dispatch, isReadonly }: ProjectManagersTableProps) => {
+  if (managers.length === 0) {
+    return <EmptyState />;
+  }
+
+  return (
+    <div className="rounded-md border p-4">
+      <Table className="table-fixed w-full">
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[22%]">{Texts.personalNumber}</TableHead>
+            <TableHead className="w-[60%]">{Texts.fullName}</TableHead>
+            <TableHead className="w-[18%] text-right">{Texts.actions}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {managers.map((manager) => (
+            <ProjectManagerRow key={`${manager.projectId}-${manager.employeeId}`} manager={manager} dispatch={dispatch} isReadonly={isReadonly} />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
+interface ProjectManagerRowProps {
+  manager: ProjectManagerItem;
+  dispatch: Dispatch<ListCrudAction<ProjectManagerItem, { employeeId: string }>>;
+  isReadonly: boolean;
+}
+
+export const ProjectManagerRow = ({ manager, dispatch, isReadonly }: ProjectManagerRowProps) => {
+  const go = useGo();
+  const { id: projectId } = useParams<{ id: string }>();
+  const canRemove = useCan(UiAction.projectManagers.remove, { projectId: projectId ?? undefined }) && !isReadonly;
+
+  return (
+    <TableRow className="cursor-pointer" onClick={() => go.forward(Routes.employee(manager.employeeId))}>
+      <TableCell className="truncate" title={manager.employeePersonalNumber}>
+        {manager.employeePersonalNumber}
+      </TableCell>
+      <TableCell className="truncate" title={manager.employeeFullName}>
+        {manager.employeeFullName}
+      </TableCell>
+      <TableCell>
+        <div className="flex justify-end">
+          {canRemove && (
+            <DeleteButton
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: "requestDelete", key: { employeeId: manager.employeeId } });
+              }}
+            />
+          )}
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+};

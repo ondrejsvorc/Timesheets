@@ -11,13 +11,24 @@ public class TestAuthHandler(
     ILoggerFactory logger,
     UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
+    public const string PersonalNumber = "test-auth";
+    public const string PersonalNumberHeader = "X-Test-PersonalNumber";
+    public const string DisplayNameHeader = "X-Test-DisplayName";
+
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        string personalNumber = Request.Headers.TryGetValue(PersonalNumberHeader, out var personalNumbers)
+            ? personalNumbers.ToString()
+            : PersonalNumber;
+        string displayName = Request.Headers.TryGetValue(DisplayNameHeader, out var displayNames)
+            ? displayNames.ToString()
+            : "Test User";
+
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, "test-user-id"),
-            new Claim(ClaimTypes.Name, "Test User"),
-            new Claim(ClaimTypes.Email, "test@example.com")
+            new Claim(ClaimTypes.NameIdentifier, personalNumber),
+            new Claim("displayName", displayName),
+            new Claim("personalNumber", personalNumber)
         };
         var identity = new ClaimsIdentity(claims, "TestScheme");
         var principal = new ClaimsPrincipal(identity);

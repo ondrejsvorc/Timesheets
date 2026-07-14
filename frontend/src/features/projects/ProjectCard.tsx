@@ -8,43 +8,39 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { useNavigateFrom } from "@/hooks/useNavigateFrom";
-import { cn } from "@/utils/cn";
-import { formatDate } from "@/utils/formatDate";
-import { archiveProject, unarchiveProject } from "./api/archiveProject";
-import type { ProjectItem } from "./api/shared/projectItem";
-import { ProjectDeleteDialog } from "./ProjectDeleteDialog";
+import { useGo } from "@/hooks/useGo";
+import { cn } from "@/utils/common";
+import { formatDate } from "@/utils/format";
+import { archiveProject, type ProjectItem, type ProjectStatus, unarchiveProject } from "./api";
 import { UpdateProjectDialog } from "./UpdateProjectDialog";
-import { getProjectStatus } from "./utils/getProjectStatus";
 
 interface ProjectCardProps {
   project: ProjectItem;
   onUpdate: (project: ProjectItem) => void;
-  onDelete: (projectId: string) => void;
+  onRequestDelete: (projectId: string) => void;
 }
 
-export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) => {
+export const ProjectCard = ({ project, onUpdate, onRequestDelete }: ProjectCardProps) => {
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const startDate = formatDate(project.startDate);
   const endDate = formatDate(project.endDate);
-  const dateRange = project.startDate && project.endDate ? `${startDate} – ${endDate}` : formatDate(project.startDate);
-  const status = getProjectStatus(project);
-  const navigate = useNavigateFrom();
+  const dateRange = project.startDate && project.endDate ? `${startDate} - ${endDate}` : formatDate(project.startDate);
+  const status: ProjectStatus = project.status;
+  const go = useGo();
 
   return (
     <>
       <Card
         className="cursor-pointer group hover:border-primary/20 transition-all duration-200"
         onClick={() => {
-          navigate(Routes.project(project.id));
+          go.forward(Routes.project(project.id));
         }}
       >
         <CardHeader>
           <CardTitle className="group-hover:text-primary transition-colors">{project.name}</CardTitle>
           {project.registrationNumber && <div className="text-sm text-muted-foreground font-mono">{project.registrationNumber}</div>}
           <CardAction>
-            <Can action={UiAction.projects.edit}>
+            <Can action={UiAction.projects.edit} context={{ projectId: project.id }}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -52,15 +48,17 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsEditOpen(true);
-                    }}
-                  >
-                    <EditIcon />
-                    {Texts.edit}
-                  </DropdownMenuItem>
+                  {status !== "archived" && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditOpen(true);
+                      }}
+                    >
+                      <EditIcon />
+                      {Texts.edit}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={async (e) => {
                       e.stopPropagation();
@@ -71,17 +69,19 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
                     {status === "archived" ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                     {status === "archived" ? Texts.unarchive : Texts.archive}
                   </DropdownMenuItem>
-                  <Can action={UiAction.projects.delete}>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsConfirmOpen(true);
-                      }}
-                    >
-                      <DeleteIcon />
-                      {Texts.delete}
-                    </DropdownMenuItem>
-                  </Can>
+                  {status !== "archived" && (
+                    <Can action={UiAction.projects.delete}>
+                      <DropdownMenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRequestDelete(project.id);
+                        }}
+                      >
+                        <DeleteIcon />
+                        {Texts.delete}
+                      </DropdownMenuItem>
+                    </Can>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </Can>
@@ -117,17 +117,6 @@ export const ProjectCard = ({ project, onUpdate, onDelete }: ProjectCardProps) =
           setIsEditOpen(false);
         }}
       />
-      {isConfirmOpen && (
-        <ProjectDeleteDialog
-          projectId={project.id}
-          projectName={project.name}
-          onClose={() => setIsConfirmOpen(false)}
-          onDeleted={() => {
-            onDelete(project.id);
-            setIsConfirmOpen(false);
-          }}
-        />
-      )}
     </>
   );
 };

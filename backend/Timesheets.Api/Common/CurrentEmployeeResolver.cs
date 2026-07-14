@@ -1,8 +1,8 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Common.Extensions;
-using Timesheets.Api.Data;
-using Timesheets.Api.Data.Models;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Domain.Models;
 
 namespace Timesheets.Api.Common;
 
@@ -15,23 +15,12 @@ public static class CurrentEmployeeResolver
             return null;
         }
 
-        string email = principal.GetEmail();
         string personalNumber = principal.GetPersonalNumber();
 
-        Employee? employee = await dbContext.Employees
+        return await dbContext.Employees
             .AsNoTracking()
             .Include(e => e.EmployeeType)
-            .FirstOrDefaultAsync(e => e.Email == email, cancellationToken);
-
-        if (employee is null)
-        {
-            employee = await dbContext.Employees
-                .AsNoTracking()
-                .Include(e => e.EmployeeType)
-                .FirstOrDefaultAsync(e => e.PersonalNumber == personalNumber, cancellationToken);
-        }
-
-        return employee;
+            .FirstOrDefaultAsync(e => e.PersonalNumber == personalNumber, cancellationToken);
     }
 
     public static async Task<Employee> GetRequiredAsync(ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)

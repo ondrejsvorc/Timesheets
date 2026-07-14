@@ -1,0 +1,203 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { startOfDay } from "date-fns";
+import { Check } from "lucide-react";
+import { useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { DialogCancelButton } from "@/components/shared/buttons/DialogButtons";
+import { DateInput } from "@/components/shared/inputs/DateInput";
+import { WorkloadPercentInput } from "@/components/shared/inputs/WorkloadPercentInput";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Texts } from "@/constants/texts";
+import { dateFieldBounds, fromDateOnlyIso, isWorkloadPercentInRange, workloadFractionToPercent, workloadPercentToFraction } from "@/utils/format";
+import type { PositionItem, UpdateContractEmployeeRequest } from "./api";
+
+type UpdatePositionFormValues = z.infer<ReturnType<typeof createSchema>>;
+
+const toIsoOrEmpty = (value: string | undefined) => (value && value.trim().length > 0 ? value : undefined);
+const createSchema = (position: PositionItem, projectStartDate: string, projectEndDate: string | null) =>
+  z
+    .object({
+      positionCode: z.string().trim().min(1).max(50),
+      positionName: z.string().nonempty(),
+      workload: z
+        .string()
+        .nonempty()
+        .refine((v) => isWorkloadPercentInRange(v, 1, 100), Texts.enterWorkloadRange1to100),
+      startDate: z.string().nonempty(),
+      endDate: z.string().optional(),
+    })
+    .superRefine((values, ctx) => {
+      const start = fromDateOnlyIso(values.startDate);
+      const end = values.endDate ? fromDateOnlyIso(values.endDate) : null;
+      const projectStart = fromDateOnlyIso(projectStartDate);
+      const projectEnd = projectEndDate ? fromDateOnlyIso(projectEndDate) : null;
+
+      if (start < projectStart) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["startDate"],
+          message: Texts.positionOutsideProjectRange,
+        });
+      }
+
+      if (end && projectEnd && end > projectEnd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["endDate"],
+          message: Texts.positionOutsideProjectRange,
+        });
+      }
+
+      const metadataChanged =
+        values.positionCode.trim() !== position.positionCode || values.positionName.trim() !== position.position || workloadPercentToFraction(values.workload) !== position.workload;
+
+      const endIso = toIsoOrEmpty(values.endDate) ?? projectEndDate ?? null;
+      const endChanged = endIso !== position.endDate;
+      const startChanged = values.startDate !== position.startDate;
+
+      if (!metadataChanged && !endChanged && !startChanged) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["positionName"],
+          message: Texts.updateImpactBlocked,
+        });
+      }
+    });
+
+interface UpdateEmployeePositionDialogProps {
+  open: boolean;
+  position: PositionItem;
+  projectStartDate: string;
+  projectEndDate: string | null;
+  onClose: () => void;
+  onContinue: (request: UpdateContractEmployeeRequest) => void;
+}
+
+export const UpdateEmployeePositionDialog = ({ open, position, projectStartDate, projectEndDate, onClose, onContinue }: UpdateEmployeePositionDialogProps) => {
+  const resolver = useMemo(() => zodResolver(createSchema(position, projectStartDate, projectEndDate)), [position, projectEndDate, projectStartDate]);
+
+  const form = useForm<UpdatePositionFormValues>({
+    resolver,
+    mode: "onChange",
+    defaultValues: {
+      positionCode: position.positionCode,
+      positionName: position.position,
+      workload: workloadFractionToPercent(position.workload),
+      startDate: position.startDate,
+      endDate: position.endDate ?? projectEndDate ?? undefined,
+    },
+  });
+
+  const startDate = form.watch("startDate");
+  const endDate = form.watch("endDate");
+
+  const handleClose = () => {
+    form.reset();
+    onClose();
+  };
+
+  const handleSubmit = (values: UpdatePositionFormValues) => {
+    onContinue({
+      positionCode: values.positionCode.trim(),
+      position: values.positionName.trim(),
+      workload: workloadPercentToFraction(values.workload),
+      startDate: values.startDate,
+      endDate: toIsoOrEmpty(values.endDate) ?? projectEndDate ?? null,
+    });
+    form.reset();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{Texts.editPositionTitle}</DialogTitle>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="positionCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{Texts.positionCode}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="positionName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{Texts.position}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="workload"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{Texts.workload}</FormLabel>
+                  <FormControl>
+                    <WorkloadPercentInput {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              {(["startDate", "endDate"] as const).map((name) => (
+                <FormField
+                  key={name}
+                  control={form.control}
+                  name={name}
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>{name === "startDate" ? Texts.startDateRequiredLabel : Texts.endDateLabel}</FormLabel>
+                      <FormControl>
+                        <DateInput
+                          value={field.value}
+                          {...dateFieldBounds(name, {
+                            projectStart: startOfDay(fromDateOnlyIso(projectStartDate)),
+                            projectEnd: projectEndDate ? startOfDay(fromDateOnlyIso(projectEndDate)) : undefined,
+                            startDate,
+                            endDate,
+                          })}
+                          onChange={(next) => field.onChange(next ?? (name === "startDate" ? "" : undefined))}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </div>
+
+            <DialogFooter>
+              <DialogCancelButton onClick={handleClose} />
+              <Button type="button" disabled={!form.formState.isValid} onClick={() => form.handleSubmit(handleSubmit)()}>
+                <Check className="size-4" />
+                {Texts.confirm}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+};

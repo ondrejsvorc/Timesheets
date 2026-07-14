@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Security.Claims;
 using CzechHolidays;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
@@ -10,11 +11,14 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
-using Timesheets.Api.Administration;
-using Timesheets.Api.Auth;
-using Timesheets.Api.Data;
-using Timesheets.Api.Notifications;
-using Timesheets.Api.Timesheets;
+using Timesheets.Api.Common;
+using Timesheets.Api.Common.Extensions;
+using Timesheets.Api.Domain;
+using Timesheets.Api.Features.Attendance;
+using Timesheets.Api.Features.Auth;
+using Timesheets.Api.Features.Notifications;
+using Timesheets.Api.Features.Timesheets;
+using Timesheets.Api.Features.Timesheets.Allocation;
 
 namespace Timesheets.Api;
 
@@ -109,6 +113,31 @@ public static class ConfigureServices
                 options.Cookie.SameSite = SameSiteMode.Lax;
                 options.Cookie.HttpOnly = true;
                 options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.Events = new CookieAuthenticationEvents
+                {
+                    OnRedirectToLogin = context =>
+                    {
+                        if (context.Request.Path.StartsWithSegments("/api"))
+                        {
+                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                            return Task.CompletedTask;
+                        }
+
+                        context.Response.Redirect(context.RedirectUri);
+                        return Task.CompletedTask;
+                    },
+                    OnRedirectToAccessDenied = context =>
+                    {
+                        if (context.Request.Path.StartsWithSegments("/api"))
+                        {
+                            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                            return Task.CompletedTask;
+                        }
+
+                        context.Response.Redirect(context.RedirectUri);
+                        return Task.CompletedTask;
+                    },
+                };
             })
             .AddOpenIdConnect(options =>
             {
@@ -134,9 +163,6 @@ public static class ConfigureServices
                 options.NonceCookie.SecurePolicy = CookieSecurePolicy.Always;
 
                 // Be explicit about claim mapping (IdP can return these either in id_token or from UserInfo).
-                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "email"));
-                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "mail"));
-                options.ClaimActions.Add(new JsonKeyClaimAction("email", ClaimValueTypes.String, "upn"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("displayName", ClaimValueTypes.String, "displayName"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("displayName", ClaimValueTypes.String, "name"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("personalNumber", ClaimValueTypes.String, "personalNumber"));
@@ -144,6 +170,7 @@ public static class ConfigureServices
                 options.ClaimActions.Add(new JsonKeyClaimAction("title", ClaimValueTypes.String, "title"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("titleBefore", ClaimValueTypes.String, "titleBefore"));
                 options.ClaimActions.Add(new JsonKeyClaimAction("titleAfter", ClaimValueTypes.String, "titleAfter"));
+                options.ClaimActions.Add(new JsonKeyClaimAction("eduPersonScopedAffiliation", ClaimValueTypes.String, "eduPersonScopedAffiliation"));
 
                 options.Scope.Clear();
                 foreach (string scope in auth.GetSection("Scope").Get<string[]>() ?? [])
@@ -153,6 +180,16 @@ public static class ConfigureServices
 
                 options.Events = new OpenIdConnectEvents
                 {
+                    OnRedirectToIdentityProvider = context =>
+                    {
+                        if (context.Request.Path.StartsWithSegments("/api"))
+                        {
+                            context.HandleResponse();
+                            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnRedirectToIdentityProviderForSignOut = context =>
                     {
                         // We want the IdP to redirect straight to the SPA route (e.g. /login),
@@ -219,6 +256,14 @@ public static class ConfigureServices
                             throw new InvalidOperationException("OIDC Principal is missing.");
                         }
 
+                        if (!context.Principal.CanUseTimesheets())
+                        {
+                            context.HandleResponse();
+                            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                            context.Response.Redirect("/auth/employee-only");
+                            return;
+                        }
+
                         UserSynchronizer synchronizer = context.HttpContext.RequestServices.GetRequiredService<UserSynchronizer>();
                         await synchronizer.SyncFromPrincipalAsync(context.Principal, context.HttpContext.RequestAborted);
                     }
@@ -239,15 +284,13 @@ public static class ConfigureServices
         builder.Services.AddScoped<UserSynchronizer>();
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<ICurrentUser, CurrentUser>();
-        builder.Services.AddSingleton<ICellParser, CellParser>();
-        builder.Services.AddSingleton<IAttendanceTimesheetMetadataReader, AttendanceTimesheetMetadataReader>();
-        builder.Services.AddSingleton<ITimesheetReader<AttendanceTimesheet>, AttendanceTimesheetReader>();
         builder.Services.AddSingleton<ICzechHolidaysFactory, CzechHolidaysFactory>();
-        builder.Services.AddTransient<ITimesheetImporter<AttendanceTimesheet>, AttendanceTimesheetImporter>();
-        builder.Services.AddScoped<IAttendanceTimesheetPersistenceService, AttendanceTimesheetPersistenceService>();
-        builder.Services.AddScoped<IAttendanceTimesheetImportService, AttendanceTimesheetImportService>();
+        builder.Services.AddSingleton<AttendanceFileReader>();
+        builder.Services.AddSingleton<AttendanceFileDetector>();
         builder.Services.AddValidatorsFromAssemblyContaining<Program>();
         builder.Services.AddSignalR();
+        builder.Services.AddSingleton<TimesheetEvaluator>();
+        builder.Services.AddSingleton<TimesheetAllocator>();
         builder.Services.AddScoped<NotificationSender>();
     }
 }

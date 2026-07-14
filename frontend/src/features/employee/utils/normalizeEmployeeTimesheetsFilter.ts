@@ -1,4 +1,4 @@
-import type { EmployeeTimesheetsFilterCriteria, GetEmployeeTimesheetsResponse } from "../api/getEmployeeTimesheets";
+import type { EmployeeTimesheetsFilterCriteria, GetEmployeeTimesheetsResponse } from "../api";
 
 function getAvailableMonthsForYear(availableMonths: number[], _year: number) {
   return availableMonths;

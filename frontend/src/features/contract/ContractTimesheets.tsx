@@ -8,17 +8,25 @@ import { TimesheetStatusBadge } from "@/components/shared/data/TimesheetStatusBa
 import { MultiSelectComboBox, type MultiSelectComboBoxItem } from "@/components/shared/inputs/MultiSelectComboBox";
 import { AwaitContent } from "@/components/shared/layout/AwaitContent";
 import { FilterBar, useFilterContext } from "@/components/shared/layout/FilterBar";
-import { ActionDropdownMenu, EditAction } from "@/components/shared/menus/ActionDropdownMenu";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Routes } from "@/constants/routes";
 import { Texts } from "@/constants/texts";
-import { cn } from "@/utils/cn";
-import type { ContractTimesheetsFilterCriteria, EmployeeGroupView, GetContractTimesheetsResponse, MonthGroupView, TimesheetRowView } from "./api/getContractTimesheets";
-import { buildEmployeesView, buildMonthsView, filterToSearchParams } from "./api/getContractTimesheets";
-import type { GetContractTimesheetsFilterOptionsResponse } from "./api/getContractTimesheetsFilterOptions";
+import { cn } from "@/utils/common";
+import { formatWorkloadPercent } from "@/utils/format";
+import {
+  buildEmployeesView,
+  buildMonthsView,
+  type ContractTimesheetsFilterCriteria,
+  type EmployeeGroupView,
+  filterToSearchParams,
+  type GetContractTimesheetsFilterOptionsResponse,
+  type GetContractTimesheetsResponse,
+  type MonthGroupView,
+  type TimesheetRowView,
+} from "./api";
 import { CZECH_MONTH_NAMES, formatMonthYear } from "./utils/czechMonths";
 
 export type ContractTimesheetsLoaderData = {
@@ -206,10 +214,6 @@ function ContractTimesheetsFilterControls({ options }: { options: GetContractTim
   );
 }
 
-function workloadPercent(workload: number): string {
-  return `${Math.round(workload * 100)}%`;
-}
-
 const overviewLinkClassName = "text-foreground hover:underline underline-offset-4";
 
 interface EmployeeNameLinkProps {
@@ -265,19 +269,18 @@ const TimesheetsByMonth = ({ months, isLoading }: TimesheetsByMonthProps) => {
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 font-medium">
                 <EmployeeNameLink employeeId={employee.id}>{employee.fullName}</EmployeeNameLink>
                 <TimesheetMonthLink employeeId={employee.id} year={monthGroup.year} month={monthGroup.month} className="text-sm text-muted-foreground">
-                  {Texts.viewCombinedTimesheet}
+                  {Texts.viewTimesheet}
                 </TimesheetMonthLink>
               </div>
               {employee.timesheets.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{Texts.noItems}</p>
               ) : (
-                <Table>
+                <Table className="table-fixed w-full">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{Texts.position}</TableHead>
-                      <TableHead>{Texts.timesheetStatus}</TableHead>
-                      <TableHead>{Texts.workload}</TableHead>
-                      <TableHead>{Texts.actions}</TableHead>
+                      <TableHead className="w-1/3">{Texts.position}</TableHead>
+                      <TableHead className="w-1/3">{Texts.timesheetStatus}</TableHead>
+                      <TableHead className="w-1/3">{Texts.workload}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -302,16 +305,13 @@ interface TimesheetItemRowProps {
 function TimesheetItemRow({ item }: TimesheetItemRowProps) {
   return (
     <TableRow>
-      <TableCell>{item.position}</TableCell>
+      <TableCell className="truncate" title={item.position}>
+        {item.position}
+      </TableCell>
       <TableCell>
         <TimesheetStatusBadge status={item.status} />
       </TableCell>
-      <TableCell>{workloadPercent(item.workload)}</TableCell>
-      <TableCell>
-        <ActionDropdownMenu>
-          <EditAction onClick={() => {}} />
-        </ActionDropdownMenu>
-      </TableCell>
+      <TableCell>{formatWorkloadPercent(item.workload)}</TableCell>
     </TableRow>
   );
 }
@@ -363,13 +363,12 @@ const TimesheetsByEmployee = ({ employees, isLoading }: TimesheetsByEmployeeProp
                         {formatMonthYear(monthGroup.month, monthGroup.year)}
                       </TimesheetMonthLink>
                     </div>
-                    <Table>
+                    <Table className="table-fixed w-full">
                       <TableHeader>
                         <TableRow>
-                          <TableHead>{Texts.position}</TableHead>
-                          <TableHead>{Texts.timesheetStatus}</TableHead>
-                          <TableHead>{Texts.workload}</TableHead>
-                          <TableHead>{Texts.actions}</TableHead>
+                          <TableHead className="w-1/3">{Texts.position}</TableHead>
+                          <TableHead className="w-1/3">{Texts.timesheetStatus}</TableHead>
+                          <TableHead className="w-1/3">{Texts.workload}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
