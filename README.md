@@ -1,6 +1,9 @@
 ## Timesheets
 
-Web application for **managing** and **auditing employee timesheets**.
+Web Application for Managing and Validating Timesheets.
+
+### Test instance
+- http://vykazy.ondrejsvorc.cz/
 
 ### Tech Stack
 - **Backend:** .NET 10, ASP.NET Core Web API, Entity Framework Core (PostgreSQL), FluentValidation
