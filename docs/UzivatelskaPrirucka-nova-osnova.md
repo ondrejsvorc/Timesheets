@@ -322,6 +322,11 @@ Odemknout zpět schválený výkaz může zaměstnanec nebo *Globální manažer
 
 ### Historie schvalování a komentářová sekce
 
+Pod tabulkou kombinovaného výkazu se nachází komentářová sekce, kde je vidět historie schvalování výkazu. Lze přidávat i vlastní komentáře nezávisle na krocích schvalovacího procesu.
+
+![Komentářová sekce](./images/v-04-01-02-vykaz-komentare.png)
+![Historie schvalování](./images/v-04-03-00-komentare_schvalovani.png)
+
 ## Otázky a odpovědi
 
 **Co se stane, když není vyplněno datum ukončení projektu?**
