@@ -300,7 +300,8 @@ const mapIssue = (issue: ApiIssue | ApiDayIssue): TimesheetIssue => {
   };
 };
 
-const buildTimesheetDraft = (timesheet: Timesheet): TimesheetDraft => {
+const buildTimesheetDraft = (timesheet: Timesheet, options?: { fixCoreHours?: boolean }): TimesheetDraft => {
+  const fixCoreHours = options?.fixCoreHours ?? true;
   return {
     days: timesheet.days.map((day, index) => {
       return {
@@ -310,7 +311,7 @@ const buildTimesheetDraft = (timesheet: Timesheet): TimesheetDraft => {
         breakStart: toApiTime(day.attendance.breakStart),
         breakEnd: toApiTime(day.attendance.breakEnd),
         coreHours: day.coreHours ?? 0,
-        coreHoursFixed: day.coreHours !== null,
+        coreHoursFixed: fixCoreHours && day.coreHours !== null,
         description: day.attendance.interruptions.trim() || null,
         schedules: mapDraftSchedules(day.attendance.schedules),
       };
@@ -422,7 +423,7 @@ export const allocateTimesheet = async (timesheet: Timesheet, day?: number): Pro
   const allocation = await customFetch<ApiAllocation>(`${ApiUrl}/timesheets/${timesheet.id}/allocate${query}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(buildTimesheetDraft(timesheet)),
+    body: JSON.stringify(buildTimesheetDraft(timesheet, { fixCoreHours: day == null })),
   });
   return {
     days: allocation.days.map((day) => ({

@@ -68,18 +68,40 @@ internal sealed class NonAcademicAllocation
 
     private void DistributeLockedContractPartDay(EditableTimesheetDay day)
     {
-        foreach (ContractPartColumn project in _sheet.ContractParts)
+        decimal capacity = AvailableDayCapacity(day);
+        decimal total = day.TotalHours();
+        decimal excess = TimesheetEvaluator.Normalize(total - capacity);
+
+        if (excess > 0m)
         {
-            if (!day.ContractPartHoursFixed.GetValueOrDefault(project.Id))
+            foreach (ContractPartColumn project in _sheet.ContractParts)
             {
-                day.ContractPartHours[project.Id] = day.ProjectFloor(project.Id);
+                if (day.ContractPartHoursFixed.GetValueOrDefault(project.Id))
+                {
+                    continue;
+                }
+
+                decimal current = day.ContractPartHours.GetValueOrDefault(project.Id);
+                decimal reducible = TimesheetEvaluator.Normalize(current - day.ProjectFloor(project.Id));
+                decimal reduction = Math.Min(excess, Math.Max(0m, reducible));
+                day.ContractPartHours[project.Id] = TimesheetEvaluator.Normalize(current - reduction);
+                excess = TimesheetEvaluator.Normalize(excess - reduction);
+                if (excess <= 0m)
+                {
+                    return;
+                }
             }
+
+            if (!day.CoreHoursFixed)
+            {
+                day.CoreHours = TimesheetEvaluator.Normalize(Math.Max(0m, day.CoreHours - excess));
+            }
+            return;
         }
 
         if (!day.CoreHoursFixed)
         {
-            decimal projectHours = TimesheetEvaluator.Normalize(_sheet.ContractParts.Sum(project => day.ContractPartHours.GetValueOrDefault(project.Id)));
-            day.CoreHours = TimesheetEvaluator.Normalize(Math.Max(0m, AvailableDayCapacity(day) - projectHours));
+            day.CoreHours = TimesheetEvaluator.Normalize(day.CoreHours + Math.Max(0m, capacity - total));
         }
     }
 
