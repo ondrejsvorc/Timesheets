@@ -76,6 +76,26 @@ public class TimesheetLockTests : BaseIntegrationTest
         Assert.True(stored.HoursLocked);
     }
 
+    [Fact]
+    public async Task UpdateTimesheet_HalfDayInterruptionDoesNotPersistContractPartCellLock()
+    {
+        DateTime date = new(2035, 4, 2, 0, 0, 0, DateTimeKind.Utc);
+        Guid timesheetId = Guid.CreateVersion7();
+        Guid contractEmployeeId = Guid.CreateVersion7();
+        Guid contractPartId = Guid.CreateVersion7();
+        await SeedTimesheetsAsync(timesheetId, contractEmployeeId, contractPartId, date, locked: false);
+
+        TimesheetEdit request = CreateDraft(contractEmployeeId, date, hours: 4m, hoursLocked: true, description: "ZV p\u016flden");
+        HttpResponseMessage response = await Client.PutAsJsonAsync($"/api/timesheets/{timesheetId}", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using IServiceScope assertionScope = CreateScope();
+        AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        ContractPartDay stored = await assertionContext.ContractPartDays.AsNoTracking().SingleAsync(day => day.ContractPartId == contractPartId);
+        Assert.Equal(4m, stored.Hours);
+        Assert.False(stored.HoursLocked);
+    }
+
     private async Task SeedTimesheetsAsync(Guid timesheetId, Guid contractEmployeeId, Guid contractPartId, DateTime date, bool locked = true)
     {
         using IServiceScope scope = CreateScope();
@@ -92,9 +112,9 @@ public class TimesheetLockTests : BaseIntegrationTest
         await dbContext.SaveChangesAsync();
     }
 
-    private static TimesheetEdit CreateDraft(Guid contractEmployeeId, DateTime date, decimal hours, decimal coreHours = 0m, bool hoursLocked = false)
+    private static TimesheetEdit CreateDraft(Guid contractEmployeeId, DateTime date, decimal hours, decimal coreHours = 0m, bool hoursLocked = false, string? description = null)
     {
-        DayEdit attendanceDay = new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: coreHours, Description: null, Schedules: []);
+        DayEdit attendanceDay = new(Date: date, ClockIn: null, ClockOut: null, BreakStart: null, BreakEnd: null, CoreHours: coreHours, Description: description, Schedules: []);
         ContractPartEdit project = new(ContractEmployeeId: contractEmployeeId, Days: [new ContractPartDayEdit(Date: date, Hours: hours, HoursLocked: hoursLocked)]);
         return new TimesheetEdit(Days: [attendanceDay], ContractParts: [project]);
     }

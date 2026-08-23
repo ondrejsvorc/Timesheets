@@ -136,11 +136,13 @@ public sealed class UpdateTimesheet : IEndpoint
 
             foreach (ContractPartDayEdit contractPartDay in update.Days)
             {
-                if (contractPartDays.TryGetValue(DateOnly.FromDateTime(contractPartDay.Date), out Domain.Models.ContractPartDay? day))
+                DateOnly date = DateOnly.FromDateTime(contractPartDay.Date);
+                if (contractPartDays.TryGetValue(date, out Domain.Models.ContractPartDay? day))
                 {
                     bool active = loaded.ContractPartRanges.TryGetValue(project.ContractEmployeeId, out range) && range.Includes(contractPartDay.Date);
+                    bool halfDayInterruption = days.TryGetValue(date, out Domain.Models.AttendanceDay? attendanceDay) && TimesheetEvaluator.HasEditableHalfDayInterruption(attendanceDay.Description);
                     day.Hours = active ? TimesheetEvaluator.Normalize(contractPartDay.Hours) : 0m;
-                    day.HoursLocked = active && contractPartDay.HoursLocked;
+                    day.HoursLocked = active && !halfDayInterruption && contractPartDay.HoursLocked;
                 }
             }
         }

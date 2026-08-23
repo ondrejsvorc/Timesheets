@@ -53,6 +53,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
   const displayBalance = evaluation?.displayBalance ?? 0;
   const isWeekendOrHoliday = day.isWeekend || day.isHoliday;
   const coreLocked = evaluation?.coreLocked ?? false;
+  const interruptionManaged = evaluation?.hasProportionalInterruption ?? false;
   const canAllocateRow = evaluation?.canAllocate ?? false;
   const attendanceAdjustedClass = day.attendanceAdjusted ? "bg-amber-50 ring-1 ring-inset ring-amber-300" : "";
   const balanceTone = displayBalance === 0 ? "bg-green-50 text-green-600" : displayBalance > 0 ? "bg-red-50 text-red-500" : "bg-amber-50 text-amber-700";
@@ -151,7 +152,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
                   draft.attendance.schedules = schedules;
                 })
               }
-              disabled={evaluation?.hasProportionalInterruption}
+              disabled={coreLocked}
             />
           </ValidationField>
         </div>
@@ -179,14 +180,16 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
       {contractParts.map((part) => {
         const active = part.activeDays[dayIndex] ?? true;
         const cell = day.contractPartCells[part.id] ?? { hours: 0, locked: false };
+        const effectiveCellLocked = interruptionManaged ? false : cell.locked;
         const systemLocked = part.locked || coreLocked || !active;
-        const locked = systemLocked || cell.locked;
-        const lockLabel = cell.locked ? Texts.unlockProjectCell : Texts.lockProjectCell;
+        const locked = systemLocked || effectiveCellLocked;
+        const lockDisabled = systemLocked || interruptionManaged;
+        const lockLabel = effectiveCellLocked ? Texts.unlockProjectCell : Texts.lockProjectCell;
         return (
           <div key={part.id} className={cellClass}>
             <ValidationField validations={fieldIssues(`contractPart:${part.id}`)}>
               <div className="flex w-full items-center justify-end gap-1">
-                <LockableField locked={systemLocked}>
+                <LockableField locked={locked}>
                   <HoursToHumanTooltip hours={cell.hours}>
                     <SmartDecimalInput
                       value={Number(cell.hours)}
@@ -207,8 +210,8 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
                 <Button
                   variant="ghost"
                   size="icon"
-                  disabled={systemLocked}
-                  className={cn("h-7 w-7 shrink-0", cell.locked ? "text-primary" : "text-slate-500")}
+                  disabled={lockDisabled}
+                  className={cn("h-7 w-7 shrink-0", effectiveCellLocked ? "text-primary" : "text-slate-500")}
                   onClick={() =>
                     update((draft) => {
                       const current = draft.contractPartCells[part.id] ?? { hours: 0, locked: false };
@@ -218,7 +221,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
                   title={lockLabel}
                   aria-label={lockLabel}
                 >
-                  {cell.locked || systemLocked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+                  {locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
                 </Button>
               </div>
             </ValidationField>

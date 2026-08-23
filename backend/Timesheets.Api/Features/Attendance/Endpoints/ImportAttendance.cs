@@ -16,6 +16,8 @@ namespace Timesheets.Api.Features.Attendance.Endpoints;
 
 public sealed class ImportAttendance : IEndpoint
 {
+    private const string HalfDaySuffix = "p\u016flden";
+
     public static void Map(IEndpointRouteBuilder app) => app
         .MapPost("/", Handle)
         .WithSummary("Import Attendance")
@@ -295,37 +297,45 @@ public sealed class ImportAttendance : IEndpoint
 
     private static DateTime ToUtcDate(DateTime value) => value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);
 
-    private static string? NormalizeInterruptions(string? raw, HashSet<string> validCodes)
+    public static string? NormalizeInterruptions(string? raw, HashSet<string> validCodes)
     {
         if (string.IsNullOrWhiteSpace(raw) || validCodes.Count == 0)
         {
             return null;
         }
 
-        string cleaned = Regex.Replace(raw, @"\([^)]*\)", " ");
-        cleaned = cleaned.Replace(";", " ").Replace(",", " ").Replace("|", " ");
-
         List<string> normalized = [];
-        string[] chunks = cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-        foreach (string chunk in chunks)
+        foreach (string segment in raw.Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
-            string token = Regex.Replace(chunk.ToUpperInvariant(), @"[^A-Z/]", "");
-            if (token.Length == 0)
+            bool halfDay = IsHalfDayInterruption(segment);
+            string cleaned = Regex.Replace(segment, @"\([^)]*\)", " ");
+            string[] chunks = cleaned.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (string chunk in chunks)
             {
-                continue;
-            }
-
-            if (TryResolveInterruptionCode(token, validCodes, out string? resolved) && resolved is not null)
-            {
-                if (!normalized.Contains(resolved, StringComparer.OrdinalIgnoreCase))
+                string token = Regex.Replace(chunk.ToUpperInvariant(), @"[^A-Z/]", "");
+                if (token.Length == 0)
                 {
-                    normalized.Add(resolved);
+                    continue;
+                }
+
+                if (TryResolveInterruptionCode(token, validCodes, out string? resolved) && resolved is not null)
+                {
+                    string value = halfDay ? $"{resolved} {HalfDaySuffix}" : resolved;
+                    if (!normalized.Contains(value, StringComparer.OrdinalIgnoreCase))
+                    {
+                        normalized.Add(value);
+                    }
                 }
             }
         }
 
         return normalized.Count == 0 ? null : string.Join(",", normalized);
+    }
+
+    private static bool IsHalfDayInterruption(string raw)
+    {
+        string upper = raw.ToUpperInvariant();
+        return upper.Contains("P\u016eLDEN", StringComparison.Ordinal) || upper.Contains("PULDEN", StringComparison.Ordinal);
     }
 
     private static bool TryResolveInterruptionCode(string token, HashSet<string> validCodes, out string? resolved)
@@ -502,11 +512,13 @@ public sealed class ImportAttendance : IEndpoint
 
             foreach (ContractPartDayEdit contractPartDay in update.Days)
             {
-                if (contractPartDays.TryGetValue(DateOnly.FromDateTime(contractPartDay.Date), out Domain.Models.ContractPartDay? day))
+                DateOnly date = DateOnly.FromDateTime(contractPartDay.Date);
+                if (contractPartDays.TryGetValue(date, out Domain.Models.ContractPartDay? day))
                 {
                     bool active = loaded.ContractPartRanges.TryGetValue(project.ContractEmployeeId, out range) && range.Includes(contractPartDay.Date);
+                    bool halfDayInterruption = days.TryGetValue(date, out Domain.Models.AttendanceDay? attendanceDay) && TimesheetEvaluator.HasEditableHalfDayInterruption(attendanceDay.Description);
                     day.Hours = active ? TimesheetEvaluator.Normalize(contractPartDay.Hours) : 0m;
-                    day.HoursLocked = active && contractPartDay.HoursLocked;
+                    day.HoursLocked = active && !halfDayInterruption && contractPartDay.HoursLocked;
                 }
             }
         }

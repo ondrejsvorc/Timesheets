@@ -215,7 +215,10 @@ internal sealed class DayTargetFiller(IReadOnlyList<ContractPartColumn> projects
                 targets.ConsumeProject(project.Id, day.ContractPartHours.GetValueOrDefault(project.Id) - previousContractPartHours[project.Id]);
             }
 
-            return;
+            if (TimesheetEvaluator.HasFullDayInterruption(day.Description))
+            {
+                return;
+            }
         }
 
         decimal capacity = TimesheetEvaluator.DayCapacity(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.Description, totalWorkload, tracksAttendance, day.Schedules);
@@ -256,7 +259,7 @@ internal sealed class DayTargetFiller(IReadOnlyList<ContractPartColumn> projects
             decimal maxValue = Math.Min(target, left);
             decimal value = PreferGeneratedCellHours(TimesheetEvaluator.Normalize(amount * target / totalRemaining), maxValue);
             left -= value;
-            day.SetContractPartHours(contractEmployeeId, value);
+            day.AddContractPartHours(contractEmployeeId, value);
             targets.ConsumeProject(contractEmployeeId, value);
         }
 

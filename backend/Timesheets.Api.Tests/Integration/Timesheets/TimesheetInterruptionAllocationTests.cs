@@ -57,6 +57,8 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AllocateTimesheet.DayResponse businessTrip = allocation.Days.Single(day => day.Date == firstDate.AddDays(2));
         Assert.Equal(0m, businessTrip.CoreHours);
         Assert.All(businessTrip.ContractPartCells.Values, cell => Assert.Equal(0m, cell.Hours));
+        Assert.True(allocation.Evaluation.Days.Single(day => day.Day == firstDate.AddDays(1).Day).CoreLocked);
+        Assert.Contains(allocation.Evaluation.DayIssues, issue => issue.Code == "WAR-INT-01" && issue.Day == firstDate.AddDays(2).Day);
     }
 
     [Fact]
@@ -84,6 +86,44 @@ public sealed class TimesheetInterruptionAllocationTests : BaseIntegrationTest
         AllocateTimesheet.DayResponse day = allocation!.Days.Single(day => day.Date == date);
         Assert.Equal(5m, day.ContractPartCells[firstAssignmentId].Hours);
         Assert.True(day.ContractPartCells[firstAssignmentId].Locked);
+    }
+
+    [Fact]
+    public async Task AllocateTimesheet_AddsWorkedHoursOnTopOfHalfDayInterruptionMinimum()
+    {
+        DateTime date = new(2036, 4, 2, 0, 0, 0, DateTimeKind.Utc);
+        Guid timesheetId = Guid.CreateVersion7();
+        Guid assignmentId = Guid.CreateVersion7();
+        await SeedSingleDayAsync(timesheetId, date, NonAcademicEmployeeTypeId, assignmentId, assignmentWorkload: 0.5m);
+
+        TimesheetEdit request = new(
+            Days:
+            [
+                new DayEdit(
+                    Date: date,
+                    ClockIn: new TimeSpan(8, 0, 0),
+                    ClockOut: new TimeSpan(12, 0, 0),
+                    BreakStart: null,
+                    BreakEnd: null,
+                    CoreHours: 0m,
+                    Description: "ZV p\u016flden",
+                    Schedules: [])
+            ],
+            ContractParts: [new ContractPartEdit(assignmentId, [new ContractPartDayEdit(date, 0m, HoursLocked: true)])]);
+
+        HttpResponseMessage response = await Client.PostAsJsonAsync($"/api/timesheets/{timesheetId}/allocate", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        AllocateTimesheet.Response? allocation = await response.Content.ReadFromJsonAsync<AllocateTimesheet.Response>();
+        Assert.NotNull(allocation);
+        AllocateTimesheet.DayResponse day = Assert.Single(allocation!.Days);
+        TimesheetDayEvaluation evaluation = Assert.Single(allocation.Evaluation.Days);
+
+        Assert.Equal(4m, day.CoreHours);
+        Assert.Equal(4m, day.ContractPartCells[assignmentId].Hours);
+        Assert.False(day.ContractPartCells[assignmentId].Locked);
+        Assert.False(evaluation.CoreLocked);
+        Assert.Equal(8m, evaluation.WorkedHours);
     }
 
     [Fact]

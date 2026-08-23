@@ -194,7 +194,12 @@ public sealed class GetTimesheet : IEndpoint
                     foreach (ContractPartDefinition project in projects)
                     {
                         int projectIndex = contractPartIndexById[project.Id];
-                        contractPartCellsArray[projectIndex] = contractPartCellsArray[projectIndex] with { Hours = dayState.ContractPartHours[Guid.Parse(project.Id)] };
+                        Guid projectId = Guid.Parse(project.Id);
+                        contractPartCellsArray[projectIndex] = contractPartCellsArray[projectIndex] with
+                        {
+                            Hours = dayState.ContractPartHours[projectId],
+                            Locked = dayState.ContractPartHoursFixed.GetValueOrDefault(projectId)
+                        };
                     }
                 }
 

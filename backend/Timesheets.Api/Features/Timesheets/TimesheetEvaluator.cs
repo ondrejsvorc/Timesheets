@@ -37,7 +37,7 @@ public sealed record AttendanceDay(DateTime Date, TimeSpan? ClockIn, TimeSpan? C
 
     public decimal TotalWorkload => Workload;
     public decimal TotalHoursObligation => TimesheetEvaluator.CalculateTotalHoursObligation(Date, IsHoliday, Workload);
-    public decimal TotalHours => TimesheetEvaluator.CalculateWorkedHoursFromAttendance(ClockIn, ClockOut, BreakStart, BreakEnd);
+    public decimal TotalHours => TimesheetEvaluator.CalculateWorkedHoursFromAttendance(ClockIn, ClockOut, BreakStart, BreakEnd, OtherInterruption, Workload);
 }
 
 public sealed record ContractPartTimesheet(int Year, int Month, decimal Workload, IReadOnlyList<ContractPartTimesheetDay> Days)
@@ -155,7 +155,7 @@ public sealed class TimesheetEvaluator
 
         List<EvaluatedDay> evaluatedDays = sheet.Days.Select(day =>
         {
-            decimal worked = CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
+            decimal worked = CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.Description, loaded.TotalWorkload);
             decimal projectHours = day.ContractPartHours.Values.Sum();
             decimal stagHours = CalculateStagHours(day.Schedules);
             bool hasAttendance = tracksAttendance && (day.ClockIn is not null || day.ClockOut is not null);
@@ -189,7 +189,7 @@ public sealed class TimesheetEvaluator
 
         TimesheetReview review = new EvaluatedTimesheetReviewer().Review(evaluated, attendance, tracksAttendance);
         IReadOnlyList<TimesheetIssue> issues = review.Issues.Concat(ReviewContractPartTotals(contractPartTotals)).Concat(ReviewCoreTolerance(totals)).ToArray();
-        IReadOnlyList<DayIssue> dayIssues = review.DayIssues.ToArray();
+        IReadOnlyList<DayIssue> dayIssues = review.DayIssues.Concat(ReviewBusinessTripInterruptions(sheet.Days)).ToArray();
 
         List<TimesheetDayEvaluation> days = sheet.Days.Zip(evaluatedDays).Select(pair =>
         {
@@ -197,7 +197,7 @@ public sealed class TimesheetEvaluator
             bool businessTrip = HasBusinessTripInterruption(day.Description);
             bool proportional = HasProportionalInterruption(day.Description);
             bool coreOnly = false;
-            bool coreLocked = coreOnly || proportional;
+            bool coreLocked = coreOnly || HasFullDayInterruption(day.Description);
             decimal balance = evaluatedDay.SkipAllocationRules || !evaluatedDay.HasAttendanceFilled ? 0m : Round(evaluatedDay.WorkedHours - evaluatedDay.AllocatedHours);
             decimal nightHours = CalculateNightHours(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd);
             IEnumerable<DayIssue> issuesForDay = dayIssues.Where(issue => issue.Day == day.Date.Day);
@@ -244,6 +244,8 @@ public sealed class TimesheetEvaluator
                 Dictionary<Guid, decimal> projectHours = [];
                 Dictionary<Guid, bool> projectHoursFixed = [];
                 Dictionary<Guid, decimal> projectHoursFloor = [];
+                string? description = update is null ? day.Description : update.Description;
+                bool editableHalfDayInterruption = HasEditableHalfDayInterruption(description);
 
                 foreach (Domain.Models.ContractPart project in loaded.ContractParts)
                 {
@@ -261,7 +263,7 @@ public sealed class TimesheetEvaluator
                     ContractPartDayEdit? contractPartDayUpdate = contractPartUpdate?.Days.FirstOrDefault(contractPartDay => DateOnly.FromDateTime(contractPartDay.Date) == date);
                     decimal hours = contractPartDayUpdate?.Hours ?? persisted;
                     projectHours[project.ContractEmployeeId] = Normalize(hours);
-                    projectHoursFixed[project.ContractEmployeeId] = projectState.IsActiveOn(day.Date) && (contractPartDayUpdate?.HoursLocked ?? persistedDay?.HoursLocked ?? false);
+                    projectHoursFixed[project.ContractEmployeeId] = !editableHalfDayInterruption && projectState.IsActiveOn(day.Date) && (contractPartDayUpdate?.HoursLocked ?? persistedDay?.HoursLocked ?? false);
                     bool projectFixed = projectHoursFixed[project.ContractEmployeeId];
                     projectHoursFloor[project.ContractEmployeeId] = projectFixed && hours > 0m ? Normalize(hours) : 0m;
                 }
@@ -273,11 +275,11 @@ public sealed class TimesheetEvaluator
                     ClockOut = update is null ? day.ClockOut : update.ClockOut,
                     BreakStart = update is null ? day.BreakStart : update.BreakStart,
                     BreakEnd = update is null ? day.BreakEnd : update.BreakEnd,
-                    Description = update is null ? day.Description : update.Description,
+                    Description = description,
                     Schedules = update is null ? ParseSchedules(day.Schedules) : update.Schedules ?? [],
                     IsHoliday = day.IsHoliday,
                     CoreHours = Normalize(update is null ? day.CoreHours : update.CoreHours),
-                    CoreHoursFixed = update?.CoreHoursFixed ?? false,
+                    CoreHoursFixed = !editableHalfDayInterruption && (update?.CoreHoursFixed ?? false),
                     ContractPartHours = projectHours,
                     ContractPartHoursFixed = projectHoursFixed,
                     ContractPartHoursFloor = projectHoursFloor
@@ -324,15 +326,22 @@ public sealed class TimesheetEvaluator
             return;
         }
 
-        decimal capacity = DayCapacity(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.Description, totalWorkload, tracksAttendance, day.Schedules);
-        if (capacity <= 0m)
+        decimal absenceHours = InterruptionAbsenceHours(day.Description, totalWorkload);
+        if (HasFullDayInterruption(day.Description))
         {
+            decimal capacity = DayCapacity(day.Date, day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd, day.Description, totalWorkload, tracksAttendance, day.Schedules);
+            if (capacity <= 0m)
+            {
+                return;
+            }
+
+            ApplyProportionalInterruption(day, projects, totalWorkload, capacity);
             return;
         }
 
-        if (HasProportionalInterruption(day.Description))
+        if (HasHalfDayInterruption(day.Description))
         {
-            ApplyProportionalInterruption(day, projects, totalWorkload, capacity);
+            ApplyHalfDayInterruption(day, projects, totalWorkload, absenceHours);
         }
     }
 
@@ -346,6 +355,17 @@ public sealed class TimesheetEvaluator
         decimal workedHours = CalculateWorkedHours(clockIn, clockOut);
         decimal breakHours = CalculateBreakHours(breakStart, breakEnd, clockIn, clockOut);
         return Normalize(Math.Max(0, workedHours - breakHours));
+    }
+
+    public static decimal CalculateWorkedHoursFromAttendance(TimeSpan? clockIn, TimeSpan? clockOut, TimeSpan? breakStart, TimeSpan? breakEnd, string? description, decimal totalWorkload)
+    {
+        decimal absenceHours = InterruptionAbsenceHours(description, totalWorkload);
+        if (HasFullDayInterruption(description))
+        {
+            return absenceHours;
+        }
+
+        return Normalize(CalculateWorkedHoursFromAttendance(clockIn, clockOut, breakStart, breakEnd) + absenceHours);
     }
 
     public static decimal CalculateWorkedHours(TimeSpan? clockIn, TimeSpan? clockOut)
@@ -487,13 +507,10 @@ public sealed class TimesheetEvaluator
     {
         if (tracksAttendance)
         {
-            if (clockIn is not null || clockOut is not null || breakStart is not null || breakEnd is not null)
+            decimal worked = CalculateWorkedHoursFromAttendance(clockIn, clockOut, breakStart, breakEnd, description, totalWorkload);
+            if (worked > 0m)
             {
-                decimal worked = CalculateWorkedHoursFromAttendance(clockIn, clockOut, breakStart, breakEnd);
-                if (worked > 0m)
-                {
-                    return Math.Min(12m, worked);
-                }
+                return Math.Min(12m, worked);
             }
 
             return 0m;
@@ -516,18 +533,98 @@ public sealed class TimesheetEvaluator
         return codes.Length > 0 && !codes.Any(BusinessTripCodes.Contains);
     }
 
-    public static bool SkipAllocationRules(string? raw) => HasBusinessTripInterruption(raw) || HasProportionalInterruption(raw);
+    public static bool HasHalfDayInterruption(string? raw) => HasProportionalInterruption(raw) && ParseInterruptionParts(raw).Any(HasHalfDayMarker);
+
+    public static bool HasFullDayInterruption(string? raw) => HasProportionalInterruption(raw) && ParseInterruptionParts(raw).Any(part => !HasHalfDayMarker(part));
+
+    public static bool HasEditableHalfDayInterruption(string? raw) => HasHalfDayInterruption(raw) && !HasFullDayInterruption(raw);
+
+    public static bool SkipAllocationRules(string? raw) => HasBusinessTripInterruption(raw) || HasFullDayInterruption(raw);
 
     private static readonly HashSet<string> BusinessTripCodes = ["SCP", "SCS", "SCT", "SCZ", "SCZE", "SCZP", "SCZS"];
 
-    private static string[] ParseInterruptionCodes(string? raw)
+    private static decimal InterruptionAbsenceHours(string? raw, decimal totalWorkload)
+    {
+        if (!HasProportionalInterruption(raw))
+        {
+            return 0m;
+        }
+
+        if (HasFullDayInterruption(raw))
+        {
+            return Normalize(StandardWorkdayHours * totalWorkload);
+        }
+
+        decimal halfDays = Math.Min(1m, ParseInterruptionParts(raw).Count(HasHalfDayMarker) / 2m);
+        return Normalize(StandardWorkdayHours * totalWorkload * halfDays);
+    }
+
+    private static string[] ParseInterruptionCodes(string? raw) =>
+        ParseInterruptionParts(raw)
+            .Select(part => part.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault())
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Select(code => code!.ToUpperInvariant())
+            .ToArray();
+
+    private static string[] ParseInterruptionParts(string? raw)
     {
         if (string.IsNullOrWhiteSpace(raw))
         {
             return [];
         }
 
-        return raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(code => code.ToUpperInvariant()).ToArray();
+        return raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static bool HasHalfDayMarker(string value)
+    {
+        string upper = value.ToUpperInvariant();
+        return upper.Contains("P\u016eLDEN", StringComparison.Ordinal) || upper.Contains("PULDEN", StringComparison.Ordinal);
+    }
+
+    private static void ApplyHalfDayInterruption(EditableTimesheetDay day, IReadOnlyList<ContractPartColumn> projects, decimal totalWorkload, decimal absenceHours)
+    {
+        if (totalWorkload <= 0m || absenceHours <= 0m)
+        {
+            return;
+        }
+
+        List<ContractPartColumn> activeProjects = projects.Where(project => project.IsActiveOn(day.Date)).ToList();
+        decimal projectWorkload = activeProjects.Sum(project => project.Workload);
+        decimal coreWorkload = Math.Max(0m, totalWorkload - projectWorkload);
+        decimal distributionWorkload = Normalize(coreWorkload + projectWorkload);
+        if (distributionWorkload <= 0m)
+        {
+            return;
+        }
+
+        decimal allocated = 0m;
+        if (coreWorkload > 0m)
+        {
+            decimal coreFloor = Normalize(absenceHours * coreWorkload / distributionWorkload);
+            day.CoreHours = Normalize(Math.Max(day.CoreHours, coreFloor));
+            allocated += coreFloor;
+        }
+
+        foreach (ContractPartColumn project in projects.Where(project => !project.IsActiveOn(day.Date)))
+        {
+            day.ContractPartHoursFixed[project.Id] = false;
+            day.ContractPartHoursFloor[project.Id] = 0m;
+            day.ContractPartHours[project.Id] = 0m;
+        }
+
+        for (int index = 0; index < activeProjects.Count; index++)
+        {
+            ContractPartColumn project = activeProjects[index];
+            decimal floor = index == activeProjects.Count - 1
+                ? Normalize(Math.Max(0m, absenceHours - allocated))
+                : Normalize(absenceHours * project.Workload / distributionWorkload);
+
+            day.ContractPartHoursFixed[project.Id] = false;
+            day.ContractPartHoursFloor[project.Id] = floor;
+            day.ContractPartHours[project.Id] = Normalize(Math.Max(day.ContractPartHours.GetValueOrDefault(project.Id), floor));
+            allocated += floor;
+        }
     }
 
     private static void ApplyProportionalInterruption(EditableTimesheetDay day, IReadOnlyList<ContractPartColumn> projects, decimal totalWorkload, decimal capacity)
@@ -624,6 +721,19 @@ public sealed class TimesheetEvaluator
         }
     }
 
+    private static IEnumerable<DayIssue> ReviewBusinessTripInterruptions(IEnumerable<EditableTimesheetDay> days)
+    {
+        foreach (EditableTimesheetDay day in days.Where(day => HasBusinessTripInterruption(day.Description)))
+        {
+            yield return new DayIssue(
+                "WAR-INT-01",
+                IssueType.Warning,
+                "Služební cesta vyžaduje ruční rozdělení hodin do správného úvazku.",
+                day.Date.Day,
+                "interruptions");
+        }
+    }
+
     private static List<ContractPartColumn> ContractPartColumns(LoadedTimesheet loaded) => loaded.ContractParts
         .Select(project => new ContractPartColumn(
             Id: project.ContractEmployeeId,
@@ -690,12 +800,26 @@ public sealed class EvaluatedTimesheetReviewer
 
     private static IEnumerable<DayIssue> ReviewDay(EvaluatedDay day, bool tracksAttendance) =>
     [
+        .. ReviewMaxDailyHours(day),
         .. ReviewBalance(day),
         .. ReviewStag(day, tracksAttendance),
         .. ReviewMissingAttendance(day, tracksAttendance),
         .. ReviewShortDay(day, tracksAttendance),
         .. ReviewWeekendAndHoliday(day)
     ];
+
+    private static IEnumerable<DayIssue> ReviewMaxDailyHours(EvaluatedDay day)
+    {
+        if (day.WorkedHours > TimesheetLimits.MaxWorkShiftHours)
+        {
+            yield return new DayIssue(
+                "ERR-ALL-07",
+                IssueType.Error,
+                "Docházka včetně nepřítomnosti přesahuje 12 h.",
+                day.Date.Day,
+                "workedHours");
+        }
+    }
 
     private static IEnumerable<DayIssue> ReviewShortDay(EvaluatedDay day, bool tracksAttendance)
     {
