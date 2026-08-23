@@ -7,6 +7,7 @@ using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Attendance;
 using Timesheets.Api.Features.Attendance.Endpoints;
 using Timesheets.Api.Features.Employees;
+using Timesheets.Api.Features.Timesheets;
 using Xunit;
 
 namespace Timesheets.Api.Tests.Integration.Timesheets;
@@ -187,6 +188,44 @@ public class TimesheetReimportTests : BaseIntegrationTest
             .SingleAsync();
 
         Assert.Equal(EmployeeTypes.NonAcademicId, employeeTypeId);
+    }
+
+    [Fact]
+    public async Task ImportAttendance_ClearsAttendanceTimesForTwoHalfDayInterruptions()
+    {
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
+        await SetEmployeeTypeAsync(setup.EmployeeId, EmployeeTypes.NonAcademicId);
+        byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(
+            setup.EmployeePersonalNumber,
+            "Test Employee",
+            2026,
+            1,
+            workloadPercent: 100m,
+            configure: sheet =>
+            {
+                const int row = 33;
+                sheet.Cell($"B{row}").Value = "00:00";
+                sheet.Cell($"C{row}").Value = "00:00";
+                sheet.Cell($"D{row}").Value = "00:00";
+                sheet.Cell($"E{row}").Value = "00:00";
+                sheet.Cell($"F{row}").Value = "D p\u016flden, JMV/HO p\u016flden";
+            });
+
+        using MultipartFormDataContent form = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx");
+        HttpResponseMessage importResponse = await Client.PostAsync("/api/attendance", form);
+
+        Assert.Equal(HttpStatusCode.OK, importResponse.StatusCode);
+        using IServiceScope scope = CreateScope();
+        AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        DateTime date = new(2026, 1, 30, 0, 0, 0, DateTimeKind.Utc);
+        global::Timesheets.Api.Domain.Models.AttendanceDay day = await dbContext.AttendanceDays
+            .AsNoTracking()
+            .SingleAsync(day => day.Attendance.Timesheet.EmployeeId == setup.EmployeeId && day.Date == date);
+        Assert.Null(day.ClockIn);
+        Assert.Null(day.ClockOut);
+        Assert.Null(day.BreakStart);
+        Assert.Null(day.BreakEnd);
+        Assert.True(TimesheetEvaluator.HasFullDayInterruption(day.Description));
     }
 
     [Fact]

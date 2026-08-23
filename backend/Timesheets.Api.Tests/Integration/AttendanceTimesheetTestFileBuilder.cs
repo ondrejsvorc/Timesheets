@@ -4,7 +4,7 @@ namespace Timesheets.Api.Tests.Integration;
 
 internal static class AttendanceTimesheetTestFileBuilder
 {
-    public static byte[] Create(string personalNumber, string employeeName, int year, int month, decimal workloadPercent = 50m)
+    public static byte[] Create(string personalNumber, string employeeName, int year, int month, decimal workloadPercent = 50m, Action<IXLWorksheet>? configure = null)
     {
         using XLWorkbook workbook = new();
         IXLWorksheet sheet = workbook.Worksheets.Add("Docházka");
@@ -25,6 +25,8 @@ internal static class AttendanceTimesheetTestFileBuilder
                 sheet.Cell($"E{rowNum}").Value = "12:00";
             }
         }
+
+        configure?.Invoke(sheet);
 
         using MemoryStream stream = new();
         workbook.SaveAs(stream);

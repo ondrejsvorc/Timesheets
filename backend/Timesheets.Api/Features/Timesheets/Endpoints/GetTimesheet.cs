@@ -203,10 +203,11 @@ public sealed class GetTimesheet : IEndpoint
                     }
                 }
 
+                bool hideAttendanceTimes = TimesheetEvaluator.HasFullDayInterruption(attendanceDay?.Description);
                 return new DayItem(
                     dayNumber,
-                    [ToMinutes(attendanceDay?.ClockIn), ToMinutes(attendanceDay?.ClockOut)],
-                    [ToMinutes(attendanceDay?.BreakStart), ToMinutes(attendanceDay?.BreakEnd)],
+                    [ToMinutes(hideAttendanceTimes ? null : attendanceDay?.ClockIn), ToMinutes(hideAttendanceTimes ? null : attendanceDay?.ClockOut)],
+                    [ToMinutes(hideAttendanceTimes ? null : attendanceDay?.BreakStart), ToMinutes(hideAttendanceTimes ? null : attendanceDay?.BreakEnd)],
                     coreHours,
                     contractPartCellsArray,
                     holidayByDate.GetValueOrDefault(dateOnly),

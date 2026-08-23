@@ -26,9 +26,10 @@ const formatSmartTime = (value: string): string => {
 interface SmartTimeInputProps {
   value: string;
   onChange: (formattedValue: string) => void;
+  disabled?: boolean;
 }
 
-export const SmartTimeInput = ({ value, onChange }: SmartTimeInputProps) => {
+export const SmartTimeInput = ({ value, onChange, disabled }: SmartTimeInputProps) => {
   const [draft, setDraft] = useState<string>(value);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ export const SmartTimeInput = ({ value, onChange }: SmartTimeInputProps) => {
       className="h-8 w-16"
       placeholder="00:00"
       value={draft}
+      disabled={disabled}
       onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => setDraft(e.currentTarget.value)}
       onBlur={commit}

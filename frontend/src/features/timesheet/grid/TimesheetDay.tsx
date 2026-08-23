@@ -71,6 +71,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
             <ValidationField validations={fieldIssues("clockIn")}>
               <SmartTimeInput
                 value={day.attendance.clockIn}
+                disabled={coreLocked}
                 onChange={(value) =>
                   update((draft) => {
                     draft.attendance.clockIn = value;
@@ -84,6 +85,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
             <ValidationField validations={fieldIssues("clockOut")}>
               <SmartTimeInput
                 value={day.attendance.clockOut}
+                disabled={coreLocked}
                 onChange={(value) =>
                   update((draft) => {
                     draft.attendance.clockOut = value;
@@ -97,6 +99,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
             <ValidationField validations={fieldIssues("breakStart")}>
               <SmartTimeInput
                 value={day.attendance.breakStart}
+                disabled={coreLocked}
                 onChange={(value) =>
                   update((draft) => {
                     draft.attendance.breakStart = value;
@@ -110,6 +113,7 @@ const TimesheetDayComponent = ({ tracksAttendance, day, dayIndex, contractParts,
             <ValidationField validations={fieldIssues("breakEnd")}>
               <SmartTimeInput
                 value={day.attendance.breakEnd}
+                disabled={coreLocked}
                 onChange={(value) =>
                   update((draft) => {
                     draft.attendance.breakEnd = value;

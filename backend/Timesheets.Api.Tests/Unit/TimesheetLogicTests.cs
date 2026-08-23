@@ -45,6 +45,9 @@ public sealed class TimesheetEvaluatorTests
 
         Assert.Equal(8m, day.TotalHours);
         Assert.Equal(8m, TimesheetEvaluator.DayCapacity(date, null, null, null, null, interruption, totalWorkload: 1m, tracksAttendance: true));
+        Assert.True(TimesheetEvaluator.HasFullDayInterruption(interruption));
+        Assert.False(TimesheetEvaluator.HasEditableHalfDayInterruption(interruption));
+        Assert.True(TimesheetEvaluator.SkipAllocationRules(interruption));
     }
 
     [Fact]
@@ -115,6 +118,29 @@ public sealed class TimesheetEvaluatorTests
         EditableTimesheetDay day = EditableDay(
             date,
             "D",
+            projectHours: new Dictionary<Guid, decimal> { [firstProject] = 0m, [secondProject] = 0m });
+        ContractPartColumn[] projects =
+        [
+            Project(firstProject, 0.25m),
+            Project(secondProject, 0.25m)
+        ];
+
+        TimesheetEvaluator.ApplyInterruptionToDayState(day, projects, totalWorkload: 1m, tracksAttendance: true);
+
+        Assert.Equal(4m, day.CoreHours);
+        Assert.Equal(2m, day.ContractPartHours[firstProject]);
+        Assert.Equal(2m, day.ContractPartHours[secondProject]);
+    }
+
+    [Fact]
+    public void Two_half_day_interruptions_distribute_full_obligation_without_editable_locks()
+    {
+        DateTime date = new(2026, 1, 30, 0, 0, 0, DateTimeKind.Utc);
+        Guid firstProject = Guid.CreateVersion7();
+        Guid secondProject = Guid.CreateVersion7();
+        EditableTimesheetDay day = EditableDay(
+            date,
+            "D p\u016flden,JMV/HO p\u016flden",
             projectHours: new Dictionary<Guid, decimal> { [firstProject] = 0m, [secondProject] = 0m });
         ContractPartColumn[] projects =
         [

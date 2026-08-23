@@ -535,7 +535,16 @@ public sealed class TimesheetEvaluator
 
     public static bool HasHalfDayInterruption(string? raw) => HasProportionalInterruption(raw) && ParseInterruptionParts(raw).Any(HasHalfDayMarker);
 
-    public static bool HasFullDayInterruption(string? raw) => HasProportionalInterruption(raw) && ParseInterruptionParts(raw).Any(part => !HasHalfDayMarker(part));
+    public static bool HasFullDayInterruption(string? raw)
+    {
+        if (!HasProportionalInterruption(raw))
+        {
+            return false;
+        }
+
+        string[] parts = ParseInterruptionParts(raw);
+        return parts.Any(part => !HasHalfDayMarker(part)) || parts.Count(HasHalfDayMarker) >= 2;
+    }
 
     public static bool HasEditableHalfDayInterruption(string? raw) => HasHalfDayInterruption(raw) && !HasFullDayInterruption(raw);
 
@@ -954,7 +963,7 @@ public sealed class AttendanceTimesheetReviewer
     private static IEnumerable<TimesheetIssue> ReviewRest(AttendanceTimesheet timesheet)
     {
         List<AttendanceDay> days = timesheet.Days
-            .Where(day => day.IsWorkday && day.ClockIn is not null && day.ClockOut is not null)
+            .Where(day => day.IsWorkday && !TimesheetEvaluator.HasFullDayInterruption(day.OtherInterruption) && day.ClockIn is not null && day.ClockOut is not null)
             .OrderBy(day => day.Date)
             .ToList();
 
@@ -984,6 +993,11 @@ public sealed class AttendanceTimesheetReviewer
 
     private static IEnumerable<DayIssue> ReviewDay(AttendanceDay day)
     {
+        if (TimesheetEvaluator.HasFullDayInterruption(day.OtherInterruption))
+        {
+            yield break;
+        }
+
         bool activity = day.ClockIn is not null || day.ClockOut is not null || day.BreakStart is not null || day.BreakEnd is not null;
         bool hasBreak = day.BreakStart is not null || day.BreakEnd is not null;
         decimal shiftHours = TimesheetEvaluator.CalculateElapsedHours(day.ClockIn, day.ClockOut);

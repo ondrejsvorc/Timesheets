@@ -245,20 +245,33 @@ public sealed class ImportAttendance : IEndpoint
     {
         foreach (AttendanceFileDay day in importedTimesheet.Days)
         {
+            string? description = NormalizeInterruptions(day.OtherInterruption, validInterruptionCodes);
+            TimeSpan? clockIn = day.ClockIn;
+            TimeSpan? clockOut = day.ClockOut;
+            TimeSpan? breakStart = day.BreakStart;
+            TimeSpan? breakEnd = day.BreakEnd;
+            if (TimesheetEvaluator.HasFullDayInterruption(description))
+            {
+                clockIn = null;
+                clockOut = null;
+                breakStart = null;
+                breakEnd = null;
+            }
+
             dbContext.AttendanceDays.Add(new Domain.Models.AttendanceDay
             {
                 Id = Guid.CreateVersion7(),
                 AttendanceId = attendanceId,
                 Date = ToUtcDate(day.Date),
-                ClockIn = day.ClockIn,
-                ClockOut = day.ClockOut,
-                BreakStart = day.BreakStart,
-                BreakEnd = day.BreakEnd,
+                ClockIn = clockIn,
+                ClockOut = clockOut,
+                BreakStart = breakStart,
+                BreakEnd = breakEnd,
                 Workload = day.Workload,
-                HoursWithoutBreak = TimesheetEvaluator.CalculateWorkedHoursFromAttendance(day.ClockIn, day.ClockOut, day.BreakStart, day.BreakEnd),
+                HoursWithoutBreak = TimesheetEvaluator.CalculateWorkedHoursFromAttendance(clockIn, clockOut, breakStart, breakEnd),
                 HoursObligation = TimesheetEvaluator.CalculateTotalHoursObligation(day.Date, day.IsHoliday, day.Workload),
                 IsHoliday = day.IsHoliday,
-                Description = NormalizeInterruptions(day.OtherInterruption, validInterruptionCodes),
+                Description = description,
                 Schedules = JsonSerializer.Serialize(day.Schedules)
             });
         }
