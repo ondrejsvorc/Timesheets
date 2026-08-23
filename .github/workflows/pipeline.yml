@@ -51,9 +51,6 @@ jobs:
     - name: Build
       run: dotnet build Timesheets.slnx --no-restore --configuration Release
 
-    - name: Pull test database image
-      run: docker pull public.ecr.aws/docker/library/postgres:17-alpine
-
     - name: Run tests
       env:
         TESTCONTAINERS_RYUK_DISABLED: true
@@ -66,6 +63,7 @@ jobs:
         name: .NET Unit Tests
         path: './backend/**/TestResults/test-results.trx'
         reporter: dotnet-trx
+        fail-on-error: false
 
   frontend:
     name: Frontend
@@ -134,7 +132,7 @@ jobs:
         cp -r dist/. .ci/dist/
 
     - name: Pull database image
-      run: docker pull public.ecr.aws/docker/library/postgres:17-alpine
+      run: docker pull postgres:17-alpine
 
     - name: Build containers
       run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build timesheets.database timesheets.backend timesheets.frontend

@@ -1,7 +1,4 @@
 services:
-  timesheets.database:
-    image: public.ecr.aws/docker/library/postgres:17-alpine
-
   timesheets.backend:
     build:
       target: prebuilt
