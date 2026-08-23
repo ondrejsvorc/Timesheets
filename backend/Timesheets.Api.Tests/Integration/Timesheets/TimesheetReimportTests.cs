@@ -108,6 +108,38 @@ public class TimesheetReimportTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task ImportAttendance_Reimport_CreatesMissingAttendanceForDraftTimesheet()
+    {
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
+        await SetEmployeeTypeAsync(setup.EmployeeId, EmployeeTypes.NonAcademicId);
+        Guid timesheetId = Guid.CreateVersion7();
+
+        using (IServiceScope scope = CreateScope())
+        {
+            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            dbContext.Timesheets.Add(new Timesheet { Id = timesheetId, EmployeeId = setup.EmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = 2024, Month = 10 });
+            await dbContext.SaveChangesAsync();
+        }
+
+        byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
+        using MultipartFormDataContent form = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx");
+        HttpResponseMessage response = await Client.PostAsync("/api/attendance", form);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        ImportAttendance.Response? payload = await response.Content.ReadFromJsonAsync<ImportAttendance.Response>();
+        Assert.NotNull(payload);
+        Assert.Equal(timesheetId, payload!.TimesheetId);
+
+        using IServiceScope assertionScope = CreateScope();
+        AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        global::Timesheets.Api.Domain.Models.Attendance attendance = await assertionContext.Attendances
+            .AsNoTracking()
+            .SingleAsync(attendance => attendance.TimesheetId == timesheetId);
+        Assert.Equal(EmployeeTypes.NonAcademicId, attendance.EmployeeTypeId);
+        Assert.Equal(31, await assertionContext.AttendanceDays.AsNoTracking().CountAsync(day => day.AttendanceId == attendance.Id));
+    }
+
+    [Fact]
     public async Task DetectAttendance_ForSubmittedMonth_ReturnsBlocked()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);

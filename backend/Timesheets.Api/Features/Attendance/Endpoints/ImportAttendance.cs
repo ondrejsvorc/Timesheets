@@ -192,10 +192,7 @@ public sealed class ImportAttendance : IEndpoint
         CancellationToken cancellationToken)
     {
         Guid timesheetId = existingTimesheet.Id;
-        Guid attendanceId = await dbContext.Attendances
-            .Where(attendance => attendance.TimesheetId == timesheetId)
-            .Select(attendance => attendance.Id)
-            .SingleAsync(cancellationToken);
+        Guid attendanceId = await GetOrCreateAttendanceIdAsync(timesheetId, employeeId, dbContext, cancellationToken);
 
         List<Domain.Models.AttendanceDay> existingDays = await dbContext.AttendanceDays
             .Where(day => day.AttendanceId == attendanceId)
@@ -214,6 +211,34 @@ public sealed class ImportAttendance : IEndpoint
         await dbContext.SaveChangesAsync(cancellationToken);
         await ApplyInterruptionHoursAsync(timesheetId, dbContext, evaluator, cancellationToken);
         return timesheetId;
+    }
+
+    private static async Task<Guid> GetOrCreateAttendanceIdAsync(Guid timesheetId, Guid employeeId, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        Guid? attendanceId = await dbContext.Attendances
+            .Where(attendance => attendance.TimesheetId == timesheetId)
+            .Select(attendance => (Guid?)attendance.Id)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (attendanceId.HasValue)
+        {
+            return attendanceId.Value;
+        }
+
+        Guid employeeTypeId = await dbContext.Employees
+            .AsNoTracking()
+            .Where(employee => employee.Id == employeeId)
+            .Select(employee => employee.EmployeeTypeId)
+            .SingleAsync(cancellationToken);
+
+        Domain.Models.Attendance attendance = new()
+        {
+            Id = Guid.CreateVersion7(),
+            TimesheetId = timesheetId,
+            EmployeeTypeId = employeeTypeId,
+        };
+        dbContext.Attendances.Add(attendance);
+        return attendance.Id;
     }
 
     private static void AddAttendanceDays(AppDbContext dbContext, Guid attendanceId, AttendanceFile importedTimesheet, HashSet<string> validInterruptionCodes)
