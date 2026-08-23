@@ -192,13 +192,17 @@ public sealed class ImportAttendance : IEndpoint
         CancellationToken cancellationToken)
     {
         Guid timesheetId = existingTimesheet.Id;
+        Guid attendanceId = await dbContext.Attendances
+            .Where(attendance => attendance.TimesheetId == timesheetId)
+            .Select(attendance => attendance.Id)
+            .SingleAsync(cancellationToken);
 
         List<Domain.Models.AttendanceDay> existingDays = await dbContext.AttendanceDays
-            .Where(day => day.AttendanceId == timesheetId)
+            .Where(day => day.AttendanceId == attendanceId)
             .ToListAsync(cancellationToken);
         dbContext.AttendanceDays.RemoveRange(existingDays);
 
-        AddAttendanceDays(dbContext, timesheetId, importedTimesheet, validInterruptionCodes);
+        AddAttendanceDays(dbContext, attendanceId, importedTimesheet, validInterruptionCodes);
         await UpsertEmployeeWorkloadAsync(dbContext, employeeId, importedTimesheet.Year, importedTimesheet.Month, importedTimesheet.Workload, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 

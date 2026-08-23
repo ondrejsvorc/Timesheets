@@ -82,6 +82,32 @@ public class TimesheetReimportTests : BaseIntegrationTest
     }
 
     [Fact]
+    public async Task ImportAttendance_Reimport_UsesAttendanceIdWhenItDiffersFromTimesheetId()
+    {
+        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
+        Guid timesheetId = Guid.CreateVersion7();
+        Guid attendanceId = Guid.CreateVersion7();
+
+        using (IServiceScope scope = CreateScope())
+        {
+            AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            dbContext.Timesheets.Add(new Timesheet { Id = timesheetId, EmployeeId = setup.EmployeeId, TimesheetStatusId = TestTimesheetStatusIds.Draft, Year = 2024, Month = 10 });
+            dbContext.Attendances.Add(new global::Timesheets.Api.Domain.Models.Attendance { Id = attendanceId, TimesheetId = timesheetId, EmployeeTypeId = EmployeeTypes.NonAcademicId });
+            await dbContext.SaveChangesAsync();
+        }
+
+        byte[] fileBytes = AttendanceTimesheetTestFileBuilder.Create(setup.EmployeePersonalNumber, "Test Employee", 2024, 10, 50m);
+        using MultipartFormDataContent form = TimesheetImportFormFactory.Create(setup.EmployeeId, fileBytes, "attendance.xlsx");
+        HttpResponseMessage response = await Client.PostAsync("/api/attendance", form);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using IServiceScope assertionScope = CreateScope();
+        AppDbContext assertionContext = assertionScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(31, await assertionContext.AttendanceDays.AsNoTracking().CountAsync(day => day.AttendanceId == attendanceId));
+        Assert.Equal(0, await assertionContext.AttendanceDays.AsNoTracking().CountAsync(day => day.AttendanceId == timesheetId));
+    }
+
+    [Fact]
     public async Task DetectAttendance_ForSubmittedMonth_ReturnsBlocked()
     {
         TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc), workload: 0.5m);
@@ -162,7 +188,8 @@ public class TimesheetReimportTests : BaseIntegrationTest
         using IServiceScope scope = CreateScope();
         AppDbContext dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         bool commentExists = await dbContext.TimesheetComments.AsNoTracking().AnyAsync(comment => comment.TimesheetId == timesheetId && comment.Text == "Test comment preserved on reimport");
-        int dayCount = await dbContext.AttendanceDays.AsNoTracking().CountAsync(day => day.AttendanceId == timesheetId);
+        Guid attendanceId = await dbContext.Attendances.AsNoTracking().Where(attendance => attendance.TimesheetId == timesheetId).Select(attendance => attendance.Id).SingleAsync();
+        int dayCount = await dbContext.AttendanceDays.AsNoTracking().CountAsync(day => day.AttendanceId == attendanceId);
         Assert.True(commentExists);
         Assert.Equal(31, dayCount);
     }
