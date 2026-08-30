@@ -31,12 +31,12 @@ public static class AuthenticationConfig
         string? titleAfter = dev.GetValue<string?>("TitleAfter", null);
         string[] affiliations = dev.GetSection("Affiliation").Get<string[]>() ?? [];
 
-        List<Claim> claims = new()
-        {
+        List<Claim> claims =
+        [
             new("given_name", firstName),
             new("family_name", surname),
             new("personalNumber", personalNumber)
-        };
+        ];
 
         if (!string.IsNullOrWhiteSpace(titleBefore))
         {

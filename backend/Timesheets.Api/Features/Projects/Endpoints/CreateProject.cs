@@ -63,7 +63,7 @@ public sealed class CreateProject : IEndpoint
         }
         catch (DbUpdateException)
         {
-            return TypedResults.BadRequest("Projekt s tímto Id nebo názvem už existuje.");
+            return TypedResults.BadRequest(ProjectCatalogValidation.DuplicateError);
         }
 
         ProjectItem projectItem = new(project.Id, project.Name, project.RegistrationNumber, project.StartDate, project.EndDate, project.ArchivedAt, 0, project.GetStatus(PragueClock.Today));

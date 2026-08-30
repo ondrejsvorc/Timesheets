@@ -61,7 +61,7 @@ public sealed class AddProjectManager : IEndpoint
             return TypedResults.BadRequest("Manager is already assigned to this project.");
         }
 
-        var projectManager = new ProjectManager
+        ProjectManager projectManager = new()
         {
             Id = Guid.CreateVersion7(),
             ProjectId = id,
@@ -70,12 +70,7 @@ public sealed class AddProjectManager : IEndpoint
         dbContext.ProjectManagers.Add(projectManager);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var response = new Response(
-            id,
-            request.EmployeeId,
-            employee.PersonalNumber,
-            employee.DisplayName);
-
+        Response response = new(id, request.EmployeeId, employee.PersonalNumber, employee.DisplayName);
         return TypedResults.Created($"/projects/{id}/managers/{request.EmployeeId}", response);
     }
 }

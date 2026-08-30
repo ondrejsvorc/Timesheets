@@ -15,8 +15,6 @@ internal static class ProjectCatalogValidation
         return await dbContext.Projects
             .AsNoTracking()
             .Where(project => !excludedProjectId.HasValue || project.Id != excludedProjectId.Value)
-            .AnyAsync(
-                project => project.Name == trimmedName || project.RegistrationNumber == trimmedRegistrationNumber,
-                cancellationToken);
+            .AnyAsync(project => project.Name == trimmedName || project.RegistrationNumber == trimmedRegistrationNumber, cancellationToken);
     }
 }

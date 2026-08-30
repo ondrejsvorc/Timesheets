@@ -154,7 +154,7 @@ public sealed class AddContractEmployee : IEndpoint
             .AsNoTracking()
             .FirstAsync(e => e.Id == request.EmployeeId, cancellationToken);
 
-        Response response = new Response(
+        Response response = new(
             id,
             request.EmployeeId,
             request.PositionCode,
@@ -183,9 +183,7 @@ public sealed class AddContractEmployee : IEndpoint
         {
             Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, contractEmployee.EmployeeId, cursor.Year, cursor.Month, cancellationToken);
             Domain.Models.ContractPart? existing = await dbContext.ContractParts
-                .FirstOrDefaultAsync(
-                    t => t.ContractEmployeeId == contractEmployee.Id && t.TimesheetId == timesheetId,
-                    cancellationToken);
+                .FirstOrDefaultAsync(t => t.ContractEmployeeId == contractEmployee.Id && t.TimesheetId == timesheetId, cancellationToken);
 
             if (existing is null)
             {

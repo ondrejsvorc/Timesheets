@@ -105,7 +105,7 @@ public sealed class UpdateContractEmployee : IEndpoint
 
             if (overlapping)
             {
-                return TypedResults.BadRequest("Zam?stnanec u? m? tuto pozici na zak?zce v p?ekr?vaj?c?m se obdob?.");
+                return TypedResults.BadRequest("Employee already has this position in contract for overlapping period.");
             }
 
             string? workloadError = await ContractEmployeeValidation.ValidateMonthlyWorkloadAsync(
@@ -244,9 +244,7 @@ public sealed class UpdateContractEmployee : IEndpoint
         {
             Guid timesheetId = await TimesheetBootstrap.EnsureMonthTimesheetIdAsync(dbContext, contractEmployee.EmployeeId, cursor.Year, cursor.Month, cancellationToken);
             Domain.Models.ContractPart? existing = await dbContext.ContractParts
-                .FirstOrDefaultAsync(
-                    t => t.ContractEmployeeId == contractEmployee.Id && t.TimesheetId == timesheetId,
-                    cancellationToken);
+                .FirstOrDefaultAsync(t => t.ContractEmployeeId == contractEmployee.Id && t.TimesheetId == timesheetId, cancellationToken);
 
             if (existing is null)
             {

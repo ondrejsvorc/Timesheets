@@ -110,9 +110,7 @@ public sealed class DeleteProjectContract : IEndpoint
 
             bool isDraft = await dbContext.Timesheets
                 .AsNoTracking()
-                .AnyAsync(
-                    timesheet => timesheet.Id == timesheetId && timesheet.TimesheetStatus.Code == TimesheetStatus.DraftCode,
-                    cancellationToken);
+                .AnyAsync(timesheet => timesheet.Id == timesheetId && timesheet.TimesheetStatus.Code == TimesheetStatus.DraftCode, cancellationToken);
 
             if (!isDraft)
             {

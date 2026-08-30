@@ -17,6 +17,6 @@ public sealed class Login : IEndpoint
             returnUrl = "/";
         }
 
-        await context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme, new AuthenticationProperties { RedirectUri = returnUrl });
+        await context.ChallengeAsync(OpenIdConnectDefaults.AuthenticationScheme, new() { RedirectUri = returnUrl });
     }
 }

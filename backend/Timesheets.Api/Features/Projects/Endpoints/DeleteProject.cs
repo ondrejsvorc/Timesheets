@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Timesheets.Api.Domain;
 using Timesheets.Api.Domain.Models;
 using Timesheets.Api.Features.Auth;
-using Timesheets.Api.Features.Projects;
 
 namespace Timesheets.Api.Features.Projects.Endpoints;
 
@@ -113,9 +112,7 @@ public sealed class DeleteProject : IEndpoint
 
             bool isDraft = await dbContext.Timesheets
                 .AsNoTracking()
-                .AnyAsync(
-                    timesheet => timesheet.Id == timesheetId && timesheet.TimesheetStatus.Code == TimesheetStatus.DraftCode,
-                    cancellationToken);
+                .AnyAsync(timesheet => timesheet.Id == timesheetId && timesheet.TimesheetStatus.Code == TimesheetStatus.DraftCode, cancellationToken);
 
             if (!isDraft)
             {

@@ -92,8 +92,8 @@ public sealed class TimesheetEvaluatorTests
             date,
             "ZV p\u016flden",
             coreHours: 3m,
-            projectHours: new Dictionary<Guid, decimal> { [firstProject] = 0m, [secondProject] = 2m },
-            projectLocks: new Dictionary<Guid, bool> { [firstProject] = true, [secondProject] = true });
+            projectHours: new() { [firstProject] = 0m, [secondProject] = 2m },
+            projectLocks: new() { [firstProject] = true, [secondProject] = true });
         ContractPartColumn[] projects =
         [
             Project(firstProject, 0.25m),
@@ -118,7 +118,7 @@ public sealed class TimesheetEvaluatorTests
         EditableTimesheetDay day = EditableDay(
             date,
             "D",
-            projectHours: new Dictionary<Guid, decimal> { [firstProject] = 0m, [secondProject] = 0m });
+            projectHours: new() { [firstProject] = 0m, [secondProject] = 0m });
         ContractPartColumn[] projects =
         [
             Project(firstProject, 0.25m),
@@ -141,7 +141,7 @@ public sealed class TimesheetEvaluatorTests
         EditableTimesheetDay day = EditableDay(
             date,
             "D p\u016flden,JMV/HO p\u016flden",
-            projectHours: new Dictionary<Guid, decimal> { [firstProject] = 0m, [secondProject] = 0m });
+            projectHours: new() { [firstProject] = 0m, [secondProject] = 0m });
         ContractPartColumn[] projects =
         [
             Project(firstProject, 0.25m),

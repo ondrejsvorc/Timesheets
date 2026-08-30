@@ -797,7 +797,7 @@ public sealed class EvaluatedTimesheetReviewer
 
     public TimesheetReview Review(EvaluatedTimesheet timesheet, AttendanceTimesheet attendance, bool tracksAttendance)
     {
-        TimesheetReview attendanceReview = tracksAttendance ? new AttendanceTimesheetReviewer().Review(attendance) : new TimesheetReview();
+        TimesheetReview attendanceReview = tracksAttendance ? new AttendanceTimesheetReviewer().Review(attendance) : new();
         return new TimesheetReview
         {
             Issues = ReviewTimesheet(timesheet).Concat(attendanceReview.Issues),

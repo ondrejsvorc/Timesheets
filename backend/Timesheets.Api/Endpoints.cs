@@ -39,12 +39,13 @@ public static class Endpoints
 
     private static void MapProtectedApiEndpoints(this WebApplication app)
     {
-        var endpoints = app.MapGroup("/api")
-            .AddEndpointFilter<EnsureCurrentUserLoadedFilter>();
+        var endpoints = app.MapGroup("/api").AddEndpointFilter<EnsureCurrentUserLoadedFilter>();
+
         if (AuthenticationConfig.IsEnabled(app.Configuration))
         {
             endpoints.RequireAuthorization();
         }
+
         endpoints.MapProjectEndpoints();
         endpoints.MapContractEndpoints();
         endpoints.MapEmployeeEndpoints();

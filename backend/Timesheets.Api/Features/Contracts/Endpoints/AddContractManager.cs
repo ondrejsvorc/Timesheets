@@ -62,7 +62,7 @@ public sealed class AddContractManager : IEndpoint
             return TypedResults.BadRequest("Manager is already assigned to this contract.");
         }
 
-        var contractManager = new ContractManager
+        ContractManager contractManager = new()
         {
             Id = Guid.CreateVersion7(),
             ContractId = id,
@@ -80,13 +80,7 @@ public sealed class AddContractManager : IEndpoint
             .AsNoTracking()
             .FirstAsync(e => e.Id == request.EmployeeId, cancellationToken);
 
-        var response = new Response(
-            id,
-            request.EmployeeId,
-            contract.RegistrationNumber,
-            employee.PersonalNumber,
-            employee.DisplayName);
-
+        Response response = new(id, request.EmployeeId, contract.RegistrationNumber, employee.PersonalNumber, employee.DisplayName);
         return TypedResults.Created($"/contracts/{id}/managers/{request.EmployeeId}", response);
     }
 }

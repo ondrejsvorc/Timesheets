@@ -30,11 +30,6 @@ public sealed class GetEmployee : IEndpoint
             return TypedResults.NotFound();
         }
 
-        return TypedResults.Ok(new Response(
-            employee.Id,
-            employee.EmployeeTypeId,
-            employee.DisplayName,
-            employee.PersonalNumber
-        ));
+        return TypedResults.Ok(new Response(employee.Id, employee.EmployeeTypeId, employee.DisplayName, employee.PersonalNumber));
     }
 }

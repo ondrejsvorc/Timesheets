@@ -32,7 +32,7 @@ public sealed class ArchiveProject : IEndpoint
 
         if (project.ArchivedAt.HasValue)
         {
-            return TypedResults.BadRequest("Projekt je jiÅ¾ archivovÃ¡n.");
+            return TypedResults.BadRequest("Project is already archived.");
         }
 
         project.Archive(DateTime.UtcNow);
