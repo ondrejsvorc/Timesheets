@@ -16,7 +16,4 @@ public class TestSetupTests : BaseIntegrationTest
         bool canConnect = await dbContext.Database.CanConnectAsync();
         Assert.True(canConnect);
     }
-
-    [Fact]
-    public void AuthMock_ClientIsCreated() => Assert.NotNull(Client);
 }

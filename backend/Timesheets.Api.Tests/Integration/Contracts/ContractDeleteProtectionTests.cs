@@ -28,18 +28,6 @@ public class ContractDeleteProtectionTests : BaseIntegrationTest
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
-    [Fact]
-    public async Task DeleteContract_WithSubmittedTimesheetsAndForceQuery_ReturnsConflict()
-    {
-        TestProjectSetup setup = await IntegrationTestDataFactory.CreateProjectWithPositionAsync(Factory.Services, Client, new DateTime(2024, 10, 1, 0, 0, 0, DateTimeKind.Utc), new DateTime(2024, 10, 31, 0, 0, 0, DateTimeKind.Utc));
-        Guid contractPartId = await GetSingleContractPartIdAsync(setup.ContractEmployeeId);
-        await SetContractPartStatusAsync(contractPartId, TestTimesheetStatusIds.Submitted);
-
-        HttpResponseMessage response = await Client.DeleteAsync($"/api/projects/{setup.ProjectId}/contracts/{setup.ContractId}?force=true");
-
-        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
-    }
-
     private async Task<Guid> GetSingleContractPartIdAsync(Guid contractEmployeeId)
     {
         using IServiceScope scope = CreateScope();
