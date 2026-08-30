@@ -386,11 +386,6 @@ public sealed class TimesheetEvaluator
         if (clockOutMinutes < clockInMinutes)
         {
             int workedMinutes = clockOutMinutes + 24 * 60 - clockInMinutes;
-            if (workedMinutes > 12 * 60)
-            {
-                return 0;
-            }
-
             return Normalize(workedMinutes / 60m);
         }
 
@@ -931,7 +926,7 @@ public sealed class EvaluatedTimesheetReviewer
         {
             yield return new DayIssue("WAR-COM-01", IssueType.Warning, "Práce o víkendu (očekává se kompenzace v jiném pracovním dni).", day.Date.Day, "workedHours");
         }
-        else if (day.IsHoliday && day.HasAttendanceFilled && day.WorkedHours > 0)
+        else if (day.IsHoliday && day.TotalHours > 0)
         {
             yield return new DayIssue("WAR-COM-02", IssueType.Warning, "Práce ve svátek (očekává se kompenzace v jiném pracovním dni).", day.Date.Day, "workedHours");
         }

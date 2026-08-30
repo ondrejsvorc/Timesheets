@@ -17,6 +17,18 @@ public sealed class TimesheetEvaluatorTests
     }
 
     [Fact]
+    public void Overnight_shift_over_twelve_hours_is_invalid()
+    {
+        AttendanceDay day = Day(date: new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc), clockIn: new TimeSpan(8, 0, 0), clockOut: new TimeSpan(7, 0, 0));
+
+        AttendanceTimesheet timesheet = new(EmployeePersonalNumber: "1", EmployeeName: "Test", Workload: 1m, Year: 2026, Month: 6, Days: [day]);
+        TimesheetReview review = new AttendanceTimesheetReviewer().Review(timesheet);
+
+        Assert.Equal(23m, day.TotalHours);
+        Assert.Contains(review.DayIssues, issue => issue.Code == "ERR-ATT-05");
+    }
+
+    [Fact]
     public void Twelve_worked_hours_with_break_does_not_exceed_daily_limit()
     {
         AttendanceDay day = Day(date: new DateTime(2026, 6, 1, 0, 0, 0, DateTimeKind.Utc), clockIn: new TimeSpan(8, 0, 0), clockOut: new TimeSpan(20, 30, 0), breakStart: new TimeSpan(12, 0, 0), breakEnd: new TimeSpan(12, 30, 0));

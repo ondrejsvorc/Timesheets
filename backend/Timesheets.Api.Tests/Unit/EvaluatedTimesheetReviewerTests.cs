@@ -112,4 +112,15 @@ public sealed class EvaluatedTimesheetReviewerTests
 
         Assert.Contains(review.DayIssues, issue => issue.Code == "WAR-ALL-04" && issue.Field == "allocatedHours");
     }
+
+    [Fact]
+    public void Review_warns_about_academic_holiday_work()
+    {
+        EvaluatedDay holiday = new(Date: new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc), IsHoliday: true, Workload: 1m, CoreWorkload: 1m, WorkedHours: 0m, CoreHours: 4m, ContractPartHours: 0m, StagHours: 0m, HasAttendanceFilled: false, SkipAllocationRules: false);
+        EvaluatedTimesheet evaluated = new(2026, 1, 1, [holiday]);
+
+        TimesheetReview review = new EvaluatedTimesheetReviewer().Review(evaluated, EmptyAttendance(2026, 1), tracksAttendance: false);
+
+        Assert.Contains(review.DayIssues, issue => issue.Code == "WAR-COM-02");
+    }
 }
