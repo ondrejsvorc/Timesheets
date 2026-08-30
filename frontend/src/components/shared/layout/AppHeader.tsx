@@ -1,4 +1,4 @@
-import { Bell, User } from "lucide-react";
+import { User } from "lucide-react";
 import { Link } from "react-router";
 import { Can } from "@/auth/Can";
 import { useCurrentUser } from "@/auth/CurrentUserContext";
@@ -12,7 +12,6 @@ import { Routes } from "@/constants/routes";
 import { Texts } from "../../../constants/texts";
 
 export const AppHeader = () => {
-  const handleNotificationsClick = () => {};
   const currentUser = useCurrentUser();
   const canNavProjects = useCan(UiAction.nav.projects);
   const canNavEmployees = useCan(UiAction.nav.employees);
@@ -60,10 +59,6 @@ export const AppHeader = () => {
           <Can action={UiAction.nav.employeeRoles}>
             <RoleViewSwitcher />
           </Can>
-          <Button variant="ghost" size="icon" onClick={handleNotificationsClick} className="text-muted-foreground hover:text-foreground hover:bg-accent">
-            <Bell className="h-5 w-5" />
-          </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-accent">
