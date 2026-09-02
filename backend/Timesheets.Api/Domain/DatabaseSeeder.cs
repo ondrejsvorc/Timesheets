@@ -49,6 +49,33 @@ public static class DatabaseSeeder
             await context.SaveChangesAsync();
         }
 
+        Guid testAcademicEmployeeId = Guid.Parse("10000000-0000-0000-0000-000000000004");
+        if (!await context.Employees.AsNoTracking().AnyAsync(employee => employee.Id == testAcademicEmployeeId))
+        {
+            context.Employees.Add(new Employee
+            {
+                Id = testAcademicEmployeeId,
+                EmployeeTypeId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                PersonalNumber = "3001",
+                FirstName = "Testovací",
+                Surname = "Akademik",
+                IsGlobalManager = false
+            });
+            await context.SaveChangesAsync();
+        }
+
+        if (!await context.CoreEmployments.AsNoTracking().AnyAsync(employment => employment.EmployeeId == testAcademicEmployeeId))
+        {
+            context.CoreEmployments.Add(new CoreEmployment
+            {
+                Id = Guid.Parse("C0000000-0000-0000-0000-000000000001"),
+                EmployeeId = testAcademicEmployeeId,
+                Workload = 1.0m,
+                StartDate = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            });
+            await context.SaveChangesAsync();
+        }
+
         if (!await context.Projects.AsNoTracking().AnyAsync())
         {
             List<Project> projects =
@@ -218,6 +245,21 @@ public static class DatabaseSeeder
             TimesheetBootstrap.AddMonth(context, timesheets[0], Guid.Parse("00000000-0000-0000-0000-000000000001"));
             TimesheetBootstrap.AddMonth(context, timesheets[1], Guid.Parse("00000000-0000-0000-0000-000000000001"));
             TimesheetBootstrap.AddMonth(context, timesheets[2], Guid.Parse("00000000-0000-0000-0000-000000000002"));
+        }
+
+        Guid testAcademicTimesheetId = Guid.Parse("70000000-0000-0000-0000-000000000004");
+        if (!await context.Timesheets.AsNoTracking().AnyAsync(timesheet => timesheet.EmployeeId == testAcademicEmployeeId && timesheet.Year == 2026 && timesheet.Month == 1))
+        {
+            TimesheetBootstrap.AddMonth(context, new Timesheet
+            {
+                Id = testAcademicTimesheetId,
+                EmployeeId = testAcademicEmployeeId,
+                TimesheetStatusId = Guid.Parse("00000000-0000-0000-0000-000000000020"),
+                Year = 2026,
+                Month = 1,
+                CreatedAt = new DateTime(2026, 1, 1, 8, 0, 0, DateTimeKind.Utc)
+            }, Guid.Parse("00000000-0000-0000-0000-000000000001"));
+            await context.SaveChangesAsync();
         }
 
         if (!await context.AttendanceDays.AsNoTracking().AnyAsync())
