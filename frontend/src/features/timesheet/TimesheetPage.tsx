@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAsyncValue, useLoaderData, useNavigate, useSearchParams } from "react-router";
 import { useImmer } from "use-immer";
 import { BackButton, FullscreenButton } from "@/components/shared/buttons/ActionButtons";
@@ -139,6 +139,8 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
   const [timesheet, setTimesheet] = useImmer<Timesheet>(initialData.timesheet);
   const [evaluation, setEvaluation] = useState<TimesheetEvaluation>(initialData.evaluation);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const reviewRequestId = useRef(0);
+  const displayEvaluation = useMemo(() => applyAcademicDraftHours(timesheet, evaluation), [timesheet, evaluation]);
 
   const { actions } = overview;
   const isEditable = actions.edit;
@@ -146,9 +148,14 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
 
   useEffect(() => {
     const controller = new AbortController();
+    const requestId = ++reviewRequestId.current;
     const timeout = window.setTimeout(() => {
       reviewTimesheet(timesheet, controller.signal)
-        .then(setEvaluation)
+        .then((nextEvaluation) => {
+          if (requestId === reviewRequestId.current) {
+            setEvaluation(nextEvaluation);
+          }
+        })
         .catch(() => {});
     }, 200);
     return () => {
@@ -220,7 +227,7 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
       )}
       <TimesheetGrid
         timesheet={timesheet}
-        evaluation={evaluation}
+        evaluation={displayEvaluation}
         readOnly={!isEditable}
         onUpdateDay={handleUpdateDay}
         onAllocate={handleAllocate}
@@ -228,4 +235,73 @@ const TimesheetEditor = ({ initialData, overview }: TimesheetEditorProps) => {
       />
     </div>
   );
+};
+
+const coreToleranceHours = 2;
+
+const roundHours = (value: number) => Number(Math.max(0, value).toFixed(2));
+
+const sumHours = (values: number[]) => roundHours(values.reduce((sum, value) => sum + value, 0));
+
+const allocatedHours = (day: TimesheetDay) => roundHours((day.coreHours ?? 0) + Object.values(day.contractPartCells).reduce((sum, cell) => sum + cell.hours, 0));
+
+const timeToMinutes = (value: string) => {
+  const [hours, minutes] = value.split(":").map(Number);
+  return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : null;
+};
+
+const stagHours = (day: TimesheetDay) => {
+  const totalMinutes = day.attendance.schedules.reduce((sum, range) => {
+    const start = timeToMinutes(range.start);
+    const end = timeToMinutes(range.end);
+    return start !== null && end !== null && end > start ? sum + end - start : sum;
+  }, 0);
+  return roundHours(Math.min(12, totalMinutes / 60));
+};
+
+const applyAcademicDraftHours = (timesheet: Timesheet, evaluation: TimesheetEvaluation): TimesheetEvaluation => {
+  if (timesheet.tracksAttendance) {
+    return evaluation;
+  }
+
+  const days = evaluation.days.map((dayEvaluation, index) => {
+    const day = timesheet.days[index];
+    if (!day) {
+      return dayEvaluation;
+    }
+
+    const allocated = allocatedHours(day);
+    const stagMissing = roundHours(stagHours(day) - (day.coreHours ?? 0));
+    const displayBalance = stagMissing > 0 ? Math.max(dayEvaluation.balance, stagMissing) : dayEvaluation.balance;
+
+    return {
+      ...dayEvaluation,
+      workedHours: allocated,
+      allocatedHours: allocated,
+      displayBalance,
+      canAllocate: displayBalance !== 0 || dayEvaluation.canGenerateAttendance,
+    };
+  });
+
+  const coreHours = sumHours(timesheet.days.map((day) => day.coreHours ?? 0));
+  const contractParts = evaluation.totals.contractParts.map((total) => {
+    const hours = sumHours(timesheet.days.map((day) => day.contractPartCells[total.contractEmployeeId]?.hours ?? 0));
+    return {
+      ...total,
+      hours,
+      matchesObligation: Math.abs(hours - total.obligation) < 0.01,
+    };
+  });
+
+  return {
+    ...evaluation,
+    days,
+    totals: {
+      ...evaluation.totals,
+      allocatedHours: sumHours(days.map((day) => day.allocatedHours)),
+      coreHours,
+      coreHoursWithinTolerance: coreHours + 0.009 >= evaluation.totals.coreHoursObligation - coreToleranceHours && coreHours <= evaluation.totals.coreHoursObligation + coreToleranceHours + 0.009,
+      contractParts,
+    },
+  };
 };
