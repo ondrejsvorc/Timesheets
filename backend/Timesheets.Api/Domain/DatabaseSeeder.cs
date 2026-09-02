@@ -220,7 +220,7 @@ public static class DatabaseSeeder
             TimesheetBootstrap.AddMonth(context, timesheets[2], Guid.Parse("00000000-0000-0000-0000-000000000002"));
         }
 
-        if (!await context.AttendanceDays.AsNoTracking().AnyAsync())
+        if (!await context.AttendanceDays.AsNoTracking().AnyAsync(day => day.Id == Guid.Parse("80000000-0000-0000-0000-000000000001")))
         {
             List<AttendanceDay> attendanceDays =
             [
